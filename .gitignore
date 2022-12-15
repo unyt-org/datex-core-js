@@ -1,0 +1,6 @@
+.dx
+.datex-cache
+**/*.js
+*.js
+**/*.js.map
+*.js.map
