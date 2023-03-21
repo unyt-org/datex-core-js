@@ -1,2 +1,2 @@
 // runtime
-export * from "./runtime/runtime.ts";
+export * from "./src/runtime/runtime.ts";

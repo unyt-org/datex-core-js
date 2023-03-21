@@ -1,0 +1,25 @@
+[package]
+name = "datex-core-js-rs-lib"
+version = "0.0.0"
+authors = ["Benedikt Strehle <benedikt@unyt.org>"]
+edition = "2021"
+
+[lib]
+crate_type = ["cdylib"]
+
+[profile.release]
+codegen-units = 1
+incremental = true
+lto = true
+opt-level = "z"
+
+[dependencies]
+wasm-bindgen = "0.2.81"
+datex-core = { path = "../../datex-core" } # https://dev.cdn.unyt.org/datex-core
+lazy_static = "1.4.0"
+
+[dependencies.web-sys]
+	version = "0.3.21"
+	features = [
+		'console'
+	]
