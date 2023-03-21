@@ -9,4 +9,13 @@ The rust adapter code can be found in the `rs_lib` directory, the generated WASM
 ## Building the rust library
 To generate new WASM and JS glue code for the rust library located in `rs_lib`, run `deno task wasmbuild`
 
+
+## Running the demo in the browser
+
+```bash
+deno run -Aq https://dev.cdn.unyt.org/unyt_node/file_server.ts -w
+```
+Go to http://localhost/demo/
+
+
 Development follows the same scheme like the other core libraries
