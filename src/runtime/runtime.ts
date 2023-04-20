@@ -5,7 +5,6 @@ export class Runtime {
 	public static readonly VERSION = "1.0";
 
 	public static init() {
-		console.log("101")
 		init_runtime()
 	}
 
