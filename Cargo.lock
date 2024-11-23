@@ -187,7 +187,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "datex-core-js-rs-lib"
+name = "datex-core-js"
 version = "0.0.0"
 dependencies = [
  "datex-core",
