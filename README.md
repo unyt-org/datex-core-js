@@ -1,21 +1,28 @@
 # DATEX Core JS
 
-DATEX Core Library for JavaScript, based on the Rust/WASM DATEX Core Library.
+[![Twitter badge][]][Twitter link] [![Discord badge][]][Discord link]
 
-The rust adapter code can be found in the `rs_lib` directory, the generated WASM and JS glue code in the `lib` directory.
+<img align="right" src="./assets/datex-logo-light.svg" height="150px" alt="the deno mascot dinosaur standing in the rain">
 
-## Development
-
-## Building the rust library
-To generate new WASM and JS glue code for the rust library located in `rs_lib`, run `deno task wasmbuild`
+The DATEX Core Library for JavaScript (DATEX Core JS) is based on the [DATEX Core](https://github.com/unyt-org/datex-core) rust library and provides a high-level API for working with DATEX in JavaScript and TypeScript.
+DATEX is developed and maintained by the [unyt.org](https://unyt.org) organization and community.
 
 
-## Running the demo in the browser
+## Contributing
 
-```bash
-deno run -Aq https://dev.cdn.unyt.org/unyt_node/file_server.ts -w
-```
-Go to http://localhost/demo/
+We welcome every contribution!<br>
+Please take a look at the [development guidelines](./DEVELOP.md) and the unyt.org [contribution guidlines](https://github.com/unyt-org/.github/blob/main/CONTRIBUTING.md).
 
 
-Development follows the same scheme like the other core libraries
+## Connect with us
+
+![https://unyt.org/discord](https://dcbadge.vercel.app/api/server/qJwsRRqezy)
+
+**Check out our [Blog](https://unyt.blog)!**
+
+
+
+[Twitter badge]: https://img.shields.io/twitter/follow/unytorg.svg?style=social&label=Follow
+[Twitter link]: https://twitter.com/intent/follow?screen_name=unytorg
+[Discord badge]: https://dcbadge.limes.pink/api/server/qJwsRRqezy
+[Discord link]: https://unyt.org/discord

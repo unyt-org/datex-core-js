@@ -2,8 +2,6 @@
 	"importMap": "./importmap.dev.json",
 	"compilerOptions": {
 		"noImplicitOverride":true,
-		"removeComments": true,
-		"emitDecoratorMetadata": true,
 		"lib": ["deno.window", "dom"]
 	},
 	"tasks": {
