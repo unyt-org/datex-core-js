@@ -6,7 +6,6 @@ use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 pub struct JSRuntime {
-	version: String,
     runtime: Runtime<'static>,
 }
 
@@ -16,9 +15,9 @@ pub struct JSRuntime {
 impl JSRuntime {
 	pub fn new(ctx: &LoggerContext) -> JSRuntime {
 		let logger = Logger::new_for_development(&ctx, "DATEX");
-		logger.success("initialized!");
+		logger.success("JSRuntime initialized");
 		let runtime = Runtime::new();
-		JSRuntime {  runtime, version: env!("CARGO_PKG_VERSION").to_string() }
+		JSRuntime { runtime }
 	}
 }
 
@@ -29,6 +28,6 @@ impl JSRuntime {
 impl JSRuntime {
     #[wasm_bindgen(getter)]
 	pub fn version(&self) -> String {
-		self.version.clone()
+		self.runtime.version.clone()
 	}
 }

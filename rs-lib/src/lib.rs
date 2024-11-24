@@ -1,5 +1,5 @@
-#![feature(generator_trait)]
-#![feature(generators)]
+#![feature(coroutines)]
+#![feature(iter_from_coroutine)]
 
 use std::io;
 use std::io::Write;

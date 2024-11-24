@@ -1,5 +1,7 @@
 {
-	"importMap": "./importmap.dev.json",
+	"name": "@unyt/datex-core-js",
+	"version": "0.0.1",
+	"exports":"./src/datex.ts",
 	"compilerOptions": {
 		"noImplicitOverride":true,
 		"lib": ["deno.window", "dom"]

@@ -5,7 +5,7 @@ authors = ["Benedikt Strehle <benedikt@unyt.org>"]
 edition = "2021"
 
 [lib]
-crate_type = ["cdylib"]
+crate-type = ["cdylib"]
 
 [profile.release]
 codegen-units = 1
