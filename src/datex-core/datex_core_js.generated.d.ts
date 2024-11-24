@@ -6,7 +6,8 @@ export interface InstantiateResult {
   exports: {
     init_runtime: typeof init_runtime;
     compile: typeof compile;
-    decompile: typeof decompile
+    decompile: typeof decompile;
+    JSRuntime : typeof JSRuntime 
   };
 }
 
@@ -32,8 +33,9 @@ export function instantiate(opts?: InstantiateOptions): Promise<InstantiateResul
 export function instantiateWithInstance(opts?: InstantiateOptions): Promise<InstantiateResult>;
 
 /**
+* @returns {JSRuntime}
 */
-export function init_runtime(): void;
+export function init_runtime(): JSRuntime;
 /**
 * @param {string} datex_script
 */
@@ -46,3 +48,11 @@ export function compile(datex_script: string): void;
 * @returns {string}
 */
 export function decompile(dxb: Uint8Array, formatted: boolean, colorized: boolean, resolve_slots: boolean): string;
+/**
+*/
+export class JSRuntime {
+  free(): void;
+/**
+*/
+  readonly version: string;
+}

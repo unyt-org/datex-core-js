@@ -11,7 +11,6 @@ use datex_core::datex_values::Value;
 use datex_core::datex_values::ValueResult;
 use datex_core::decompiler;
 
-use datex_core::runtime;
 use datex_core::utils::logger::LoggerContext;
 use datex_core::utils::logger::Logger;
 use lazy_static::lazy_static;
@@ -19,6 +18,8 @@ use wasm_bindgen::prelude::*;
 
 use web_sys::console;
 
+mod runtime;
+use runtime::JSRuntime;
 
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
 // allocator.
@@ -35,7 +36,6 @@ lazy_static! {
 
 
 
-
 // console.log
 #[wasm_bindgen]
 extern "C" {
@@ -47,9 +47,9 @@ extern "C" {
 
 // export compiler/runtime functions to JavaScript
 #[wasm_bindgen]
-pub fn init_runtime() {
-    let logger = Logger::new_for_development(&CTX, "DATEX");
-    logger.success("initialized!");
+pub fn init_runtime() -> JSRuntime {
+    let runtime = JSRuntime::new(&CTX);
+    return runtime;
 }
 
 

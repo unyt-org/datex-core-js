@@ -166,7 +166,7 @@ dependencies = [
 
 [[package]]
 name = "datex-core"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "byteorder",
  "default-args",
@@ -188,7 +188,7 @@ dependencies = [
 
 [[package]]
 name = "datex-core-js"
-version = "0.0.0"
+version = "0.0.1"
 dependencies = [
  "datex-core",
  "lazy_static",
