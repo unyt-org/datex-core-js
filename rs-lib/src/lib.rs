@@ -54,8 +54,8 @@ pub fn init_runtime() {
 
 
 #[wasm_bindgen]
-pub fn compile(datex_script:&str) -> String {
-    compiler::compile(datex_script).to_string()
+pub fn compile(datex_script:&str) {
+    compiler::compile(datex_script);
 }
 
 #[wasm_bindgen]

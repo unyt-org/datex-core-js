@@ -4,4 +4,4 @@
 *.js
 **/*.js.map
 *.js.map
-/target
+target
