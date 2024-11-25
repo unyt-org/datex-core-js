@@ -7,6 +7,8 @@ export interface InstantiateResult {
     init_runtime: typeof init_runtime;
     compile: typeof compile;
     decompile: typeof decompile;
+    JSMemory : typeof JSMemory ;
+    JSPointer : typeof JSPointer ;
     JSRuntime : typeof JSRuntime 
   };
 }
@@ -50,8 +52,30 @@ export function compile(datex_script: string): void;
 export function decompile(dxb: Uint8Array, formatted: boolean, colorized: boolean, resolve_slots: boolean): string;
 /**
 */
+export class JSMemory {
+  free(): void;
+/**
+* @param {Uint8Array} address
+* @returns {JSPointer | undefined}
+*/
+  get_pointer_by_id(address: Uint8Array): JSPointer | undefined;
+/**
+* @returns {(Uint8Array)[]}
+*/
+  get_pointer_ids(): (Uint8Array)[];
+}
+/**
+*/
+export class JSPointer {
+  free(): void;
+}
+/**
+*/
 export class JSRuntime {
   free(): void;
+/**
+*/
+  readonly memory: JSMemory;
 /**
 */
   readonly version: string;
