@@ -7,8 +7,6 @@ use std::io::Read;
 
 // use datex_cli_core::CLI;
 use datex_core::compiler;
-use datex_core::datex_values::Value;
-use datex_core::datex_values::ValueResult;
 use datex_core::decompiler;
 
 use datex_core::utils::logger::LoggerContext;
@@ -20,6 +18,9 @@ use web_sys::console;
 
 mod runtime;
 use runtime::JSRuntime;
+
+pub mod memory;
+pub mod pointer;
 
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
 // allocator.
