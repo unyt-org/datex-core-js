@@ -5,7 +5,7 @@ import type {
 } from "../datex-core/datex_core_js.generated.d.ts";
 
 // get version from deno.json
-const VERSION = globalThis.Deno
+const VERSION: string = globalThis.Deno
     // Deno
     ? await Deno.readTextFile(new URL("../../deno.json", import.meta.url)).then(
         JSON.parse,
@@ -24,18 +24,18 @@ export class Runtime {
     /**
      * properties from #runtime
      */
-    get version() {
+    get version(): string {
         return this.#runtime.version;
     }
 
-    get memory() {
+    get memory(): JSMemory {
         return this.#memory;
     }
 
     /**
      * @internal only used for debugging
      */
-    get _runtime() {
+    get _runtime(): JSRuntime {
         return this.#runtime;
     }
 
