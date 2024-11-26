@@ -2,7 +2,7 @@
 
 [![Twitter badge][]][Twitter link] [![Discord badge][]][Discord link]
 
-<img align="right" src="./assets/datex-logo-light.svg" height="150px">
+<img align="right" src="./.github/assets/datex-logo-light.svg" height="150px">
 
 The DATEX Core Library for JavaScript (DATEX Core JS) is based on the [DATEX Core](https://github.com/unyt-org/datex-core) rust library and provides a high-level API for working with DATEX in JavaScript and TypeScript.
 DATEX is developed and maintained by the [unyt.org](https://unyt.org) organization and community.

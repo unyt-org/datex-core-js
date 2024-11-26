@@ -23,3 +23,6 @@ lazy_static = "1.4.0"
 	features = [
 		'console'
 	]
+
+[dev-dependencies]
+wasm-bindgen-test = "0.3"
