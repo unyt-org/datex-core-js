@@ -13,6 +13,7 @@
         "serve": "deno run -A https://raw.githubusercontent.com/unyt-org/ts-file-server/main/src/run.ts -w --minify=false --port 8042"
     },
     "fmt": {
-        "indentWidth": 4
+        "indentWidth": 4,
+        "exclude": ["./rs-lib/datex-core"]
     }
 }
