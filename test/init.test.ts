@@ -10,7 +10,7 @@ Deno.test("runtime version", async () => {
         new URL("../deno.json", import.meta.url),
     ).then(JSON.parse).then((data: { version: string }) => data.version);
     const actual_version = await Deno.readTextFile(
-        new URL("../rs-lib/Cargo.toml", import.meta.url),
+        new URL("../rs-lib/datex-core/Cargo.toml", import.meta.url),
     ).then((data) => data.match(/version\s*=\s*"?([^"]*)"?$/m)?.[1]);
 
     const runtime = new Runtime();
