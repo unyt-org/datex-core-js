@@ -1,7 +1,7 @@
 {
-	"name": "@unyt/datex-core-js",
+	"name": "@unyt/datex",
 	"version": "0.0.0",
-	"exports":"./src/datex.ts",
+	"exports":"./src/mod.ts",
 	"compilerOptions": {
 		"noImplicitOverride":true,
 		"lib": ["deno.window", "dom"]
