@@ -18,7 +18,6 @@ const denoJsonPath = "./deno.json";
 const denoJsonText = await Deno.readTextFile(denoJsonPath);
 const denoJson = JSON.parse(denoJsonText);
 
-
 // Extract versions from Cargo.toml and deno.json
 const cargoVersionRegex = /version\s*=\s*"(\d+)\.(\d+)\.(\d+)"/;
 const denoVersionRegex = /"version":\s*"(\d+\.\d+\.\d+)"/;
@@ -39,7 +38,6 @@ if (!denoVersion) {
 if (denoVersion !== cargoVersion) {
     throw new Error("Version mismatch between Cargo.toml and deno.json");
 }
-
 
 switch (type) {
     case "major":
@@ -73,6 +71,8 @@ const updatedDenoJson = denoJsonText.replace(
 await Deno.writeTextFile(denoJsonPath, updatedDenoJson);
 
 // pass new version to the next step
-await Deno.writeTextFile(ghOutput, `NEW_VERSION=${newVersion}`, { append: true });
+await Deno.writeTextFile(ghOutput, `NEW_VERSION=${newVersion}`, {
+    append: true,
+});
 
 console.log(`Version updated to ${newVersion}`, ghOutput);
