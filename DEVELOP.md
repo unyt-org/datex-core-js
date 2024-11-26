@@ -2,11 +2,14 @@
 
 ## Building the rust library
 
-The rust adapter code can be found in the `rs-lib` directory, the generated WASM and JS glue code in the `src/datex-core` directory.
+The rust adapter code can be found in the `rs-lib` directory, the generated WASM
+and JS glue code in the `src/datex-core` directory.
 
-The `rs-lib` directory contains the `datex-core` submodule, which contains the complete [DATEX Core](https://github.com/unyt-org/datex-core.git) library.
+The `rs-lib` directory contains the `datex-core` submodule, which contains the
+complete [DATEX Core](https://github.com/unyt-org/datex-core.git) library.
 
-To generate new WASM and JS glue code for the rust library located in `rs-lib`, run `deno task build`.
+To generate new WASM and JS glue code for the rust library located in `rs-lib`,
+run `deno task build`.
 
 Rust nightly is required for coroutines:
 
@@ -17,12 +20,14 @@ rustup default nightly
 
 ## Testing
 
-The JS runtime can be tested by running `deno task test`.
-This compiles the rust library, generates the WASM and JS glue code, and runs all tests in the `test` directory.
-If you only want to run the tests without rebuilding the rust library, you can run `deno task test-no-build`.
+The JS runtime can be tested by running `deno task test`. This compiles the rust
+library, generates the WASM and JS glue code, and runs all tests in the `test`
+directory. If you only want to run the tests without rebuilding the rust
+library, you can run `deno task test-no-build`.
 
 ## Running in the browser
 
-You can test the library in the browser by running `deno task serve`.
-Now, you can open `http://localhost:8042/test/browser.html` in your browser.
-A new Datex runtime instance is automatically created and can be accessed in the developer console via the global `Datex` variable.
+You can test the library in the browser by running `deno task serve`. Now, you
+can open `http://localhost:8042/test/browser.html` in your browser. A new Datex
+runtime instance is automatically created and can be accessed in the developer
+console via the global `Datex` variable.
