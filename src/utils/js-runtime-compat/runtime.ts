@@ -30,25 +30,15 @@ function detectRuntime(): JSRuntimeType {
 
     if (global.Deno && !global.Deno.isPolyfill) {
         return "deno";
-    } else if (global.process.versions.bun) {
-        return "bun";
-    } else if (global.process) {
-        return "node";
     } else {
         return "browser";
     }
 }
 
 async function getRuntimeInterface(type: JSRuntimeType) {
-    if (type === "deno") {
+    if (type === "deno" || type === "node" || type === "bun") {
         const { DenoRuntimeInterface } = await import("./runtimes/deno.ts");
         return new DenoRuntimeInterface();
-    } else if (type === "node") {
-        const { NodeRuntimeInterface } = await import("./runtimes/node.ts");
-        return new NodeRuntimeInterface();
-    } else if (type === "bun") {
-        const { BunRuntimeInterface } = await import("./runtimes/bun.ts");
-        return new BunRuntimeInterface();
     } else {
         const { BrowserRuntimeInterface } = await import(
             "./runtimes/browser.ts"
