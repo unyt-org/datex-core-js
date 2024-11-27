@@ -22,7 +22,7 @@ jobs:
             id-token: write
         steps:
             - uses: actions/checkout@v4
-            
+
             - name: Set up Deno
               uses: denoland/setup-deno@v2
               with:
@@ -33,5 +33,5 @@ jobs:
 
             - name: Publish to NPM
               env:
-                NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
               run: cd npm && npm publish
