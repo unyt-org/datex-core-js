@@ -16,7 +16,7 @@
     },
     "fmt": {
         "indentWidth": 4,
-        "exclude": ["./rs-lib/datex-core"]
+        "exclude": ["./rs-lib/datex-core", "./npm"]
     },
     "imports": {
         "@deno/dnt": "jsr:@deno/dnt@^0.41.3"
