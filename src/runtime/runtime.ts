@@ -3,17 +3,13 @@ import type {
     JSMemory,
     JSRuntime,
 } from "../datex-core/datex_core_js.generated.d.ts";
+import { runtimeInterface } from "../utils/js-runtime-compat/runtime.ts";
 
 // get version from deno.json
-const VERSION: string = globalThis.Deno
-    // Deno
-    ? await Deno.readTextFile(new URL("../../deno.json", import.meta.url)).then(
-        JSON.parse,
-    ).then((data: { version: string }) => data.version)
-    // browser
-    : await fetch(new URL("../../deno.json", import.meta.url)).then((res) =>
-        res.json()
-    ).then((data: { version: string }) => data.version);
+const VERSION: string = await runtimeInterface
+    .readTextFile(new URL("../../deno.json", import.meta.url))
+    .then(JSON.parse)
+    .then((data: { version: string }) => data.version);
 
 export class Runtime {
     public readonly js_version = VERSION;

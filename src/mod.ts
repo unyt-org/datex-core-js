@@ -1,3 +1,9 @@
+/**
+ * @module mod.ts
+ * @description
+ * This modules exports a instance of the DATEX runtime.
+ */
+
 import { Runtime } from "./runtime/runtime.ts";
 
 /**
