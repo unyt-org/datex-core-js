@@ -6,9 +6,7 @@
  * It automatically detects the runtime environment and provides the correct
  * runtime interface.
  * Supported runtimes are:
- * - Deno
- * - Node.js
- * - Bun
+ * - Deno / Node.js / Bun
  * - Browser
  */
 
@@ -36,7 +34,7 @@ function detectRuntime(): JSRuntimeType {
 }
 
 async function getRuntimeInterface(type: JSRuntimeType) {
-    if (type === "deno" || type === "node" || type === "bun") {
+    if (type === "deno") {
         const { DenoRuntimeInterface } = await import("./runtimes/deno.ts");
         return new DenoRuntimeInterface();
     } else {

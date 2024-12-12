@@ -1,4 +1,4 @@
-export type JSRuntimeType = "deno" | "node" | "bun" | "browser";
+export type JSRuntimeType = "deno" | "browser";
 
 export interface JsRuntimeInterface {
     type: JSRuntimeType;

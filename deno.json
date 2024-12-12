@@ -20,5 +20,8 @@
     },
     "imports": {
         "@deno/dnt": "jsr:@deno/dnt@^0.41.3"
+    },
+    "test": {
+        "exclude": ["./rs-lib/datex-core", "./npm"]
     }
 }
