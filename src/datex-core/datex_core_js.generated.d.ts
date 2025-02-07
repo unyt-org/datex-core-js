@@ -9,7 +9,8 @@ export interface InstantiateResult {
     decompile: typeof decompile;
     JSMemory : typeof JSMemory ;
     JSPointer : typeof JSPointer ;
-    JSRuntime : typeof JSRuntime 
+    JSRuntime : typeof JSRuntime ;
+    JSWebSocketClientInterface : typeof JSWebSocketClientInterface 
   };
 }
 
@@ -79,4 +80,20 @@ export class JSRuntime {
 /**
 */
   readonly version: string;
+}
+/**
+*/
+export class JSWebSocketClientInterface {
+  free(): void;
+/**
+* @param {string} address
+*/
+  constructor(address: string);
+/**
+* @param {Uint8Array} block
+*/
+  send_block(block: Uint8Array): void;
+/**
+*/
+  readonly url: string;
 }
