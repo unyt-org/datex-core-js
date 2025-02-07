@@ -19,6 +19,9 @@ use web_sys::console;
 mod runtime;
 use runtime::JSRuntime;
 
+pub mod network;
+use network::com_interfaces::websocket_client_interface;
+
 pub mod memory;
 pub mod pointer;
 
