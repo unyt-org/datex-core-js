@@ -20,7 +20,7 @@ mod runtime;
 use runtime::JSRuntime;
 
 pub mod network;
-use network::com_interfaces::websocket_client_interface;
+use network::com_interfaces::websocket_client_js;
 
 pub mod memory;
 pub mod pointer;
@@ -47,7 +47,7 @@ extern "C" {
 // export compiler/runtime functions to JavaScript
 #[wasm_bindgen]
 pub fn init_runtime() -> JSRuntime {
-  let runtime = JSRuntime::new(&CTX);
+  let runtime = JSRuntime::create(&CTX);
   return runtime;
 }
 

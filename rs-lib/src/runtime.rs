@@ -1,14 +1,13 @@
-use std::cell::RefCell;
 use std::rc::Rc;
 
 use datex_core::datex_values::Pointer;
-use datex_core::runtime::memory;
 use datex_core::runtime::Runtime;
 use datex_core::utils::logger::Logger;
 use datex_core::utils::logger::LoggerContext;
 use wasm_bindgen::prelude::*;
 
 use crate::memory::JSMemory;
+use crate::network::com_hub::JSComHub;
 
 #[wasm_bindgen]
 pub struct JSRuntime {
@@ -19,7 +18,7 @@ pub struct JSRuntime {
  * Internal impl of the JSRuntime, not exposed to JavaScript
  */
 impl JSRuntime {
-  pub fn new(ctx: &LoggerContext) -> JSRuntime {
+  pub fn create(ctx: &LoggerContext) -> JSRuntime {
     let logger = Logger::new_for_development(&ctx, "DATEX");
     logger.success("JSRuntime initialized");
     let runtime = Runtime::new();
@@ -30,7 +29,14 @@ impl JSRuntime {
       ],
       Pointer::from_id(Vec::new()),
     );
-    JSRuntime { runtime }
+
+    JSRuntime::new(runtime)
+  }
+
+  pub fn new(runtime: Runtime<'static>) -> JSRuntime {
+    JSRuntime { 
+      runtime
+    }
   }
 }
 
@@ -47,5 +53,10 @@ impl JSRuntime {
   #[wasm_bindgen(getter)]
   pub fn memory(&self) -> JSMemory {
     JSMemory::new(Rc::clone(&self.runtime.memory))
+  }
+
+  #[wasm_bindgen(getter)]
+  pub fn com_hub(&self) -> JSComHub {
+    JSComHub::new(Rc::clone(&self.runtime.com_hub))
   }
 }

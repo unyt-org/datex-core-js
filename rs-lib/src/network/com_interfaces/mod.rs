@@ -1,1 +1,1 @@
-pub mod websocket_client_interface;
+pub mod websocket_client_js;

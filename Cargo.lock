@@ -237,6 +237,7 @@ dependencies = [
  "regex",
  "strum",
  "thiserror 2.0.11",
+ "url 2.5.4",
  "wasm-bindgen",
  "websocket",
 ]
