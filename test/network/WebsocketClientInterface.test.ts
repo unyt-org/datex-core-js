@@ -1,6 +1,9 @@
 import { WebsocketClientInterface } from "../../src/network/com-interfaces/WebsocketClientInterface.ts";
 import { assertThrows } from "jsr:@std/assert/throws";
 import { assert, assertEquals } from "jsr:@std/assert";
+import { createMockupServer } from "./WebsockeMockupServer.ts";
+import { Runtime } from "../../src/runtime/Runtime.ts";
+
 
 Deno.test("websocket fail test", () => {
     assertThrows(
@@ -26,10 +29,24 @@ Deno.test("websocket construct via https", () => {
     assertEquals(websocketClient.url, "wss://localhost:8080/");
 });
 Deno.test("websocket construct via ws", () => {
-    const websocketClient = new WebsocketClientInterface("ws://localhost:8080");
+    const websocketClient = new WebsocketClientInterface(`ws://localhost:8080`);
     assertEquals(websocketClient.url, "ws://localhost:8080/");
 });
-// Deno.test("websocket connect", async () => {
-// 	const websocketClient = new WebsocketClientInterface("ws://localhost:8080");
-// 	assert(await websocketClient.connect(), "Connection failed");
-// });
+
+Deno.test("websocket connect", async () => {
+    const port = 8484;
+    const mockupServer = createMockupServer(port);
+    const runtime = new Runtime();
+    runtime.comHub.add_ws_interface("ws://localhost:8484/");
+
+    using server = await mockupServer;
+    server.send(runtime._runtime._create_block(new Uint8Array([0x01, 0x02, 0x03, 0x04])));
+    await new Promise((resolve) => setTimeout(resolve, 1300));
+    runtime.comHub._update();
+    await new Promise((resolve) => setTimeout(resolve, 1300));
+
+    console.log(
+        runtime.comHub._incoming_blocks
+    );
+    close();
+});

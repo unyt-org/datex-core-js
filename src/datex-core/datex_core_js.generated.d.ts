@@ -60,6 +60,12 @@ export class JSComHub {
 * @param {string} address
 */
   add_ws_interface(address: string): void;
+/**
+*/
+  _update(): void;
+/**
+*/
+  readonly _incoming_blocks: (Uint8Array)[];
 }
 /**
 */
@@ -84,6 +90,11 @@ export class JSPointer {
 */
 export class JSRuntime {
   free(): void;
+/**
+* @param {Uint8Array | undefined} [body]
+* @returns {Uint8Array}
+*/
+  _create_block(body?: Uint8Array): Uint8Array;
 /**
 */
   readonly com_hub: JSComHub;

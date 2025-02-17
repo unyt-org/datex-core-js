@@ -230,6 +230,7 @@ dependencies = [
  "mopa",
  "num-bigint",
  "num-integer",
+ "num-traits",
  "num_enum",
  "pad",
  "pest",

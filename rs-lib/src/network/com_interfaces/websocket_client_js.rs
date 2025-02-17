@@ -1,4 +1,4 @@
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, collections::VecDeque, rc::Rc, sync::{Arc, Mutex}, vec};
 
 use anyhow::Result;
 use datex_core::network::com_interfaces::websocket_client::{
@@ -6,7 +6,7 @@ use datex_core::network::com_interfaces::websocket_client::{
   };
 
 use url::Url;
-use wasm_bindgen::{convert::IntoWasmAbi, prelude::{wasm_bindgen, Closure}, JsCast, JsError, JsValue};
+use wasm_bindgen::{prelude::{wasm_bindgen, Closure}, JsCast, JsError};
 use web_sys::{js_sys, ErrorEvent, MessageEvent};
 
 macro_rules! console_log {
@@ -52,43 +52,36 @@ impl JSWebSocketClientInterface {
 pub struct WebSocketJS {
   address: Url,
   ws: web_sys::WebSocket,
+  receive_queue: Arc<Mutex<VecDeque<u8>>>,
 }
 
 impl WebSocketJS {
   fn new(address: &str) -> Result<WebSocketJS, JsError> {
     let address = parse_url(address).map_err(|_| JsError::new("Invalid URL"))?;
     let ws = web_sys::WebSocket::new(&address.to_string()).map_err(|_| JsError::new("Failed to create WebSocket"))?;
-    return Ok(WebSocketJS { address, ws });
+    return Ok(WebSocketJS {
+      address,
+      ws,
+      receive_queue: Arc::new(Mutex::new(VecDeque::new())),
+    });
   }
 
   fn connect(&self) -> Result<()> {
-  
     self.ws.set_binary_type(web_sys::BinaryType::Arraybuffer);
     // create callback
     let cloned_ws = self.ws.clone();
     cloned_ws.set_binary_type(web_sys::BinaryType::Arraybuffer);
-
+    
+    let receive_queue = self.receive_queue.clone();
     let onmessage_callback = Closure::<dyn FnMut(_)>::new(move |e: MessageEvent| {
-        // Handle difference Text/Binary,...
         if let Ok(abuf) = e.data().dyn_into::<js_sys::ArrayBuffer>() {
-            console_log!("message event, received arraybuffer: {:?}", abuf);
             let array = js_sys::Uint8Array::new(&abuf);
-            let len = array.byte_length() as usize;
-            console_log!("Arraybuffer received {}bytes: {:?}", len, array.to_vec());
-            // here you can for example use Serde Deserialize decode the message
-            // for demo purposes we switch back to Blob-type and send off another binary message
-            // cloned_ws.set_binary_type(web_sys::BinaryType::Blob);
-            // match cloned_ws.send_with_u8_array(&[5, 6, 7, 8]) {
-            //     Ok(_) => console_log!("binary message successfully sent"),
-            //     Err(err) => console_log!("error sending message: {:?}", err),
-            // }
+            receive_queue.lock().unwrap().extend(array.to_vec().iter().cloned());
         } else {
             console_log!("message event, received Unknown: {:?}", e.data());
         }
     });
-    // set message event handler on WebSocket
     self.ws.set_onmessage(Some(onmessage_callback.as_ref().unchecked_ref()));
-    // forget the callback to keep it alive
     onmessage_callback.forget();
 
     let onerror_callback = Closure::<dyn FnMut(_)>::new(move |e: ErrorEvent| {
@@ -99,20 +92,18 @@ impl WebSocketJS {
 
     let onopen_callback = Closure::<dyn FnMut()>::new(move || {
         console_log!("socket opened");
-        // TODO: create socket and add incoming messages to the socket queue
     });
     self.ws.set_onopen(Some(onopen_callback.as_ref().unchecked_ref()));
     onopen_callback.forget();
-
     Ok(())
   }
-
 }
 
 impl WebSocket for WebSocketJS {
     
-    fn connect(&self) -> Result<()> {
-        self.connect()
+    fn connect(&self) -> Result<Arc<Mutex<VecDeque<u8>>>> {
+        self.connect()?;
+        Ok(self.receive_queue.clone())
     }
 
     fn send_data(&self, message: &[u8]) -> bool {

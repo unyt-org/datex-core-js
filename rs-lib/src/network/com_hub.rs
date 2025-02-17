@@ -1,6 +1,7 @@
 use std::{cell::RefCell, rc::Rc};
 use datex_core::network::{com_hub::ComHub, com_interfaces::com_interface::ComInterfaceTrait};
 use wasm_bindgen::prelude::*;
+use web_sys::js_sys;
 
 use crate::network::com_interfaces::websocket_client_js::JSWebSocketClientInterface;
 
@@ -33,5 +34,22 @@ impl JSComHub {
 	)).map_err(|e| JsError::new(&format!("{:?}", e)))?;
 
 	Ok(())
+  }
+
+  #[wasm_bindgen]
+  pub fn _update(&mut self) {
+	self.com_hub.borrow_mut().update();
+  }
+
+  #[wasm_bindgen(getter)]
+  pub fn _incoming_blocks(self) -> Vec<js_sys::Uint8Array> {
+	let vec = self.com_hub.borrow().incoming_blocks.clone();
+	let vec = vec.borrow();
+	vec.iter().map(|block| {
+		let bytes = block.to_bytes().unwrap();
+		let entry = js_sys::Uint8Array::new_with_length(bytes.len() as u32);
+		entry.copy_from(&bytes);
+		entry
+	}).collect::<Vec<_>>()
   }
 }

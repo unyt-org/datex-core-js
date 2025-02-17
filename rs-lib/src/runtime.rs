@@ -1,6 +1,7 @@
 use std::rc::Rc;
 
 use datex_core::datex_values::Pointer;
+use datex_core::global::dxb_block::DXBBlock;
 use datex_core::runtime::Runtime;
 use datex_core::utils::logger::Logger;
 use datex_core::utils::logger::LoggerContext;
@@ -58,5 +59,13 @@ impl JSRuntime {
   #[wasm_bindgen(getter)]
   pub fn com_hub(&self) -> JSComHub {
     JSComHub::new(Rc::clone(&self.runtime.com_hub))
+  }
+
+  #[wasm_bindgen]
+  pub fn _create_block(&self, body: Option<Vec<u8>>) -> Vec<u8> {
+    DXBBlock{
+      body: body.unwrap_or(vec![]),
+      ..DXBBlock::default()
+    }.to_bytes().unwrap()
   }
 }
