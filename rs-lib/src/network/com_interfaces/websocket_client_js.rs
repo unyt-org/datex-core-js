@@ -15,7 +15,6 @@ pub struct WebSocketJS {
   ws: web_sys::WebSocket,
   receive_queue: Arc<Mutex<VecDeque<u8>>>,
   logger: Option<Rc<RefCell<Logger>>>,
-  socket: Option<Rc<RefCell<ComInterfaceSocket>>>,
 }
 
 impl WebSocketJS {
@@ -28,12 +27,10 @@ impl WebSocketJS {
         Some(logger) => Some(Rc::new(RefCell::new(logger))),
         None => None,
       },
-      socket: None,
       ws,
       receive_queue: Arc::new(Mutex::new(VecDeque::new())),
     });
   }
-
 
   fn connect(&mut self) -> Result<()> {
     self.ws.set_binary_type(web_sys::BinaryType::Arraybuffer);
@@ -55,6 +52,7 @@ impl WebSocketJS {
         if let Ok(abuf) = e.data().dyn_into::<js_sys::ArrayBuffer>() {
             let array = js_sys::Uint8Array::new(&abuf);
             receive_queue.lock().unwrap().extend(array.to_vec().iter().cloned());
+            logger.borrow().info(&format!("message event, received: {:?}", array));
         } else {
             logger.borrow().info(&format!("message event, received Unknown: {:?}", e.data()));
         }
@@ -85,8 +83,6 @@ impl WebSocketJS {
     };
 
     // TODO FIXME
-    let new_socket = Rc::new(RefCell::new(ComInterfaceSocket::new_with_logger(logger.borrow().clone()))).clone();
-    self.socket = Some(new_socket);
 
     let onopen_callback = Closure::<dyn FnMut()>::new(move || {
       logger.borrow().success(&format!("Socket opened"));
@@ -110,9 +106,5 @@ impl WebSocket for WebSocketJS {
 
     fn get_address(&self) -> Url {
         self.address.clone()
-    }
-    
-    fn get_socket(&self) -> Option<Rc<RefCell<ComInterfaceSocket>>> {
-        return self.socket.clone();
     }
 }

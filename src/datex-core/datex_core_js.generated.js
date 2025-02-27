@@ -4,7 +4,7 @@
 // deno-fmt-ignore-file
 /// <reference types="./datex_core_js.generated.d.ts" />
 
-// source-hash: cc7001f0900838a7f8dc6ea035bf258bd91f345a
+// source-hash: 50c7e3371d9dd2d55aea5de85f342cae6b981282
 let wasm;
 
 const heap = new Array(128).fill(undefined);
@@ -233,24 +233,20 @@ function __wbg_adapter_19(arg0, arg1) {
     );
 }
 
-let cachedUint32Memory0 = null;
-
-function getUint32Memory0() {
-    if (cachedUint32Memory0 === null || cachedUint32Memory0.byteLength === 0) {
-        cachedUint32Memory0 = new Uint32Array(wasm.memory.buffer);
-    }
-    return cachedUint32Memory0;
+function passArray8ToWasm0(arg, malloc) {
+    const ptr = malloc(arg.length * 1, 1) >>> 0;
+    getUint8Memory0().set(arg, ptr / 1);
+    WASM_VECTOR_LEN = arg.length;
+    return ptr;
 }
 
-function getArrayJsValueFromWasm0(ptr, len) {
+function isLikeNone(x) {
+    return x === undefined || x === null;
+}
+
+function getArrayU8FromWasm0(ptr, len) {
     ptr = ptr >>> 0;
-    const mem = getUint32Memory0();
-    const slice = mem.subarray(ptr / 4, ptr / 4 + len);
-    const result = [];
-    for (let i = 0; i < slice.length; i++) {
-        result.push(takeObject(slice[i]));
-    }
-    return result;
+    return getUint8Memory0().subarray(ptr / 1, ptr / 1 + len);
 }
 /**
  * @returns {JSRuntime}
@@ -273,12 +269,6 @@ export function compile(datex_script) {
     wasm.compile(ptr0, len0);
 }
 
-function passArray8ToWasm0(arg, malloc) {
-    const ptr = malloc(arg.length * 1, 1) >>> 0;
-    getUint8Memory0().set(arg, ptr / 1);
-    WASM_VECTOR_LEN = arg.length;
-    return ptr;
-}
 /**
  * @param {Uint8Array} dxb
  * @param {boolean} formatted
@@ -305,13 +295,24 @@ export function decompile(dxb, formatted, colorized, resolve_slots) {
     }
 }
 
-function isLikeNone(x) {
-    return x === undefined || x === null;
+let cachedUint32Memory0 = null;
+
+function getUint32Memory0() {
+    if (cachedUint32Memory0 === null || cachedUint32Memory0.byteLength === 0) {
+        cachedUint32Memory0 = new Uint32Array(wasm.memory.buffer);
+    }
+    return cachedUint32Memory0;
 }
 
-function getArrayU8FromWasm0(ptr, len) {
+function getArrayJsValueFromWasm0(ptr, len) {
     ptr = ptr >>> 0;
-    return getUint8Memory0().subarray(ptr / 1, ptr / 1 + len);
+    const mem = getUint32Memory0();
+    const slice = mem.subarray(ptr / 4, ptr / 4 + len);
+    const result = [];
+    for (let i = 0; i < slice.length; i++) {
+        result.push(takeObject(slice[i]));
+    }
+    return result;
 }
 
 function handleError(f, args) {
@@ -652,16 +653,16 @@ const imports = {
             const ret = wasm.memory;
             return addHeapObject(ret);
         },
-        __wbindgen_closure_wrapper26: function (arg0, arg1, arg2) {
-            const ret = makeMutClosure(arg0, arg1, 5, __wbg_adapter_16);
+        __wbindgen_closure_wrapper93: function (arg0, arg1, arg2) {
+            const ret = makeMutClosure(arg0, arg1, 22, __wbg_adapter_16);
             return addHeapObject(ret);
         },
-        __wbindgen_closure_wrapper27: function (arg0, arg1, arg2) {
-            const ret = makeMutClosure(arg0, arg1, 5, __wbg_adapter_19);
+        __wbindgen_closure_wrapper94: function (arg0, arg1, arg2) {
+            const ret = makeMutClosure(arg0, arg1, 22, __wbg_adapter_19);
             return addHeapObject(ret);
         },
-        __wbindgen_closure_wrapper28: function (arg0, arg1, arg2) {
-            const ret = makeMutClosure(arg0, arg1, 5, __wbg_adapter_16);
+        __wbindgen_closure_wrapper95: function (arg0, arg1, arg2) {
+            const ret = makeMutClosure(arg0, arg1, 22, __wbg_adapter_16);
             return addHeapObject(ret);
         },
     },
