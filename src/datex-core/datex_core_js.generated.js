@@ -4,7 +4,7 @@
 // deno-fmt-ignore-file
 /// <reference types="./datex_core_js.generated.d.ts" />
 
-// source-hash: 24d5239d0cdd316f14e3c4548cf9d467bb400ab3
+// source-hash: 7ae7b856bf6f8756703246d44affae362c7f69e5
 let wasm;
 
 const cachedTextDecoder = typeof TextDecoder !== "undefined"
@@ -378,9 +378,8 @@ export class JSComHub {
      */
     get _incoming_blocks() {
         try {
-            const ptr = this.__destroy_into_raw();
             const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-            wasm.jscomhub__incoming_blocks(retptr, ptr);
+            wasm.jscomhub__incoming_blocks(retptr, this.__wbg_ptr);
             var r0 = getInt32Memory0()[retptr / 4 + 0];
             var r1 = getInt32Memory0()[retptr / 4 + 1];
             var v1 = getArrayJsValueFromWasm0(r0, r1).slice();

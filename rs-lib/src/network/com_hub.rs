@@ -45,7 +45,7 @@ impl JSComHub {
   }
 
   #[wasm_bindgen(getter)]
-  pub fn _incoming_blocks(self) -> Vec<js_sys::Uint8Array> {
+  pub fn _incoming_blocks(&self) -> Vec<js_sys::Uint8Array> {
 	let vec: Rc<RefCell<std::collections::VecDeque<Rc<datex_core::global::dxb_block::DXBBlock>>>> = self.com_hub.borrow().incoming_blocks.clone();
 	let vec = vec.borrow();
 	vec.iter().map(|block| {

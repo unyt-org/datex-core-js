@@ -1,4 +1,3 @@
-import { assertThrows } from "jsr:@std/assert/throws";
 import { assert, assertEquals } from "jsr:@std/assert";
 import { createMockupServer } from "./WebsocketMockupServer.ts";
 import { Runtime } from "../../src/runtime/Runtime.ts";
