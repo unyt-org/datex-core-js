@@ -51,8 +51,8 @@ impl WebSocketJS {
     let onmessage_callback = Closure::<dyn FnMut(_)>::new(move |e: MessageEvent| {
         if let Ok(abuf) = e.data().dyn_into::<js_sys::ArrayBuffer>() {
             let array = js_sys::Uint8Array::new(&abuf);
-            receive_queue.lock().unwrap().extend(array.to_vec().iter().cloned());
-            logger.borrow().info(&format!("message event, received: {:?}", array));
+            receive_queue.lock().unwrap().extend(array.to_vec());
+            logger.borrow().info(&format!("message event, received: {:?} bytes ({:?})", array.to_vec().len(), receive_queue));
         } else {
             logger.borrow().info(&format!("message event, received Unknown: {:?}", e.data()));
         }

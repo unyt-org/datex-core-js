@@ -10,12 +10,13 @@ Deno.test("websocket connect", async () => {
     runtime.comHub.add_ws_interface("ws://localhost:8484/");
 
     using server = await mockupServer;
-    server.send(runtime._runtime._create_block(new Uint8Array([0x01, 0x02, 0x03, 0x04])));
-    await new Promise((resolve) => setTimeout(resolve, 1300));
+    const block = runtime._runtime._create_block(new Uint8Array([0x01, 0x02, 0x03, 0x04]));
+    server.send(block);
+    await new Promise((resolve) => setTimeout(resolve, 100));
     runtime.comHub._update();
-    await new Promise((resolve) => setTimeout(resolve, 1300));
 
-    console.log(
-        runtime.comHub._incoming_blocks
-    );
+    assert(runtime.comHub._incoming_blocks.length === 1);
+    const incoming_block = runtime.comHub._incoming_blocks[0];
+    assert(incoming_block.length === block.length);
+    assertEquals(incoming_block, block);
 });
