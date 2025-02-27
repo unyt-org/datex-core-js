@@ -1,5 +1,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
+use std::sync::Arc;
+use std::sync::Mutex;
 
 use datex_core::datex_values::Pointer;
 use datex_core::global::dxb_block::DXBBlock;
@@ -66,7 +68,6 @@ impl JSRuntime {
 
   #[wasm_bindgen]
   pub fn _create_block(&self, body: Option<Vec<u8>>) -> Vec<u8> {
-    self.runtime.logger.success("geloo works");
     DXBBlock{
       body: body.unwrap_or(vec![]),
       ..DXBBlock::default()

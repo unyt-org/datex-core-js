@@ -1,9 +1,11 @@
 use std::{cell::RefCell, rc::Rc};
-use datex_core::network::{com_hub::ComHub, com_interfaces::com_interface::ComInterfaceTrait};
+use datex_core::network::{com_hub::ComHub, com_interfaces::{com_interface::ComInterfaceTrait, websocket_client::WebSocketClientInterface}};
 use wasm_bindgen::prelude::*;
 use web_sys::js_sys;
 
-use crate::network::com_interfaces::websocket_client_js::JSWebSocketClientInterface;
+use crate::network::com_interfaces::websocket_client_js::WebSocketJS;
+
+// use crate::network::com_interfaces::websocket_client_js::JSWebSocketClientInterface;
 
 #[wasm_bindgen]
 pub struct JSComHub {
@@ -27,10 +29,11 @@ impl JSComHub {
   #[wasm_bindgen]
   pub fn add_ws_interface(&mut self, address: &str) -> Result<(), JsError> {
 
-	let ws_interface = JSWebSocketClientInterface::new(address)?;
+	let websocket = WebSocketJS::new(address, self.com_hub.borrow().logger.clone())?;
+    let ws_interface = Rc::new(RefCell::new(WebSocketClientInterface::new_with_web_socket(websocket, self.com_hub.borrow().logger.clone())));
 
 	self.com_hub.borrow_mut().add_interface(ComInterfaceTrait::new(
-		ws_interface.get_ws_interface(),
+		ws_interface.clone(),
 	)).map_err(|e| JsError::new(&format!("{:?}", e)))?;
 
 	Ok(())

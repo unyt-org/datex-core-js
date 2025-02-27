@@ -4,8 +4,30 @@
 // deno-fmt-ignore-file
 /// <reference types="./datex_core_js.generated.d.ts" />
 
-// source-hash: aa30c59ddd1f3ff328aefb75f3007ba6ff8a3551
+// source-hash: cc7001f0900838a7f8dc6ea035bf258bd91f345a
 let wasm;
+
+const heap = new Array(128).fill(undefined);
+
+heap.push(undefined, null, true, false);
+
+function getObject(idx) {
+    return heap[idx];
+}
+
+let heap_next = heap.length;
+
+function dropObject(idx) {
+    if (idx < 132) return;
+    heap[idx] = heap_next;
+    heap_next = idx;
+}
+
+function takeObject(idx) {
+    const ret = getObject(idx);
+    dropObject(idx);
+    return ret;
+}
 
 const cachedTextDecoder = typeof TextDecoder !== "undefined"
     ? new TextDecoder("utf-8", { ignoreBOM: true, fatal: true })
@@ -31,12 +53,6 @@ function getStringFromWasm0(ptr, len) {
     return cachedTextDecoder.decode(getUint8Memory0().subarray(ptr, ptr + len));
 }
 
-const heap = new Array(128).fill(undefined);
-
-heap.push(undefined, null, true, false);
-
-let heap_next = heap.length;
-
 function addHeapObject(obj) {
     if (heap_next === heap.length) heap.push(heap.length + 1);
     const idx = heap_next;
@@ -44,22 +60,6 @@ function addHeapObject(obj) {
 
     heap[idx] = obj;
     return idx;
-}
-
-function getObject(idx) {
-    return heap[idx];
-}
-
-function dropObject(idx) {
-    if (idx < 132) return;
-    heap[idx] = heap_next;
-    heap_next = idx;
-}
-
-function takeObject(idx) {
-    const ret = getObject(idx);
-    dropObject(idx);
-    return ret;
 }
 
 function debugString(val) {
@@ -226,7 +226,7 @@ function __wbg_adapter_16(arg0, arg1, arg2) {
     );
 }
 
-function __wbg_adapter_21(arg0, arg1) {
+function __wbg_adapter_19(arg0, arg1) {
     wasm._dyn_core__ops__function__FnMut_____Output___R_as_wasm_bindgen__closure__WasmClosure___describe__invoke__he5bf4e1724d0d183(
         arg0,
         arg1,
@@ -550,86 +550,18 @@ export class JSRuntime {
     }
 }
 
-const JSWebSocketClientInterfaceFinalization =
-    (typeof FinalizationRegistry === "undefined")
-        ? { register: () => {}, unregister: () => {} }
-        : new FinalizationRegistry((ptr) =>
-            wasm.__wbg_jswebsocketclientinterface_free(ptr >>> 0)
-        );
-/** */
-export class JSWebSocketClientInterface {
-    __destroy_into_raw() {
-        const ptr = this.__wbg_ptr;
-        this.__wbg_ptr = 0;
-        JSWebSocketClientInterfaceFinalization.unregister(this);
-        return ptr;
-    }
-
-    free() {
-        const ptr = this.__destroy_into_raw();
-        wasm.__wbg_jswebsocketclientinterface_free(ptr);
-    }
-    /**
-     * @param {string} address
-     */
-    constructor(address) {
-        try {
-            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-            const ptr0 = passStringToWasm0(
-                address,
-                wasm.__wbindgen_malloc,
-                wasm.__wbindgen_realloc,
-            );
-            const len0 = WASM_VECTOR_LEN;
-            wasm.jswebsocketclientinterface_new(retptr, ptr0, len0);
-            var r0 = getInt32Memory0()[retptr / 4 + 0];
-            var r1 = getInt32Memory0()[retptr / 4 + 1];
-            var r2 = getInt32Memory0()[retptr / 4 + 2];
-            if (r2) {
-                throw takeObject(r1);
-            }
-            this.__wbg_ptr = r0 >>> 0;
-            return this;
-        } finally {
-            wasm.__wbindgen_add_to_stack_pointer(16);
-        }
-    }
-    /**
-     * @returns {string}
-     */
-    get url() {
-        let deferred1_0;
-        let deferred1_1;
-        try {
-            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-            wasm.jswebsocketclientinterface_url(retptr, this.__wbg_ptr);
-            var r0 = getInt32Memory0()[retptr / 4 + 0];
-            var r1 = getInt32Memory0()[retptr / 4 + 1];
-            deferred1_0 = r0;
-            deferred1_1 = r1;
-            return getStringFromWasm0(r0, r1);
-        } finally {
-            wasm.__wbindgen_add_to_stack_pointer(16);
-            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
-        }
-    }
-}
-
 const imports = {
     __wbindgen_placeholder__: {
+        __wbindgen_object_drop_ref: function (arg0) {
+            takeObject(arg0);
+        },
         __wbindgen_string_new: function (arg0, arg1) {
             const ret = getStringFromWasm0(arg0, arg1);
             return addHeapObject(ret);
         },
-        __wbindgen_object_drop_ref: function (arg0) {
-            takeObject(arg0);
-        },
         __wbindgen_error_new: function (arg0, arg1) {
             const ret = new Error(getStringFromWasm0(arg0, arg1));
             return addHeapObject(ret);
-        },
-        __wbg_log_7bd1eb71bdf7f15c: function (arg0, arg1) {
-            console.log(getStringFromWasm0(arg0, arg1));
         },
         __wbindgen_object_clone_ref: function (arg0) {
             const ret = getObject(arg0);
@@ -720,16 +652,16 @@ const imports = {
             const ret = wasm.memory;
             return addHeapObject(ret);
         },
-        __wbindgen_closure_wrapper47: function (arg0, arg1, arg2) {
-            const ret = makeMutClosure(arg0, arg1, 14, __wbg_adapter_16);
+        __wbindgen_closure_wrapper26: function (arg0, arg1, arg2) {
+            const ret = makeMutClosure(arg0, arg1, 5, __wbg_adapter_16);
             return addHeapObject(ret);
         },
-        __wbindgen_closure_wrapper48: function (arg0, arg1, arg2) {
-            const ret = makeMutClosure(arg0, arg1, 14, __wbg_adapter_16);
+        __wbindgen_closure_wrapper27: function (arg0, arg1, arg2) {
+            const ret = makeMutClosure(arg0, arg1, 5, __wbg_adapter_19);
             return addHeapObject(ret);
         },
-        __wbindgen_closure_wrapper49: function (arg0, arg1, arg2) {
-            const ret = makeMutClosure(arg0, arg1, 14, __wbg_adapter_21);
+        __wbindgen_closure_wrapper28: function (arg0, arg1, arg2) {
+            const ret = makeMutClosure(arg0, arg1, 5, __wbg_adapter_16);
             return addHeapObject(ret);
         },
     },
@@ -884,7 +816,6 @@ function getWasmInstanceExports() {
         JSMemory,
         JSPointer,
         JSRuntime,
-        JSWebSocketClientInterface,
     };
 }
 
