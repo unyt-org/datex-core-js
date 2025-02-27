@@ -22,11 +22,9 @@ pub struct JSRuntime {
  */
 impl JSRuntime {
   pub fn create(ctx: Rc<RefCell<LoggerContext>>) -> JSRuntime {
-    let logger = Logger::new_for_development(ctx, "DATEX".to_string());
-    logger.success("JSRuntime initialized");
     let runtime = Runtime::new_with_crypto_and_logger(
       &RustCrypto {},
-      Rc::new(RefCell::new(LoggerContext { log_redirect: None })),
+      ctx.clone()
     );
     runtime.memory.borrow_mut().store_pointer(
       [
