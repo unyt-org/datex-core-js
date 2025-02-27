@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use std::rc::Rc;
 
 use datex_core::datex_values::Pointer;
@@ -5,6 +6,7 @@ use datex_core::global::dxb_block::DXBBlock;
 use datex_core::runtime::Runtime;
 use datex_core::utils::logger::Logger;
 use datex_core::utils::logger::LoggerContext;
+use datex_core::utils::rust_crypto::RustCrypto;
 use wasm_bindgen::prelude::*;
 
 use crate::memory::JSMemory;
@@ -19,10 +21,13 @@ pub struct JSRuntime {
  * Internal impl of the JSRuntime, not exposed to JavaScript
  */
 impl JSRuntime {
-  pub fn create(ctx: &LoggerContext) -> JSRuntime {
-    let logger = Logger::new_for_development(&ctx, "DATEX");
+  pub fn create(ctx: Rc<RefCell<LoggerContext>>) -> JSRuntime {
+    let logger = Logger::new_for_development(ctx, "DATEX".to_string());
     logger.success("JSRuntime initialized");
-    let runtime = Runtime::new();
+    let runtime = Runtime::new_with_crypto_and_logger(
+      &RustCrypto {},
+      Rc::new(RefCell::new(LoggerContext { log_redirect: None })),
+    );
     runtime.memory.borrow_mut().store_pointer(
       [
         10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160,
@@ -63,9 +68,10 @@ impl JSRuntime {
 
   #[wasm_bindgen]
   pub fn _create_block(&self, body: Option<Vec<u8>>) -> Vec<u8> {
+    self.runtime.logger.success("geloo works");
     DXBBlock{
       body: body.unwrap_or(vec![]),
       ..DXBBlock::default()
-    }.to_bytes().unwrap()
+    }.recalculate_struct().to_bytes().unwrap()
   }
 }

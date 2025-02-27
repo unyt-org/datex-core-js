@@ -48,5 +48,4 @@ Deno.test("websocket connect", async () => {
     console.log(
         runtime.comHub._incoming_blocks
     );
-    close();
 });

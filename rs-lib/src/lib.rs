@@ -1,9 +1,12 @@
 #![feature(coroutines)]
 #![feature(iter_from_coroutine)]
 
+use std::cell::Ref;
+use std::cell::RefCell;
 use std::io;
 use std::io::Read;
 use std::io::Write;
+use std::rc::Rc;
 
 // use datex_cli_core::CLI;
 use datex_core::compiler;
@@ -19,6 +22,9 @@ use web_sys::console;
 mod runtime;
 use runtime::JSRuntime;
 
+pub mod jsconsole;
+pub(crate) use jsconsole::debug;
+
 pub mod network;
 use network::com_interfaces::websocket_client_js;
 
@@ -31,12 +37,6 @@ pub mod pointer;
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
-lazy_static! {
-  static ref CTX: LoggerContext = LoggerContext {
-    log_redirect: Some(|s: &str| -> () { console::log_1(&s.into()) })
-  };
-}
-
 // console.log
 #[wasm_bindgen]
 extern "C" {
@@ -47,7 +47,10 @@ extern "C" {
 // export compiler/runtime functions to JavaScript
 #[wasm_bindgen]
 pub fn init_runtime() -> JSRuntime {
-  let runtime = JSRuntime::create(&CTX);
+  let ctx = Rc::new(RefCell::new(LoggerContext {
+    log_redirect: Some(|s: &str| -> () { console::log_1(&s.into()) }),
+  }));
+  let runtime = JSRuntime::create(ctx.clone());
   return runtime;
 }
 
@@ -63,7 +66,10 @@ pub fn decompile(
   colorized: bool,
   resolve_slots: bool,
 ) -> String {
-  return decompiler::decompile(&CTX, dxb, formatted, colorized, resolve_slots);
+  let ctx = Rc::new(RefCell::new(LoggerContext {
+    log_redirect: Some(|s: &str| -> () { console::log_1(&s.into()) }),
+  }));
+  return decompiler::decompile(ctx, dxb, formatted, colorized, resolve_slots);
 }
 
 // #[wasm_bindgen]
@@ -75,28 +81,28 @@ pub fn decompile(
 //     }
 // }
 
-struct IOWrite {}
-struct IORead {}
+// struct IOWrite {}
+// struct IORead {}
 
-impl Write for IOWrite {
-  fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-    let logger = Logger::new_for_development(&CTX, "DATEX");
-    logger.success("...write!");
-    return Ok(buf.len());
-  }
+// impl Write for IOWrite {
+//   fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+//     let logger = Logger::new_for_development(&CTX, "DATEX".to_string());
+//     logger.success("...write!");
+//     return Ok(buf.len());
+//   }
 
-  fn flush(&mut self) -> io::Result<()> {
-    let logger = Logger::new_for_development(&CTX, "DATEX");
-    logger.success("...flush!");
-    return Ok(());
-  }
-}
+//   fn flush(&mut self) -> io::Result<()> {
+//     let logger = Logger::new_for_development(&CTX, "DATEX".to_string());
+//     logger.success("...flush!");
+//     return Ok(());
+//   }
+// }
 
-impl Read for IORead {
-  fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-    todo!()
-  }
-}
+// impl Read for IORead {
+//   fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+//     todo!()
+//   }
+// }
 
 // #[wasm_bindgen]
 // pub fn cli() {
