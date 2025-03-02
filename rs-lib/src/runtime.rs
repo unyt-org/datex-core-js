@@ -23,7 +23,7 @@ pub struct JSRuntime {
  * Internal impl of the JSRuntime, not exposed to JavaScript
  */
 impl JSRuntime {
-  pub fn create(ctx: Rc<RefCell<LoggerContext>>) -> JSRuntime {
+  pub fn create(ctx: Arc<Mutex<LoggerContext>>) -> JSRuntime {
     let runtime = Runtime::new_with_crypto_and_logger(
       &RustCrypto {},
       ctx.clone()

@@ -7,6 +7,8 @@ use std::io;
 use std::io::Read;
 use std::io::Write;
 use std::rc::Rc;
+use std::sync::Arc;
+use std::sync::Mutex;
 
 // use datex_cli_core::CLI;
 use datex_core::compiler;
@@ -47,7 +49,7 @@ extern "C" {
 // export compiler/runtime functions to JavaScript
 #[wasm_bindgen]
 pub fn init_runtime() -> JSRuntime {
-  let ctx = Rc::new(RefCell::new(LoggerContext {
+  let ctx = Arc::new(Mutex::new(LoggerContext {
     log_redirect: Some(|s: &str| -> () { console::log_1(&s.into()) }),
   }));
   let runtime = JSRuntime::create(ctx.clone());
@@ -66,7 +68,7 @@ pub fn decompile(
   colorized: bool,
   resolve_slots: bool,
 ) -> String {
-  let ctx = Rc::new(RefCell::new(LoggerContext {
+  let ctx = Arc::new(Mutex::new(LoggerContext {
     log_redirect: Some(|s: &str| -> () { console::log_1(&s.into()) }),
   }));
   return decompiler::decompile(ctx, dxb, formatted, colorized, resolve_slots);

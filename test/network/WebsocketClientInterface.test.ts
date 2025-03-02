@@ -6,9 +6,9 @@ import { sleep } from "../utils.ts";
 Deno.test("websocket connect", async () => {
     const port = 8484;
     const mockupServer = createMockupServer(port);
-    const runtime = new Runtime();
-    runtime.comHub.add_ws_interface("ws://localhost:8484/");
 
+    const runtime = new Runtime();
+    console.log(runtime.comHub.add_ws_interface(`ws://localhost:4${port}/`));
     await using server = await mockupServer;
     const block = runtime._runtime._create_block(new Uint8Array([0x01, 0x02, 0x03, 0x04]));
     server.send(block);

@@ -1,4 +1,4 @@
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, rc::Rc, sync::{Arc, Mutex}};
 use datex_core::network::{com_hub::ComHub, com_interfaces::{com_interface::ComInterfaceTrait, websocket_client::WebSocketClientInterface}};
 use wasm_bindgen::prelude::*;
 use web_sys::js_sys;
@@ -27,15 +27,14 @@ impl JSComHub {
 #[wasm_bindgen]
 impl JSComHub {
   #[wasm_bindgen]
-  pub fn add_ws_interface(&mut self, address: &str) -> Result<(), JsError> {
+  pub async fn add_ws_interface(&mut self, address: &str) -> Result<(), JsError> {
 
 	let websocket = WebSocketJS::new(address, self.com_hub.borrow().logger.clone())?;
-    let ws_interface = Rc::new(RefCell::new(WebSocketClientInterface::new_with_web_socket(websocket, self.com_hub.borrow().logger.clone())));
+    let ws_interface = Arc::new(Mutex::new(WebSocketClientInterface::new_with_web_socket(websocket, self.com_hub.borrow().logger.clone())));
 
-	self.com_hub.borrow_mut().add_interface(ComInterfaceTrait::new(
+	let res = self.com_hub.borrow_mut().add_interface(ComInterfaceTrait::new(
 		ws_interface.clone(),
-	)).map_err(|e| JsError::new(&format!("{:?}", e)))?;
-
+	)).await.map_err(|e| JsError::new(&format!("{:?}", e)))?;
 	Ok(())
   }
 

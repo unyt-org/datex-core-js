@@ -14,7 +14,7 @@ pub struct WebSocketJS {
   address: Url,
   ws: web_sys::WebSocket,
   receive_queue: Arc<Mutex<VecDeque<u8>>>,
-  logger: Option<Rc<RefCell<Logger>>>,
+  logger: Option<Arc<Mutex<Logger>>>,
 }
 
 impl WebSocketJS {
@@ -24,7 +24,7 @@ impl WebSocketJS {
     return Ok(WebSocketJS {
       address,
       logger: match logger {
-        Some(logger) => Some(Rc::new(RefCell::new(logger))),
+        Some(logger) => Some(Arc::new(Mutex::new(logger))),
         None => None,
       },
       ws,
@@ -43,8 +43,8 @@ impl WebSocketJS {
     // TODO fix this sh*t
     let logger = match &self.logger.clone() {
       Some(logger) => logger.clone(),
-      None => Rc::new(RefCell::new(
-        Logger::new_for_development(Rc::new(RefCell::new(LoggerContext { log_redirect: None })), "name".to_string())
+      None => Arc::new(Mutex::new(
+        Logger::new_for_development(Arc::new(Mutex::new(LoggerContext { log_redirect: None })), "name".to_string())
       )),
     };
    
@@ -52,9 +52,9 @@ impl WebSocketJS {
         if let Ok(abuf) = e.data().dyn_into::<js_sys::ArrayBuffer>() {
             let array = js_sys::Uint8Array::new(&abuf);
             receive_queue.lock().unwrap().extend(array.to_vec());
-            logger.borrow().info(&format!("message event, received: {:?} bytes ({:?})", array.to_vec().len(), receive_queue));
+            logger.lock().unwrap().info(&format!("message event, received: {:?} bytes ({:?})", array.to_vec().len(), receive_queue));
         } else {
-            logger.borrow().info(&format!("message event, received Unknown: {:?}", e.data()));
+            logger.lock().unwrap().info(&format!("message event, received Unknown: {:?}", e.data()));
         }
     });
     self.ws.set_onmessage(Some(onmessage_callback.as_ref().unchecked_ref()));
@@ -63,13 +63,13 @@ impl WebSocketJS {
     // TODO fix this sh*t
     let logger = match &self.logger.clone() {
       Some(logger) => logger.clone(),
-      None => Rc::new(RefCell::new(
-        Logger::new_for_development(Rc::new(RefCell::new(LoggerContext { log_redirect: None })), "name".to_string())
+      None => Arc::new(Mutex::new(
+        Logger::new_for_development(Arc::new(Mutex::new(LoggerContext { log_redirect: None })), "name".to_string())
       )),
     };
 
     let onerror_callback = Closure::<dyn FnMut(_)>::new(move |e: ErrorEvent| {
-      logger.borrow().error(&format!("error event: {:?}", e));
+      logger.lock().unwrap().error(&format!("error event: {:?}", e));
     });
     self.ws.set_onerror(Some(onerror_callback.as_ref().unchecked_ref()));
     onerror_callback.forget();
@@ -77,15 +77,15 @@ impl WebSocketJS {
     // TODO fix this sh*t
     let logger = match &self.logger.clone() {
       Some(logger) => logger.clone(),
-      None => Rc::new(RefCell::new(
-        Logger::new_for_development(Rc::new(RefCell::new(LoggerContext { log_redirect: None })), "name".to_string())
+      None => Arc::new(Mutex::new(
+        Logger::new_for_development(Arc::new(Mutex::new(LoggerContext { log_redirect: None })), "name".to_string())
       )),
     };
 
     // TODO FIXME
 
     let onopen_callback = Closure::<dyn FnMut()>::new(move || {
-      logger.borrow().success(&format!("Socket opened"));
+      logger.lock().unwrap().success(&format!("Socket opened"));
 
     });
     self.ws.set_onopen(Some(onopen_callback.as_ref().unchecked_ref()));
@@ -95,10 +95,6 @@ impl WebSocketJS {
 }
 
 impl WebSocket for WebSocketJS {
-    fn connect(&mut self) -> Result<Arc<Mutex<VecDeque<u8>>>> {
-        self.connect()?;
-        Ok(self.receive_queue.clone())
-    }
 
     fn send_data(&self, message: &[u8]) -> bool {
       self.ws.send_with_u8_array(&message).is_ok()
@@ -106,5 +102,10 @@ impl WebSocket for WebSocketJS {
 
     fn get_address(&self) -> Url {
         self.address.clone()
+    }
+    
+    async fn connect(&mut self) -> Result<Arc<Mutex<VecDeque<u8>>>> {
+        self.connect()?;
+        Ok(self.receive_queue.clone())
     }
 }
