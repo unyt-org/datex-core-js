@@ -3,10 +3,10 @@ export const createMockupServer = (port = 9999) => {
 	return new Promise<{
 		receiveQueue: Uint8Array[],
 		nextMessage: () => Promise<void>,
-		[Symbol.dispose]: () => void,
+		[Symbol.asyncDispose]: () => Promise<void>,
 		send: (data: string | ArrayBufferLike | Blob | ArrayBufferView) => void
 	}>((resolve, reject) => {
-		setTimeout(() => reject("No client connected. Timed out."), 10_000);
+		const timeout = setTimeout(() => reject("No client connected. Timed out."), 10_000);
 		let mainSocket: WebSocket | undefined;
 		let nextmessageResolve: () => void;
 		const server = Deno.serve({ port }, (req) => {
@@ -41,8 +41,10 @@ export const createMockupServer = (port = 9999) => {
 				if (mainSocket?.readyState === WebSocket.OPEN)
 					mainSocket.send(data);
 			},
-			[Symbol.dispose]: () => {
-				server?.shutdown();
+			[Symbol.asyncDispose]: () => {
+				clearTimeout(timeout);
+				mainSocket?.close();
+				return server?.shutdown();
 			}
 		}
 	});
