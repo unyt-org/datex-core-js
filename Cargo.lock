@@ -229,7 +229,6 @@ dependencies = [
  "strum",
  "thiserror",
  "url 2.5.4",
- "wasm-bindgen",
  "websocket",
 ]
 

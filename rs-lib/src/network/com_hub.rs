@@ -44,7 +44,7 @@ impl JSComHub {
 		com_hub.borrow_mut().add_interface(ComInterfaceTrait::new(ws_interface.clone()))
 			.map_err(|e| JsError::new(&format!("{:?}", e)))?;
 
-		Ok(JsValue::UNDEFINED)
+		Ok(JsValue::TRUE)
 	})
   }
 

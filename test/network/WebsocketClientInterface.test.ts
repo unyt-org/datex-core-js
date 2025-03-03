@@ -10,6 +10,7 @@ Deno.test("websocket connect", async () => {
     const runtime = new Runtime();
     runtime.comHub.add_ws_interface(`ws://localhost:${port}/`);
     await using server = await mockupServer;
+
     const block = runtime._runtime._create_block(new Uint8Array([0x01, 0x02, 0x03, 0x04]));
     server.send(block);
     await sleep(10);
