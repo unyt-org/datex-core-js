@@ -1,6 +1,6 @@
 import { assert, assertEquals } from "jsr:@std/assert";
 import { createMockupServer } from "./WebsocketMockupServer.ts";
-import { Runtime } from "../../src/runtime/Runtime.ts";
+import { Runtime } from "../../src/runtime/runtime.ts";
 import { sleep } from "../utils.ts";
 
 Deno.test("websocket connect", async () => {
