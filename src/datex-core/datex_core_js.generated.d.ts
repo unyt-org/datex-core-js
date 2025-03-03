@@ -7,6 +7,7 @@ export interface InstantiateResult {
     init_runtime: typeof init_runtime;
     compile: typeof compile;
     decompile: typeof decompile;
+    JSComHub : typeof JSComHub ;
     JSMemory : typeof JSMemory ;
     JSPointer : typeof JSPointer ;
     JSRuntime : typeof JSRuntime 
@@ -52,6 +53,21 @@ export function compile(datex_script: string): void;
 export function decompile(dxb: Uint8Array, formatted: boolean, colorized: boolean, resolve_slots: boolean): string;
 /**
 */
+export class JSComHub {
+  free(): void;
+/**
+* @param {string} address
+*/
+  add_ws_interface(address: string): void;
+/**
+*/
+  _update(): void;
+/**
+*/
+  readonly _incoming_blocks: (Uint8Array)[];
+}
+/**
+*/
 export class JSMemory {
   free(): void;
 /**
@@ -73,6 +89,14 @@ export class JSPointer {
 */
 export class JSRuntime {
   free(): void;
+/**
+* @param {Uint8Array | undefined} [body]
+* @returns {Uint8Array}
+*/
+  _create_block(body?: Uint8Array): Uint8Array;
+/**
+*/
+  readonly com_hub: JSComHub;
 /**
 */
   readonly memory: JSMemory;
