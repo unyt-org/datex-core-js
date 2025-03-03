@@ -1,7 +1,8 @@
 use std::{cell::RefCell, rc::Rc};
 use datex_core::network::{com_hub::ComHub, com_interfaces::{com_interface::ComInterfaceTrait, websocket_client::WebSocketClientInterface}};
 use wasm_bindgen::prelude::*;
-use web_sys::js_sys;
+use web_sys::js_sys::{self, Promise};
+use wasm_bindgen_futures::future_to_promise;
 
 use crate::network::com_interfaces::websocket_client_js::WebSocketJS;
 
@@ -27,16 +28,24 @@ impl JSComHub {
 #[wasm_bindgen]
 impl JSComHub {
   #[wasm_bindgen]
-  pub fn add_ws_interface(&mut self, address: &str) -> Result<(), JsError> {
+  pub fn add_ws_interface(&mut self, address: String) -> Promise {
+	let com_hub = self.com_hub.clone(); 
+	let address_clone = address.clone();
 
-	let websocket = WebSocketJS::new(address, self.com_hub.borrow().logger.clone())?;
-    let ws_interface = Rc::new(RefCell::new(WebSocketClientInterface::new_with_web_socket(websocket, self.com_hub.borrow().logger.clone())));
+	future_to_promise(async move {
+		let websocket = WebSocketJS::new(&address_clone, com_hub.borrow().logger.clone())
+			.map_err(|e| JsError::new(&format!("{:?}", e)))?;
 
-	self.com_hub.borrow_mut().add_interface(ComInterfaceTrait::new(
-		ws_interface.clone(),
-	)).map_err(|e| JsError::new(&format!("{:?}", e)))?;
+		let ws_interface = Rc::new(RefCell::new(WebSocketClientInterface::new_with_web_socket(
+			websocket,
+			com_hub.borrow().logger.clone(),
+		)));
 
-	Ok(())
+		com_hub.borrow_mut().add_interface(ComInterfaceTrait::new(ws_interface.clone()))
+			.map_err(|e| JsError::new(&format!("{:?}", e)))?;
+
+		Ok(JsValue::UNDEFINED)
+	})
   }
 
   #[wasm_bindgen]

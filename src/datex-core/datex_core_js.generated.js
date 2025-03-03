@@ -4,7 +4,7 @@
 // deno-fmt-ignore-file
 /// <reference types="./datex_core_js.generated.d.ts" />
 
-// source-hash: 7ae7b856bf6f8756703246d44affae362c7f69e5
+// source-hash: 4d4f98d078026e207708c6c7a758916d3781b09a
 let wasm;
 
 const cachedTextDecoder = typeof TextDecoder !== "undefined"
