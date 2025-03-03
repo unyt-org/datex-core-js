@@ -24,10 +24,8 @@ pub struct JSRuntime {
  */
 impl JSRuntime {
   pub fn create(ctx: Rc<RefCell<LoggerContext>>) -> JSRuntime {
-    let runtime = Runtime::new_with_crypto_and_logger(
-      &RustCrypto {},
-      ctx.clone()
-    );
+    let runtime =
+      Runtime::new_with_crypto_and_logger(&RustCrypto {}, ctx.clone());
     runtime.memory.borrow_mut().store_pointer(
       [
         10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160,
@@ -40,9 +38,7 @@ impl JSRuntime {
   }
 
   pub fn new(runtime: Runtime<'static>) -> JSRuntime {
-    JSRuntime { 
-      runtime
-    }
+    JSRuntime { runtime }
   }
 }
 
@@ -68,9 +64,12 @@ impl JSRuntime {
 
   #[wasm_bindgen]
   pub fn _create_block(&self, body: Option<Vec<u8>>) -> Vec<u8> {
-    DXBBlock{
+    DXBBlock {
       body: body.unwrap_or(vec![]),
       ..DXBBlock::default()
-    }.recalculate_struct().to_bytes().unwrap()
+    }
+    .recalculate_struct()
+    .to_bytes()
+    .unwrap()
   }
 }
