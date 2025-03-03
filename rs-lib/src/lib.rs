@@ -22,9 +22,6 @@ use web_sys::console;
 mod runtime;
 use runtime::JSRuntime;
 
-pub mod jsconsole;
-pub(crate) use jsconsole::debug;
-
 pub mod network;
 use network::com_interfaces::websocket_client_js;
 
