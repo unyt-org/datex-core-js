@@ -1,10 +1,6 @@
 use datex_core::network::{
   com_hub::ComHub,
-  com_interfaces::com_interface_socket::SocketState,
-  com_interfaces::{
-    com_interface::ComInterfaceTrait,
-    websocket_client::WebSocketClientInterface,
-  },
+  com_interfaces::{com_interface::{ComInterface, ComInterfaceTrait}, com_interface_socket::SocketState, websocket_client::WebSocketClientInterface},
 };
 use std::{cell::RefCell, rc::Rc};
 use wasm_bindgen::prelude::*;
@@ -60,6 +56,8 @@ impl JSComHub {
       if socket_state != SocketState::Open {
         return Err(JsError::new("Failed to connect to WebSocket").into());
       }
+	  // FIXME return uuid
+	//   ws_interface.borrow().get_properties();
 
       Ok(JsValue::UNDEFINED)
     })
