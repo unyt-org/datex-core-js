@@ -38,8 +38,7 @@ impl WebSocketJS {
     address: &str,
     logger: Option<Logger>,
   ) -> Result<WebSocketJS, Error> {
-    let address =
-      parse_url(address)?;
+    let address = parse_url(address)?;
     let ws = web_sys::WebSocket::new(&address.to_string())
       .map_err(|_| Error::msg("Failed to create WebSocket"))?;
     return Ok(WebSocketJS {

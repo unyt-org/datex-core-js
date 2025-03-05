@@ -1,6 +1,10 @@
 use datex_core::network::{
   com_hub::ComHub,
-  com_interfaces::{com_interface::{ComInterface, ComInterfaceTrait}, com_interface_socket::SocketState, websocket_client::WebSocketClientInterface},
+  com_interfaces::{
+    com_interface::ComInterfaceTrait,
+    com_interface_socket::SocketState,
+    websocket_client::WebSocketClientInterface,
+  },
 };
 use std::{cell::RefCell, rc::Rc};
 use wasm_bindgen::prelude::*;
@@ -8,8 +12,6 @@ use wasm_bindgen_futures::future_to_promise;
 use web_sys::js_sys::{self, Promise};
 
 use crate::network::com_interfaces::websocket_client_js::WebSocketJS;
-
-// use crate::network::com_interfaces::websocket_client_js::JSWebSocketClientInterface;
 
 #[wasm_bindgen]
 pub struct JSComHub {
@@ -36,8 +38,9 @@ impl JSComHub {
     let address_clone = address.clone();
 
     future_to_promise(async move {
-		let websocket = WebSocketJS::new(&address_clone, com_hub.borrow().logger.clone())
-		.map_err(|e| JsError::new(&format!("{:?}", e)))?;
+      let websocket =
+        WebSocketJS::new(&address_clone, com_hub.borrow().logger.clone())
+          .map_err(|e| JsError::new(&format!("{:?}", e)))?;
       let websocket = Rc::new(RefCell::new(websocket));
 
       let ws_interface =
@@ -45,7 +48,7 @@ impl JSComHub {
           websocket.clone(),
           com_hub.borrow().logger.clone(),
         )));
-
+      
       com_hub
         .borrow_mut()
         .add_interface(ComInterfaceTrait::new(ws_interface.clone()))
@@ -56,8 +59,8 @@ impl JSComHub {
       if socket_state != SocketState::Open {
         return Err(JsError::new("Failed to connect to WebSocket").into());
       }
-	  // FIXME return uuid
-	//   ws_interface.borrow().get_properties();
+      // FIXME return uuid
+      // ws_interface.borrow().get_properties();
 
       Ok(JsValue::UNDEFINED)
     })
