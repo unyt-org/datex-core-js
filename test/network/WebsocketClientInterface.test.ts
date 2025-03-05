@@ -1,14 +1,21 @@
-import { assert, assertEquals } from "jsr:@std/assert";
+import { assert, assertEquals, assertRejects } from "jsr:@std/assert";
 import { createMockupServer } from "./WebsocketMockupServer.ts";
 import { Runtime } from "../../src/runtime/runtime.ts";
 import { sleep } from "../utils.ts";
+
+Deno.test("websocket error connect", async () => {
+    const runtime = new Runtime();
+    await assertRejects(() => runtime.comHub.add_ws_interface(`ws://invalid`));
+}); 
 
 Deno.test("websocket connect", async () => {
     const port = 8484;
     const mockupServer = createMockupServer(port);
 
     const runtime = new Runtime();
-    runtime.comHub.add_ws_interface(`ws://localhost:${port}/`);
+    runtime.comHub.add_ws_interface(`ws://localhost:${port}/`)
+        .then(() => console.info("Connected"))
+        .catch((err) => console.error("Error:", err));
     await using server = await mockupServer;
 
     const block = runtime._runtime._create_block(new Uint8Array([0x01, 0x02, 0x03, 0x04]));

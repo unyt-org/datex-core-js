@@ -1,5 +1,6 @@
 use datex_core::network::{
   com_hub::ComHub,
+  com_interfaces::com_interface_socket::SocketState,
   com_interfaces::{
     com_interface::ComInterfaceTrait,
     websocket_client::WebSocketClientInterface,
@@ -39,13 +40,14 @@ impl JSComHub {
     let address_clone = address.clone();
 
     future_to_promise(async move {
-      let websocket =
+      let websocket = Rc::new(RefCell::new(
         WebSocketJS::new(&address_clone, com_hub.borrow().logger.clone())
-          .map_err(|e| JsError::new(&format!("{:?}", e)))?;
+          .map_err(|e| JsError::new(&format!("{:?}", e)))?,
+      ));
 
       let ws_interface =
         Rc::new(RefCell::new(WebSocketClientInterface::new_with_web_socket(
-          websocket,
+          websocket.clone(),
           com_hub.borrow().logger.clone(),
         )));
 
@@ -54,7 +56,13 @@ impl JSComHub {
         .add_interface(ComInterfaceTrait::new(ws_interface.clone()))
         .map_err(|e| JsError::new(&format!("{:?}", e)))?;
 
-      Ok(JsValue::TRUE)
+      let socket_state =
+        websocket.clone().borrow_mut().wait_for_state_change().await;
+      if socket_state != SocketState::Open {
+        return Err(JsError::new("Failed to connect to WebSocket").into());
+      }
+
+      Ok(JsValue::UNDEFINED)
     })
   }
 
