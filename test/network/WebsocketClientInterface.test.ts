@@ -3,12 +3,43 @@ import { createMockupServer } from "./WebsocketMockupServer.ts";
 import { Runtime } from "../../src/runtime/runtime.ts";
 import { sleep } from "../utils.ts";
 
-Deno.test("websocket error connect", async () => {
+Deno.test("invalid url construct", async () => {
     const runtime = new Runtime();
-    await assertRejects(() => runtime.comHub.add_ws_interface(`ws://invalid`));
-}); 
+    await assertRejects(() =>
+        runtime.comHub.add_ws_interface(`invalid url`),
+        Error, 
+        "Invalid URL"
+    );
+});
 
-Deno.test("websocket connect", async () => {
+Deno.test("invalid url scheme construct", async () => {
+    const runtime = new Runtime();
+    await assertRejects(() =>
+        runtime.comHub.add_ws_interface(`ftp://invalid`),
+        Error, 
+        "Invalid URL scheme"
+    );
+});
+
+Deno.test("websocket connect fail", async () => {
+    const runtime = new Runtime();
+    await assertRejects(() => 
+        runtime.comHub.add_ws_interface(`ws://invalid`),
+        Error,
+        "Failed to connect to WebSocket"
+    );
+});
+
+Deno.test("websocket basic connect", async () => {
+    const port = 8484;
+    const mockupServer = createMockupServer(port)
+    const runtime = new Runtime();
+    const connection = runtime.comHub.add_ws_interface(`ws://localhost:${port}/`);
+    await using _ = await mockupServer;
+    assertEquals(await connection, undefined);
+});
+
+Deno.test("websocket block retrieval", async () => {
     const port = 8484;
     const mockupServer = createMockupServer(port);
 

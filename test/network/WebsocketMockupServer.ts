@@ -4,7 +4,7 @@ export const createMockupServer = (port = 9999) => {
 		receiveQueue: Uint8Array[],
 		nextMessage: () => Promise<void>,
 		[Symbol.asyncDispose]: () => Promise<void>,
-		send: (data: string | ArrayBufferLike | Blob | ArrayBufferView) => void
+		send: (data: string | ArrayBufferLike | Blob | ArrayBufferView) => void,
 	}>((resolve, reject) => {
 		const timeout = setTimeout(() => reject("No client connected. Timed out."), 10_000);
 		let mainSocket: WebSocket | undefined;
