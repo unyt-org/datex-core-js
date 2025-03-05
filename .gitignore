@@ -2,3 +2,5 @@
 .datex-cache
 target
 npm
+.DS_Store
+.idea
