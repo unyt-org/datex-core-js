@@ -1,14 +1,11 @@
 use std::cell::RefCell;
 use std::rc::Rc;
-use std::sync::Arc;
-use std::sync::Mutex;
 
+use datex_core::crypto::crypto::Crypto;
 use datex_core::datex_values::Pointer;
 use datex_core::global::dxb_block::DXBBlock;
 use datex_core::runtime::Runtime;
-use datex_core::utils::logger::Logger;
 use datex_core::utils::logger::LoggerContext;
-use datex_core::utils::rust_crypto::RustCrypto;
 use wasm_bindgen::prelude::*;
 
 use crate::memory::JSMemory;
@@ -16,16 +13,16 @@ use crate::network::com_hub::JSComHub;
 
 #[wasm_bindgen]
 pub struct JSRuntime {
-  runtime: Runtime<'static>,
+  runtime: Runtime,
 }
 
 /**
  * Internal impl of the JSRuntime, not exposed to JavaScript
  */
 impl JSRuntime {
-  pub fn create(ctx: Rc<RefCell<LoggerContext>>) -> JSRuntime {
+  pub fn create(crypto: Rc<RefCell<dyn Crypto>>, ctx: Rc<RefCell<LoggerContext>>) -> JSRuntime {
     let runtime =
-      Runtime::new_with_crypto_and_logger(&RustCrypto {}, ctx.clone());
+      Runtime::new_with_crypto_and_logger(crypto, ctx.clone());
     runtime.memory.borrow_mut().store_pointer(
       [
         10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160,
@@ -37,7 +34,7 @@ impl JSRuntime {
     JSRuntime::new(runtime)
   }
 
-  pub fn new(runtime: Runtime<'static>) -> JSRuntime {
+  pub fn new(runtime: Runtime) -> JSRuntime {
     JSRuntime { runtime }
   }
 }

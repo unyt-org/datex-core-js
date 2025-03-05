@@ -8,6 +8,7 @@ use std::io::Read;
 use std::io::Write;
 use std::rc::Rc;
 
+use crypto::crypto_js::CryptoJS;
 // use datex_cli_core::CLI;
 use datex_core::compiler;
 use datex_core::decompiler;
@@ -27,6 +28,7 @@ use network::com_interfaces::websocket_client_js;
 
 pub mod memory;
 pub mod pointer;
+pub mod crypto;
 
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
 // allocator.
@@ -47,7 +49,8 @@ pub fn init_runtime() -> JSRuntime {
   let ctx = Rc::new(RefCell::new(LoggerContext {
     log_redirect: Some(|s: &str| -> () { console::log_1(&s.into()) }),
   }));
-  let runtime = JSRuntime::create(ctx.clone());
+  let crypto = CryptoJS {};
+  let runtime = JSRuntime::create(Rc::new(RefCell::new(crypto)), ctx);
   return runtime;
 }
 

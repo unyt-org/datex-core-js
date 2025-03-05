@@ -1,10 +1,8 @@
 use std::{
   cell::RefCell,
   collections::VecDeque,
-  future::Future,
   rc::Rc,
   sync::{Arc, Mutex},
-  vec,
 };
 
 use anyhow::{Error, Result};

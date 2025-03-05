@@ -1,11 +1,11 @@
-use datex_core::network::{
+use datex_core::{crypto, network::{
   com_hub::ComHub,
   com_interfaces::{
     com_interface::ComInterfaceTrait,
     com_interface_socket::SocketState,
     websocket_client::WebSocketClientInterface,
   },
-};
+}};
 use std::{cell::RefCell, rc::Rc};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::future_to_promise;
@@ -36,6 +36,7 @@ impl JSComHub {
   pub fn add_ws_interface(&mut self, address: String) -> Promise {
     let com_hub = self.com_hub.clone();
     let address_clone = address.clone();
+    let crypto = self.com_hub.borrow().crypto.clone();
 
     future_to_promise(async move {
       let websocket =
@@ -45,6 +46,7 @@ impl JSComHub {
 
       let ws_interface =
         Rc::new(RefCell::new(WebSocketClientInterface::new_with_web_socket(
+          crypto,
           websocket.clone(),
           com_hub.borrow().logger.clone(),
         )));
