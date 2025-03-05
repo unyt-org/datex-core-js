@@ -309,11 +309,11 @@ function __wbg_adapter_27(arg0, arg1) {
 }
 
 function __wbg_adapter_32(arg0, arg1, arg2) {
-    wasm.closure74_externref_shim(arg0, arg1, arg2);
+    wasm.closure80_externref_shim(arg0, arg1, arg2);
 }
 
 function __wbg_adapter_77(arg0, arg1, arg2, arg3) {
-    wasm.closure87_externref_shim(arg0, arg1, arg2, arg3);
+    wasm.closure93_externref_shim(arg0, arg1, arg2, arg3);
 }
 
 const __wbindgen_enum_BinaryType = ["blob", "arraybuffer"];
@@ -697,8 +697,8 @@ export function __wbindgen_cb_drop(arg0) {
     return ret;
 }
 
-export function __wbindgen_closure_wrapper188(arg0, arg1, arg2) {
-    const ret = makeMutClosure(arg0, arg1, 75, __wbg_adapter_32);
+export function __wbindgen_closure_wrapper206(arg0, arg1, arg2) {
+    const ret = makeMutClosure(arg0, arg1, 81, __wbg_adapter_32);
     return ret;
 }
 
