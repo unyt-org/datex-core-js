@@ -7,7 +7,7 @@ use std::{
   vec,
 };
 
-use anyhow::Result;
+use anyhow::{Error, Result};
 use datex_core::{
   network::com_interfaces::{
     com_interface_socket::{ComInterfaceSocket, SocketState},
@@ -37,11 +37,11 @@ impl WebSocketJS {
   pub fn new(
     address: &str,
     logger: Option<Logger>,
-  ) -> Result<WebSocketJS, JsError> {
+  ) -> Result<WebSocketJS, Error> {
     let address =
-      parse_url(address).map_err(|_| JsError::new("Invalid URL"))?;
+      parse_url(address)?;
     let ws = web_sys::WebSocket::new(&address.to_string())
-      .map_err(|_| JsError::new("Failed to create WebSocket"))?;
+      .map_err(|_| Error::msg("Failed to create WebSocket"))?;
     return Ok(WebSocketJS {
       address,
       state: Rc::new(RefCell::new(SocketState::Closed)),
