@@ -26,9 +26,9 @@ use runtime::JSRuntime;
 pub mod network;
 use network::com_interfaces::websocket_client_js;
 
+pub mod crypto;
 pub mod memory;
 pub mod pointer;
-pub mod crypto;
 
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
 // allocator.

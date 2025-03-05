@@ -1,11 +1,13 @@
-use datex_core::{crypto, network::{
-  com_hub::ComHub,
-  com_interfaces::{
-    com_interface::ComInterfaceTrait,
-    com_interface_socket::SocketState,
-    websocket_client::WebSocketClientInterface,
+use datex_core::{
+  crypto,
+  network::{
+    com_hub::ComHub,
+    com_interfaces::{
+      com_interface::ComInterfaceTrait, com_interface_socket::SocketState,
+      websocket_client::WebSocketClientInterface,
+    },
   },
-}};
+};
 use std::{cell::RefCell, rc::Rc};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::future_to_promise;
@@ -50,7 +52,7 @@ impl JSComHub {
           websocket.clone(),
           com_hub.borrow().logger.clone(),
         )));
-      
+
       com_hub
         .borrow_mut()
         .add_interface(ComInterfaceTrait::new(ws_interface.clone()))
