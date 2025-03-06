@@ -1,5 +1,4 @@
 import { Datex } from "../src/mod.ts";
-import { WebsocketClientInterface } from "../src/network/com-interfaces/WebsocketClientInterface.ts";
 
-// @ts-ignore
+// @ts-ignore global variable for debugging
 globalThis.Datex = Datex;
