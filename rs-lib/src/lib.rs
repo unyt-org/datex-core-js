@@ -1,6 +1,7 @@
 #![feature(coroutines)]
 #![feature(iter_from_coroutine)]
 
+use crypto::crypto_js::CryptoJS;
 use std::cell::Ref;
 use std::cell::RefCell;
 use std::io;
@@ -8,7 +9,6 @@ use std::io::Read;
 use std::io::Write;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
-use crypto::crypto_js::CryptoJS;
 // use datex_cli_core::CLI;
 use datex_core::compiler;
 use datex_core::decompiler;
@@ -19,8 +19,8 @@ use datex_core::utils::logger::LoggerContext;
 use lazy_static::lazy_static;
 use wasm_bindgen::prelude::*;
 
-use web_sys::console;
 use datex_core::runtime::global_context::{set_global_context, GlobalContext};
+use web_sys::console;
 
 mod runtime;
 use runtime::JSRuntime;
@@ -48,15 +48,14 @@ extern "C" {
 // export compiler/runtime functions to JavaScript
 #[wasm_bindgen]
 pub fn init_runtime() -> JSRuntime {
-
   let ctx = Context {
     logger_context: Rc::new(RefCell::new(LoggerContext {
       log_redirect: Some(|s: &str| -> () { console::log_1(&s.into()) }),
-    }))
+    })),
   };
 
   let global_ctx = GlobalContext {
-      crypto: Arc::new(Mutex::new(CryptoJS)),
+    crypto: Arc::new(Mutex::new(CryptoJS)),
   };
 
   set_global_context(global_ctx);
@@ -82,7 +81,13 @@ pub fn decompile(
   let context = Rc::new(RefCell::new(Context {
     logger_context: logger_context.clone(),
   }));
-  return decompiler::decompile(context, dxb, formatted, colorized, resolve_slots);
+  return decompiler::decompile(
+    context,
+    dxb,
+    formatted,
+    colorized,
+    resolve_slots,
+  );
 }
 
 // #[wasm_bindgen]

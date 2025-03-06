@@ -8,7 +8,8 @@ use std::{
 use anyhow::{Error, Result};
 use datex_core::{
   network::com_interfaces::{
-    com_interface_socket::{ComInterfaceSocket, SocketState}, websocket::{websocket_client::WebSocket, websocket_common::parse_url},
+    com_interface_socket::{ComInterfaceSocket, SocketState},
+    websocket::{websocket_client::WebSocket, websocket_common::parse_url},
   },
   utils::logger::{self, Logger, LoggerContext},
 };

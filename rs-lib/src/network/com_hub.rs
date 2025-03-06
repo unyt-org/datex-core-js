@@ -3,7 +3,9 @@ use datex_core::{
   network::{
     com_hub::ComHub,
     com_interfaces::{
-      com_interface::{ComInterface, ComInterfaceTrait}, com_interface_socket::SocketState, websocket::websocket_client::WebSocketClientInterface,
+      com_interface::{ComInterface, ComInterfaceTrait},
+      com_interface_socket::SocketState,
+      websocket::websocket_client::WebSocketClientInterface,
     },
   },
 };

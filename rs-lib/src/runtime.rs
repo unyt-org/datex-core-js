@@ -20,12 +20,8 @@ pub struct JSRuntime {
  * Internal impl of the JSRuntime, not exposed to JavaScript
  */
 impl JSRuntime {
-  pub fn create(
-    ctx: Context,
-  ) -> JSRuntime {
-    let runtime = Runtime::new(
-      Rc::new(RefCell::new(ctx))
-    );
+  pub fn create(ctx: Context) -> JSRuntime {
+    let runtime = Runtime::new(Rc::new(RefCell::new(ctx)));
     runtime.memory.borrow_mut().store_pointer(
       [
         10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160,

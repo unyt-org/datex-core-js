@@ -2,8 +2,8 @@ use datex_core::crypto::crypto::Crypto;
 use wasm_bindgen::prelude::wasm_bindgen;
 #[wasm_bindgen]
 extern "C" {
-    #[wasm_bindgen(js_namespace = crypto)]
-    fn randomUUID() -> String;
+  #[wasm_bindgen(js_namespace = crypto)]
+  fn randomUUID() -> String;
 }
 pub struct CryptoJS;
 impl Crypto for CryptoJS {
