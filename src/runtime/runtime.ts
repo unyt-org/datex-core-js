@@ -1,5 +1,5 @@
 import { init_runtime } from "../datex-core.ts";
-import type { JSMemory, JSRuntime, JSComHub } from "../datex-core.ts";
+import type { JSComHub, JSMemory, JSRuntime } from "../datex-core.ts";
 import { runtimeInterface } from "../utils/js-runtime-compat/runtime.ts";
 
 // get version from deno.json
