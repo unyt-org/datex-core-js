@@ -2,6 +2,7 @@ import { assert, assertEquals, assertRejects } from "jsr:@std/assert";
 import { createMockupServer } from "./WebsocketMockupServer.ts";
 import { Runtime } from "../../src/runtime/runtime.ts";
 import { sleep } from "../utils.ts";
+import * as uuid from "jsr:@std/uuid";
 
 Deno.test("invalid url construct", async () => {
     const runtime = new Runtime();
@@ -36,7 +37,7 @@ Deno.test("websocket basic connect", async () => {
     const runtime = new Runtime();
     const connection = runtime.comHub.add_ws_interface(`ws://localhost:${port}/`);
     await using _ = await mockupServer;
-    assertEquals(await connection, undefined);
+    assert(uuid.validate(await connection), "Invalid UUID");
 });
 
 Deno.test("websocket block retrieval", async () => {

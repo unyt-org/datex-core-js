@@ -4,7 +4,7 @@ use std::rc::Rc;
 use datex_core::crypto::crypto::Crypto;
 use datex_core::datex_values::Pointer;
 use datex_core::global::dxb_block::DXBBlock;
-use datex_core::runtime::Runtime;
+use datex_core::runtime::{Context, Runtime};
 use datex_core::utils::logger::LoggerContext;
 use wasm_bindgen::prelude::*;
 
@@ -22,9 +22,15 @@ pub struct JSRuntime {
 impl JSRuntime {
   pub fn create(
     crypto: Rc<RefCell<dyn Crypto>>,
-    ctx: Rc<RefCell<LoggerContext>>,
+    logger_context: Rc<RefCell<LoggerContext>>,
   ) -> JSRuntime {
-    let runtime = Runtime::new(crypto, ctx.clone());
+    let context = Context {
+      logger_context,
+      crypto: crypto.clone(),
+    };
+    let runtime = Runtime::new(
+      Rc::new(RefCell::new(context))
+    );
     runtime.memory.borrow_mut().store_pointer(
       [
         10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160,
@@ -32,7 +38,6 @@ impl JSRuntime {
       ],
       Pointer::from_id(Vec::new()),
     );
-
     JSRuntime::new(runtime)
   }
 

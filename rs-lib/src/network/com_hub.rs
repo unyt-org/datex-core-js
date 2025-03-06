@@ -3,7 +3,7 @@ use datex_core::{
   network::{
     com_hub::ComHub,
     com_interfaces::{
-      com_interface::ComInterfaceTrait, com_interface_socket::SocketState,
+      com_interface::{ComInterface, ComInterfaceTrait}, com_interface_socket::SocketState,
       websocket_client::WebSocketClientInterface,
     },
   },
@@ -11,7 +11,7 @@ use datex_core::{
 use std::{cell::RefCell, rc::Rc};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::future_to_promise;
-use web_sys::js_sys::{self, Promise};
+use web_sys::js_sys::{self, Object, Promise};
 
 use crate::network::com_interfaces::websocket_client_js::WebSocketJS;
 
@@ -38,7 +38,7 @@ impl JSComHub {
   pub fn add_ws_interface(&mut self, address: String) -> Promise {
     let com_hub = self.com_hub.clone();
     let address_clone = address.clone();
-    let crypto = self.com_hub.borrow().crypto.clone();
+    let context = self.com_hub.borrow().context.clone();
 
     future_to_promise(async move {
       let websocket =
@@ -48,7 +48,7 @@ impl JSComHub {
 
       let ws_interface =
         Rc::new(RefCell::new(WebSocketClientInterface::new_with_web_socket(
-          crypto,
+          context.clone(),
           websocket.clone(),
           com_hub.borrow().logger.clone(),
         )));
@@ -63,10 +63,8 @@ impl JSComHub {
       if socket_state != SocketState::Open {
         return Err(JsError::new("Failed to connect to WebSocket").into());
       }
-      // FIXME return uuid
-      // ws_interface.borrow().get_properties();
-
-      Ok(JsValue::UNDEFINED)
+      let uuid = ws_interface.borrow().get_uuid();
+      Ok(JsValue::from_str(&uuid))
     })
   }
 

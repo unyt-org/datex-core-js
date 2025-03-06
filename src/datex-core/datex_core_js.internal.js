@@ -231,6 +231,13 @@ function debugString(val) {
     return className;
 }
 
+function passArray8ToWasm0(arg, malloc) {
+    const ptr = malloc(arg.length * 1, 1) >>> 0;
+    getUint8ArrayMemory0().set(arg, ptr / 1);
+    WASM_VECTOR_LEN = arg.length;
+    return ptr;
+}
+
 function getArrayJsValueFromWasm0(ptr, len) {
     ptr = ptr >>> 0;
     const mem = getDataViewMemory0();
@@ -240,13 +247,6 @@ function getArrayJsValueFromWasm0(ptr, len) {
     }
     wasm.__externref_drop_slice(ptr, len);
     return result;
-}
-
-function passArray8ToWasm0(arg, malloc) {
-    const ptr = malloc(arg.length * 1, 1) >>> 0;
-    getUint8ArrayMemory0().set(arg, ptr / 1);
-    WASM_VECTOR_LEN = arg.length;
-    return ptr;
 }
 /**
  * @returns {JSRuntime}
@@ -298,7 +298,7 @@ export function decompile(dxb, formatted, colorized, resolve_slots) {
 }
 
 function __wbg_adapter_24(arg0, arg1, arg2) {
-    wasm.closure9_externref_shim(arg0, arg1, arg2);
+    wasm.closure21_externref_shim(arg0, arg1, arg2);
 }
 
 function __wbg_adapter_27(arg0, arg1) {
@@ -309,11 +309,11 @@ function __wbg_adapter_27(arg0, arg1) {
 }
 
 function __wbg_adapter_32(arg0, arg1, arg2) {
-    wasm.closure80_externref_shim(arg0, arg1, arg2);
+    wasm.closure81_externref_shim(arg0, arg1, arg2);
 }
 
-function __wbg_adapter_77(arg0, arg1, arg2, arg3) {
-    wasm.closure93_externref_shim(arg0, arg1, arg2, arg3);
+function __wbg_adapter_79(arg0, arg1, arg2, arg3) {
+    wasm.closure94_externref_shim(arg0, arg1, arg2, arg3);
 }
 
 const __wbindgen_enum_BinaryType = ["blob", "arraybuffer"];
@@ -575,7 +575,7 @@ export function __wbg_new_23a2665fac83c611(arg0, arg1) {
             const a = state0.a;
             state0.a = 0;
             try {
-                return __wbg_adapter_77(a, state0.b, arg0, arg1);
+                return __wbg_adapter_79(a, state0.b, arg0, arg1);
             } finally {
                 state0.a = a;
             }
@@ -625,6 +625,18 @@ export function __wbg_queueMicrotask_97d92b4fcc8a61c5(arg0) {
 export function __wbg_queueMicrotask_d3219def82552485(arg0) {
     const ret = arg0.queueMicrotask;
     return ret;
+}
+
+export function __wbg_randomUUID_2260fd15ca9fcf96(arg0) {
+    const ret = crypto.randomUUID();
+    const ptr1 = passStringToWasm0(
+        ret,
+        wasm.__wbindgen_malloc,
+        wasm.__wbindgen_realloc,
+    );
+    const len1 = WASM_VECTOR_LEN;
+    getDataViewMemory0().setInt32(arg0 + 4 * 1, len1, true);
+    getDataViewMemory0().setInt32(arg0 + 4 * 0, ptr1, true);
 }
 
 export function __wbg_resolve_4851785c9c5f573d(arg0) {
@@ -697,23 +709,23 @@ export function __wbindgen_cb_drop(arg0) {
     return ret;
 }
 
-export function __wbindgen_closure_wrapper206(arg0, arg1, arg2) {
-    const ret = makeMutClosure(arg0, arg1, 81, __wbg_adapter_32);
+export function __wbindgen_closure_wrapper211(arg0, arg1, arg2) {
+    const ret = makeMutClosure(arg0, arg1, 82, __wbg_adapter_32);
     return ret;
 }
 
-export function __wbindgen_closure_wrapper71(arg0, arg1, arg2) {
-    const ret = makeMutClosure(arg0, arg1, 10, __wbg_adapter_24);
+export function __wbindgen_closure_wrapper83(arg0, arg1, arg2) {
+    const ret = makeMutClosure(arg0, arg1, 22, __wbg_adapter_24);
     return ret;
 }
 
-export function __wbindgen_closure_wrapper72(arg0, arg1, arg2) {
-    const ret = makeMutClosure(arg0, arg1, 10, __wbg_adapter_27);
+export function __wbindgen_closure_wrapper84(arg0, arg1, arg2) {
+    const ret = makeMutClosure(arg0, arg1, 22, __wbg_adapter_27);
     return ret;
 }
 
-export function __wbindgen_closure_wrapper73(arg0, arg1, arg2) {
-    const ret = makeMutClosure(arg0, arg1, 10, __wbg_adapter_24);
+export function __wbindgen_closure_wrapper85(arg0, arg1, arg2) {
+    const ret = makeMutClosure(arg0, arg1, 22, __wbg_adapter_24);
     return ret;
 }
 

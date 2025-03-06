@@ -13,6 +13,7 @@ use crypto::crypto_js::CryptoJS;
 use datex_core::compiler;
 use datex_core::decompiler;
 
+use datex_core::runtime::Context;
 use datex_core::utils::logger::Logger;
 use datex_core::utils::logger::LoggerContext;
 use lazy_static::lazy_static;
@@ -66,10 +67,14 @@ pub fn decompile(
   colorized: bool,
   resolve_slots: bool,
 ) -> String {
-  let ctx = Rc::new(RefCell::new(LoggerContext {
+  let logger_context = Rc::new(RefCell::new(LoggerContext {
     log_redirect: Some(|s: &str| -> () { console::log_1(&s.into()) }),
   }));
-  return decompiler::decompile(ctx, dxb, formatted, colorized, resolve_slots);
+  let context = Rc::new(RefCell::new(Context {
+    logger_context: logger_context.clone(),
+    crypto: Rc::new(RefCell::new(CryptoJS {})),
+  }));
+  return decompiler::decompile(context, dxb, formatted, colorized, resolve_slots);
 }
 
 // #[wasm_bindgen]
