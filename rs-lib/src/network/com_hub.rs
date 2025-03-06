@@ -3,8 +3,7 @@ use datex_core::{
   network::{
     com_hub::ComHub,
     com_interfaces::{
-      com_interface::{ComInterface, ComInterfaceTrait}, com_interface_socket::SocketState,
-      websocket_client::WebSocketClientInterface,
+      com_interface::{ComInterface, ComInterfaceTrait}, com_interface_socket::SocketState, websocket::websocket_client::WebSocketClientInterface,
     },
   },
 };
@@ -13,7 +12,7 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::future_to_promise;
 use web_sys::js_sys::{self, Object, Promise};
 
-use crate::network::com_interfaces::websocket_client_js::WebSocketJS;
+use crate::network::com_interfaces::websocket_client_js::WebSocketClientJS;
 
 #[wasm_bindgen]
 pub struct JSComHub {
@@ -42,7 +41,7 @@ impl JSComHub {
 
     future_to_promise(async move {
       let websocket =
-        WebSocketJS::new(&address_clone, com_hub.borrow().logger.clone())
+        WebSocketClientJS::new(&address_clone, com_hub.borrow().logger.clone())
           .map_err(|e| JsError::new(&format!("{:?}", e)))?;
       let websocket = Rc::new(RefCell::new(websocket));
 

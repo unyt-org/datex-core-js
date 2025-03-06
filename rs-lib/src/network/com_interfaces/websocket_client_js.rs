@@ -8,8 +8,7 @@ use std::{
 use anyhow::{Error, Result};
 use datex_core::{
   network::com_interfaces::{
-    com_interface_socket::{ComInterfaceSocket, SocketState},
-    websocket_client::{parse_url, WebSocket, WebSocketClientInterface},
+    com_interface_socket::{ComInterfaceSocket, SocketState}, websocket::{websocket_client::WebSocket, websocket_common::parse_url},
   },
   utils::logger::{self, Logger, LoggerContext},
 };
@@ -22,7 +21,7 @@ use wasm_bindgen::{
 };
 use web_sys::{js_sys, ErrorEvent, MessageEvent};
 
-pub struct WebSocketJS {
+pub struct WebSocketClientJS {
   address: Url,
   ws: web_sys::WebSocket,
   receive_queue: Arc<Mutex<VecDeque<u8>>>,
@@ -31,15 +30,15 @@ pub struct WebSocketJS {
   state: Rc<RefCell<SocketState>>,
 }
 
-impl WebSocketJS {
+impl WebSocketClientJS {
   pub fn new(
     address: &str,
     logger: Option<Logger>,
-  ) -> Result<WebSocketJS, Error> {
+  ) -> Result<WebSocketClientJS, Error> {
     let address = parse_url(address)?;
     let ws = web_sys::WebSocket::new(&address.to_string())
       .map_err(|_| Error::msg("Failed to create WebSocket"))?;
-    return Ok(WebSocketJS {
+    return Ok(WebSocketClientJS {
       address,
       state: Rc::new(RefCell::new(SocketState::Closed)),
       wait_for_state_change: Arc::new(Notify::new()),
@@ -162,7 +161,7 @@ impl WebSocketJS {
   }
 }
 
-impl WebSocket for WebSocketJS {
+impl WebSocket for WebSocketClientJS {
   fn connect(&mut self) -> Result<Arc<Mutex<VecDeque<u8>>>> {
     self.connect()?;
     Ok(self.receive_queue.clone())
