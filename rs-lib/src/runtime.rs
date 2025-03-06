@@ -24,7 +24,7 @@ impl JSRuntime {
     crypto: Rc<RefCell<dyn Crypto>>,
     ctx: Rc<RefCell<LoggerContext>>,
   ) -> JSRuntime {
-    let runtime = Runtime::new_with_crypto_and_logger(crypto, ctx.clone());
+    let runtime = Runtime::new(crypto, ctx.clone());
     runtime.memory.borrow_mut().store_pointer(
       [
         10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160,
