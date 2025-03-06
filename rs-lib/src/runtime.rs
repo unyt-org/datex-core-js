@@ -21,15 +21,10 @@ pub struct JSRuntime {
  */
 impl JSRuntime {
   pub fn create(
-    crypto: Rc<RefCell<dyn Crypto>>,
-    logger_context: Rc<RefCell<LoggerContext>>,
+    ctx: Context,
   ) -> JSRuntime {
-    let context = Context {
-      logger_context,
-      crypto: crypto.clone(),
-    };
     let runtime = Runtime::new(
-      Rc::new(RefCell::new(context))
+      Rc::new(RefCell::new(ctx))
     );
     runtime.memory.borrow_mut().store_pointer(
       [

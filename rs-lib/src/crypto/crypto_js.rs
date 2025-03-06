@@ -5,7 +5,7 @@ extern "C" {
     #[wasm_bindgen(js_namespace = crypto)]
     fn randomUUID() -> String;
 }
-pub struct CryptoJS {}
+pub struct CryptoJS;
 impl Crypto for CryptoJS {
   fn encrypt(&self, data: &[u8]) -> Vec<u8> {
     todo!()
