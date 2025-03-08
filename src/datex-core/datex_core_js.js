@@ -4,7 +4,7 @@
 // deno-fmt-ignore-file
 // @ts-self-types="./datex_core_js.d.ts"
 
-// source-hash: 470024a1c633827069594df5964c62e3dde99676
+// source-hash: f40d89419a96beea1f4f58678f8d97d205d6d7a8
 import * as wasm from "./datex_core_js.wasm";
 export * from "./datex_core_js.internal.js";
 import { __wbg_set_wasm } from "./datex_core_js.internal.js";
