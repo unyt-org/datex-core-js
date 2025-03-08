@@ -41,53 +41,53 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 // console.log
 #[wasm_bindgen]
 extern "C" {
-  #[wasm_bindgen(js_namespace = console, final)]
-  pub fn log(s: &str);
+    #[wasm_bindgen(js_namespace = console, final)]
+    pub fn log(s: &str);
 }
 
 // export compiler/runtime functions to JavaScript
 #[wasm_bindgen]
 pub fn init_runtime() -> JSRuntime {
-  let ctx = Context {
-    logger_context: Rc::new(RefCell::new(LoggerContext {
-      log_redirect: Some(|s: &str| -> () { console::log_1(&s.into()) }),
-    })),
-  };
+    let ctx = Context {
+        logger_context: Rc::new(RefCell::new(LoggerContext {
+            log_redirect: Some(|s: &str| -> () { console::log_1(&s.into()) }),
+        })),
+    };
 
-  let global_ctx = GlobalContext {
-    crypto: Arc::new(Mutex::new(CryptoJS)),
-  };
+    let global_ctx = GlobalContext {
+        crypto: Arc::new(Mutex::new(CryptoJS)),
+    };
 
-  set_global_context(global_ctx);
-  let runtime = JSRuntime::create(ctx);
-  return runtime;
+    set_global_context(global_ctx);
+    let runtime = JSRuntime::create(ctx);
+    return runtime;
 }
 
 #[wasm_bindgen]
 pub fn compile(datex_script: &str) {
-  compiler::compile(datex_script);
+    compiler::compile(datex_script);
 }
 
 #[wasm_bindgen]
 pub fn decompile(
-  dxb: &[u8],
-  formatted: bool,
-  colorized: bool,
-  resolve_slots: bool,
+    dxb: &[u8],
+    formatted: bool,
+    colorized: bool,
+    resolve_slots: bool,
 ) -> String {
-  let logger_context = Rc::new(RefCell::new(LoggerContext {
-    log_redirect: Some(|s: &str| -> () { console::log_1(&s.into()) }),
-  }));
-  let context = Rc::new(RefCell::new(Context {
-    logger_context: logger_context.clone(),
-  }));
-  return decompiler::decompile(
-    context,
-    dxb,
-    formatted,
-    colorized,
-    resolve_slots,
-  );
+    let logger_context = Rc::new(RefCell::new(LoggerContext {
+        log_redirect: Some(|s: &str| -> () { console::log_1(&s.into()) }),
+    }));
+    let context = Rc::new(RefCell::new(Context {
+        logger_context: logger_context.clone(),
+    }));
+    return decompiler::decompile(
+        context,
+        dxb,
+        formatted,
+        colorized,
+        resolve_slots,
+    );
 }
 
 // #[wasm_bindgen]
