@@ -1,11 +1,8 @@
-use datex_core::{
-    network::{
-        com_hub::ComHub,
-        com_interfaces::{
-            com_interface::ComInterface,
-            com_interface_socket::SocketState,
-            websocket::websocket_client::WebSocketClientInterface,
-        },
+use datex_core::network::{
+    com_hub::ComHub,
+    com_interfaces::{
+        com_interface::ComInterface, com_interface_socket::SocketState,
+        websocket::websocket_client::WebSocketClientInterface,
     },
 };
 use std::{cell::RefCell, rc::Rc};
