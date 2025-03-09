@@ -1,9 +1,8 @@
 use datex_core::{
-    crypto,
     network::{
         com_hub::ComHub,
         com_interfaces::{
-            com_interface::{ComInterface, ComInterfaceTrait},
+            com_interface::ComInterface,
             com_interface_socket::SocketState,
             websocket::websocket_client::WebSocketClientInterface,
         },
@@ -12,7 +11,7 @@ use datex_core::{
 use std::{cell::RefCell, rc::Rc};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::future_to_promise;
-use web_sys::js_sys::{self, Object, Promise};
+use web_sys::js_sys::{self, Promise};
 
 use crate::network::com_interfaces::websocket_client_js::WebSocketClientJS;
 
@@ -59,7 +58,7 @@ impl JSComHub {
 
             com_hub
                 .borrow_mut()
-                .add_interface(ComInterfaceTrait::new(ws_interface.clone()))
+                .add_interface(ws_interface.clone())
                 .map_err(|e| JsError::new(&format!("{:?}", e)))?;
 
             let socket_state =
@@ -70,7 +69,7 @@ impl JSComHub {
                 );
             }
             let uuid = ws_interface.borrow().get_uuid();
-            Ok(JsValue::from_str(&uuid))
+            Ok(JsValue::from_str(&uuid.to_string()))
         })
     }
 
