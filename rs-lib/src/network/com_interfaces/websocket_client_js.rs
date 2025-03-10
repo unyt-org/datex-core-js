@@ -165,7 +165,7 @@ impl WebSocket for WebSocketClientJS {
         Ok(self.receive_queue.clone())
     }
 
-    fn send_data(&self, message: &[u8]) -> bool {
+    fn send_data(&mut self, message: &[u8]) -> bool {
         self.ws.send_with_u8_array(&message).is_ok()
     }
 
