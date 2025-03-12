@@ -24,17 +24,19 @@ wasm-bindgen-futures = "0.4.50"
 tokio = { version = "1.43.0", features = ["sync"] }
 
 [dependencies.web-sys]
-	version = "0.3.69"
-	features = [
-		"console",
-		"BinaryType",
-		"Blob",
-		"ErrorEvent",
-		"FileReader",
-		"MessageEvent",
-		"ProgressEvent",
-		"WebSocket",
-	]
+version = "0.3.69"
+features = [
+    "Window",
+    "console",
+    "BinaryType",
+    "Blob",
+    "ErrorEvent",
+    "FileReader",
+    "MessageEvent",
+    "ProgressEvent",
+    "WebSocket",
+    "Crypto",
+]
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.50"
