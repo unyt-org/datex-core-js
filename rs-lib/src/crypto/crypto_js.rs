@@ -18,4 +18,8 @@ impl Crypto for CryptoJS {
     fn create_uuid(&self) -> String {
         return randomUUID();
     }
+
+    fn random_bytes(&self, length: usize) -> Vec<u8> {
+        todo!()
+    }
 }
