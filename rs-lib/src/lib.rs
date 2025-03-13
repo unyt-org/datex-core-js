@@ -29,6 +29,7 @@ pub mod network;
 use network::com_interfaces::websocket_client_js;
 
 pub mod crypto;
+pub mod js_utils;
 pub mod memory;
 pub mod pointer;
 

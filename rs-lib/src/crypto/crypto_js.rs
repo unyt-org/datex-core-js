@@ -11,6 +11,8 @@ use web_sys::{
     CryptoKey, EcdsaParams, RsaOaepParams,
 };
 
+use crate::js_utils::AsByteSlice;
+
 fn js_array(values: &[&str]) -> JsValue {
     return JsValue::from(
         values
@@ -33,7 +35,24 @@ impl CryptoJS {
     }
     fn generate_key_pair(&self) {}
 
-    async fn generate_key(
+    async fn export_key(
+        &self,
+        key: &CryptoKey,
+        format: &str,
+    ) -> Result<Vec<u8>, CryptoError> {
+        let export_key_promise = Self::crypto_subtle()
+            .export_key(format, key)
+            .map_err(|_| CryptoError::KeyExportFailed)?;
+        let key: JsValue = JsFuture::from(export_key_promise)
+            .await
+            .map_err(|_| CryptoError::KeyExportFailed)?;
+        let bytes = key
+            .as_u8_slice()
+            .map_err(|_| CryptoError::KeyExportFailed)?;
+        Ok(bytes)
+    }
+
+    async fn generate_crypto_key(
         &self,
         algorithm: &Object,
         extractable: bool,
@@ -56,7 +75,7 @@ impl CryptoJS {
     }
 
     pub async fn new_encryption_key(&self) -> Result<CryptoKey, CryptoError> {
-        self.generate_key(
+        self.generate_crypto_key(
             &RsaOaepParams::new("RSA-OAEP"),
             true,
             &["encrypt", "decrypt"],
@@ -64,7 +83,7 @@ impl CryptoJS {
         .await
     }
     pub async fn new_sign_key(&self) -> Result<CryptoKey, CryptoError> {
-        self.generate_key(
+        self.generate_crypto_key(
             &EcdsaParams::new("RSA-OAEP", &JsValue::from_str("SHA-256")),
             true,
             &["sign", "verify"],
