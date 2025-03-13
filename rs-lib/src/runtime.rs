@@ -48,10 +48,13 @@ impl JSRuntime {
 #[wasm_bindgen]
 impl JSRuntime {
     #[wasm_bindgen]
-    pub async fn crypto_test_tmp() -> Promise {
+    pub async fn crypto_test_tmp(&self) -> Promise {
         future_to_promise(async move {
             let crypto = CryptoJS {};
-            let pair = crypto.new_encryption_key_pair().await.unwrap();
+            let pair = crypto
+                .new_encryption_key_pair()
+                .await
+                .map_err(|e| JsValue::from_str(&format!("{:?}", e)))?;
             let js_array = Uint8Array::from(pair.0.as_slice());
             Ok(js_array.into())
         })

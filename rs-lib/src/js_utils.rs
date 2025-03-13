@@ -1,5 +1,5 @@
 use wasm_bindgen::JsValue;
-use web_sys::js_sys;
+use web_sys::js_sys::{self, Object, Reflect};
 
 pub enum JsError {
     ConversionError,
@@ -21,4 +21,21 @@ impl AsByteSlice for JsValue {
         uint8_array.copy_to(&mut bytes);
         Ok(bytes)
     }
+}
+
+pub fn js_object(values: Vec<(&str, JsValue)>) -> Object {
+    let obj = Object::new();
+    for (key, value) in values {
+        let _ = Reflect::set(&obj, &key.into(), &value);
+    }
+    obj
+}
+
+pub fn js_array(values: &[&str]) -> JsValue {
+    return JsValue::from(
+        values
+            .iter()
+            .map(|x| JsValue::from_str(x))
+            .collect::<js_sys::Array>(),
+    );
 }

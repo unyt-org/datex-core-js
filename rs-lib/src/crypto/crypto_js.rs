@@ -1,4 +1,4 @@
-use std::array;
+use std::{array, fmt::format};
 
 use datex_core::crypto::{
     self,
@@ -7,20 +7,11 @@ use datex_core::crypto::{
 use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{
-    js_sys::{self, Array, Object},
+    js_sys::{self, Array, Object, Uint8Array},
     CryptoKey, CryptoKeyPair, EcdsaParams, RsaOaepParams,
 };
 
-use crate::js_utils::AsByteSlice;
-
-fn js_array(values: &[&str]) -> JsValue {
-    return JsValue::from(
-        values
-            .iter()
-            .map(|x| JsValue::from_str(x))
-            .collect::<js_sys::Array>(),
-    );
-}
+use crate::js_utils::{js_array, js_object, AsByteSlice};
 
 mod sealed {
     use super::*;
@@ -73,7 +64,7 @@ impl CryptoJS {
                 extractable,
                 &js_array(&key_usages),
             )
-            .map_err(|_| CryptoError::KeyGeneratorFailed)?;
+            .map_err(|e| CryptoError::Other(format!("{:?}", e)))?;
         let key: JsValue = JsFuture::from(key_generator_promise)
             .await
             .map_err(|_| CryptoError::KeyGeneratorFailed)?;
@@ -82,12 +73,17 @@ impl CryptoJS {
     }
 
     async fn new_encryption_key_pair() -> Result<CryptoKeyPair, CryptoError> {
-        Self::generate_crypto_key(
-            &RsaOaepParams::new("RSA-OAEP"),
-            true,
-            &["encrypt", "decrypt"],
-        )
-        .await
+        let algorithm = js_object(vec![
+            ("name", JsValue::from_str("RSA-OAEP")),
+            ("modulusLength", JsValue::from_f64(4096.0)),
+            (
+                "publicExponent",
+                JsValue::from(Uint8Array::from(&[1, 0, 1][..])),
+            ),
+            ("hash", JsValue::from_str("SHA-256")),
+        ]);
+        Self::generate_crypto_key(&algorithm, true, &["encrypt", "decrypt"])
+            .await
     }
     async fn new_sign_key_pair() -> Result<CryptoKeyPair, CryptoError> {
         Self::generate_crypto_key(
@@ -100,11 +96,6 @@ impl CryptoJS {
 }
 impl Crypto for CryptoJS {
     fn encrypt(&self, data: &[u8]) -> Vec<u8> {
-        // let crypto_key = Self::crypto_subtle().generate_key_with_str(
-        //     "AES-GCM", true, &["encrypt", "decrypt"]
-        // ).unwrap();
-        // Self::crypto_subtle().encrypt_with_str_and_u8_array(
-        //     "xx", key, data)
         todo!()
     }
 

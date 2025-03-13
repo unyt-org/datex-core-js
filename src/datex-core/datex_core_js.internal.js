@@ -230,17 +230,6 @@ function debugString(val) {
     // TODO we could test for more things here, like `Set`s and `Map`s.
     return className;
 }
-
-function getArrayJsValueFromWasm0(ptr, len) {
-    ptr = ptr >>> 0;
-    const mem = getDataViewMemory0();
-    const result = [];
-    for (let i = ptr; i < ptr + 4 * len; i += 4) {
-        result.push(wasm.__wbindgen_export_2.get(mem.getUint32(i, true)));
-    }
-    wasm.__externref_drop_slice(ptr, len);
-    return result;
-}
 /**
  * @returns {JSRuntime}
  */
@@ -296,18 +285,28 @@ export function decompile(dxb, formatted, colorized, resolve_slots) {
     }
 }
 
-function __wbg_adapter_24(arg0, arg1, arg2) {
+function getArrayJsValueFromWasm0(ptr, len) {
+    ptr = ptr >>> 0;
+    const mem = getDataViewMemory0();
+    const result = [];
+    for (let i = ptr; i < ptr + 4 * len; i += 4) {
+        result.push(wasm.__wbindgen_export_2.get(mem.getUint32(i, true)));
+    }
+    wasm.__externref_drop_slice(ptr, len);
+    return result;
+}
+function __wbg_adapter_26(arg0, arg1, arg2) {
     wasm.closure81_externref_shim(arg0, arg1, arg2);
 }
 
-function __wbg_adapter_27(arg0, arg1) {
+function __wbg_adapter_29(arg0, arg1) {
     wasm._dyn_core__ops__function__FnMut_____Output___R_as_wasm_bindgen__closure__WasmClosure___describe__invoke__hc6451a377f96a390(
         arg0,
         arg1,
     );
 }
 
-function __wbg_adapter_32(arg0, arg1, arg2) {
+function __wbg_adapter_34(arg0, arg1, arg2) {
     wasm.closure101_externref_shim(arg0, arg1, arg2);
 }
 
@@ -469,8 +468,8 @@ export class JSRuntime {
     /**
      * @returns {Promise<Promise<any>>}
      */
-    static crypto_test_tmp() {
-        const ret = wasm.jsruntime_crypto_test_tmp();
+    crypto_test_tmp() {
+        const ret = wasm.jsruntime_crypto_test_tmp(this.__wbg_ptr);
         return ret;
     }
     /**
@@ -735,12 +734,15 @@ export function __wbg_set_65595bdd868b3009(arg0, arg1, arg2) {
     arg0.set(arg1, arg2 >>> 0);
 }
 
-export function __wbg_setbinaryType_92fa1ffd873b327c(arg0, arg1) {
-    arg0.binaryType = __wbindgen_enum_BinaryType[arg1];
+export function __wbg_set_bb8cecf6a62b9f46() {
+    return handleError(function (arg0, arg1, arg2) {
+        const ret = Reflect.set(arg0, arg1, arg2);
+        return ret;
+    }, arguments);
 }
 
-export function __wbg_setname_90bc8e798d1b67dc(arg0, arg1, arg2) {
-    arg0.name = getStringFromWasm0(arg1, arg2);
+export function __wbg_setbinaryType_92fa1ffd873b327c(arg0, arg1) {
+    arg0.binaryType = __wbindgen_enum_BinaryType[arg1];
 }
 
 export function __wbg_setonclose_14fc475a49d488fc(arg0, arg1) {
@@ -804,23 +806,23 @@ export function __wbindgen_cb_drop(arg0) {
     return ret;
 }
 
-export function __wbindgen_closure_wrapper196(arg0, arg1, arg2) {
-    const ret = makeMutClosure(arg0, arg1, 82, __wbg_adapter_24);
+export function __wbindgen_closure_wrapper199(arg0, arg1, arg2) {
+    const ret = makeMutClosure(arg0, arg1, 82, __wbg_adapter_26);
     return ret;
 }
 
-export function __wbindgen_closure_wrapper197(arg0, arg1, arg2) {
-    const ret = makeMutClosure(arg0, arg1, 82, __wbg_adapter_27);
+export function __wbindgen_closure_wrapper200(arg0, arg1, arg2) {
+    const ret = makeMutClosure(arg0, arg1, 82, __wbg_adapter_29);
     return ret;
 }
 
-export function __wbindgen_closure_wrapper198(arg0, arg1, arg2) {
-    const ret = makeMutClosure(arg0, arg1, 82, __wbg_adapter_24);
+export function __wbindgen_closure_wrapper201(arg0, arg1, arg2) {
+    const ret = makeMutClosure(arg0, arg1, 82, __wbg_adapter_26);
     return ret;
 }
 
-export function __wbindgen_closure_wrapper228(arg0, arg1, arg2) {
-    const ret = makeMutClosure(arg0, arg1, 102, __wbg_adapter_32);
+export function __wbindgen_closure_wrapper231(arg0, arg1, arg2) {
+    const ret = makeMutClosure(arg0, arg1, 102, __wbg_adapter_34);
     return ret;
 }
 
@@ -863,6 +865,11 @@ export function __wbindgen_is_undefined(arg0) {
 
 export function __wbindgen_memory() {
     const ret = wasm.memory;
+    return ret;
+}
+
+export function __wbindgen_number_new(arg0) {
+    const ret = arg0;
     return ret;
 }
 
