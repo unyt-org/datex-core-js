@@ -30,6 +30,7 @@ export class JSPointer {
 export class JSRuntime {
     private constructor();
     free(): void;
+    static crypto_test_tmp(): Promise<Promise<any>>;
     _create_block(body?: Uint8Array | null): Uint8Array;
     readonly version: string;
     readonly memory: JSMemory;

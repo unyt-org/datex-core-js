@@ -48,7 +48,7 @@ impl JSRuntime {
 #[wasm_bindgen]
 impl JSRuntime {
     #[wasm_bindgen]
-    pub async fn __test__() -> Promise {
+    pub async fn crypto_test_tmp() -> Promise {
         future_to_promise(async move {
             let crypto = CryptoJS {};
             let pair = crypto.new_encryption_key_pair().await.unwrap();
