@@ -1,4 +1,4 @@
-use std::{array, fmt::format};
+use std::{array, fmt::format, future::Future, pin::Pin};
 
 use datex_core::crypto::{
     self,
@@ -151,16 +151,28 @@ impl Crypto for CryptoJS {
         })
     }
 
-    fn encrypt_rsa(&self, data: &[u8], public_key: Vec<u8>) -> Vec<u8> {
-        Box::pin(async move {
-            // let key: CryptoKey = CryptoKey {};
+    fn encrypt_rsa(
+        &self,
+        data: &[u8],
+        public_key: Vec<u8>,
+    ) -> Pin<Box<(dyn Future<Output = Result<Vec<u8>, CryptoError>> + 'static)>>
+    {
+        // TODO implement import key
+        todo!()
+        // Box::pin(async move {
+        //     // let key: CryptoKey = CryptoKey {};
 
-            // Self::crypto_subtle()
-            //     .encrypt_with_str_and_u8_array("RSA-OAEP", &key, data)
-        })
+        //     Self::crypto_subtle()
+        //         .encrypt_with_str_and_u8_array("RSA-OAEP", &key, data)
+        // })
     }
 
-    fn decrypt_rsa(&self, data: &[u8], private_key: Vec<u8>) -> Vec<u8> {
+    fn decrypt_rsa(
+        &self,
+        data: &[u8],
+        private_key: Vec<u8>,
+    ) -> Pin<Box<(dyn Future<Output = Result<Vec<u8>, CryptoError>> + 'static)>>
+    {
         todo!()
     }
 }
