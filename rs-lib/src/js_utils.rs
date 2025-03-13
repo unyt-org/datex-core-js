@@ -1,5 +1,5 @@
-use wasm_bindgen::JsValue;
-use web_sys::js_sys::{self, Object, Reflect};
+use wasm_bindgen::{JsCast, JsValue};
+use web_sys::js_sys::{self, Array, Object, Reflect};
 
 pub enum JsError {
     ConversionError,
@@ -32,11 +32,48 @@ pub fn js_object<T: Into<JsValue>>(values: Vec<(&str, T)>) -> Object {
     obj
 }
 
-pub fn js_array(values: &[&str]) -> JsValue {
-    return JsValue::from(
-        values
-            .iter()
-            .map(|x| JsValue::from_str(x))
-            .collect::<js_sys::Array>(),
-    );
+pub fn js_array<T>(values: &[T]) -> JsValue
+where
+    T: Into<JsValue> + Clone,
+{
+    // FIXME TODO can we avoid clone here?
+    let js_array = values
+        .iter()
+        .map(|x| <T as Into<JsValue>>::into(x.clone()))
+        .collect::<Array>();
+
+    JsValue::from(js_array)
 }
+
+// pub fn js_array(values: &[&str]) -> JsValue {
+//     return JsValue::from(
+//         values
+//             .iter()
+//             .map(|x| JsValue::from_str(x))
+//             .collect::<js_sys::Array>(),
+//     );
+// }
+
+// pub fn js_array<T>(values: &[T]) -> JsValue
+// where
+//     T: Into<JsValue> + ?Sized + JsCast, // Allow the generic T to handle references too
+// {
+//     let js_array = values
+//         .iter()
+//         .map(|x| JsValue::from(x)) // Use the Into trait on the reference
+//         .collect::<Array>();
+
+//     JsValue::from(js_array)
+// }
+
+// pub fn js_array<T>(values: &[T]) -> JsValue
+// where
+//     T: Into<JsValue> + 'static, // T must be convertible into JsValue and can be passed to JS
+// {
+//     let js_array = values
+//         .iter()
+//         .map(|x| Into::<JsValue>::into(x.clone())) // Use Into<JsValue> to convert references
+//         .collect::<Array>();
+
+//     JsValue::from(js_array)
+// }

@@ -90,23 +90,15 @@ impl CryptoJS {
             .await
     }
     async fn new_sign_key_pair() -> Result<CryptoKeyPair, CryptoError> {
-        Self::generate_crypto_key(
-            &EcdsaParams::new("RSA-OAEP", &JsValue::from_str("SHA-256")),
-            true,
-            &["sign", "verify"],
-        )
-        .await
+        let algorithm = js_object(vec![
+            ("name", JsValue::from_str("ECDSA")),
+            ("namedCurve", JsValue::from_str("P-384")),
+        ]);
+        Self::generate_crypto_key(&algorithm, true, &["sign", "verify"]).await
     }
 }
+
 impl Crypto for CryptoJS {
-    fn encrypt(&self, data: &[u8]) -> Vec<u8> {
-        todo!()
-    }
-
-    fn decrypt(&self, data: &[u8]) -> Vec<u8> {
-        todo!()
-    }
-
     fn create_uuid(&self) -> String {
         Self::crypto().random_uuid()
     }
@@ -148,6 +140,27 @@ impl Crypto for CryptoJS {
             >,
         >,
     > {
+        Box::pin(async move {
+            let key = Self::new_sign_key_pair().await?;
+            let public_key =
+                Self::export_crypto_key(&key.get_public_key(), "spki").await?;
+            let private_key =
+                Self::export_crypto_key(&key.get_private_key(), "pkcs8")
+                    .await?;
+            Ok((public_key, private_key))
+        })
+    }
+
+    fn encrypt_rsa(&self, data: &[u8], public_key: Vec<u8>) -> Vec<u8> {
+        Box::pin(async move {
+            // let key: CryptoKey = CryptoKey {};
+
+            // Self::crypto_subtle()
+            //     .encrypt_with_str_and_u8_array("RSA-OAEP", &key, data)
+        })
+    }
+
+    fn decrypt_rsa(&self, data: &[u8], private_key: Vec<u8>) -> Vec<u8> {
         todo!()
     }
 }

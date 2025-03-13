@@ -13,6 +13,7 @@ use wasm_bindgen_futures::future_to_promise;
 use web_sys::js_sys::{Promise, Uint8Array};
 
 use crate::crypto::crypto_js::CryptoJS;
+use crate::js_utils::js_array;
 use crate::memory::JSMemory;
 use crate::network::com_hub::JSComHub;
 
@@ -51,11 +52,23 @@ impl JSRuntime {
     pub async fn crypto_test_tmp(&self) -> Promise {
         future_to_promise(async move {
             let crypto = CryptoJS {};
-            let pair = crypto
+
+            let sign_key_pair = crypto
+                .new_sign_key_pair()
+                .await
+                .map_err(|e| JsValue::from_str(&format!("{:?}", e)))?;
+
+            let encryption_key_pair = crypto
                 .new_encryption_key_pair()
                 .await
                 .map_err(|e| JsValue::from_str(&format!("{:?}", e)))?;
-            let js_array = Uint8Array::from(pair.0.as_slice());
+
+            let js_array = js_array(&[
+                encryption_key_pair.0,
+                encryption_key_pair.1,
+                sign_key_pair.0,
+                sign_key_pair.1,
+            ]);
             Ok(js_array.into())
         })
     }
