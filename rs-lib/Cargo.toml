@@ -38,8 +38,9 @@ features = [
     "Crypto",
     "SubtleCrypto",
     "CryptoKey",
+    "CryptoKeyPair",
     "RsaOaepParams",
-    "EcdsaParams"
+    "EcdsaParams",
 ]
 
 [dev-dependencies]

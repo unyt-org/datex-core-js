@@ -1,13 +1,18 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use datex_core::crypto;
 use datex_core::crypto::crypto::Crypto;
 use datex_core::datex_values::Pointer;
 use datex_core::global::dxb_block::DXBBlock;
 use datex_core::runtime::{Context, Runtime};
 use datex_core::utils::logger::LoggerContext;
+use tokio::sync::futures;
 use wasm_bindgen::prelude::*;
+use wasm_bindgen_futures::future_to_promise;
+use web_sys::js_sys::{Promise, Uint8Array};
 
+use crate::crypto::crypto_js::CryptoJS;
 use crate::memory::JSMemory;
 use crate::network::com_hub::JSComHub;
 
@@ -42,6 +47,16 @@ impl JSRuntime {
  */
 #[wasm_bindgen]
 impl JSRuntime {
+    #[wasm_bindgen]
+    pub async fn __test__() -> Promise {
+        future_to_promise(async move {
+            let crypto = CryptoJS {};
+            let pair = crypto.new_encryption_key_pair().await.unwrap();
+            let js_array = Uint8Array::from(pair.0.as_slice());
+            Ok(js_array.into())
+        })
+    }
+
     #[wasm_bindgen(getter)]
     pub fn version(&self) -> String {
         self.runtime.version.clone()

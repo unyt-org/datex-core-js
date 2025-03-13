@@ -4,11 +4,11 @@ use datex_core::crypto::{
     self,
     crypto::{Crypto, CryptoError},
 };
-use wasm_bindgen::JsValue;
+use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{
     js_sys::{self, Array, Object},
-    CryptoKey, EcdsaParams, RsaOaepParams,
+    CryptoKey, CryptoKeyPair, EcdsaParams, RsaOaepParams,
 };
 
 use crate::js_utils::AsByteSlice;
@@ -20,6 +20,13 @@ fn js_array(values: &[&str]) -> JsValue {
             .map(|x| JsValue::from_str(x))
             .collect::<js_sys::Array>(),
     );
+}
+
+mod sealed {
+    use super::*;
+    pub trait CryptoKeyType: JsCast {}
+    impl CryptoKeyType for CryptoKey {}
+    impl CryptoKeyType for CryptoKeyPair {}
 }
 
 pub struct CryptoJS;
@@ -51,12 +58,15 @@ impl CryptoJS {
         Ok(bytes)
     }
 
-    async fn generate_crypto_key(
-        &self,
+    // This method can either create a crypto key pair or a symmetric key
+    async fn generate_crypto_key<T>(
         algorithm: &Object,
         extractable: bool,
         key_usages: &[&str],
-    ) -> Result<CryptoKey, CryptoError> {
+    ) -> Result<T, CryptoError>
+    where
+        T: sealed::CryptoKeyType + JsCast,
+    {
         let key_generator_promise = Self::crypto_subtle()
             .generate_key_with_object(
                 &algorithm,
@@ -67,22 +77,20 @@ impl CryptoJS {
         let key: JsValue = JsFuture::from(key_generator_promise)
             .await
             .map_err(|_| CryptoError::KeyGeneratorFailed)?;
-        let crypto_key: CryptoKey = key
-            .try_into()
-            .map_err(|_| CryptoError::KeyGeneratorFailed)?;
-        Ok(crypto_key)
+        key.dyn_into::<T>()
+            .map_err(|_| CryptoError::KeyGeneratorFailed)
     }
 
-    pub async fn new_encryption_key(&self) -> Result<CryptoKey, CryptoError> {
-        self.generate_crypto_key(
+    async fn new_encryption_key_pair() -> Result<CryptoKeyPair, CryptoError> {
+        Self::generate_crypto_key(
             &RsaOaepParams::new("RSA-OAEP"),
             true,
             &["encrypt", "decrypt"],
         )
         .await
     }
-    pub async fn new_sign_key(&self) -> Result<CryptoKey, CryptoError> {
-        self.generate_crypto_key(
+    async fn new_sign_key_pair() -> Result<CryptoKeyPair, CryptoError> {
+        Self::generate_crypto_key(
             &EcdsaParams::new("RSA-OAEP", &JsValue::from_str("SHA-256")),
             true,
             &["sign", "verify"],
@@ -116,7 +124,7 @@ impl Crypto for CryptoJS {
         buffer.to_vec()
     }
 
-    fn new_encryption_key_pair(
+    fn new_encryption_key_pair<'a>(
         &self,
     ) -> std::pin::Pin<
         Box<
@@ -126,9 +134,12 @@ impl Crypto for CryptoJS {
         >,
     > {
         Box::pin(async move {
-            let key = Self::new_encryption_key(&self).await?;
-            let public_key = Self::export_crypto_key(&key, "spki").await?;
-            let private_key = Self::export_crypto_key(&key, "pkcs8").await?;
+            let key = Self::new_encryption_key_pair().await?;
+            let public_key =
+                Self::export_crypto_key(&key.get_public_key(), "spki").await?;
+            let private_key =
+                Self::export_crypto_key(&key.get_private_key(), "pkcs8")
+                    .await?;
             Ok((public_key, private_key))
         })
     }
@@ -138,8 +149,8 @@ impl Crypto for CryptoJS {
     ) -> std::pin::Pin<
         Box<
             dyn std::prelude::rust_2024::Future<
-                    Output = Result<(Vec<u8>, Vec<u8>), CryptoError>,
-                > + Send,
+                Output = Result<(Vec<u8>, Vec<u8>), CryptoError>,
+            >,
         >,
     > {
         todo!()
