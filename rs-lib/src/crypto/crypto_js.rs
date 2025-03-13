@@ -35,8 +35,7 @@ impl CryptoJS {
     }
     fn generate_key_pair(&self) {}
 
-    async fn export_key(
-        &self,
+    async fn export_crypto_key(
         key: &CryptoKey,
         format: &str,
     ) -> Result<Vec<u8>, CryptoError> {
@@ -115,5 +114,34 @@ impl Crypto for CryptoJS {
             .get_random_values_with_u8_array(&mut buffer)
             .unwrap();
         buffer.to_vec()
+    }
+
+    fn new_encryption_key_pair(
+        &self,
+    ) -> std::pin::Pin<
+        Box<
+            dyn std::prelude::rust_2024::Future<
+                Output = Result<(Vec<u8>, Vec<u8>), CryptoError>,
+            >,
+        >,
+    > {
+        Box::pin(async move {
+            let key = Self::new_encryption_key(&self).await?;
+            let public_key = Self::export_crypto_key(&key, "spki").await?;
+            let private_key = Self::export_crypto_key(&key, "pkcs8").await?;
+            Ok((public_key, private_key))
+        })
+    }
+
+    fn new_sign_key_pair(
+        &self,
+    ) -> std::pin::Pin<
+        Box<
+            dyn std::prelude::rust_2024::Future<
+                    Output = Result<(Vec<u8>, Vec<u8>), CryptoError>,
+                > + Send,
+        >,
+    > {
+        todo!()
     }
 }
