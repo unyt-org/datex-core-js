@@ -237,6 +237,17 @@ function passArray8ToWasm0(arg, malloc) {
     WASM_VECTOR_LEN = arg.length;
     return ptr;
 }
+
+function getArrayJsValueFromWasm0(ptr, len) {
+    ptr = ptr >>> 0;
+    const mem = getDataViewMemory0();
+    const result = [];
+    for (let i = ptr; i < ptr + 4 * len; i += 4) {
+        result.push(wasm.__wbindgen_export_2.get(mem.getUint32(i, true)));
+    }
+    wasm.__externref_drop_slice(ptr, len);
+    return result;
+}
 /**
  * @returns {JSRuntime}
  */
@@ -286,16 +297,6 @@ export function decompile(dxb, formatted, colorized, resolve_slots) {
     }
 }
 
-function getArrayJsValueFromWasm0(ptr, len) {
-    ptr = ptr >>> 0;
-    const mem = getDataViewMemory0();
-    const result = [];
-    for (let i = ptr; i < ptr + 4 * len; i += 4) {
-        result.push(wasm.__wbindgen_export_2.get(mem.getUint32(i, true)));
-    }
-    wasm.__externref_drop_slice(ptr, len);
-    return result;
-}
 function __wbg_adapter_26(arg0, arg1, arg2) {
     wasm.closure81_externref_shim(arg0, arg1, arg2);
 }
@@ -796,22 +797,22 @@ export function __wbindgen_cb_drop(arg0) {
     return ret;
 }
 
-export function __wbindgen_closure_wrapper199(arg0, arg1, arg2) {
+export function __wbindgen_closure_wrapper198(arg0, arg1, arg2) {
     const ret = makeMutClosure(arg0, arg1, 82, __wbg_adapter_26);
     return ret;
 }
 
-export function __wbindgen_closure_wrapper200(arg0, arg1, arg2) {
+export function __wbindgen_closure_wrapper199(arg0, arg1, arg2) {
     const ret = makeMutClosure(arg0, arg1, 82, __wbg_adapter_29);
     return ret;
 }
 
-export function __wbindgen_closure_wrapper201(arg0, arg1, arg2) {
+export function __wbindgen_closure_wrapper200(arg0, arg1, arg2) {
     const ret = makeMutClosure(arg0, arg1, 82, __wbg_adapter_26);
     return ret;
 }
 
-export function __wbindgen_closure_wrapper231(arg0, arg1, arg2) {
+export function __wbindgen_closure_wrapper230(arg0, arg1, arg2) {
     const ret = makeMutClosure(arg0, arg1, 102, __wbg_adapter_34);
     return ret;
 }

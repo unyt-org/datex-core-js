@@ -23,10 +23,11 @@ impl AsByteSlice for JsValue {
     }
 }
 
-pub fn js_object(values: Vec<(&str, JsValue)>) -> Object {
+pub fn js_object<T: Into<JsValue>>(values: Vec<(&str, T)>) -> Object {
     let obj = Object::new();
     for (key, value) in values {
-        let _ = Reflect::set(&obj, &key.into(), &value);
+        let js_value: JsValue = value.into();
+        let _ = Reflect::set(&obj, &key.into(), &js_value);
     }
     obj
 }
