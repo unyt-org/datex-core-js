@@ -63,11 +63,17 @@ impl JSRuntime {
                 .await
                 .map_err(|e| JsValue::from_str(&format!("{:?}", e)))?;
 
+            // let encrypted_message = crypto
+            //     .encrypt_rsa(vec![1, 2, 3], encryption_key_pair.0.clone())
+            //     .await
+            //     .map_err(|e| JsValue::from_str(&format!("{:?}", e)))?;
+
             let js_array = js_array(&[
                 encryption_key_pair.0,
                 encryption_key_pair.1,
                 sign_key_pair.0,
                 sign_key_pair.1,
+                // encrypted_message,
             ]);
             Ok(js_array.into())
         })

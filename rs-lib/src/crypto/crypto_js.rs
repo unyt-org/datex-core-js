@@ -49,6 +49,30 @@ impl CryptoJS {
         Ok(bytes)
     }
 
+    async fn import_crypto_key(
+        key: &[u8],
+        format: &str,
+        algorithm: &str,
+        key_usages: &[&str],
+    ) -> Result<CryptoKey, CryptoError> {
+        let key = Uint8Array::from(&key[..]);
+        let import_key_promise = Self::crypto_subtle()
+            .import_key_with_str(
+                format,
+                &Object::from(Uint8Array::from(key)),
+                algorithm,
+                true,
+                &js_array(&key_usages),
+            )
+            .map_err(|_| CryptoError::KeyImportFailed)?;
+        let key: JsValue = JsFuture::from(import_key_promise)
+            .await
+            .map_err(|_| CryptoError::KeyImportFailed)?;
+        let key: CryptoKey =
+            key.dyn_into().map_err(|_| CryptoError::KeyImportFailed)?;
+        Ok(key)
+    }
+
     // This method can either create a crypto key pair or a symmetric key
     async fn generate_crypto_key<T>(
         algorithm: &Object,
@@ -153,18 +177,33 @@ impl Crypto for CryptoJS {
 
     fn encrypt_rsa(
         &self,
-        data: &[u8],
+        data: Vec<u8>, // FIXME how to handle lifetime and let data pass as slice
         public_key: Vec<u8>,
     ) -> Pin<Box<(dyn Future<Output = Result<Vec<u8>, CryptoError>> + 'static)>>
     {
-        // TODO implement import key
-        todo!()
-        // Box::pin(async move {
-        //     // let key: CryptoKey = CryptoKey {};
+        Box::pin(async move {
+            let key = Self::import_crypto_key(
+                &public_key,
+                "spki",
+                "RSA-OAEP",
+                &["encrypt"],
+            )
+            .await?;
 
-        //     Self::crypto_subtle()
-        //         .encrypt_with_str_and_u8_array("RSA-OAEP", &key, data)
-        // })
+            let encryption_promise = Self::crypto_subtle()
+                .encrypt_with_str_and_u8_array("RSA-OAEP", &key, &data)
+                .map_err(|_| CryptoError::EncryptionError)?;
+
+            let result: JsValue = JsFuture::from(encryption_promise)
+                .await
+                .map_err(|_| CryptoError::KeyGeneratorFailed)?;
+
+            let message: Uint8Array =
+                result.try_into().map_err(|_: std::convert::Infallible| {
+                    CryptoError::KeyGeneratorFailed
+                })?;
+            Ok(message.to_vec())
+        })
     }
 
     fn decrypt_rsa(
