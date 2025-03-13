@@ -1,15 +1,12 @@
 use datex_core::crypto::crypto::Crypto;
-use wasm_bindgen::prelude::wasm_bindgen;
-#[wasm_bindgen]
-extern "C" {
-    #[wasm_bindgen(js_namespace = crypto)]
-    fn randomUUID() -> String;
-}
+
 pub struct CryptoJS;
 impl CryptoJS {
+    fn window() -> web_sys::Window {
+        web_sys::window().unwrap()
+    }
     fn crypto() -> web_sys::Crypto {
-        let window_instance = web_sys::window().unwrap();
-        window_instance.crypto().unwrap()
+        Self::window().crypto().unwrap()
     }
 }
 impl Crypto for CryptoJS {
@@ -22,8 +19,7 @@ impl Crypto for CryptoJS {
     }
 
     fn create_uuid(&self) -> String {
-        randomUUID()
-        //return Self::crypto().randomUUID();
+        Self::crypto().random_uuid()
     }
 
     fn random_bytes(&self, length: usize) -> Vec<u8> {
