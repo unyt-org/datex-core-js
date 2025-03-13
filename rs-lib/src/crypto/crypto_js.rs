@@ -4,7 +4,7 @@ use datex_core::crypto::{
     self,
     crypto::{Crypto, CryptoError},
 };
-use wasm_bindgen::{JsCast, JsValue};
+use wasm_bindgen::{convert::IntoWasmAbi, JsCast, JsValue};
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{
     js_sys::{self, Array, Object, Uint8Array},
@@ -49,6 +49,25 @@ impl CryptoJS {
         Ok(bytes)
     }
 
+    // async fn generate_crypto_key(
+    //     algorithm: &Object,
+    //     extractable: bool,
+    //     key_usages: &[&str],
+    // ) -> Result<CryptoKeyPair, CryptoError> {
+    //     let key_generator_promise = Self::crypto_subtle()
+    //         .generate_key_with_object(
+    //             &algorithm,
+    //             extractable,
+    //             &js_array(&key_usages),
+    //         )
+    //         .map_err(|e| CryptoError::Other(format!("{:?}", e)))?;
+    //     let key: JsValue = JsFuture::from(key_generator_promise)
+    //         .await
+    //         .map_err(|_| CryptoError::KeyGeneratorFailed)?;
+    //     key.try_into()
+    //         .map_err(|e| CryptoError::Other(format!("cast: {:?}", e)))
+    // }
+
     // This method can either create a crypto key pair or a symmetric key
     async fn generate_crypto_key<T>(
         algorithm: &Object,
@@ -56,7 +75,7 @@ impl CryptoJS {
         key_usages: &[&str],
     ) -> Result<T, CryptoError>
     where
-        T: sealed::CryptoKeyType + JsCast,
+        T: sealed::CryptoKeyType + std::convert::From<wasm_bindgen::JsValue>,
     {
         let key_generator_promise = Self::crypto_subtle()
             .generate_key_with_object(
@@ -65,11 +84,33 @@ impl CryptoJS {
                 &js_array(&key_usages),
             )
             .map_err(|e| CryptoError::Other(format!("{:?}", e)))?;
-        let key: JsValue = JsFuture::from(key_generator_promise)
+        let result: JsValue = JsFuture::from(key_generator_promise)
             .await
             .map_err(|_| CryptoError::KeyGeneratorFailed)?;
-        key.dyn_into::<T>()
-            .map_err(|_| CryptoError::KeyGeneratorFailed)
+
+        let key_or_pair: T = result
+            .try_into()
+            .map_err(|e| CryptoError::KeyGeneratorFailed)?;
+
+        Ok(key_or_pair)
+        // if let Some(key_pair) = key.dyn_ref::<CryptoKeyPair>() {
+        //     // If it's a CryptoKeyPair, return the key pair
+        //     // Assuming you want to return the type T which could be a CryptoKeyPair.
+
+        //     // let p: T = key_pair
+        //     //     .try_into()
+        //     //     .map_err(|e| CryptoError::Other(format!("cast: {:?}", e)))?;
+        //     // Ok(p)
+        // } else if let Some(crypto_key) = key.dyn_ref::<CryptoKey>() {
+        //     // If it's a CryptoKey, return the single key
+        //     // Assuming you want to return the type T which could be a CryptoKey.
+        //     crypto_key
+        //         .try_into()
+        //         .map_err(|e| CryptoError::Other(format!("cast: {:?}", e)))
+        // } else {
+        //     // If the result isn't a CryptoKey or CryptoKeyPair, return an error
+        //     Err(CryptoError::Other("Unexpected key type".to_string()))
+        // }
     }
 
     async fn new_encryption_key_pair() -> Result<CryptoKeyPair, CryptoError> {

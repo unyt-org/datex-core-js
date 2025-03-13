@@ -230,6 +230,13 @@ function debugString(val) {
     // TODO we could test for more things here, like `Set`s and `Map`s.
     return className;
 }
+
+function passArray8ToWasm0(arg, malloc) {
+    const ptr = malloc(arg.length * 1, 1) >>> 0;
+    getUint8ArrayMemory0().set(arg, ptr / 1);
+    WASM_VECTOR_LEN = arg.length;
+    return ptr;
+}
 /**
  * @returns {JSRuntime}
  */
@@ -251,12 +258,6 @@ export function compile(datex_script) {
     wasm.compile(ptr0, len0);
 }
 
-function passArray8ToWasm0(arg, malloc) {
-    const ptr = malloc(arg.length * 1, 1) >>> 0;
-    getUint8ArrayMemory0().set(arg, ptr / 1);
-    WASM_VECTOR_LEN = arg.length;
-    return ptr;
-}
 /**
  * @param {Uint8Array} dxb
  * @param {boolean} formatted
@@ -310,7 +311,7 @@ function __wbg_adapter_34(arg0, arg1, arg2) {
     wasm.closure101_externref_shim(arg0, arg1, arg2);
 }
 
-function __wbg_adapter_106(arg0, arg1, arg2, arg3) {
+function __wbg_adapter_104(arg0, arg1, arg2, arg3) {
     wasm.closure125_externref_shim(arg0, arg1, arg2, arg3);
 }
 
@@ -590,17 +591,6 @@ export function __wbg_instanceof_ArrayBuffer_e14585432e3737fc(arg0) {
     return ret;
 }
 
-export function __wbg_instanceof_CryptoKeyPair_82de9e697ce92805(arg0) {
-    let result;
-    try {
-        result = arg0 instanceof CryptoKeyPair;
-    } catch (_) {
-        result = false;
-    }
-    const ret = result;
-    return ret;
-}
-
 export function __wbg_instanceof_Window_def73ea0955fc569(arg0) {
     let result;
     try {
@@ -640,7 +630,7 @@ export function __wbg_new_23a2665fac83c611(arg0, arg1) {
             const a = state0.a;
             state0.a = 0;
             try {
-                return __wbg_adapter_106(a, state0.b, arg0, arg1);
+                return __wbg_adapter_104(a, state0.b, arg0, arg1);
             } finally {
                 state0.a = a;
             }
