@@ -36,6 +36,10 @@ features = [
     "ProgressEvent",
     "WebSocket",
     "Crypto",
+    "SubtleCrypto",
+    "CryptoKey",
+    "RsaOaepParams",
+    "EcdsaParams"
 ]
 
 [dev-dependencies]
