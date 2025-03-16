@@ -1,14 +1,11 @@
-use std::{array, fmt::format, future::Future, pin::Pin};
+use std::{future::Future, pin::Pin};
 
-use datex_core::crypto::{
-    self,
-    crypto::{Crypto, CryptoError},
-};
-use wasm_bindgen::{convert::IntoWasmAbi, JsCast, JsValue};
+use datex_core::crypto::crypto::{Crypto, CryptoError};
+use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{
-    js_sys::{self, Array, Object, Uint8Array},
-    CryptoKey, CryptoKeyPair, EcdsaParams, RsaOaepParams,
+    js_sys::{ArrayBuffer, Object, Uint8Array},
+    CryptoKey, CryptoKeyPair,
 };
 
 use crate::js_utils::{js_array, js_object, AsByteSlice};
@@ -31,7 +28,6 @@ impl CryptoJS {
     fn crypto_subtle() -> web_sys::SubtleCrypto {
         Self::crypto().subtle()
     }
-    fn generate_key_pair(&self) {}
 
     async fn export_crypto_key(
         key: &CryptoKey,
@@ -52,12 +48,12 @@ impl CryptoJS {
     async fn import_crypto_key(
         key: &[u8],
         format: &str,
-        algorithm: &str,
+        algorithm: &Object,
         key_usages: &[&str],
     ) -> Result<CryptoKey, CryptoError> {
         let key = Uint8Array::from(&key[..]);
         let import_key_promise = Self::crypto_subtle()
-            .import_key_with_str(
+            .import_key_with_object(
                 format,
                 &Object::from(Uint8Array::from(key)),
                 algorithm,
@@ -185,7 +181,10 @@ impl Crypto for CryptoJS {
             let key = Self::import_crypto_key(
                 &public_key,
                 "spki",
-                "RSA-OAEP",
+                &js_object(vec![
+                    ("name", JsValue::from_str("RSA-OAEP")),
+                    ("hash", JsValue::from_str("SHA-256")),
+                ]),
                 &["encrypt"],
             )
             .await?;
@@ -194,24 +193,153 @@ impl Crypto for CryptoJS {
                 .encrypt_with_str_and_u8_array("RSA-OAEP", &key, &data)
                 .map_err(|_| CryptoError::EncryptionError)?;
 
-            let result: JsValue = JsFuture::from(encryption_promise)
+            let result: ArrayBuffer = JsFuture::from(encryption_promise)
                 .await
-                .map_err(|_| CryptoError::KeyGeneratorFailed)?;
-
-            let message: Uint8Array =
-                result.try_into().map_err(|_: std::convert::Infallible| {
-                    CryptoError::KeyGeneratorFailed
+                .map_err(|_| CryptoError::EncryptionError)?
+                .try_into()
+                .map_err(|_: std::convert::Infallible| {
+                    CryptoError::EncryptionError
                 })?;
-            Ok(message.to_vec())
+
+            let message: Vec<u8> = result
+                .as_u8_slice()
+                .map_err(|_| CryptoError::EncryptionError)?;
+
+            Ok(message)
         })
     }
 
     fn decrypt_rsa(
         &self,
-        data: &[u8],
+        data: Vec<u8>,
         private_key: Vec<u8>,
     ) -> Pin<Box<(dyn Future<Output = Result<Vec<u8>, CryptoError>> + 'static)>>
     {
-        todo!()
+        Box::pin(async move {
+            let key = Self::import_crypto_key(
+                &private_key,
+                "pkcs8",
+                &js_object(vec![
+                    ("name", JsValue::from_str("RSA-OAEP")),
+                    ("hash", JsValue::from_str("SHA-256")),
+                ]),
+                &["decrypt"],
+            )
+            .await?;
+
+            let decryption_promise = Self::crypto_subtle()
+                .decrypt_with_str_and_u8_array("RSA-OAEP", &key, &data)
+                .map_err(|_| CryptoError::DecryptionError)?;
+
+            let result: JsValue = JsFuture::from(decryption_promise)
+                .await
+                .map_err(|_| CryptoError::DecryptionError)?
+                .try_into()
+                .map_err(|_: std::convert::Infallible| {
+                    CryptoError::DecryptionError
+                })?;
+
+            let message: Vec<u8> = result
+                .as_u8_slice()
+                .map_err(|_| CryptoError::DecryptionError)?;
+
+            Ok(message)
+        })
+    }
+
+    fn sign_rsa(
+        &self,
+        data: Vec<u8>,
+        private_key: Vec<u8>,
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<u8>, CryptoError>>>> {
+        Box::pin(async move {
+            let key = Self::import_crypto_key(
+                &private_key,
+                "pkcs8",
+                &js_object(vec![
+                    ("name", JsValue::from_str("ECDSA")),
+                    ("namedCurve", JsValue::from_str("P-384")),
+                ]),
+                &["sign"],
+            )
+            .await?;
+
+            let signature_promise = Self::crypto_subtle()
+                .sign_with_object_and_u8_array(
+                    &js_object(vec![
+                        ("name", JsValue::from_str("ECDSA")),
+                        (
+                            "hash",
+                            JsValue::from(js_object(vec![(
+                                "name",
+                                JsValue::from_str("SHA-384"),
+                            )])),
+                        ),
+                    ]),
+                    &key,
+                    &data,
+                )
+                .map_err(|_| CryptoError::SigningError)?;
+
+            let result: ArrayBuffer = JsFuture::from(signature_promise)
+                .await
+                .map_err(|_| CryptoError::SigningError)?
+                .try_into()
+                .map_err(|_: std::convert::Infallible| {
+                    CryptoError::SigningError
+                })?;
+
+            let signature: Vec<u8> = result
+                .as_u8_slice()
+                .map_err(|_| CryptoError::SigningError)?;
+
+            Ok(signature)
+        })
+    }
+
+    fn verify_rsa(
+        &self,
+        data: Vec<u8>,
+        signature: Vec<u8>,
+        public_key: Vec<u8>,
+    ) -> Pin<Box<dyn Future<Output = Result<bool, CryptoError>>>> {
+        Box::pin(async move {
+            let key = Self::import_crypto_key(
+                &public_key,
+                "spki",
+                &js_object(vec![
+                    ("name", JsValue::from_str("ECDSA")),
+                    ("namedCurve", JsValue::from_str("P-384")),
+                ]),
+                &["verify"],
+            )
+            .await?;
+
+            let verified_promise = Self::crypto_subtle()
+                .verify_with_object_and_u8_array_and_u8_array(
+                    &js_object(vec![
+                        ("name", JsValue::from_str("ECDSA")),
+                        (
+                            "hash",
+                            JsValue::from(js_object(vec![(
+                                "name",
+                                JsValue::from_str("SHA-384"),
+                            )])),
+                        ),
+                    ]),
+                    &key,
+                    &signature,
+                    &data,
+                )
+                .map_err(|_| CryptoError::VerificationError)?;
+
+            let result: bool = JsFuture::from(verified_promise)
+                .await
+                .map_err(|_| CryptoError::VerificationError)?
+                .as_bool()
+                .ok_or(CryptoError::VerificationError)?;
+
+            Ok(result)
+        })
     }
 }
