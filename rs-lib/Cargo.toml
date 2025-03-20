@@ -19,7 +19,7 @@ panic = "abort"
 
 [dependencies]
 datex-core = { path = "./datex-core", default-features = false, features = [
-    "std",
+    "std", # FIXME remove this once we have a proper std implementation for HashMap and stuff
 ] }
 lazy_static = "1.4.0"
 anyhow = "1.0.95"
