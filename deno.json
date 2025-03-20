@@ -8,7 +8,9 @@
         "lib": ["deno.window", "dom"]
     },
     "tasks": {
-        "build": "deno run -A jsr:@deno/wasmbuild@0.19.1 -p datex-core-js --no-default-features --inline --out ./src/datex-core",
+        "build": "deno run -A build.ts",
+        "check": "deno task build --check",
+        "build-and-check": "deno task build && deno task check",
         "test": "deno task build && deno test -A",
         "test-no-build": "deno test -A",
         "build-npm": "deno run -A scripts/build-npm.ts",

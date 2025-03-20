@@ -26,6 +26,8 @@
       library
 - [ ] integrate clippy
 - [ ] smaller binary size: https://github.com/johnthagen/min-sized-rust
+  - We can shrink from 2.6MB to 2MB
+    (`wasm-opt' -Oz datex_core_js.wasm -o out.wasm`)
 
 ---
 
