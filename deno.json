@@ -9,8 +9,6 @@
     },
     "tasks": {
         "build": "deno run -A build.ts",
-        "check": "deno task build --check",
-        "build-and-check": "deno task build && deno task check",
         "test": "deno task build && deno test -A",
         "test-no-build": "deno test -A",
         "build-npm": "deno run -A scripts/build-npm.ts",
