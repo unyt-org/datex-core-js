@@ -8,7 +8,7 @@
         "lib": ["deno.window", "dom"]
     },
     "tasks": {
-        "build": "deno run -A build.ts",
+        "build": "deno run -A scripts/build-wasm.ts",
         "test": "deno task build && deno test -A",
         "test-no-build": "deno test -A",
         "build-npm": "deno run -A scripts/build-npm.ts",
