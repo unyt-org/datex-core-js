@@ -1,9 +1,10 @@
 # TODO
 
 - [ ] crate should be no_std (for wasm and embedded)
-  - pad
-  - tokio
-  - websockets
+  - current dependencies:
+    - pad
+    - tokio
+    - websockets
 - [ ] create a trait for everything that is platform-specific (e.g. websockets)
       put the implementations of the traits behind feature flags (or in a
       seperate crate) features should be additive

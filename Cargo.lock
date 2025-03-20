@@ -261,6 +261,7 @@ dependencies = [
  "lazy_static",
  "modular-bitfield",
  "mopa",
+ "nostd",
  "num-bigint",
  "num-integer",
  "num-traits",
@@ -870,6 +871,15 @@ dependencies = [
  "cfg-if 0.1.10",
  "libc",
  "winapi 0.3.9",
+]
+
+[[package]]
+name = "nostd"
+version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fa3dd4c68516f7c5a1838eda0de376d4bc3c2aba3893da0ca2cf400bbc18435f"
+dependencies = [
+ "memchr",
 ]
 
 [[package]]
