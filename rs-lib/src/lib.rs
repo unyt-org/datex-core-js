@@ -1,22 +1,18 @@
 #![feature(coroutines)]
 #![feature(iter_from_coroutine)]
 
+use std::sync::Mutex; // FIXME no-std
+
 use crypto::crypto_js::CryptoJS;
-use std::cell::Ref;
-use std::cell::RefCell;
-use std::io;
-use std::io::Read;
-use std::io::Write;
-use std::rc::Rc;
-use std::sync::{Arc, Mutex};
+use datex_core::stdlib::cell::RefCell;
+use datex_core::stdlib::rc::Rc;
+use datex_core::stdlib::sync::Arc;
 // use datex_cli_core::CLI;
 use datex_core::compiler;
 use datex_core::decompiler;
 
 use datex_core::runtime::Context;
-use datex_core::utils::logger::Logger;
 use datex_core::utils::logger::LoggerContext;
-use lazy_static::lazy_static;
 use wasm_bindgen::prelude::*;
 
 use datex_core::runtime::global_context::{set_global_context, GlobalContext};

@@ -1,4 +1,4 @@
-use std::{future::Future, pin::Pin};
+use datex_core::stdlib::{future::Future, pin::Pin};
 
 use datex_core::crypto::crypto::{Crypto, CryptoError};
 use wasm_bindgen::{JsCast, JsValue};

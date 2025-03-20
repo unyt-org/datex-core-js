@@ -5,7 +5,7 @@ use datex_core::network::{
         websocket::websocket_client::WebSocketClientInterface,
     },
 };
-use std::{cell::RefCell, rc::Rc};
+use datex_core::stdlib::{cell::RefCell, rc::Rc};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::future_to_promise;
 use web_sys::js_sys::{self, Promise};

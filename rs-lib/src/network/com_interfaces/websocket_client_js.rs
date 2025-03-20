@@ -1,8 +1,7 @@
-use std::{
-    cell::RefCell,
-    collections::VecDeque,
-    rc::Rc,
-    sync::{Arc, Mutex},
+use std::sync::Mutex; // FIXME no-std
+
+use datex_core::stdlib::{
+    cell::RefCell, collections::VecDeque, rc::Rc, sync::Arc,
 };
 
 use anyhow::{Error, Result};

@@ -1,4 +1,4 @@
-use std::{cell::RefCell, rc::Rc};
+use datex_core::stdlib::{cell::RefCell, rc::Rc};
 
 use datex_core::runtime::memory::Memory;
 use wasm_bindgen::prelude::*;
