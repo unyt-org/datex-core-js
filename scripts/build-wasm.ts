@@ -2,14 +2,21 @@ import { runBuildCommand } from "https://jsr.io/@deno/wasmbuild/0.19.1/lib/comma
 import { Path } from "jsr:@david/path@^0.2.0";
 import { format } from "https://deno.land/std@0.224.0/fmt/bytes.ts";
 
-const NAME = "datex_core_js";
+import { parseArgs } from "jsr:@std/cli/parse-args";
+const flags = parseArgs(Deno.args, {
+    boolean: ["opt"],
+    string: ["profile"],
+    default: { "opt": true, profile: "release" },
+    negatable: ["opt"],
+});
 
+const NAME = "datex_core_js";
 const outDir = new Path("./src/datex-core");
 try {
     await runBuildCommand({
-        isOpt: true, // set false to skip wasm-opt
+        isOpt: flags.opt,
         outDir,
-        profile: "release",
+        profile: flags.profile === "release" ? "release" : "debug",
         kind: "build",
         inline: false,
         bindingJsFileExt: "js",
