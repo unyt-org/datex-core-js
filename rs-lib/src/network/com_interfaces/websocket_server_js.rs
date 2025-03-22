@@ -1,10 +1,16 @@
 use std::sync::Mutex; // FIXME no-std
 
-use datex_core::stdlib::{
-    cell::RefCell, collections::VecDeque, rc::Rc, sync::Arc,
+use datex_core::{
+    network::com_interfaces::{
+        com_interface::ComInterfaceError,
+        websocket::{
+            websocket_common::WebSocketError,
+            websocket_server::WebSocketServerError,
+        },
+    },
+    stdlib::{cell::RefCell, collections::VecDeque, rc::Rc, sync::Arc},
 };
 
-use anyhow::Error;
 use datex_core::network::com_interfaces::{
     com_interface_socket::SocketState,
     websocket::websocket_server::{WebSocket, WebSocketServerInterface},
@@ -20,7 +26,10 @@ pub struct WebSocketServerJS {
 }
 
 impl WebSocketServerJS {
-    pub fn new(port: u32) -> Result<WebSocketServerJS, Error> {
+    pub fn new(port: u32) -> Result<WebSocketServerJS, WebSocketServerError> {
+        if port == 0 || port > 65535 {
+            return Err(WebSocketServerError::InvalidPort);
+        }
         Ok(WebSocketServerJS {
             port,
             receive_queue: Arc::new(Mutex::new(VecDeque::new())),
@@ -39,7 +48,9 @@ impl WebSocket for WebSocketServerJS {
         todo!()
     }
 
-    fn connect(&mut self) -> anyhow::Result<Arc<Mutex<VecDeque<u8>>>> {
+    fn connect(
+        &mut self,
+    ) -> Result<Arc<Mutex<VecDeque<u8>>>, WebSocketServerError> {
         todo!()
     }
 }

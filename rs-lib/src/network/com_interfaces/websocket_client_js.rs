@@ -1,12 +1,12 @@
 use std::sync::Mutex; // FIXME no-std
 
+use datex_core::network::com_interfaces::websocket::websocket_common::WebSocketError;
 use datex_core::stdlib::{
     cell::RefCell, collections::VecDeque, rc::Rc, sync::Arc,
 };
 
-use anyhow::{Error, Result};
 use datex_core::network::com_interfaces::{
-    com_interface_socket::{ComInterfaceSocket, SocketState},
+    com_interface_socket::SocketState,
     websocket::{websocket_client::WebSocket, websocket_common::parse_url},
 };
 
@@ -28,10 +28,11 @@ pub struct WebSocketClientJS {
 }
 
 impl WebSocketClientJS {
-    pub fn new(address: &str) -> Result<WebSocketClientJS, Error> {
-        let address = parse_url(address)?;
+    pub fn new(address: &str) -> Result<WebSocketClientJS, WebSocketError> {
+        let address =
+            parse_url(address).map_err(|_| WebSocketError::InvalidURL)?;
         let ws = web_sys::WebSocket::new(&address.to_string())
-            .map_err(|_| Error::msg("Failed to create WebSocket"))?;
+            .map_err(|e| WebSocketError::Other(format!("{:?}", e)))?;
         return Ok(WebSocketClientJS {
             address,
             state: Rc::new(RefCell::new(SocketState::Closed)),
@@ -102,7 +103,7 @@ impl WebSocketClientJS {
         })
     }
 
-    fn connect(&mut self) -> Result<()> {
+    fn connect(&mut self) -> Result<(), WebSocketError> {
         self.ws.set_binary_type(web_sys::BinaryType::Arraybuffer);
         let cloned_ws = self.ws.clone();
         cloned_ws.set_binary_type(web_sys::BinaryType::Arraybuffer);
@@ -131,7 +132,7 @@ impl WebSocketClientJS {
 }
 
 impl WebSocket for WebSocketClientJS {
-    fn connect(&mut self) -> Result<Arc<Mutex<VecDeque<u8>>>> {
+    fn connect(&mut self) -> Result<Arc<Mutex<VecDeque<u8>>>, WebSocketError> {
         self.connect()?;
         Ok(self.receive_queue.clone())
     }

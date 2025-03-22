@@ -42,12 +42,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "anyhow"
-version = "1.0.97"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dcfed56ad506cb2c684a14971b8861fdc3baaaae314b9e5f9bb532cbe3ba7a4f"
-
-[[package]]
 name = "array-init"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -300,7 +294,6 @@ dependencies = [
 name = "datex-core"
 version = "0.0.3"
 dependencies = [
- "anyhow",
  "async-trait",
  "binrw",
  "byteorder",
@@ -337,7 +330,6 @@ dependencies = [
 name = "datex-core-js"
 version = "0.0.1"
 dependencies = [
- "anyhow",
  "datex-core",
  "lazy_static",
  "log 0.4.26",
