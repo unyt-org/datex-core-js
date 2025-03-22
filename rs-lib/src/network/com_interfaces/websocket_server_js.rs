@@ -6,8 +6,7 @@ use datex_core::{
 };
 
 use datex_core::network::com_interfaces::{
-    com_interface_socket::SocketState,
-    websocket::websocket_server::WebSocket,
+    com_interface_socket::SocketState, websocket::websocket_server::WebSocket,
 };
 use tokio::sync::Notify;
 use url::Url;

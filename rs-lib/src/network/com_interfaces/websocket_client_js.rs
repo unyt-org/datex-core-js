@@ -13,10 +13,7 @@ use datex_core::network::com_interfaces::{
 use log::{error, info, warn};
 use tokio::sync::Notify;
 use url::Url;
-use wasm_bindgen::{
-    prelude::Closure,
-    JsCast,
-};
+use wasm_bindgen::{prelude::Closure, JsCast};
 use web_sys::{js_sys, ErrorEvent, MessageEvent};
 
 pub struct WebSocketClientJS {
