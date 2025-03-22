@@ -49,8 +49,8 @@ pub fn init_runtime() -> JSRuntime {
     };
 
     set_global_context(global_ctx);
-    let runtime = JSRuntime::create(ctx);
-    return runtime;
+    
+    JSRuntime::create(ctx)
 }
 
 #[wasm_bindgen]
@@ -66,11 +66,11 @@ pub fn decompile(
     resolve_slots: bool,
 ) -> String {
     let context = Rc::new(RefCell::new(Context::default()));
-    return decompiler::decompile(
+    decompiler::decompile(
         context,
         dxb,
         formatted,
         colorized,
         resolve_slots,
-    );
+    )
 }

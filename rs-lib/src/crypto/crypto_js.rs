@@ -51,14 +51,14 @@ impl CryptoJS {
         algorithm: &Object,
         key_usages: &[&str],
     ) -> Result<CryptoKey, CryptoError> {
-        let key = Uint8Array::from(&key[..]);
+        let key = Uint8Array::from(key);
         let import_key_promise = Self::crypto_subtle()
             .import_key_with_object(
                 format,
-                &Object::from(Uint8Array::from(key)),
+                &Object::from(key),
                 algorithm,
                 true,
-                &js_array(&key_usages),
+                &js_array(key_usages),
             )
             .map_err(|_| CryptoError::KeyImportFailed)?;
         let key: JsValue = JsFuture::from(import_key_promise)
@@ -80,9 +80,9 @@ impl CryptoJS {
     {
         let key_generator_promise = Self::crypto_subtle()
             .generate_key_with_object(
-                &algorithm,
+                algorithm,
                 extractable,
-                &js_array(&key_usages),
+                &js_array(key_usages),
             )
             .map_err(|e| CryptoError::Other(format!("{:?}", e)))?;
         let result: JsValue = JsFuture::from(key_generator_promise)
@@ -124,9 +124,9 @@ impl Crypto for CryptoJS {
     }
 
     fn random_bytes(&self, length: usize) -> Vec<u8> {
-        let mut buffer = &mut vec![0u8; length];
+        let buffer = &mut vec![0u8; length];
         Self::crypto()
-            .get_random_values_with_u8_array(&mut buffer)
+            .get_random_values_with_u8_array(buffer)
             .unwrap();
         buffer.to_vec()
     }

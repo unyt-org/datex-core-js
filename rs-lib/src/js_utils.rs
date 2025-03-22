@@ -1,4 +1,4 @@
-use wasm_bindgen::{JsCast, JsValue};
+use wasm_bindgen::JsValue;
 use web_sys::js_sys::{self, Array, Object, Reflect};
 
 pub enum JsError {

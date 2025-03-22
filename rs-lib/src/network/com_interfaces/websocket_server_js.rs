@@ -1,19 +1,13 @@
 use std::sync::Mutex; // FIXME no-std
 
 use datex_core::{
-    network::com_interfaces::{
-        com_interface::ComInterfaceError,
-        websocket::{
-            websocket_common::WebSocketError,
-            websocket_server::WebSocketServerError,
-        },
-    },
+    network::com_interfaces::websocket::websocket_server::WebSocketServerError,
     stdlib::{cell::RefCell, collections::VecDeque, rc::Rc, sync::Arc},
 };
 
 use datex_core::network::com_interfaces::{
     com_interface_socket::SocketState,
-    websocket::websocket_server::{WebSocket, WebSocketServerInterface},
+    websocket::websocket_server::WebSocket,
 };
 use tokio::sync::Notify;
 use url::Url;

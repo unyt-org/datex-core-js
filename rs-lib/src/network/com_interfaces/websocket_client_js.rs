@@ -14,8 +14,8 @@ use log::{error, info, warn};
 use tokio::sync::Notify;
 use url::Url;
 use wasm_bindgen::{
-    prelude::{wasm_bindgen, Closure},
-    JsCast, JsError,
+    prelude::Closure,
+    JsCast,
 };
 use web_sys::{js_sys, ErrorEvent, MessageEvent};
 
@@ -31,15 +31,15 @@ impl WebSocketClientJS {
     pub fn new(address: &str) -> Result<WebSocketClientJS, WebSocketError> {
         let address =
             parse_url(address).map_err(|_| WebSocketError::InvalidURL)?;
-        let ws = web_sys::WebSocket::new(&address.to_string())
+        let ws = web_sys::WebSocket::new(address.as_ref())
             .map_err(|e| WebSocketError::Other(format!("{:?}", e)))?;
-        return Ok(WebSocketClientJS {
+        Ok(WebSocketClientJS {
             address,
             state: Rc::new(RefCell::new(SocketState::Closed)),
             wait_for_state_change: Arc::new(Notify::new()),
             ws,
             receive_queue: Arc::new(Mutex::new(VecDeque::new())),
-        });
+        })
     }
 
     pub async fn wait_for_state_change(&self) -> SocketState {
@@ -138,7 +138,7 @@ impl WebSocket for WebSocketClientJS {
     }
 
     fn send_data(&mut self, message: &[u8]) -> bool {
-        self.ws.send_with_u8_array(&message).is_ok()
+        self.ws.send_with_u8_array(message).is_ok()
     }
 
     fn get_address(&self) -> Url {

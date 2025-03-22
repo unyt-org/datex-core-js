@@ -1,15 +1,13 @@
 use datex_core::stdlib::cell::RefCell;
 use datex_core::stdlib::rc::Rc;
 
-use datex_core::crypto;
 use datex_core::crypto::crypto::Crypto;
 use datex_core::datex_values::Pointer;
 use datex_core::global::dxb_block::DXBBlock;
 use datex_core::runtime::{Context, Runtime};
-use tokio::sync::futures;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::future_to_promise;
-use web_sys::js_sys::{Promise, Uint8Array};
+use web_sys::js_sys::Promise;
 
 use crate::crypto::crypto_js::CryptoJS;
 use crate::js_utils::js_array;
@@ -102,7 +100,7 @@ impl JSRuntime {
                 decrypted_message,
                 signed_message,
             ]);
-            Ok(js_array.into())
+            Ok(js_array)
         })
     }
 
@@ -124,7 +122,7 @@ impl JSRuntime {
     #[wasm_bindgen]
     pub fn _create_block(&self, body: Option<Vec<u8>>) -> Vec<u8> {
         DXBBlock {
-            body: body.unwrap_or(vec![]),
+            body: body.unwrap_or_default(),
             ..DXBBlock::default()
         }
         .recalculate_struct()
