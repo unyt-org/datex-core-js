@@ -5,14 +5,12 @@ use datex_core::stdlib::{
 };
 
 use anyhow::{Error, Result};
-use datex_core::{
-    network::com_interfaces::{
-        com_interface_socket::{ComInterfaceSocket, SocketState},
-        websocket::{websocket_client::WebSocket, websocket_common::parse_url},
-    },
-    utils::logger::{self, Logger, LoggerContext},
+use datex_core::network::com_interfaces::{
+    com_interface_socket::{ComInterfaceSocket, SocketState},
+    websocket::{websocket_client::WebSocket, websocket_common::parse_url},
 };
 
+use log::{error, info, warn};
 use tokio::sync::Notify;
 use url::Url;
 use wasm_bindgen::{
@@ -25,16 +23,12 @@ pub struct WebSocketClientJS {
     address: Url,
     ws: web_sys::WebSocket,
     receive_queue: Arc<Mutex<VecDeque<u8>>>,
-    logger: Option<Rc<RefCell<Logger>>>,
     wait_for_state_change: Arc<Notify>,
     state: Rc<RefCell<SocketState>>,
 }
 
 impl WebSocketClientJS {
-    pub fn new(
-        address: &str,
-        logger: Option<Logger>,
-    ) -> Result<WebSocketClientJS, Error> {
+    pub fn new(address: &str) -> Result<WebSocketClientJS, Error> {
         let address = parse_url(address)?;
         let ws = web_sys::WebSocket::new(&address.to_string())
             .map_err(|_| Error::msg("Failed to create WebSocket"))?;
@@ -42,10 +36,6 @@ impl WebSocketClientJS {
             address,
             state: Rc::new(RefCell::new(SocketState::Closed)),
             wait_for_state_change: Arc::new(Notify::new()),
-            logger: match logger {
-                Some(logger) => Some(Rc::new(RefCell::new(logger))),
-                None => None,
-            },
             ws,
             receive_queue: Arc::new(Mutex::new(VecDeque::new())),
         });
@@ -56,32 +46,19 @@ impl WebSocketClientJS {
         *self.state.borrow()
     }
 
-    fn get_logger(&self) -> Rc<RefCell<Logger>> {
-        self.logger.clone().unwrap_or_else(|| {
-            Rc::new(RefCell::new(Logger::new_for_development(
-                Rc::new(RefCell::new(LoggerContext { log_redirect: None })),
-                "name".to_string(),
-            )))
-        })
-    }
-
     fn create_onmessage_callback(&self) -> Closure<dyn FnMut(MessageEvent)> {
         let receive_queue = self.receive_queue.clone();
-        let logger = self.get_logger();
         Closure::new(move |e: MessageEvent| {
             if let Ok(abuf) = e.data().dyn_into::<js_sys::ArrayBuffer>() {
                 let array = js_sys::Uint8Array::new(&abuf);
                 receive_queue.lock().unwrap().extend(array.to_vec());
-                logger.borrow().info(&format!(
+                info!(
                     "message event, received: {:?} bytes ({:?})",
                     array.to_vec().len(),
                     receive_queue
-                ));
+                );
             } else {
-                logger.borrow().info(&format!(
-                    "message event, received Unknown: {:?}",
-                    e.data()
-                ));
+                info!("message event, received Unknown: {:?}", e.data());
             }
         })
     }
@@ -90,11 +67,8 @@ impl WebSocketClientJS {
         let state = self.state.clone();
         let on_error = self.wait_for_state_change.clone();
 
-        let logger = self.get_logger();
         Closure::new(move |e: ErrorEvent| {
-            logger
-                .borrow()
-                .error(&format!("Socket error event: {:?}", e.message()));
+            error!("Socket error event: {:?}", e.message());
             *state.borrow_mut() = SocketState::Error;
             on_error.notify_one();
         })
@@ -103,14 +77,13 @@ impl WebSocketClientJS {
     fn create_onclose_callback(&self) -> Closure<dyn FnMut()> {
         let state = self.state.clone();
         let on_close = self.wait_for_state_change.clone();
-        let logger = self.get_logger();
         Closure::new(move || {
             if *state.borrow() == SocketState::Error
                 || *state.borrow() == SocketState::Closed
             {
                 return;
             }
-            logger.borrow().warn("Socket closed");
+            warn!("Socket closed");
             *state.borrow_mut() = SocketState::Closed;
 
             on_close.notify_one();
@@ -118,12 +91,11 @@ impl WebSocketClientJS {
     }
 
     fn create_onopen_callback(&self) -> Closure<dyn FnMut()> {
-        let logger = self.get_logger();
         let on_connect = self.wait_for_state_change.clone();
         let state = self.state.clone();
 
         Closure::new(move || {
-            logger.borrow().success("Socket opened");
+            info!("Socket opened");
             *state.borrow_mut() = SocketState::Open;
 
             on_connect.notify_one(); // Notify that connection is open

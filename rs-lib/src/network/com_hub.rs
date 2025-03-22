@@ -38,18 +38,14 @@ impl JSComHub {
         let context = self.com_hub.borrow().context.clone();
 
         future_to_promise(async move {
-            let websocket = WebSocketClientJS::new(
-                &address_clone,
-                com_hub.borrow().logger.clone(),
-            )
-            .map_err(|e| JsError::new(&format!("{:?}", e)))?;
+            let websocket = WebSocketClientJS::new(&address_clone)
+                .map_err(|e| JsError::new(&format!("{:?}", e)))?;
             let websocket = Rc::new(RefCell::new(websocket));
 
             let ws_interface = Rc::new(RefCell::new(
                 WebSocketClientInterface::new_with_web_socket(
                     context.clone(),
                     websocket.clone(),
-                    com_hub.borrow().logger.clone(),
                 ),
             ));
 

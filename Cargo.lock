@@ -340,6 +340,7 @@ dependencies = [
  "anyhow",
  "datex-core",
  "lazy_static",
+ "log 0.4.26",
  "tokio",
  "url 2.5.4",
  "wasm-bindgen",

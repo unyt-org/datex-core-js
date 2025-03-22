@@ -12,17 +12,14 @@ use datex_core::compiler;
 use datex_core::decompiler;
 
 use datex_core::runtime::Context;
-use datex_core::utils::logger::LoggerContext;
 use wasm_bindgen::prelude::*;
 
 use datex_core::runtime::global_context::{set_global_context, GlobalContext};
-use web_sys::console;
 
 mod runtime;
 use runtime::JSRuntime;
 
 pub mod network;
-use network::com_interfaces::websocket_client_js;
 
 pub mod crypto;
 pub mod js_utils;
@@ -45,11 +42,7 @@ extern "C" {
 // export compiler/runtime functions to JavaScript
 #[wasm_bindgen]
 pub fn init_runtime() -> JSRuntime {
-    let ctx = Context {
-        logger_context: Rc::new(RefCell::new(LoggerContext {
-            log_redirect: Some(|s: &str| -> () { console::log_1(&s.into()) }),
-        })),
-    };
+    let ctx = Context::default();
 
     let global_ctx = GlobalContext {
         crypto: Arc::new(Mutex::new(CryptoJS)),
@@ -72,12 +65,7 @@ pub fn decompile(
     colorized: bool,
     resolve_slots: bool,
 ) -> String {
-    let logger_context = Rc::new(RefCell::new(LoggerContext {
-        log_redirect: Some(|s: &str| -> () { console::log_1(&s.into()) }),
-    }));
-    let context = Rc::new(RefCell::new(Context {
-        logger_context: logger_context.clone(),
-    }));
+    let context = Rc::new(RefCell::new(Context::default()));
     return decompiler::decompile(
         context,
         dxb,
@@ -86,40 +74,3 @@ pub fn decompile(
         resolve_slots,
     );
 }
-
-// #[wasm_bindgen]
-// pub fn execute(dxb:&[u8]) -> Result<String, JsError> {
-//     let result = runtime::execute(&CTX, dxb);
-//     match result {
-//         Ok(val) => Ok(val.to_string()),
-//         Err(err) => Err(JsError::new(&err.message))
-//     }
-// }
-
-// struct IOWrite {}
-// struct IORead {}
-
-// impl Write for IOWrite {
-//   fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-//     let logger = Logger::new_for_development(&CTX, "DATEX".to_string());
-//     logger.success("...write!");
-//     return Ok(buf.len());
-//   }
-
-//   fn flush(&mut self) -> io::Result<()> {
-//     let logger = Logger::new_for_development(&CTX, "DATEX".to_string());
-//     logger.success("...flush!");
-//     return Ok(());
-//   }
-// }
-
-// impl Read for IORead {
-//   fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-//     todo!()
-//   }
-// }
-
-// #[wasm_bindgen]
-// pub fn cli() {
-//     let cli = CLI::new(IOWrite{}, IORead{});
-// }

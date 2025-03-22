@@ -5,15 +5,9 @@ use datex_core::stdlib::{
 };
 
 use anyhow::Error;
-use datex_core::{
-    network::com_interfaces::{
-        com_interface_socket::SocketState,
-        websocket::{
-            websocket_common::parse_url,
-            websocket_server::{WebSocket, WebSocketServerInterface},
-        },
-    },
-    utils::logger::Logger,
+use datex_core::network::com_interfaces::{
+    com_interface_socket::SocketState,
+    websocket::websocket_server::{WebSocket, WebSocketServerInterface},
 };
 use tokio::sync::Notify;
 use url::Url;
@@ -21,21 +15,13 @@ use url::Url;
 pub struct WebSocketServerJS {
     port: u32,
     receive_queue: Arc<Mutex<VecDeque<u8>>>,
-    logger: Option<Rc<RefCell<Logger>>>,
     wait_for_state_change: Arc<Notify>,
     state: Rc<RefCell<SocketState>>,
 }
 
 impl WebSocketServerJS {
-    pub fn new(
-        port: u32,
-        logger: Option<Logger>,
-    ) -> Result<WebSocketServerJS, Error> {
+    pub fn new(port: u32) -> Result<WebSocketServerJS, Error> {
         Ok(WebSocketServerJS {
-            logger: match logger {
-                Some(logger) => Some(Rc::new(RefCell::new(logger))),
-                None => None,
-            },
             port,
             receive_queue: Arc::new(Mutex::new(VecDeque::new())),
             wait_for_state_change: Arc::new(Notify::new()),
