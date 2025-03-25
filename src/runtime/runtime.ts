@@ -1,6 +1,6 @@
-import { init_runtime } from "../datex-core.ts";
-import type { JSComHub, JSMemory, JSRuntime } from "../datex-core.ts";
-import { runtimeInterface } from "../utils/js-runtime-compat/runtime.ts";
+import type {JSComHub, JSMemory, JSRuntime} from "../datex-core.ts";
+import {init_runtime} from "../datex-core.ts";
+import {runtimeInterface} from "../utils/js-runtime-compat/runtime.ts";
 
 // get version from deno.json
 const VERSION: string = await runtimeInterface
@@ -11,9 +11,15 @@ const VERSION: string = await runtimeInterface
 export class Runtime {
     public readonly js_version = VERSION;
 
-    #runtime: JSRuntime;
-    #memory: JSMemory;
-    #comHub: JSComHub;
+    readonly #runtime: JSRuntime;
+    readonly #memory: JSMemory;
+    readonly #comHub: JSComHub;
+
+    constructor() {
+        this.#runtime = init_runtime();
+        this.#memory = this.#runtime.memory;
+        this.#comHub = this.#runtime.com_hub;
+    }
 
     /**
      * properties from #runtime
@@ -35,11 +41,5 @@ export class Runtime {
      */
     get _runtime(): JSRuntime {
         return this.#runtime;
-    }
-
-    constructor() {
-        this.#runtime = init_runtime();
-        this.#memory = this.#runtime.memory;
-        this.#comHub = this.#runtime.com_hub;
     }
 }
