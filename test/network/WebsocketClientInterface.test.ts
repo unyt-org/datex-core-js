@@ -9,7 +9,7 @@ Deno.test("invalid url construct", async () => {
     await assertRejects(
         () => runtime.comHub.add_ws_interface(`invalid url`),
         Error,
-        "Invalid URL",
+        "InvalidURL",
     );
 });
 
@@ -18,7 +18,7 @@ Deno.test("invalid url scheme construct", async () => {
     await assertRejects(
         () => runtime.comHub.add_ws_interface(`ftp://invalid`),
         Error,
-        "Invalid URL scheme",
+        "InvalidURL",
     );
 });
 
