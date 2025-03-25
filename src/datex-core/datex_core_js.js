@@ -1,6 +1,6 @@
 // @ts-ignore no-slow-types
 import * as imports from "./datex_core_js.internal.js";
-import {__wbg_set_wasm} from "./datex_core_js.internal.js";
+import { __wbg_set_wasm } from "./datex_core_js.internal.js";
 
 export * from "./datex_core_js.internal.js";
 
