@@ -1,25 +1,35 @@
 use wasm_bindgen::JsValue;
-use web_sys::js_sys::{self, Array, Object, Reflect};
+use web_sys::js_sys::{self, Array, ArrayBuffer, Object, Reflect};
 
 pub enum JsError {
     ConversionError,
 }
 
-pub trait AsByteSlice {
-    fn as_u8_slice(&self) -> Result<Vec<u8>, JsError>;
+pub trait TryAsByteSlice {
+    fn try_as_u8_slice(&self) -> Result<Vec<u8>, JsError>;
 }
 
-impl AsByteSlice for JsValue {
-    fn as_u8_slice(&self) -> Result<Vec<u8>, JsError> {
-        let buffer: js_sys::ArrayBuffer = self
+pub trait AsByteSlice {
+    fn as_u8_slice(&self) -> Vec<u8>;
+}
+
+impl TryAsByteSlice for JsValue {
+    fn try_as_u8_slice(&self) -> Result<Vec<u8>, JsError> {
+        let buffer: ArrayBuffer = self
             .clone()
             .try_into()
             .map_err(|_| JsError::ConversionError)?;
 
-        let uint8_array = js_sys::Uint8Array::new(&buffer);
+        Ok(buffer.as_u8_slice())
+    }
+}
+
+impl AsByteSlice for ArrayBuffer {
+    fn as_u8_slice(&self) -> Vec<u8> {
+        let uint8_array = js_sys::Uint8Array::new(&self);
         let mut bytes = vec![0; uint8_array.length() as usize];
         uint8_array.copy_to(&mut bytes);
-        Ok(bytes)
+        bytes
     }
 }
 

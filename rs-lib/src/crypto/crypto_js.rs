@@ -8,7 +8,7 @@ use web_sys::{
     CryptoKey, CryptoKeyPair,
 };
 
-use crate::js_utils::{js_array, js_object, AsByteSlice};
+use crate::js_utils::{js_array, js_object, AsByteSlice, TryAsByteSlice};
 
 mod sealed {
     use super::*;
@@ -40,7 +40,7 @@ impl CryptoJS {
             .await
             .map_err(|_| CryptoError::KeyExportFailed)?;
         let bytes = key
-            .as_u8_slice()
+            .try_as_u8_slice()
             .map_err(|_| CryptoError::KeyExportFailed)?;
         Ok(bytes)
     }
@@ -136,7 +136,7 @@ impl Crypto for CryptoJS {
     ) -> std::pin::Pin<
         Box<
             dyn std::prelude::rust_2024::Future<
-                Output = Result<(Vec<u8>, Vec<u8>), CryptoError>,
+                Output=Result<(Vec<u8>, Vec<u8>), CryptoError>,
             >,
         >,
     > {
@@ -156,7 +156,7 @@ impl Crypto for CryptoJS {
     ) -> std::pin::Pin<
         Box<
             dyn std::prelude::rust_2024::Future<
-                Output = Result<(Vec<u8>, Vec<u8>), CryptoError>,
+                Output=Result<(Vec<u8>, Vec<u8>), CryptoError>,
             >,
         >,
     > {
@@ -175,7 +175,7 @@ impl Crypto for CryptoJS {
         &self,
         data: Vec<u8>, // FIXME how to handle lifetime and let data pass as slice
         public_key: Vec<u8>,
-    ) -> Pin<Box<(dyn Future<Output = Result<Vec<u8>, CryptoError>> + 'static)>>
+    ) -> Pin<Box<(dyn Future<Output=Result<Vec<u8>, CryptoError>> + 'static)>>
     {
         Box::pin(async move {
             let key = Self::import_crypto_key(
@@ -187,7 +187,7 @@ impl Crypto for CryptoJS {
                 ]),
                 &["encrypt"],
             )
-            .await?;
+                .await?;
 
             let encryption_promise = Self::crypto_subtle()
                 .encrypt_with_str_and_u8_array("RSA-OAEP", &key, &data)
@@ -201,9 +201,7 @@ impl Crypto for CryptoJS {
                     CryptoError::EncryptionError
                 })?;
 
-            let message: Vec<u8> = result
-                .as_u8_slice()
-                .map_err(|_| CryptoError::EncryptionError)?;
+            let message: Vec<u8> = result.as_u8_slice();
 
             Ok(message)
         })
@@ -213,7 +211,7 @@ impl Crypto for CryptoJS {
         &self,
         data: Vec<u8>,
         private_key: Vec<u8>,
-    ) -> Pin<Box<(dyn Future<Output = Result<Vec<u8>, CryptoError>> + 'static)>>
+    ) -> Pin<Box<(dyn Future<Output=Result<Vec<u8>, CryptoError>> + 'static)>>
     {
         Box::pin(async move {
             let key = Self::import_crypto_key(
@@ -225,7 +223,7 @@ impl Crypto for CryptoJS {
                 ]),
                 &["decrypt"],
             )
-            .await?;
+                .await?;
 
             let decryption_promise = Self::crypto_subtle()
                 .decrypt_with_str_and_u8_array("RSA-OAEP", &key, &data)
@@ -240,7 +238,7 @@ impl Crypto for CryptoJS {
                 })?;
 
             let message: Vec<u8> = result
-                .as_u8_slice()
+                .try_as_u8_slice()
                 .map_err(|_| CryptoError::DecryptionError)?;
 
             Ok(message)
@@ -251,7 +249,7 @@ impl Crypto for CryptoJS {
         &self,
         data: Vec<u8>,
         private_key: Vec<u8>,
-    ) -> Pin<Box<dyn Future<Output = Result<Vec<u8>, CryptoError>>>> {
+    ) -> Pin<Box<dyn Future<Output=Result<Vec<u8>, CryptoError>>>> {
         Box::pin(async move {
             let key = Self::import_crypto_key(
                 &private_key,
@@ -262,7 +260,7 @@ impl Crypto for CryptoJS {
                 ]),
                 &["sign"],
             )
-            .await?;
+                .await?;
 
             let signature_promise = Self::crypto_subtle()
                 .sign_with_object_and_u8_array(
@@ -289,9 +287,7 @@ impl Crypto for CryptoJS {
                     CryptoError::SigningError
                 })?;
 
-            let signature: Vec<u8> = result
-                .as_u8_slice()
-                .map_err(|_| CryptoError::SigningError)?;
+            let signature: Vec<u8> = result.as_u8_slice();
 
             Ok(signature)
         })
@@ -302,7 +298,7 @@ impl Crypto for CryptoJS {
         data: Vec<u8>,
         signature: Vec<u8>,
         public_key: Vec<u8>,
-    ) -> Pin<Box<dyn Future<Output = Result<bool, CryptoError>>>> {
+    ) -> Pin<Box<dyn Future<Output=Result<bool, CryptoError>>>> {
         Box::pin(async move {
             let key = Self::import_crypto_key(
                 &public_key,
@@ -313,7 +309,7 @@ impl Crypto for CryptoJS {
                 ]),
                 &["verify"],
             )
-            .await?;
+                .await?;
 
             let verified_promise = Self::crypto_subtle()
                 .verify_with_object_and_u8_array_and_u8_array(
