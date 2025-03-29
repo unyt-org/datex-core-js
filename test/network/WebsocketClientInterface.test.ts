@@ -1,7 +1,7 @@
-import {assert, assertEquals, assertRejects} from "jsr:@std/assert";
-import {createMockupServer} from "./WebsocketMockupServer.ts";
-import {Runtime} from "../../src/runtime/runtime.ts";
-import {sleep} from "../utils.ts";
+import { assert, assertEquals, assertRejects } from "jsr:@std/assert";
+import { createMockupServer } from "./WebsocketMockupServer.ts";
+import { Runtime } from "../../src/runtime/runtime.ts";
+import { sleep } from "../utils.ts";
 import * as uuid from "jsr:@std/uuid";
 
 const IS_CI = Deno.env.has("CI");
