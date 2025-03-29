@@ -4,8 +4,6 @@ import { Runtime } from "../../src/runtime/runtime.ts";
 import { sleep } from "../utils.ts";
 import * as uuid from "jsr:@std/uuid";
 
-const IS_CI = Deno.env.has("CI");
-
 Deno.test("invalid url construct", async () => {
     const runtime = new Runtime();
     await assertRejects(
@@ -33,10 +31,7 @@ Deno.test("websocket connect fail", async () => {
     );
 });
 
-Deno.test({
-    name: "websocket basic connect",
-    ignore: IS_CI,
-}, async () => {
+Deno.test("websocket basic connect", async () => {
     const port = 8484;
     const mockupServer = createMockupServer(port);
     const runtime = new Runtime();
@@ -47,10 +42,7 @@ Deno.test({
     assert(uuid.validate(await connection), "Invalid UUID");
 });
 
-Deno.test({
-    name: "websocket block retrieval",
-    ignore: IS_CI,
-}, async () => {
+Deno.test("websocket block retrieval", async () => {
     const port = 8484;
     const mockupServer = createMockupServer(port);
 
