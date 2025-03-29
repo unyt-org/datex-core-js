@@ -3,14 +3,11 @@
     <head>
         <meta charset="utf-8" />
         <title>Datex Core JS Test Page</title>
-        <link rel="icon" href="/assets/datex-logo-light.svg" />
+        <link rel="icon" href="./assets/datex-logo-light.png" />
     </head>
     <body>
         <!-- Datex Runtime initialization -->
-        <script type="module">
-            const { Datex } = await import("/src/datex.ts");
-            globalThis.Datex = Datex;
-        </script>
+        <script type="module" src="./browser.ts"></script>
         <!---------------------------------->
 
         <div>

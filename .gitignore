@@ -2,3 +2,6 @@
 .datex-cache
 target
 npm
+.DS_Store
+.idea
+src/datex-core/datex_core_js.wasm

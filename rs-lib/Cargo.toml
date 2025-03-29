@@ -1,28 +1,53 @@
 [package]
 name = "datex-core-js"
 version = "0.0.1"
-authors = ["Benedikt Strehle <benedikt@unyt.org>"]
+authors = [
+    "Benedikt Strehle <benedikt@unyt.org>",
+    "Jonas Strehle <jonas@unyt.org>",
+]
 edition = "2021"
 
 [lib]
 crate-type = ["cdylib"]
 
 [profile.release]
-codegen-units = 1
-incremental = true
+opt-level = "s"
+strip = true
 lto = true
-opt-level = "z"
+codegen-units = 1
+panic = "abort"
 
 [dependencies]
-wasm-bindgen = "=0.2.92"
-datex-core = { path = "./datex-core" }
+log = { version = "0.4", features = ["std", "serde"] }
+datex-core = { path = "./datex-core", default-features = false, features = [
+    "std",         # FIXME remove this once we have a proper std implementation for HashMap and stuff
+    "wasm_logger",
+] }
 lazy_static = "1.4.0"
+url = "2.5.4"
+
+wasm-bindgen = "=0.2.100"
+wasm-bindgen-futures = "0.4.50"
+tokio = { version = "1.43.0", features = ["sync"] }
 
 [dependencies.web-sys]
-	version = "0.3.69"
-	features = [
-		'console'
-	]
+version = "0.3.69"
+features = [
+    "Window",
+    "BinaryType",
+    "Blob",
+    "ErrorEvent",
+    "FileReader",
+    "MessageEvent",
+    "ProgressEvent",
+    "WebSocket",
+    "Crypto",
+    "SubtleCrypto",
+    "CryptoKey",
+    "CryptoKeyPair",
+    "RsaOaepParams",
+    "EcdsaParams",
+]
 
 [dev-dependencies]
-wasm-bindgen-test = "0.3"
+wasm-bindgen-test = "0.3.50"
