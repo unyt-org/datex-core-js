@@ -26,7 +26,7 @@ impl TryAsByteSlice for JsValue {
 
 impl AsByteSlice for ArrayBuffer {
     fn as_u8_slice(&self) -> Vec<u8> {
-        let uint8_array = js_sys::Uint8Array::new(&self);
+        let uint8_array = js_sys::Uint8Array::new(self);
         let mut bytes = vec![0; uint8_array.length() as usize];
         uint8_array.copy_to(&mut bytes);
         bytes
