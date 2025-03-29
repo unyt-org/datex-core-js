@@ -1,8 +1,6 @@
 import * as imports from "./datex_core_js.internal.js";
-
-const wasm = (await WebAssembly.instantiate(
-    //fetch(new URL("datex_core_js.wasm", import.meta.url)),
-    Deno.readFileSync(new URL("datex_core_js.wasm", import.meta.url)),
+const wasm = (await WebAssembly.instantiateStreaming(
+    fetch(new URL("datex_core_js.wasm", import.meta.url)),
     {
         "./datex_core_js.internal.js": imports,
     },
