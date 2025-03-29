@@ -1,8 +1,7 @@
-import {runBuildCommand} from "https://jsr.io/@deno/wasmbuild/0.19.1/lib/commands/build_command.ts";
-import {Path} from "jsr:@david/path@^0.2.0";
-import {format} from "https://deno.land/std@0.224.0/fmt/bytes.ts";
-
-import {parseArgs} from "jsr:@std/cli/parse-args";
+import { runBuildCommand } from "https://jsr.io/@deno/wasmbuild/0.19.1/lib/commands/build_command.ts";
+import { Path } from "jsr:@david/path@^0.2.0";
+import { format } from "https://deno.land/std@0.224.0/fmt/bytes.ts";
+import { parseArgs } from "jsr:@std/cli/parse-args";
 
 const flags = parseArgs(Deno.args, {
     boolean: ["opt"],
