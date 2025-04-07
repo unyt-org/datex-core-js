@@ -1,6 +1,6 @@
 use datex_core::stdlib::{future::Future, pin::Pin};
 
-use datex_core::crypto::crypto::{Crypto, CryptoError};
+use datex_core::crypto::crypto::{CryptoError, CryptoTrait};
 use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{
@@ -118,7 +118,7 @@ impl CryptoJS {
     }
 }
 
-impl Crypto for CryptoJS {
+impl CryptoTrait for CryptoJS {
     fn create_uuid(&self) -> String {
         Self::crypto().random_uuid()
     }

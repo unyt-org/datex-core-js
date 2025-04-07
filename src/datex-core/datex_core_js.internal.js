@@ -231,13 +231,6 @@ function debugString(val) {
     return className;
 }
 
-function passArray8ToWasm0(arg, malloc) {
-    const ptr = malloc(arg.length * 1, 1) >>> 0;
-    getUint8ArrayMemory0().set(arg, ptr / 1);
-    WASM_VECTOR_LEN = arg.length;
-    return ptr;
-}
-
 function getArrayJsValueFromWasm0(ptr, len) {
     ptr = ptr >>> 0;
     const mem = getDataViewMemory0();
@@ -269,6 +262,12 @@ export function compile(datex_script) {
     wasm.compile(ptr0, len0);
 }
 
+function passArray8ToWasm0(arg, malloc) {
+    const ptr = malloc(arg.length * 1, 1) >>> 0;
+    getUint8ArrayMemory0().set(arg, ptr / 1);
+    WASM_VECTOR_LEN = arg.length;
+    return ptr;
+}
 /**
  * @param {Uint8Array} dxb
  * @param {boolean} formatted
@@ -298,7 +297,7 @@ export function decompile(dxb, formatted, colorized, resolve_slots) {
 }
 
 function __wbg_adapter_30(arg0, arg1) {
-    wasm._dyn_core__ops__function__FnMut_____Output___R_as_wasm_bindgen__closure__WasmClosure___describe__invoke__h3024d68373d811ad(
+    wasm._dyn_core__ops__function__FnMut_____Output___R_as_wasm_bindgen__closure__WasmClosure___describe__invoke__ha84ccea7a1f3d381(
         arg0,
         arg1,
     );
@@ -889,8 +888,13 @@ export function __wbindgen_cb_drop(arg0) {
     return ret;
 }
 
-export function __wbindgen_closure_wrapper181(arg0, arg1, arg2) {
+export function __wbindgen_closure_wrapper180(arg0, arg1, arg2) {
     const ret = makeMutClosure(arg0, arg1, 59, __wbg_adapter_30);
+    return ret;
+}
+
+export function __wbindgen_closure_wrapper181(arg0, arg1, arg2) {
+    const ret = makeMutClosure(arg0, arg1, 59, __wbg_adapter_33);
     return ret;
 }
 
@@ -899,12 +903,7 @@ export function __wbindgen_closure_wrapper182(arg0, arg1, arg2) {
     return ret;
 }
 
-export function __wbindgen_closure_wrapper183(arg0, arg1, arg2) {
-    const ret = makeMutClosure(arg0, arg1, 59, __wbg_adapter_33);
-    return ret;
-}
-
-export function __wbindgen_closure_wrapper235(arg0, arg1, arg2) {
+export function __wbindgen_closure_wrapper234(arg0, arg1, arg2) {
     const ret = makeMutClosure(arg0, arg1, 83, __wbg_adapter_38);
     return ret;
 }

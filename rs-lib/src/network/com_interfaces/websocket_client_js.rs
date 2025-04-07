@@ -141,4 +141,8 @@ impl WebSocket for WebSocketClientJS {
     fn get_address(&self) -> Url {
         self.address.clone()
     }
+    
+    fn get_com_interface_sockets(&self) -> Rc<RefCell<datex_core::network::com_interfaces::com_interface::ComInterfaceSockets>> {
+        todo!()
+    }
 }

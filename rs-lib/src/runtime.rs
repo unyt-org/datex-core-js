@@ -1,10 +1,12 @@
-use datex_core::stdlib::cell::RefCell;
+use std::sync::{Arc, Mutex};
+
+use datex_core::runtime::global_context::GlobalContext;
 use datex_core::stdlib::rc::Rc;
 
-use datex_core::crypto::crypto::Crypto;
+use datex_core::crypto::crypto::CryptoTrait;
 use datex_core::datex_values::Pointer;
 use datex_core::global::dxb_block::DXBBlock;
-use datex_core::runtime::{Context, Runtime};
+use datex_core::runtime::Runtime;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::future_to_promise;
 use web_sys::js_sys::Promise;
@@ -13,6 +15,7 @@ use crate::crypto::crypto_js::CryptoJS;
 use crate::js_utils::js_array;
 use crate::memory::JSMemory;
 use crate::network::com_hub::JSComHub;
+use crate::utils::time::TimeJS;
 
 #[wasm_bindgen]
 pub struct JSRuntime {
@@ -23,8 +26,11 @@ pub struct JSRuntime {
  * Internal impl of the JSRuntime, not exposed to JavaScript
  */
 impl JSRuntime {
-    pub fn create(ctx: Context) -> JSRuntime {
-        let runtime = Runtime::new(Rc::new(RefCell::new(ctx)));
+    pub fn create() -> JSRuntime {
+        let runtime = Runtime::init(GlobalContext {
+            crypto: Arc::new(Mutex::new(CryptoJS)),
+            time: Arc::new(Mutex::new(TimeJS)),
+        });
         runtime.memory.borrow_mut().store_pointer(
             [
                 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140,
