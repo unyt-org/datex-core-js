@@ -1,19 +1,14 @@
 #![feature(coroutines)]
 #![feature(iter_from_coroutine)]
 
-use std::sync::Mutex; // FIXME no-std
+ // FIXME no-std
 
-use crypto::crypto_js::CryptoJS;
-use datex_core::stdlib::cell::RefCell;
-use datex_core::stdlib::rc::Rc;
-use datex_core::stdlib::sync::Arc;
 // use datex_cli_core::CLI;
 use datex_core::compiler;
 use datex_core::decompiler;
 
 use wasm_bindgen::prelude::*;
 
-use datex_core::runtime::global_context::{set_global_context, GlobalContext};
 
 mod runtime;
 use runtime::JSRuntime;

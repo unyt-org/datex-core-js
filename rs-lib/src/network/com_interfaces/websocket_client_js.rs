@@ -1,4 +1,4 @@
-use std::future::{Future, IntoFuture};
+use std::future::Future;
 use std::pin::Pin;
 use std::sync::Mutex; // FIXME no-std
 
@@ -16,7 +16,6 @@ use log::{error, info, warn};
 use tokio::sync::Notify;
 use url::Url;
 use wasm_bindgen::{prelude::Closure, JsCast};
-use web_sys::js_sys::Boolean;
 use web_sys::{js_sys, ErrorEvent, MessageEvent};
 
 pub struct WebSocketClientJS {
