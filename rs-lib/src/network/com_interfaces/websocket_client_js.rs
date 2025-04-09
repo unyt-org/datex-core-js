@@ -1,3 +1,5 @@
+use std::future::{Future, IntoFuture};
+use std::pin::Pin;
 use std::sync::Mutex; // FIXME no-std
 
 use datex_core::network::com_interfaces::websocket::websocket_common::WebSocketError;
@@ -14,6 +16,7 @@ use log::{error, info, warn};
 use tokio::sync::Notify;
 use url::Url;
 use wasm_bindgen::{prelude::Closure, JsCast};
+use web_sys::js_sys::Boolean;
 use web_sys::{js_sys, ErrorEvent, MessageEvent};
 
 pub struct WebSocketClientJS {
@@ -134,10 +137,7 @@ impl WebSocket for WebSocketClientJS {
         Ok(self.receive_queue.clone())
     }
 
-    fn send_data(&mut self, message: &[u8]) -> bool {
-        self.ws.send_with_u8_array(message).is_ok()
-    }
-
+    
     fn get_address(&self) -> Url {
         self.address.clone()
     }
@@ -145,4 +145,33 @@ impl WebSocket for WebSocketClientJS {
     fn get_com_interface_sockets(&self) -> Rc<RefCell<datex_core::network::com_interfaces::com_interface::ComInterfaceSockets>> {
         todo!()
     }
+    
+    fn send_data(
+        &mut self,
+        message: &[u8],
+    ) -> Pin<Box<dyn Future<Output = bool> + Send>> {
+        let status = self.ws.send_with_u8_array(message).is_ok();
+        Box::pin(async move {
+            status
+        })
+    }
+    
+    
+    
+    // fn send_data(
+    //     &mut self,
+    //     message: &[u8],
+    // ) -> impl Future<Output = bool> + Send {
+    //     tokio::spawn(async move {
+    //         true
+    //     }).into_future()
+    //     // todo!()
+    // }
+    
+    // fn send_data(
+    //     &mut self,
+    //     message: &[u8],
+    // ) -> impl Future<bool> + Send {
+    //     self.ws.send_with_u8_array(message).is_ok()
+    // }
 }
