@@ -131,9 +131,19 @@ impl WebSocketClientJS {
 }
 
 impl WebSocket for WebSocketClientJS {
-    fn connect(&mut self) -> Result<Arc<Mutex<VecDeque<u8>>>, WebSocketError> {
-        self.connect()?;
-        Ok(self.receive_queue.clone())
+    fn connect<'a>(
+        &'a mut self,
+    ) -> Pin<
+        Box<
+            dyn Future<
+                    Output = Result<Arc<Mutex<VecDeque<u8>>>, WebSocketError>,
+                > + 'a,
+        >,
+    > {
+        Box::pin(async move {
+            self.connect()?;
+            Ok(self.receive_queue.clone())
+        })
     }
 
     
@@ -154,8 +164,6 @@ impl WebSocket for WebSocketClientJS {
             status
         })
     }
-    
-    
     
     // fn send_data(
     //     &mut self,
