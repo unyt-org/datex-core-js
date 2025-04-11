@@ -1,111 +1,98 @@
 use std::future::Future;
 use std::pin::Pin;
-use std::sync::Mutex; // FIXME no-std
+use std::sync::Mutex;
+use std::time::Duration; // FIXME no-std
 
+use datex_core::network::com_interfaces::com_interface::{
+    ComInterface, ComInterfaceSockets, ComInterfaceUUID,
+};
+use datex_core::network::com_interfaces::com_interface_properties::{
+    InterfaceDirection, InterfaceProperties,
+};
+use datex_core::network::com_interfaces::com_interface_socket::{
+    ComInterfaceSocket, ComInterfaceSocketUUID,
+};
 use datex_core::network::com_interfaces::websocket::websocket_common::WebSocketError;
 use datex_core::stdlib::{
     cell::RefCell, collections::VecDeque, rc::Rc, sync::Arc,
 };
 
 use datex_core::network::com_interfaces::{
-    com_interface_socket::SocketState,
-    websocket::{websocket_client::WebSocket, websocket_common::parse_url},
+    com_interface_socket::SocketState, websocket::websocket_common::parse_url,
 };
 
-use log::{error, info, warn};
+use datex_core::utils::uuid::UUID;
+use log::{debug, error, info, warn};
+use tokio::spawn;
 use tokio::sync::Notify;
 use url::Url;
 use wasm_bindgen::{prelude::Closure, JsCast};
 use web_sys::{js_sys, ErrorEvent, MessageEvent};
 
-pub struct WebSocketClientJS {
-    address: Url,
-    ws: web_sys::WebSocket,
-    receive_queue: Arc<Mutex<VecDeque<u8>>>,
-    wait_for_state_change: Arc<Notify>,
-    state: Rc<RefCell<SocketState>>,
+// pub struct WebSocketClientJS {
+//     address: Url,
+//     ws: web_sys::WebSocket,
+//     receive_queue: Arc<Mutex<VecDeque<u8>>>,
+//     wait_for_state_change: Arc<Notify>,
+//     state: Rc<RefCell<SocketState>>,
+// }
+
+pub struct WebSocketClientJSInterface {
+    pub address: Url,
+    pub uuid: ComInterfaceUUID,
+    pub com_interface_sockets: Arc<Mutex<ComInterfaceSockets>>,
+    pub ws: web_sys::WebSocket,
+
+    pub state: Rc<RefCell<SocketState>>,
 }
 
-impl WebSocketClientJS {
-    pub fn new(address: &str) -> Result<WebSocketClientJS, WebSocketError> {
+impl WebSocketClientJSInterface {
+    pub async fn open(
+        address: &str,
+    ) -> Result<WebSocketClientJSInterface, WebSocketError> {
         let address =
             parse_url(address).map_err(|_| WebSocketError::InvalidURL)?;
+        let uuid = ComInterfaceUUID(UUID::new());
+        let com_interface_sockets =
+            Arc::new(Mutex::new(ComInterfaceSockets::default()));
+
         let ws = web_sys::WebSocket::new(address.as_ref())
             .map_err(|e| WebSocketError::Other(format!("{:?}", e)))?;
-        Ok(WebSocketClientJS {
+
+        let mut interface = WebSocketClientJSInterface {
             address,
+            uuid,
+            com_interface_sockets,
             state: Rc::new(RefCell::new(SocketState::Closed)),
-            wait_for_state_change: Arc::new(Notify::new()),
             ws,
-            receive_queue: Arc::new(Mutex::new(VecDeque::new())),
-        })
+        };
+        interface.start().await?;
+        Ok(interface)
     }
 
-    pub async fn wait_for_state_change(&self) -> SocketState {
-        self.wait_for_state_change.notified().await;
-        *self.state.borrow()
+    pub fn get_socket(&self) -> Option<Arc<Mutex<ComInterfaceSocket>>> {
+        return self
+            .get_sockets()
+            .lock()
+            .unwrap()
+            .sockets
+            .values()
+            .next()
+            .cloned();
     }
 
-    fn create_onmessage_callback(&self) -> Closure<dyn FnMut(MessageEvent)> {
-        let receive_queue = self.receive_queue.clone();
-        Closure::new(move |e: MessageEvent| {
-            if let Ok(abuf) = e.data().dyn_into::<js_sys::ArrayBuffer>() {
-                let array = js_sys::Uint8Array::new(&abuf);
-                receive_queue.lock().unwrap().extend(array.to_vec());
-                info!(
-                    "message event, received: {:?} bytes ({:?})",
-                    array.to_vec().len(),
-                    receive_queue
-                );
-            } else {
-                info!("message event, received Unknown: {:?}", e.data());
-            }
-        })
+    pub fn get_socket_uuid(&self) -> Option<ComInterfaceSocketUUID> {
+        self.get_socket().map(|s| s.lock().unwrap().uuid.clone())
     }
 
-    fn create_onerror_callback(&self) -> Closure<dyn FnMut(ErrorEvent)> {
-        let state = self.state.clone();
-        let on_error = self.wait_for_state_change.clone();
+    async fn start(&mut self) -> Result<(), WebSocketError> {
+        let address = self.address.clone();
+        info!(
+            "Connecting to WebSocket server at {}",
+            address.host_str().unwrap()
+        );
 
-        Closure::new(move |e: ErrorEvent| {
-            error!("Socket error event: {:?}", e.message());
-            *state.borrow_mut() = SocketState::Error;
-            on_error.notify_one();
-        })
-    }
-
-    fn create_onclose_callback(&self) -> Closure<dyn FnMut()> {
-        let state = self.state.clone();
-        let on_close = self.wait_for_state_change.clone();
-        Closure::new(move || {
-            if *state.borrow() == SocketState::Error
-                || *state.borrow() == SocketState::Closed
-            {
-                return;
-            }
-            warn!("Socket closed");
-            *state.borrow_mut() = SocketState::Closed;
-
-            on_close.notify_one();
-        })
-    }
-
-    fn create_onopen_callback(&self) -> Closure<dyn FnMut()> {
-        let on_connect = self.wait_for_state_change.clone();
-        let state = self.state.clone();
-
-        Closure::new(move || {
-            info!("Socket opened");
-            *state.borrow_mut() = SocketState::Open;
-
-            on_connect.notify_one(); // Notify that connection is open
-        })
-    }
-
-    fn connect(&mut self) -> Result<(), WebSocketError> {
         self.ws.set_binary_type(web_sys::BinaryType::Arraybuffer);
-        let cloned_ws = self.ws.clone();
-        cloned_ws.set_binary_type(web_sys::BinaryType::Arraybuffer);
 
         let message_callback = self.create_onmessage_callback();
         let error_callback = self.create_onerror_callback();
@@ -128,57 +115,104 @@ impl WebSocketClientJS {
 
         Ok(())
     }
+
+    fn create_onmessage_callback(
+        &mut self,
+    ) -> Closure<dyn FnMut(MessageEvent)> {
+        let sockets = self.get_sockets().clone();
+        Closure::new(move |e: MessageEvent| {
+            let sockets = sockets.clone();
+            let sockets = sockets.lock().unwrap();
+            let socket = sockets.sockets.values().next().unwrap();
+
+            let receive_queue = socket.lock().unwrap().receive_queue.clone();
+            if let Ok(abuf) = e.data().dyn_into::<js_sys::ArrayBuffer>() {
+                let array = js_sys::Uint8Array::new(&abuf);
+                receive_queue.lock().unwrap().extend(array.to_vec());
+                info!(
+                    "message event, received: {:?} bytes ({:?})",
+                    array.to_vec().len(),
+                    receive_queue
+                );
+            } else {
+                info!("message event, received Unknown: {:?}", e.data());
+            }
+        })
+    }
+
+    fn create_onerror_callback(&self) -> Closure<dyn FnMut(ErrorEvent)> {
+        let state = self.state.clone();
+
+        Closure::new(move |e: ErrorEvent| {
+            error!("Socket error event: {:?}", e.message());
+            *state.borrow_mut() = SocketState::Error;
+        })
+    }
+
+    fn create_onclose_callback(&self) -> Closure<dyn FnMut()> {
+        let state = self.state.clone();
+        Closure::new(move || {
+            if *state.borrow() == SocketState::Error
+                || *state.borrow() == SocketState::Closed
+            {
+                return;
+            }
+            warn!("Socket closed");
+            *state.borrow_mut() = SocketState::Closed;
+        })
+    }
+
+    fn create_onopen_callback(&self) -> Closure<dyn FnMut()> {
+        let state = self.state.clone();
+        let uuid = self.uuid.clone();
+        let com_interface_sockets = self.com_interface_sockets.clone();
+        Closure::new(move || {
+            info!("Socket opened");
+
+            com_interface_sockets.lock().unwrap().add_socket(Arc::new(
+                Mutex::new(ComInterfaceSocket::new(
+                    uuid.clone(),
+                    InterfaceDirection::IN_OUT,
+                    1,
+                )),
+            ));
+            *state.borrow_mut() = SocketState::Open;
+        })
+    }
 }
 
-impl WebSocket for WebSocketClientJS {
-    fn connect<'a>(
+impl ComInterface for WebSocketClientJSInterface {
+    fn send_block<'a>(
         &'a mut self,
-    ) -> Pin<
-        Box<
-            dyn Future<
-                    Output = Result<Arc<Mutex<VecDeque<u8>>>, WebSocketError>,
-                > + 'a,
-        >,
-    > {
+        block: &'a [u8],
+        _: ComInterfaceSocketUUID,
+    ) -> Pin<Box<dyn Future<Output = bool> + 'a>> {
         Box::pin(async move {
-            self.connect()?;
-            Ok(self.receive_queue.clone())
+            debug!("Sending block: {:?}", block);
+            self.ws
+                .send_with_u8_array(block)
+                .map_err(|e| {
+                    error!("Error sending message: {:?}", e);
+                    false
+                })
+                .is_ok()
         })
     }
 
-    
-    fn get_address(&self) -> Url {
-        self.address.clone()
+    fn get_properties(&self) -> InterfaceProperties {
+        InterfaceProperties {
+            channel: "websocket".to_string(),
+            round_trip_time: Duration::from_millis(40),
+            max_bandwidth: 1000,
+            ..InterfaceProperties::default()
+        }
     }
-    
-    fn get_com_interface_sockets(&self) -> Rc<RefCell<datex_core::network::com_interfaces::com_interface::ComInterfaceSockets>> {
-        todo!()
+
+    fn get_uuid(&self) -> &ComInterfaceUUID {
+        &self.uuid
     }
-    
-    fn send_block(
-        &mut self,
-        message: &[u8],
-    ) -> Pin<Box<dyn Future<Output = bool> + Send>> {
-        let status = self.ws.send_with_u8_array(message).is_ok();
-        Box::pin(async move {
-            status
-        })
+
+    fn get_sockets(&self) -> Arc<Mutex<ComInterfaceSockets>> {
+        self.com_interface_sockets.clone()
     }
-    
-    // fn send_data(
-    //     &mut self,
-    //     message: &[u8],
-    // ) -> impl Future<Output = bool> + Send {
-    //     tokio::spawn(async move {
-    //         true
-    //     }).into_future()
-    //     // todo!()
-    // }
-    
-    // fn send_data(
-    //     &mut self,
-    //     message: &[u8],
-    // ) -> impl Future<bool> + Send {
-    //     self.ws.send_with_u8_array(message).is_ok()
-    // }
 }
