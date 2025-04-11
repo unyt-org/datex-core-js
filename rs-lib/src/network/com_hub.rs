@@ -35,7 +35,6 @@ impl JSComHub {
     pub fn add_ws_interface(&mut self, address: String) -> Promise {
         let com_hub = self.com_hub.clone();
         let address_clone = address.clone();
-        let context = self.com_hub.borrow().context.clone();
 
         future_to_promise(async move {
             let websocket = WebSocketClientJS::new(&address_clone)
@@ -44,7 +43,6 @@ impl JSComHub {
 
             let ws_interface = Rc::new(RefCell::new(
                 WebSocketClientInterface::new_with_web_socket(
-                    context.clone(),
                     websocket.clone(),
                 ),
             ));
