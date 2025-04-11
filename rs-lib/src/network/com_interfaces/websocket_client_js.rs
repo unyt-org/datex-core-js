@@ -155,7 +155,7 @@ impl WebSocket for WebSocketClientJS {
         todo!()
     }
     
-    fn send_data(
+    fn send_block(
         &mut self,
         message: &[u8],
     ) -> Pin<Box<dyn Future<Output = bool> + Send>> {
