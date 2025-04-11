@@ -4,7 +4,7 @@ use datex_core::runtime::global_context::GlobalContext;
 use datex_core::stdlib::rc::Rc;
 
 use datex_core::crypto::crypto::CryptoTrait;
-use datex_core::datex_values::Pointer;
+use datex_core::datex_values::{Endpoint, Pointer};
 use datex_core::global::dxb_block::DXBBlock;
 use datex_core::runtime::Runtime;
 use wasm_bindgen::prelude::*;
@@ -26,11 +26,14 @@ pub struct JSRuntime {
  * Internal impl of the JSRuntime, not exposed to JavaScript
  */
 impl JSRuntime {
-    pub fn create() -> JSRuntime {
-        let runtime = Runtime::init(GlobalContext {
-            crypto: Arc::new(Mutex::new(CryptoJS)),
-            time: Arc::new(Mutex::new(TimeJS)),
-        });
+    pub fn create(endpoint: Endpoint) -> JSRuntime {
+        let runtime = Runtime::init(
+            endpoint,
+            GlobalContext {
+                crypto: Arc::new(Mutex::new(CryptoJS)),
+                time: Arc::new(Mutex::new(TimeJS)),
+            },
+        );
         runtime.memory.borrow_mut().store_pointer(
             [
                 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140,
@@ -121,18 +124,34 @@ impl JSRuntime {
     }
 
     #[wasm_bindgen(getter)]
+    pub fn endpoint(&self) -> String {
+        self.runtime.endpoint.to_string()
+    }
+
+    #[wasm_bindgen(getter)]
     pub fn com_hub(&self) -> JSComHub {
         JSComHub::new(Rc::clone(&self.runtime.com_hub))
     }
 
     #[wasm_bindgen]
-    pub fn _create_block(&self, body: Option<Vec<u8>>) -> Vec<u8> {
-        DXBBlock {
+    pub fn _create_block(
+        &self,
+        body: Option<Vec<u8>>,
+        receivers: Vec<String>,
+    ) -> Vec<u8> {
+        let mut block = DXBBlock {
             body: body.unwrap_or_default(),
             ..DXBBlock::default()
-        }
-        .recalculate_struct()
-        .to_bytes()
-        .unwrap()
+        };
+
+        block.recalculate_struct();
+        block.set_receivers(
+            &receivers
+                .iter()
+                .map(|r| Endpoint::from_string(r))
+                .collect::<Result<Vec<Endpoint>, _>>()
+                .unwrap(),
+        );
+        block.to_bytes().unwrap()
     }
 }

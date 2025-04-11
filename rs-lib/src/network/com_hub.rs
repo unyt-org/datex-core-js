@@ -57,7 +57,7 @@ impl JSComHub {
                 );
             }
             let uuid = websocket_interface.borrow().get_uuid().clone();
-            Ok(JsValue::from_str(&uuid.to_string()))
+            Ok(JsValue::from_str(&uuid.0.to_string()))
         })
     }
 

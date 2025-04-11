@@ -24,7 +24,8 @@ use datex_core::network::com_interfaces::{
 use datex_core::utils::uuid::UUID;
 use log::{debug, error, info, warn};
 use tokio::spawn;
-use tokio::sync::Notify;
+use tokio::sync::oneshot::Sender;
+use tokio::sync::{oneshot, Notify};
 use url::Url;
 use wasm_bindgen::{prelude::Closure, JsCast};
 use web_sys::{js_sys, ErrorEvent, MessageEvent};
@@ -96,23 +97,47 @@ impl WebSocketClientJSInterface {
 
         let message_callback = self.create_onmessage_callback();
         let error_callback = self.create_onerror_callback();
-        let open_callback = self.create_onopen_callback();
+        let (sender, receiver) = oneshot::channel::<()>();
+        let state = self.state.clone();
+        let uuid = self.uuid.clone();
+        let com_interface_sockets = self.com_interface_sockets.clone();
+
+        let open_callback = Closure::once(move |e: MessageEvent| {
+            info!("Socket opened");
+            com_interface_sockets.lock().unwrap().add_socket(Arc::new(
+                Mutex::new(ComInterfaceSocket::new(
+                    uuid.clone(),
+                    InterfaceDirection::IN_OUT,
+                    1,
+                )),
+            ));
+            *state.borrow_mut() = SocketState::Open;
+            sender.send(()).unwrap_or_else(|_| {
+                error!("Failed to send onopen event");
+            });
+        });
         let close_callback = self.create_onclose_callback();
 
         self.ws
             .set_onmessage(Some(message_callback.as_ref().unchecked_ref()));
         self.ws
             .set_onerror(Some(error_callback.as_ref().unchecked_ref()));
-        self.ws
-            .set_onopen(Some(open_callback.as_ref().unchecked_ref()));
+
         self.ws
             .set_onclose(Some(close_callback.as_ref().unchecked_ref()));
+
+        self.ws
+            .set_onopen(Some(open_callback.as_ref().unchecked_ref()));
+
+        receiver.await.map_err(|_| {
+            error!("Failed to receive onopen event");
+            WebSocketError::Other("Failed to receive onopen event".to_string())
+        })?;
 
         message_callback.forget();
         error_callback.forget();
         open_callback.forget();
         close_callback.forget();
-
         Ok(())
     }
 
@@ -159,24 +184,6 @@ impl WebSocketClientJSInterface {
             }
             warn!("Socket closed");
             *state.borrow_mut() = SocketState::Closed;
-        })
-    }
-
-    fn create_onopen_callback(&self) -> Closure<dyn FnMut()> {
-        let state = self.state.clone();
-        let uuid = self.uuid.clone();
-        let com_interface_sockets = self.com_interface_sockets.clone();
-        Closure::new(move || {
-            info!("Socket opened");
-
-            com_interface_sockets.lock().unwrap().add_socket(Arc::new(
-                Mutex::new(ComInterfaceSocket::new(
-                    uuid.clone(),
-                    InterfaceDirection::IN_OUT,
-                    1,
-                )),
-            ));
-            *state.borrow_mut() = SocketState::Open;
         })
     }
 }

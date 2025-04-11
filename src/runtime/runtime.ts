@@ -15,8 +15,8 @@ export class Runtime {
     readonly #memory: JSMemory;
     readonly #comHub: JSComHub;
 
-    constructor() {
-        this.#runtime = init_runtime();
+    constructor(endpoint: string) {
+        this.#runtime = init_runtime(endpoint);
         this.#memory = this.#runtime.memory;
         this.#comHub = this.#runtime.com_hub;
     }
@@ -24,6 +24,10 @@ export class Runtime {
     /**
      * properties from #runtime
      */
+    get endpoint(): string {
+        return this.#runtime.endpoint;
+    }
+
     get version(): string {
         return this.#runtime.version;
     }

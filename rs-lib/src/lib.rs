@@ -1,14 +1,14 @@
 #![feature(coroutines)]
 #![feature(iter_from_coroutine)]
 
- // FIXME no-std
+// FIXME no-std
 
 // use datex_cli_core::CLI;
 use datex_core::compiler;
+use datex_core::datex_values::Endpoint;
 use datex_core::decompiler;
 
 use wasm_bindgen::prelude::*;
-
 
 mod runtime;
 use runtime::JSRuntime;
@@ -36,8 +36,10 @@ extern "C" {
 
 // export compiler/runtime functions to JavaScript
 #[wasm_bindgen]
-pub fn init_runtime() -> JSRuntime {
-    JSRuntime::create()
+pub fn init_runtime(endpoint: &str) -> JSRuntime {
+    JSRuntime::create(
+        Endpoint::from_string(endpoint).expect("Invalid endpoint"),
+    )
 }
 
 #[wasm_bindgen]
