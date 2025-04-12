@@ -49,7 +49,7 @@ impl JSComHub {
                 .await
                 .map_err(|e| JsError::new(&format!("{:?}", e)))?;
 
-            if websocket_interface.borrow().state.borrow().clone()
+            if *websocket_interface.borrow().state.borrow()
                 != SocketState::Open
             {
                 return Err(

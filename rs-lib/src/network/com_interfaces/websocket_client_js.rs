@@ -14,7 +14,7 @@ use datex_core::network::com_interfaces::com_interface_socket::{
 };
 use datex_core::network::com_interfaces::websocket::websocket_common::WebSocketError;
 use datex_core::stdlib::{
-    cell::RefCell, collections::VecDeque, rc::Rc, sync::Arc,
+    cell::RefCell, rc::Rc, sync::Arc,
 };
 
 use datex_core::network::com_interfaces::{
@@ -23,9 +23,7 @@ use datex_core::network::com_interfaces::{
 
 use datex_core::utils::uuid::UUID;
 use log::{debug, error, info, warn};
-use tokio::spawn;
-use tokio::sync::oneshot::Sender;
-use tokio::sync::{oneshot, Notify};
+use tokio::sync::oneshot;
 use url::Url;
 use wasm_bindgen::{prelude::Closure, JsCast};
 use web_sys::{js_sys, ErrorEvent, MessageEvent};
