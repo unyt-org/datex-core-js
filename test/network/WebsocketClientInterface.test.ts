@@ -5,7 +5,7 @@ import { sleep } from "../utils.ts";
 import * as uuid from "jsr:@std/uuid";
 
 Deno.test("invalid url construct", async () => {
-    const runtime = new Runtime();
+    const runtime = new Runtime("@unyt");
     await assertRejects(
         () => runtime.comHub.add_ws_interface(`invalid url`),
         Error,
@@ -14,7 +14,7 @@ Deno.test("invalid url construct", async () => {
 });
 
 Deno.test("invalid url scheme construct", async () => {
-    const runtime = new Runtime();
+    const runtime = new Runtime("@unyt");
     await assertRejects(
         () => runtime.comHub.add_ws_interface(`ftp://invalid`),
         Error,
@@ -23,7 +23,7 @@ Deno.test("invalid url scheme construct", async () => {
 });
 
 Deno.test("websocket connect fail", async () => {
-    const runtime = new Runtime();
+    const runtime = new Runtime("@unyt");
     await assertRejects(
         () => runtime.comHub.add_ws_interface(`ws://invalid`),
         Error,
@@ -34,7 +34,7 @@ Deno.test("websocket connect fail", async () => {
 Deno.test("websocket basic connect", async () => {
     const port = 8484;
     const mockupServer = createMockupServer(port);
-    const runtime = new Runtime();
+    const runtime = new Runtime("@unyt");
     await new Promise((resolve) => setTimeout(resolve, 1000));
     const connection = runtime.comHub.add_ws_interface(
         `ws://localhost:${port}/`,

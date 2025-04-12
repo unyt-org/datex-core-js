@@ -30,14 +30,6 @@ use url::Url;
 use wasm_bindgen::{prelude::Closure, JsCast};
 use web_sys::{js_sys, ErrorEvent, MessageEvent};
 
-// pub struct WebSocketClientJS {
-//     address: Url,
-//     ws: web_sys::WebSocket,
-//     receive_queue: Arc<Mutex<VecDeque<u8>>>,
-//     wait_for_state_change: Arc<Notify>,
-//     state: Rc<RefCell<SocketState>>,
-// }
-
 pub struct WebSocketClientJSInterface {
     pub address: Url,
     pub uuid: ComInterfaceUUID,
