@@ -13,9 +13,7 @@ use datex_core::network::com_interfaces::com_interface_socket::{
     ComInterfaceSocket, ComInterfaceSocketUUID,
 };
 use datex_core::network::com_interfaces::websocket::websocket_common::WebSocketError;
-use datex_core::stdlib::{
-    cell::RefCell, rc::Rc, sync::Arc,
-};
+use datex_core::stdlib::{cell::RefCell, rc::Rc, sync::Arc};
 
 use datex_core::network::com_interfaces::{
     com_interface_socket::SocketState, websocket::websocket_common::parse_url,
@@ -48,7 +46,7 @@ impl WebSocketClientJSInterface {
             Arc::new(Mutex::new(ComInterfaceSockets::default()));
 
         let ws = web_sys::WebSocket::new(address.as_ref())
-            .map_err(|e| WebSocketError::Other(format!("{:?}", e)))?;
+            .map_err(|_| WebSocketError::ConnectionError)?;
 
         let mut interface = WebSocketClientJSInterface {
             address,
