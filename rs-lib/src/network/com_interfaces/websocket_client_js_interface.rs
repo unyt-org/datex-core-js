@@ -93,6 +93,8 @@ impl WebSocketClientJSInterface {
                 .lock()
                 .unwrap()
                 .set_state(ComInterfaceState::Connected);
+
+            info!("sending done...");
             sender.send(()).unwrap_or_else(|_| {
                 error!("Failed to send onopen event");
             });
@@ -109,11 +111,13 @@ impl WebSocketClientJSInterface {
 
         self.ws
             .set_onopen(Some(open_callback.as_ref().unchecked_ref()));
+        info!("waiting sender...");
 
         receiver.await.map_err(|_| {
             error!("Failed to receive onopen event");
             WebSocketError::Other("Failed to receive onopen event".to_string())
         })?;
+        info!("got sender...");
 
         message_callback.forget();
         error_callback.forget();
