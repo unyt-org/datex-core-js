@@ -3,10 +3,7 @@ use datex_core::network::com_interfaces::com_interface::{
 };
 use datex_core::stdlib::{cell::RefCell, rc::Rc};
 use datex_core::{
-    network::{
-        com_hub::ComHub,
-        com_interfaces::com_interface::ComInterface,
-    },
+    network::{com_hub::ComHub, com_interfaces::com_interface::ComInterface},
     utils::uuid::UUID,
 };
 use wasm_bindgen::prelude::*;
@@ -89,16 +86,13 @@ impl JSComHub {
             ComInterfaceUUID(UUID::from_string(interface_uuid));
 
         let com_hub = self.com_hub.clone();
-        let interface = com_hub.borrow_mut();
-        let interface = interface
+        let com_hub = com_hub.borrow_mut();
+        let mut interface = com_hub
             .get_interface_by_uuid::<WebSocketServerJSInterface>(
                 &interface_uuid,
             )
             .unwrap();
-
-        // interface.register_socket(&websocket);
-
-        // let websocket_interface = interface.clone()
+        interface.register_socket(&websocket);
     }
 
     #[wasm_bindgen]
