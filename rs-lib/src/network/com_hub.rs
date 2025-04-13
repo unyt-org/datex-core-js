@@ -48,12 +48,8 @@ impl JSComHub {
                     .await
                     .map_err(|e| JsError::new(&format!("{:?}", e)))?;
             let interface_uuid = websocket_interface.get_uuid().clone();
-            let websocket_interface =
-                Rc::new(RefCell::new(websocket_interface));
 
-            if websocket_interface.clone().borrow().get_state()
-                != ComInterfaceState::Connected
-            {
+            if websocket_interface.get_state() != ComInterfaceState::Connected {
                 error!("Failed to connect to WebSocket");
                 return Err(
                     JsError::new("Failed to connect to WebSocket").into()
@@ -61,20 +57,15 @@ impl JSComHub {
             }
 
             info!("Adding WebSocket interface {}", interface_uuid);
-            {
-                let mut comhub = com_hub.borrow_mut();
-                info!("Got CH");
-                comhub
-                    .add_interface(websocket_interface.clone())
-                    .await
-                    .map_err(|e| JsError::new(&format!("{:?}", e)))?;
-            }
+            let mut comhub = com_hub.borrow_mut();
+            info!("Got CH");
+            let websocket_interface =
+                Rc::new(RefCell::new(websocket_interface));
+            comhub
+                .add_interface(websocket_interface.clone())
+                .await
+                .map_err(|e| JsError::new(&format!("{:?}", e)))?;
 
-            // com_hub
-            //     .borrow_mut()
-            //     .add_interface(websocket_interface.clone())
-            //     .await
-            //     .map_err(|e| JsError::new(&format!("{:?}", e)))?;
             info!("WebSocket interface added");
             Ok(JsValue::from_str(&interface_uuid.0.to_string()))
         })
