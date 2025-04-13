@@ -79,23 +79,31 @@ impl JSComHub {
 
         let com_hub = self.com_hub.clone();
         future_to_promise(async move {
-            let com_hub_mut = com_hub.lock().unwrap();
-            let interface = com_hub_mut
-                .get_interface_by_uuid_mut::<WebSocketServerJSInterface>(
-                    &interface_uuid.clone(),
-                );
+            let com_hub = com_hub.clone();
 
-            if interface.is_some() {
-                info!("has interface");
-                let mut com_hub_mut = com_hub.lock().unwrap();
+            let has_interface = {
+                let com_hub_mut = com_hub
+                    .lock()
+                    .map_err(|_| JsError::new("Failed to lock ComHub"))?;
+
+                let interface = com_hub_mut
+                    .get_interface_by_uuid::<WebSocketServerJSInterface>(
+                        &interface_uuid.clone(),
+                    );
+                interface.is_some()
+            };
+            if has_interface {
+                let com_hub = com_hub.clone();
+                let mut com_hub_mut = com_hub
+                    .lock()
+                    .map_err(|_| JsError::new("Failed to lock ComHub"))?;
 
                 com_hub_mut
                     .remove_interface(interface_uuid.clone())
                     .await
                     .map_err(|e| JsError::new(&format!("{:?}", e)))?;
-                return Ok(JsValue::undefined());
+                return Ok(JsValue::TRUE);
             } else {
-                info!("hanots interface");
                 error!("Failed to find WebSocket interface");
                 return Err(
                     JsError::new("Failed to find WebSocket interface").into()
@@ -139,7 +147,7 @@ impl JSComHub {
                 &interface_uuid,
             );
         if interface.is_some() {
-            interface.unwrap().register_socket(&websocket);
+            interface.unwrap().register_socket(websocket);
             return JsValue::undefined();
         } else {
             error!("Failed to find WebSocket interface");

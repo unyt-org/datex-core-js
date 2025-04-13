@@ -37,7 +37,7 @@ impl WebSocketServerJSInterface {
         })
     }
 
-    pub fn register_socket(&mut self, web_socket: &web_sys::WebSocket) {
+    pub fn register_socket(&mut self, web_socket: web_sys::WebSocket) {
         let interface_uuid = self.get_uuid().clone();
         let socket = ComInterfaceSocket::new(
             interface_uuid,
@@ -66,6 +66,7 @@ impl WebSocketServerJSInterface {
                 .as_ref()
                 .unchecked_ref(),
         ));
+        self.sockets.insert(socket_uuid.clone(), web_socket);
     }
 
     pub fn get_socket(&self) -> Option<Arc<Mutex<ComInterfaceSocket>>> {
@@ -165,7 +166,7 @@ impl ComInterface for WebSocketServerJSInterface {
             // FIXME
             // Do we have to remove the event listeners here
             // or is this done automatically when the socket is closed?
-            let _ = socket.close();
+            let _ = socket.close().is_ok();
         }
         Box::pin(async move { true })
     }

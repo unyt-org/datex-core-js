@@ -43,8 +43,10 @@ Deno.test("connect client", async () => {
     });
     await new Promise<void>((resolve) =>
         setTimeout(async () => {
-            await runtime.comHub.close_websocket_server_interface(
-                serverInterfaceUUID,
+            assert(
+                await runtime.comHub.close_websocket_server_interface(
+                    serverInterfaceUUID,
+                ),
             );
             // sockets.forEach((socket) => socket.close());
             await server.shutdown();
