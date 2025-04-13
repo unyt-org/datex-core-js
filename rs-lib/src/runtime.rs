@@ -130,7 +130,7 @@ impl JSRuntime {
 
     #[wasm_bindgen(getter)]
     pub fn com_hub(&self) -> JSComHub {
-        JSComHub::new(Rc::clone(&self.runtime.com_hub))
+        JSComHub::new(self.runtime.com_hub.clone())
     }
 
     #[wasm_bindgen]

@@ -1,4 +1,5 @@
 use core::error;
+use std::sync::{Arc, Mutex};
 
 use datex_core::network::com_interfaces::com_interface::{
     ComInterfaceState, ComInterfaceUUID,
@@ -21,14 +22,14 @@ use crate::network::com_interfaces::{
 
 #[wasm_bindgen]
 pub struct JSComHub {
-    com_hub: Rc<RefCell<ComHub>>,
+    com_hub: Arc<Mutex<ComHub>>,
 }
 
 /**
  * Internal impl of the JSRuntime, not exposed to JavaScript
  */
 impl JSComHub {
-    pub fn new(com_hub: Rc<RefCell<ComHub>>) -> JSComHub {
+    pub fn new(com_hub: Arc<Mutex<ComHub>>) -> JSComHub {
         JSComHub { com_hub }
     }
 }
@@ -38,6 +39,7 @@ impl JSComHub {
  */
 #[wasm_bindgen]
 impl JSComHub {
+    #[wasm_bindgen]
     pub fn add_ws_interface(&mut self, address: String) -> Promise {
         let com_hub = self.com_hub.clone();
         let address_clone = address.clone();
@@ -55,30 +57,68 @@ impl JSComHub {
                     JsError::new("Failed to connect to WebSocket").into()
                 );
             }
-
-            info!("Adding WebSocket interface {}", interface_uuid);
-            let mut comhub = com_hub.borrow_mut();
-            info!("Got CH");
             let websocket_interface =
                 Rc::new(RefCell::new(websocket_interface));
-            comhub
+            com_hub
+                .lock()
+                .unwrap()
                 .add_interface(websocket_interface.clone())
                 .await
                 .map_err(|e| JsError::new(&format!("{:?}", e)))?;
-
-            info!("WebSocket interface added");
             Ok(JsValue::from_str(&interface_uuid.0.to_string()))
         })
     }
 
     #[wasm_bindgen]
+    pub async fn close_websocket_server_interface(
+        &mut self,
+        interface_uuid: String,
+    ) -> Promise {
+        let interface_uuid =
+            ComInterfaceUUID(UUID::from_string(interface_uuid));
+
+        let com_hub = self.com_hub.clone();
+        future_to_promise(async move {
+            let com_hub_mut = com_hub.lock().unwrap();
+            let interface = com_hub_mut
+                .get_interface_by_uuid_mut::<WebSocketServerJSInterface>(
+                    &interface_uuid.clone(),
+                );
+
+            if interface.is_some() {
+                info!("has interface");
+                let mut com_hub_mut = com_hub.lock().unwrap();
+
+                com_hub_mut
+                    .remove_interface(interface_uuid.clone())
+                    .await
+                    .map_err(|e| JsError::new(&format!("{:?}", e)))?;
+                return Ok(JsValue::undefined());
+            } else {
+                info!("hanots interface");
+                error!("Failed to find WebSocket interface");
+                return Err(
+                    JsError::new("Failed to find WebSocket interface").into()
+                );
+            }
+        })
+    }
+    #[wasm_bindgen]
     pub async fn create_websocket_server_interface(&self) -> Promise {
+        let com_hub = self.com_hub.clone();
+
         future_to_promise(async move {
             let websocket_interface = WebSocketServerJSInterface::open()
                 .await
                 .map_err(|e| JsError::new(&format!("{:?}", e)))?;
-
             let uuid = websocket_interface.get_uuid().clone();
+
+            let mut com_hub = com_hub.lock().unwrap();
+            com_hub
+                .add_interface(Rc::new(RefCell::new(websocket_interface)))
+                .await
+                .map_err(|e| JsError::new(&format!("{:?}", e)))?;
+
             Ok(JsValue::from_str(&uuid.0.to_string()))
         })
     }
@@ -88,23 +128,28 @@ impl JSComHub {
         &mut self,
         interface_uuid: String,
         websocket: web_sys::WebSocket,
-    ) {
+    ) -> JsValue {
         let interface_uuid =
             ComInterfaceUUID(UUID::from_string(interface_uuid));
 
         let com_hub = self.com_hub.clone();
-        let com_hub = com_hub.borrow_mut();
-        let mut interface = com_hub
+        let com_hub = com_hub.lock().unwrap();
+        let interface = com_hub
             .get_interface_by_uuid_mut::<WebSocketServerJSInterface>(
                 &interface_uuid,
-            )
-            .unwrap();
-        interface.register_socket(&websocket);
+            );
+        if interface.is_some() {
+            interface.unwrap().register_socket(&websocket);
+            return JsValue::undefined();
+        } else {
+            error!("Failed to find WebSocket interface");
+            return JsError::new("Failed to find WebSocket interface").into();
+        }
     }
 
     #[wasm_bindgen]
     pub async fn _update(&mut self) {
-        self.com_hub.borrow_mut().update().await;
+        self.com_hub.lock().unwrap().update().await;
     }
 
     #[wasm_bindgen(getter)]
@@ -115,7 +160,7 @@ impl JSComHub {
                     Rc<datex_core::global::dxb_block::DXBBlock>,
                 >,
             >,
-        > = self.com_hub.borrow().incoming_blocks.clone();
+        > = self.com_hub.lock().unwrap().incoming_blocks.clone();
         let vec = vec.borrow();
         vec.iter()
             .map(|block| {

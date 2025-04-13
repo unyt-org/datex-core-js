@@ -52,20 +52,17 @@ impl WebSocketServerJSInterface {
             .insert(socket_uuid.clone(), Arc::new(Mutex::new(socket)));
 
         web_socket.set_onmessage(Some(
-            self
-                .create_onmessage_callback(socket_uuid.clone())
+            self.create_onmessage_callback(socket_uuid.clone())
                 .as_ref()
                 .unchecked_ref(),
         ));
         web_socket.set_onerror(Some(
-            self
-                .create_onerror_callback(socket_uuid.clone())
+            self.create_onerror_callback(socket_uuid.clone())
                 .as_ref()
                 .unchecked_ref(),
         ));
         web_socket.set_onclose(Some(
-            self
-                .create_onclose_callback(socket_uuid.clone())
+            self.create_onclose_callback(socket_uuid.clone())
                 .as_ref()
                 .unchecked_ref(),
         ));
@@ -163,6 +160,14 @@ impl ComInterface for WebSocketServerJSInterface {
             ..InterfaceProperties::default()
         }
     }
-
+    fn close<'a>(&'a mut self) -> Pin<Box<dyn Future<Output = bool> + 'a>> {
+        for (_, socket) in self.sockets.iter() {
+            // FIXME
+            // Do we have to remove the event listeners here
+            // or is this done automatically when the socket is closed?
+            let _ = socket.close();
+        }
+        Box::pin(async move { true })
+    }
     delegate_com_interface_info!();
 }

@@ -117,10 +117,10 @@ impl WebSocketClientJSInterface {
         })?;
 
         // FIXME are these needed?
-        // message_callback.forget();
-        // error_callback.forget();
-        // open_callback.forget();
-        // close_callback.forget();
+        message_callback.forget();
+        error_callback.forget();
+        open_callback.forget();
+        close_callback.forget();
         Ok(())
     }
 
@@ -189,6 +189,9 @@ impl ComInterface for WebSocketClientJSInterface {
             ..InterfaceProperties::default()
         }
     }
-
+    fn close<'a>(&'a mut self) -> Pin<Box<dyn Future<Output = bool> + 'a>> {
+        // TODO
+        Box::pin(async move { true })
+    }
     delegate_com_interface_info!();
 }
