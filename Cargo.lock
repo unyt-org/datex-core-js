@@ -947,8 +947,6 @@ dependencies = [
  "default-args",
  "esp-idf-svc",
  "flexi_logger",
- "futures",
- "futures-timer",
  "futures-util",
  "hex",
  "itertools",
