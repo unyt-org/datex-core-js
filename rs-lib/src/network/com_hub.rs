@@ -1,3 +1,5 @@
+use core::error;
+
 use datex_core::network::com_interfaces::com_interface::{
     ComInterfaceState, ComInterfaceUUID,
 };
@@ -6,8 +8,10 @@ use datex_core::{
     network::{com_hub::ComHub, com_interfaces::com_interface::ComInterface},
     utils::uuid::UUID,
 };
+use log::{error, info};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::future_to_promise;
+use web_sys::console::info;
 use web_sys::js_sys::{self, Promise};
 
 use crate::network::com_interfaces::{
@@ -43,24 +47,36 @@ impl JSComHub {
                 WebSocketClientJSInterface::open(&address_clone)
                     .await
                     .map_err(|e| JsError::new(&format!("{:?}", e)))?;
+            let interface_uuid = websocket_interface.get_uuid().clone();
             let websocket_interface =
                 Rc::new(RefCell::new(websocket_interface));
 
-            com_hub
-                .borrow_mut()
-                .add_interface(websocket_interface.clone())
-                .await
-                .map_err(|e| JsError::new(&format!("{:?}", e)))?;
-
-            if websocket_interface.borrow().get_state()
+            if websocket_interface.clone().borrow().get_state()
                 != ComInterfaceState::Connected
             {
+                error!("Failed to connect to WebSocket");
                 return Err(
                     JsError::new("Failed to connect to WebSocket").into()
                 );
             }
-            let uuid = websocket_interface.borrow().get_uuid().clone();
-            Ok(JsValue::from_str(&uuid.0.to_string()))
+
+            info!("Adding WebSocket interface {}", interface_uuid);
+            {
+                let mut comhub = com_hub.borrow_mut();
+                info!("Got CH");
+                comhub
+                    .add_interface(websocket_interface.clone())
+                    .await
+                    .map_err(|e| JsError::new(&format!("{:?}", e)))?;
+            }
+
+            // com_hub
+            //     .borrow_mut()
+            //     .add_interface(websocket_interface.clone())
+            //     .await
+            //     .map_err(|e| JsError::new(&format!("{:?}", e)))?;
+            info!("WebSocket interface added");
+            Ok(JsValue::from_str(&interface_uuid.0.to_string()))
         })
     }
 

@@ -23,7 +23,7 @@ Deno.test("connect client", async () => {
         );
         return response;
     });
-    await sleep(1000);
+    await sleep(2500);
     // add client
     const clientUUID = await runtime.comHub.add_ws_interface(
         `ws://localhost:${PORT}`,
