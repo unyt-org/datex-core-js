@@ -88,7 +88,7 @@ impl JSComHub {
         let com_hub = self.com_hub.clone();
         let com_hub = com_hub.borrow_mut();
         let mut interface = com_hub
-            .get_interface_by_uuid::<WebSocketServerJSInterface>(
+            .get_interface_by_uuid_mut::<WebSocketServerJSInterface>(
                 &interface_uuid,
             )
             .unwrap();

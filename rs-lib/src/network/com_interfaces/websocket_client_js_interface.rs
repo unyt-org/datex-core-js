@@ -19,7 +19,7 @@ use datex_core::stdlib::sync::Arc;
 use datex_core::network::com_interfaces::com_interface::ComInterfaceState;
 use datex_core::network::com_interfaces::default_com_interfaces::websocket::websocket_common::parse_url;
 
-use log::{debug, error, info};
+use log::{debug, error, info, warn};
 use tokio::sync::oneshot;
 use url::Url;
 use wasm_bindgen::{prelude::Closure, JsCast};
@@ -67,10 +67,7 @@ impl WebSocketClientJSInterface {
 
     async fn start(&mut self) -> Result<(), WebSocketError> {
         let address = self.address.clone();
-        info!(
-            "Connecting to WebSocket server at {}",
-            address.host_str().unwrap()
-        );
+        info!("Connecting to WebSocket server at {}", address);
 
         self.ws.set_binary_type(web_sys::BinaryType::Arraybuffer);
 
@@ -81,14 +78,17 @@ impl WebSocketClientJSInterface {
         let com_interface_sockets = self.get_sockets().clone();
         let state = self.get_info().get_state();
         let open_callback = Closure::once(move |_: MessageEvent| {
-            info!("Socket opened");
-            com_interface_sockets.lock().unwrap().add_socket(Arc::new(
-                Mutex::new(ComInterfaceSocket::new(
-                    uuid.clone(),
-                    InterfaceDirection::IN_OUT,
-                    1,
-                )),
-            ));
+            let socket = ComInterfaceSocket::new(
+                uuid.clone(),
+                InterfaceDirection::IN_OUT,
+                1,
+            );
+            info!("Socket opened: {:?}", socket.uuid);
+
+            com_interface_sockets
+                .lock()
+                .unwrap()
+                .add_socket(Arc::new(Mutex::new(socket)));
             state
                 .lock()
                 .unwrap()
@@ -155,6 +155,7 @@ impl WebSocketClientJSInterface {
     fn create_onclose_callback(&self) -> Closure<dyn FnMut()> {
         let state = self.get_info().get_state();
         Closure::new(move || {
+            warn!("Socket closed");
             state.lock().unwrap().set_state(ComInterfaceState::Closed);
         })
     }

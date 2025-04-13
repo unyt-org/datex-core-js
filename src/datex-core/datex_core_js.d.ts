@@ -14,6 +14,11 @@ export class JSComHub {
     private constructor();
     free(): void;
     add_ws_interface(address: string): Promise<any>;
+    create_websocket_server_interface(): Promise<Promise<any>>;
+    add_websocket_to_server_interface(
+        interface_uuid: string,
+        websocket: WebSocket,
+    ): Promise<void>;
     _update(): Promise<void>;
     readonly _incoming_blocks: Uint8Array[];
 }
