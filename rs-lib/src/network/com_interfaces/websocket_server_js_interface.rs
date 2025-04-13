@@ -4,8 +4,9 @@ use std::pin::Pin;
 use std::sync::Mutex;
 use std::time::Duration; // FIXME no-std
 
+use datex_core::delegate_com_interface_info;
 use datex_core::network::com_interfaces::com_interface::{
-    ComInterface, ComInterfaceSockets, ComInterfaceUUID,
+    ComInterface, ComInterfaceInfo, ComInterfaceSockets, ComInterfaceUUID,
 };
 use datex_core::network::com_interfaces::com_interface_properties::{
     InterfaceDirection, InterfaceProperties,
@@ -13,27 +14,25 @@ use datex_core::network::com_interfaces::com_interface_properties::{
 use datex_core::network::com_interfaces::com_interface_socket::{
     ComInterfaceSocket, ComInterfaceSocketUUID,
 };
-use datex_core::network::com_interfaces::websocket::websocket_common::WebSocketError;
+use datex_core::network::com_interfaces::default_com_interfaces::websocket::websocket_common::WebSocketError;
 use datex_core::stdlib::{cell::RefCell, rc::Rc, sync::Arc};
 
-use datex_core::utils::uuid::UUID;
+use datex_core::network::com_interfaces::com_interface::ComInterfaceState;
 use log::{debug, error, info, warn};
 use wasm_bindgen::{prelude::Closure, JsCast};
 use web_sys::{js_sys, ErrorEvent, MessageEvent};
 
 pub struct WebSocketServerJSInterface {
-    pub uuid: ComInterfaceUUID,
-    pub com_interface_sockets: Arc<Mutex<ComInterfaceSockets>>,
     pub sockets: HashMap<ComInterfaceSocketUUID, web_sys::WebSocket>,
+    info: ComInterfaceInfo,
 }
 
 impl WebSocketServerJSInterface {
     pub async fn open() -> Result<WebSocketServerJSInterface, WebSocketError> {
         Ok(WebSocketServerJSInterface {
-            uuid: ComInterfaceUUID(UUID::new()),
-            com_interface_sockets: Arc::new(Mutex::new(
-                ComInterfaceSockets::default(),
-            )),
+            info: ComInterfaceInfo::new_with_state(
+                ComInterfaceState::Connected,
+            ),
             sockets: HashMap::new(),
         })
     }
@@ -156,7 +155,7 @@ impl ComInterface for WebSocketServerJSInterface {
         })
     }
 
-    fn get_properties(&self) -> InterfaceProperties {
+    fn init_properties(&self) -> InterfaceProperties {
         InterfaceProperties {
             channel: "websocket".to_string(),
             round_trip_time: Duration::from_millis(40),
@@ -165,18 +164,5 @@ impl ComInterface for WebSocketServerJSInterface {
         }
     }
 
-    fn get_uuid(&self) -> &ComInterfaceUUID {
-        &self.uuid
-    }
-
-    fn get_sockets(&self) -> Arc<Mutex<ComInterfaceSockets>> {
-        self.com_interface_sockets.clone()
-    }
-
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
-        self
-    }
+    delegate_com_interface_info!();
 }

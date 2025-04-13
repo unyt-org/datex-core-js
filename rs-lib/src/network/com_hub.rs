@@ -1,4 +1,6 @@
-use datex_core::network::com_interfaces::com_interface::ComInterfaceUUID;
+use datex_core::network::com_interfaces::com_interface::{
+    ComInterfaceState, ComInterfaceUUID,
+};
 use datex_core::stdlib::{cell::RefCell, rc::Rc};
 use datex_core::{
     network::{
@@ -14,8 +16,8 @@ use wasm_bindgen_futures::future_to_promise;
 use web_sys::js_sys::{self, Promise};
 
 use crate::network::com_interfaces::{
-    websocket_client_js::WebSocketClientJSInterface,
-    websocket_server_js::WebSocketServerJSInterface,
+    websocket_client_js_interface::WebSocketClientJSInterface,
+    websocket_server_js_interface::WebSocketServerJSInterface,
 };
 
 #[wasm_bindgen]
@@ -55,7 +57,8 @@ impl JSComHub {
                 .await
                 .map_err(|e| JsError::new(&format!("{:?}", e)))?;
 
-            if *websocket_interface.borrow().state.borrow() != SocketState::Open
+            if websocket_interface.borrow().get_state()
+                != ComInterfaceState::Connected
             {
                 return Err(
                     JsError::new("Failed to connect to WebSocket").into()

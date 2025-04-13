@@ -3,8 +3,9 @@ use std::pin::Pin;
 use std::sync::Mutex;
 use std::time::Duration; // FIXME no-std
 
+use datex_core::delegate_com_interface_info;
 use datex_core::network::com_interfaces::com_interface::{
-    ComInterface, ComInterfaceSockets, ComInterfaceUUID,
+    ComInterface, ComInterfaceInfo, ComInterfaceSockets, ComInterfaceUUID,
 };
 use datex_core::network::com_interfaces::com_interface_properties::{
     InterfaceDirection, InterfaceProperties,
@@ -12,11 +13,13 @@ use datex_core::network::com_interfaces::com_interface_properties::{
 use datex_core::network::com_interfaces::com_interface_socket::{
     ComInterfaceSocket, ComInterfaceSocketUUID,
 };
-use datex_core::network::com_interfaces::websocket::websocket_common::WebSocketError;
+use datex_core::network::com_interfaces::default_com_interfaces::websocket::websocket_common::WebSocketError;
 use datex_core::stdlib::{cell::RefCell, rc::Rc, sync::Arc};
 
+use datex_core::network::com_interfaces::com_interface::ComInterfaceState;
 use datex_core::network::com_interfaces::{
-    com_interface_socket::SocketState, websocket::websocket_common::parse_url,
+    com_interface_socket::SocketState,
+    default_com_interfaces::websocket::websocket_common::parse_url,
 };
 
 use datex_core::utils::uuid::UUID;
@@ -28,11 +31,8 @@ use web_sys::{js_sys, ErrorEvent, MessageEvent};
 
 pub struct WebSocketClientJSInterface {
     pub address: Url,
-    pub uuid: ComInterfaceUUID,
-    pub com_interface_sockets: Arc<Mutex<ComInterfaceSockets>>,
     pub ws: web_sys::WebSocket,
-
-    pub state: Rc<RefCell<SocketState>>,
+    info: ComInterfaceInfo,
 }
 
 impl WebSocketClientJSInterface {
@@ -41,18 +41,13 @@ impl WebSocketClientJSInterface {
     ) -> Result<WebSocketClientJSInterface, WebSocketError> {
         let address =
             parse_url(address).map_err(|_| WebSocketError::InvalidURL)?;
-        let uuid = ComInterfaceUUID(UUID::new());
-        let com_interface_sockets =
-            Arc::new(Mutex::new(ComInterfaceSockets::default()));
 
         let ws = web_sys::WebSocket::new(address.as_ref())
             .map_err(|_| WebSocketError::ConnectionError)?;
 
         let mut interface = WebSocketClientJSInterface {
             address,
-            uuid,
-            com_interface_sockets,
-            state: Rc::new(RefCell::new(SocketState::Closed)),
+            info: ComInterfaceInfo::new(),
             ws,
         };
         interface.start().await?;
@@ -86,11 +81,10 @@ impl WebSocketClientJSInterface {
         let message_callback = self.create_onmessage_callback();
         let error_callback = self.create_onerror_callback();
         let (sender, receiver) = oneshot::channel::<()>();
-        let state = self.state.clone();
-        let uuid = self.uuid.clone();
-        let com_interface_sockets = self.com_interface_sockets.clone();
-
-        let open_callback = Closure::once(move |e: MessageEvent| {
+        let uuid = self.get_uuid().clone();
+        let com_interface_sockets = self.get_sockets().clone();
+        let state = self.get_info().get_state();
+        let open_callback = Closure::once(move |_: MessageEvent| {
             info!("Socket opened");
             com_interface_sockets.lock().unwrap().add_socket(Arc::new(
                 Mutex::new(ComInterfaceSocket::new(
@@ -99,7 +93,10 @@ impl WebSocketClientJSInterface {
                     1,
                 )),
             ));
-            *state.borrow_mut() = SocketState::Open;
+            state
+                .lock()
+                .unwrap()
+                .set_state(ComInterfaceState::Connected);
             sender.send(()).unwrap_or_else(|_| {
                 error!("Failed to send onopen event");
             });
@@ -154,24 +151,15 @@ impl WebSocketClientJSInterface {
     }
 
     fn create_onerror_callback(&self) -> Closure<dyn FnMut(ErrorEvent)> {
-        let state = self.state.clone();
-
         Closure::new(move |e: ErrorEvent| {
             error!("Socket error event: {:?}", e.message());
-            *state.borrow_mut() = SocketState::Error;
         })
     }
 
     fn create_onclose_callback(&self) -> Closure<dyn FnMut()> {
-        let state = self.state.clone();
+        let state = self.get_info().get_state();
         Closure::new(move || {
-            if *state.borrow() == SocketState::Error
-                || *state.borrow() == SocketState::Closed
-            {
-                return;
-            }
-            warn!("Socket closed");
-            *state.borrow_mut() = SocketState::Closed;
+            state.lock().unwrap().set_state(ComInterfaceState::Closed);
         })
     }
 }
@@ -194,7 +182,7 @@ impl ComInterface for WebSocketClientJSInterface {
         })
     }
 
-    fn get_properties(&self) -> InterfaceProperties {
+    fn init_properties(&self) -> InterfaceProperties {
         InterfaceProperties {
             channel: "websocket".to_string(),
             round_trip_time: Duration::from_millis(40),
@@ -203,17 +191,5 @@ impl ComInterface for WebSocketClientJSInterface {
         }
     }
 
-    fn get_uuid(&self) -> &ComInterfaceUUID {
-        &self.uuid
-    }
-
-    fn get_sockets(&self) -> Arc<Mutex<ComInterfaceSockets>> {
-        self.com_interface_sockets.clone()
-    }
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
-        self
-    }
+    delegate_com_interface_info!();
 }
