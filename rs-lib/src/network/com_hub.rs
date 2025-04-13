@@ -1,4 +1,3 @@
-use core::error;
 use std::sync::{Arc, Mutex};
 
 use datex_core::network::com_interfaces::com_interface::{
@@ -9,10 +8,9 @@ use datex_core::{
     network::{com_hub::ComHub, com_interfaces::com_interface::ComInterface},
     utils::uuid::UUID,
 };
-use log::{error, info};
+use log::error;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::future_to_promise;
-use web_sys::console::info;
 use web_sys::js_sys::{self, Promise};
 
 use crate::network::com_interfaces::{
@@ -102,12 +100,12 @@ impl JSComHub {
                     .remove_interface(interface_uuid.clone())
                     .await
                     .map_err(|e| JsError::new(&format!("{:?}", e)))?;
-                return Ok(JsValue::TRUE);
+                Ok(JsValue::TRUE)
             } else {
                 error!("Failed to find WebSocket interface");
-                return Err(
+                Err(
                     JsError::new("Failed to find WebSocket interface").into()
-                );
+                )
             }
         })
     }
@@ -148,10 +146,10 @@ impl JSComHub {
             );
         if interface.is_some() {
             interface.unwrap().register_socket(websocket);
-            return JsValue::undefined();
+            JsValue::undefined()
         } else {
             error!("Failed to find WebSocket interface");
-            return JsError::new("Failed to find WebSocket interface").into();
+            JsError::new("Failed to find WebSocket interface").into()
         }
     }
 
