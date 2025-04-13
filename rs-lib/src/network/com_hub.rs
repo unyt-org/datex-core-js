@@ -5,9 +5,7 @@ use datex_core::stdlib::{cell::RefCell, rc::Rc};
 use datex_core::{
     network::{
         com_hub::ComHub,
-        com_interfaces::{
-            com_interface::ComInterface, com_interface_socket::SocketState,
-        },
+        com_interfaces::com_interface::ComInterface,
     },
     utils::uuid::UUID,
 };
@@ -92,7 +90,7 @@ impl JSComHub {
 
         let com_hub = self.com_hub.clone();
         let interface = com_hub.borrow_mut();
-        let mut interface = interface
+        let interface = interface
             .get_interface_by_uuid::<WebSocketServerJSInterface>(
                 &interface_uuid,
             )

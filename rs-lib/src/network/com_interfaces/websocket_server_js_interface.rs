@@ -15,10 +15,10 @@ use datex_core::network::com_interfaces::com_interface_socket::{
     ComInterfaceSocket, ComInterfaceSocketUUID,
 };
 use datex_core::network::com_interfaces::default_com_interfaces::websocket::websocket_common::WebSocketError;
-use datex_core::stdlib::{cell::RefCell, rc::Rc, sync::Arc};
+use datex_core::stdlib::sync::Arc;
 
 use datex_core::network::com_interfaces::com_interface::ComInterfaceState;
-use log::{debug, error, info, warn};
+use log::{debug, error, info};
 use wasm_bindgen::{prelude::Closure, JsCast};
 use web_sys::{js_sys, ErrorEvent, MessageEvent};
 
@@ -52,19 +52,19 @@ impl WebSocketServerJSInterface {
             .insert(socket_uuid.clone(), Arc::new(Mutex::new(socket)));
 
         web_socket.set_onmessage(Some(
-            &self
+            self
                 .create_onmessage_callback(socket_uuid.clone())
                 .as_ref()
                 .unchecked_ref(),
         ));
         web_socket.set_onerror(Some(
-            &self
+            self
                 .create_onerror_callback(socket_uuid.clone())
                 .as_ref()
                 .unchecked_ref(),
         ));
         web_socket.set_onclose(Some(
-            &self
+            self
                 .create_onclose_callback(socket_uuid.clone())
                 .as_ref()
                 .unchecked_ref(),

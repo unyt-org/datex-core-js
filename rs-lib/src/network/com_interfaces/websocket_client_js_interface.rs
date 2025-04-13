@@ -14,16 +14,12 @@ use datex_core::network::com_interfaces::com_interface_socket::{
     ComInterfaceSocket, ComInterfaceSocketUUID,
 };
 use datex_core::network::com_interfaces::default_com_interfaces::websocket::websocket_common::WebSocketError;
-use datex_core::stdlib::{cell::RefCell, rc::Rc, sync::Arc};
+use datex_core::stdlib::sync::Arc;
 
 use datex_core::network::com_interfaces::com_interface::ComInterfaceState;
-use datex_core::network::com_interfaces::{
-    com_interface_socket::SocketState,
-    default_com_interfaces::websocket::websocket_common::parse_url,
-};
+use datex_core::network::com_interfaces::default_com_interfaces::websocket::websocket_common::parse_url;
 
-use datex_core::utils::uuid::UUID;
-use log::{debug, error, info, warn};
+use log::{debug, error, info};
 use tokio::sync::oneshot;
 use url::Url;
 use wasm_bindgen::{prelude::Closure, JsCast};
