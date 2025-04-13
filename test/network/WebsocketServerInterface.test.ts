@@ -2,7 +2,7 @@ import { assert } from "jsr:@std/assert/assert";
 import { Runtime } from "../../src/runtime/runtime.ts";
 import * as uuid from "jsr:@std/uuid";
 
-Deno.test("connect client", async () => {
+Deno.test("connect client and server", async () => {
     const PORT = 8082;
     const runtime = new Runtime("@unyt");
     const serverInterfaceUUID = await runtime.comHub
@@ -48,7 +48,6 @@ Deno.test("connect client", async () => {
                     serverInterfaceUUID,
                 ),
             );
-            // sockets.forEach((socket) => socket.close());
             await server.shutdown();
             resolve();
         }, 2000)

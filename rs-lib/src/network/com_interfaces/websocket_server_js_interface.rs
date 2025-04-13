@@ -50,22 +50,20 @@ impl WebSocketServerJSInterface {
         sockets
             .sockets
             .insert(socket_uuid.clone(), Arc::new(Mutex::new(socket)));
+        web_socket.set_binary_type(web_sys::BinaryType::Arraybuffer);
 
-        web_socket.set_onmessage(Some(
-            self.create_onmessage_callback(socket_uuid.clone())
-                .as_ref()
-                .unchecked_ref(),
-        ));
-        web_socket.set_onerror(Some(
-            self.create_onerror_callback(socket_uuid.clone())
-                .as_ref()
-                .unchecked_ref(),
-        ));
-        web_socket.set_onclose(Some(
-            self.create_onclose_callback(socket_uuid.clone())
-                .as_ref()
-                .unchecked_ref(),
-        ));
+        let on_message = self.create_onmessage_callback(socket_uuid.clone());
+        web_socket.set_onmessage(Some(on_message.as_ref().unchecked_ref()));
+
+        let on_error = self.create_onerror_callback(socket_uuid.clone());
+        web_socket.set_onerror(Some(on_error.as_ref().unchecked_ref()));
+
+        let on_close = self.create_onclose_callback(socket_uuid.clone());
+        web_socket.set_onclose(Some(on_close.as_ref().unchecked_ref()));
+
+        on_message.forget();
+        on_error.forget();
+        on_close.forget();
         self.sockets.insert(socket_uuid.clone(), web_socket);
     }
 

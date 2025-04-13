@@ -116,7 +116,6 @@ impl WebSocketClientJSInterface {
             WebSocketError::Other("Failed to receive onopen event".to_string())
         })?;
 
-        // FIXME are these needed?
         message_callback.forget();
         error_callback.forget();
         open_callback.forget();
