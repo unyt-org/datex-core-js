@@ -940,8 +940,10 @@ version = "0.0.4"
 dependencies = [
  "ansi_term",
  "async-trait",
+ "axum",
  "binrw",
  "byteorder",
+ "bytes",
  "cfg-if 0.1.10",
  "console_log",
  "default-args",
@@ -951,6 +953,7 @@ dependencies = [
  "futures-timer",
  "futures-util",
  "hex",
+ "hyper",
  "itertools",
  "js-sys",
  "lazy_static",
@@ -973,6 +976,7 @@ dependencies = [
  "strum 0.24.1",
  "thiserror 2.0.12",
  "tokio",
+ "tokio-stream",
  "tokio-tungstenite 0.21.0",
  "tungstenite 0.21.0",
  "url",
@@ -3697,6 +3701,7 @@ dependencies = [
  "futures-core",
  "pin-project-lite",
  "tokio",
+ "tokio-util",
 ]
 
 [[package]]
