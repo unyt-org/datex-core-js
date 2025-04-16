@@ -60,6 +60,7 @@ features = [
     "WritableStream",
     "SerialOptions",
     "ReadableStreamDefaultReader",
+    "WritableStreamDefaultWriter",
 ]
 
 [dev-dependencies]
