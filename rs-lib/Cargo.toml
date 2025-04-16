@@ -53,6 +53,11 @@ features = [
     "CryptoKeyPair",
     "RsaOaepParams",
     "EcdsaParams",
+    "Serial",
+    "SerialPort",
+    "Navigator",
+    "ReadableStream",
+    "WritableStream",
 ]
 
 [dev-dependencies]
