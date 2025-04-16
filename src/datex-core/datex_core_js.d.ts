@@ -48,3 +48,8 @@ export class JSRuntime {
     readonly endpoint: string;
     readonly com_hub: JSComHub;
 }
+export class SerialJSInterface {
+    private constructor();
+    free(): void;
+    static open(baud_rate: number): Promise<SerialJSInterface>;
+}

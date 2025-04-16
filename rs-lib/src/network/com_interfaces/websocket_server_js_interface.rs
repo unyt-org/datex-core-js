@@ -15,20 +15,35 @@ use datex_core::network::com_interfaces::com_interface_socket::{
     ComInterfaceSocket, ComInterfaceSocketUUID,
 };
 use datex_core::network::com_interfaces::default_com_interfaces::websocket::websocket_common::WebSocketError;
+use datex_core::network::com_interfaces::socket_provider::MultipleSocketProvider;
 use datex_core::stdlib::sync::Arc;
 
 use datex_core::network::com_interfaces::com_interface::ComInterfaceState;
 use log::{debug, error, info};
+use wasm_bindgen::prelude::wasm_bindgen;
 use wasm_bindgen::{prelude::Closure, JsCast};
 use web_sys::{js_sys, ErrorEvent, MessageEvent};
 
+use crate::wrap_error_for_js;
+
+#[wasm_bindgen]
 pub struct WebSocketServerJSInterface {
-    pub sockets: HashMap<ComInterfaceSocketUUID, web_sys::WebSocket>,
+    sockets: HashMap<ComInterfaceSocketUUID, web_sys::WebSocket>,
     info: ComInterfaceInfo,
 }
 
+impl MultipleSocketProvider for WebSocketServerJSInterface {
+    fn provide_sockets(&self) -> Arc<Mutex<ComInterfaceSockets>> {
+        self.get_sockets().clone()
+    }
+}
+
+wrap_error_for_js!(JSWebSocketServerError, datex_core::network::com_interfaces::default_com_interfaces::websocket::websocket_common::WebSocketServerError);
+
+#[wasm_bindgen]
 impl WebSocketServerJSInterface {
-    pub async fn open() -> Result<WebSocketServerJSInterface, WebSocketError> {
+    pub async fn open(
+    ) -> Result<WebSocketServerJSInterface, JSWebSocketServerError> {
         Ok(WebSocketServerJSInterface {
             info: ComInterfaceInfo::new_with_state(
                 ComInterfaceState::Connected,
@@ -65,21 +80,6 @@ impl WebSocketServerJSInterface {
         on_error.forget();
         on_close.forget();
         self.sockets.insert(socket_uuid.clone(), web_socket);
-    }
-
-    pub fn get_socket(&self) -> Option<Arc<Mutex<ComInterfaceSocket>>> {
-        return self
-            .get_sockets()
-            .lock()
-            .unwrap()
-            .sockets
-            .values()
-            .next()
-            .cloned();
-    }
-
-    pub fn get_socket_uuid(&self) -> Option<ComInterfaceSocketUUID> {
-        self.get_socket().map(|s| s.lock().unwrap().uuid.clone())
     }
 
     fn create_onmessage_callback(

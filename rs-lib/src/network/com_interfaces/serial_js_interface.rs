@@ -16,25 +16,32 @@ use datex_core::network::com_interfaces::com_interface::ComInterfaceState;
 
 use log::{debug, error};
 use tokio::task::spawn_local;
-use wasm_bindgen::JsCast;
+use wasm_bindgen::prelude::wasm_bindgen;
+use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_futures::JsFuture;
 use web_sys::js_sys::Uint8Array;
-use web_sys::{
-    js_sys, ReadableStreamDefaultReader,
-    SerialOptions, WritableStreamDefaultWriter,
-};
 use web_sys::SerialPort;
+use web_sys::{
+    js_sys, ReadableStreamDefaultReader, SerialOptions,
+    WritableStreamDefaultWriter,
+};
 
+use crate::wrap_error_for_js;
+
+#[wasm_bindgen]
 pub struct SerialJSInterface {
     port: Option<SerialPort>,
     tx: Option<Arc<Mutex<WritableStreamDefaultWriter>>>,
     info: ComInterfaceInfo,
 }
 
+wrap_error_for_js!(JsSerialError, datex_core::network::com_interfaces::default_com_interfaces::serial::serial_common::SerialError);
+
+#[wasm_bindgen]
 impl SerialJSInterface {
     pub async fn open(
         baud_rate: u32,
-    ) -> Result<SerialJSInterface, SerialError> {
+    ) -> Result<SerialJSInterface, JsSerialError> {
         let mut interface = SerialJSInterface {
             info: ComInterfaceInfo::new(),
             tx: None,
@@ -144,7 +151,7 @@ impl ComInterface for SerialJSInterface {
         }
     }
     fn close<'a>(&'a mut self) -> Pin<Box<dyn Future<Output = bool> + 'a>> {
-        // TODO
+        // TODO add shutdown hook
         let port = self.port.as_ref();
         Box::pin(async move {
             let result = JsFuture::from(port.unwrap().close()).await;

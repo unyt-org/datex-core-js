@@ -103,9 +103,7 @@ impl JSComHub {
                 Ok(JsValue::TRUE)
             } else {
                 error!("Failed to find WebSocket interface");
-                Err(
-                    JsError::new("Failed to find WebSocket interface").into()
-                )
+                Err(JsError::new("Failed to find WebSocket interface").into())
             }
         })
     }
@@ -114,9 +112,8 @@ impl JSComHub {
         let com_hub = self.com_hub.clone();
 
         future_to_promise(async move {
-            let websocket_interface = WebSocketServerJSInterface::open()
-                .await
-                .map_err(|e| JsError::new(&format!("{:?}", e)))?;
+            let websocket_interface =
+                WebSocketServerJSInterface::open().await?;
             let uuid = websocket_interface.get_uuid().clone();
 
             let mut com_hub = com_hub.lock().unwrap();

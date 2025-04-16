@@ -14,6 +14,7 @@ use datex_core::network::com_interfaces::com_interface_socket::{
     ComInterfaceSocket, ComInterfaceSocketUUID,
 };
 use datex_core::network::com_interfaces::default_com_interfaces::websocket::websocket_common::WebSocketError;
+use datex_core::network::com_interfaces::socket_provider::SingleSocketProvider;
 use datex_core::stdlib::sync::Arc;
 
 use datex_core::network::com_interfaces::com_interface::ComInterfaceState;
@@ -29,6 +30,12 @@ pub struct WebSocketClientJSInterface {
     pub address: Url,
     pub ws: web_sys::WebSocket,
     info: ComInterfaceInfo,
+}
+
+impl SingleSocketProvider for WebSocketClientJSInterface {
+    fn provide_sockets(&self) -> Arc<Mutex<ComInterfaceSockets>> {
+        self.get_sockets().clone()
+    }
 }
 
 impl WebSocketClientJSInterface {
@@ -48,21 +55,6 @@ impl WebSocketClientJSInterface {
         };
         interface.start().await?;
         Ok(interface)
-    }
-
-    pub fn get_socket(&self) -> Option<Arc<Mutex<ComInterfaceSocket>>> {
-        return self
-            .get_sockets()
-            .lock()
-            .unwrap()
-            .sockets
-            .values()
-            .next()
-            .cloned();
-    }
-
-    pub fn get_socket_uuid(&self) -> Option<ComInterfaceSocketUUID> {
-        self.get_socket().map(|s| s.lock().unwrap().uuid.clone())
     }
 
     async fn start(&mut self) -> Result<(), WebSocketError> {

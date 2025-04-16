@@ -9,11 +9,14 @@
         <!-- Datex Runtime initialization -->
         <script type="module" src="./browser.ts"></script>
         <!---------------------------------->
-
-        <div>
+        <section>
             <h1>Datex Core JS Test Page</h1>
             <p>Please open the developer console</p>
-        </div>
+        </section>
+        <section>
+            <button id="serial">Serial</button>
+        </section>
+
         <style>
             body {
                 font-family: Helvetica, sans-serif;
@@ -24,8 +27,9 @@
                 justify-content: center;
                 align-items: center;
                 height: 100vh;
+                flex-direction: column;
             }
-            div {
+            section:first-of-type {
                 margin: 20px;
                 padding: 20px;
                 background-color: #fff;
