@@ -58,6 +58,8 @@ features = [
     "Navigator",
     "ReadableStream",
     "WritableStream",
+    "SerialOptions",
+    "ReadableStreamDefaultReader",
 ]
 
 [dev-dependencies]
