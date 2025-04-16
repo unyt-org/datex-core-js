@@ -7,30 +7,23 @@ use datex_core::delegate_com_interface_info;
 use datex_core::network::com_interfaces::com_interface::{
     ComInterface, ComInterfaceInfo, ComInterfaceSockets, ComInterfaceUUID,
 };
-use datex_core::network::com_interfaces::com_interface_properties::{
-    InterfaceDirection, InterfaceProperties,
-};
-use datex_core::network::com_interfaces::com_interface_socket::{
-    ComInterfaceSocket, ComInterfaceSocketUUID,
-};
+use datex_core::network::com_interfaces::com_interface_properties::InterfaceProperties;
+use datex_core::network::com_interfaces::com_interface_socket::ComInterfaceSocketUUID;
 use datex_core::network::com_interfaces::default_com_interfaces::serial::serial_common::SerialError;
 use datex_core::stdlib::sync::Arc;
 
 use datex_core::network::com_interfaces::com_interface::ComInterfaceState;
-use datex_core::network::com_interfaces::default_com_interfaces::websocket::websocket_common::parse_url;
 
-use log::{debug, error, info, warn};
-use tokio::sync::oneshot;
+use log::{debug, error};
 use tokio::task::spawn_local;
-use url::Url;
-use wasm_bindgen::{prelude::Closure, JsCast};
+use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::JsFuture;
 use web_sys::js_sys::Uint8Array;
 use web_sys::{
-    js_sys, ErrorEvent, MessageEvent, ReadableStreamDefaultReader,
+    js_sys, ReadableStreamDefaultReader,
     SerialOptions, WritableStreamDefaultWriter,
 };
-use web_sys::{Navigator, ReadableStream, Serial, SerialPort, WritableStream};
+use web_sys::SerialPort;
 
 pub struct SerialJSInterface {
     port: Option<SerialPort>,
@@ -67,7 +60,7 @@ impl SerialJSInterface {
             .map_err(|_| SerialError::PermissionError)?;
         let port: SerialPort = port_js.into();
 
-        JsFuture::from(port.open(&options))
+        JsFuture::from(port.open(options))
             .await
             .map_err(|_| SerialError::PortNotFound)?;
 
