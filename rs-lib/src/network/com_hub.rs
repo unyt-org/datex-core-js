@@ -7,12 +7,10 @@ use super::com_interfaces::websocket_client_js_interface::WebSocketClientRegistr
 #[cfg(feature = "wasm_websocket_server")]
 use super::com_interfaces::websocket_server_js_interface::WebSocketServerRegistry;
 
-use datex_core::network::com_interfaces::com_interface::{
-    ComInterfaceState, ComInterfaceUUID,
-};
+use datex_core::network::com_interfaces::com_interface::ComInterfaceUUID;
 use datex_core::stdlib::{cell::RefCell, rc::Rc};
 use datex_core::{
-    network::{com_hub::ComHub, com_interfaces::com_interface::ComInterface},
+    network::com_hub::ComHub,
     utils::uuid::UUID,
 };
 use log::error;

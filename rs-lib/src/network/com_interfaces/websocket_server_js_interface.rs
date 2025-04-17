@@ -6,10 +6,7 @@ use std::rc::Rc;
 use std::sync::Mutex;
 use std::time::Duration; // FIXME no-std
 
-use js_sys::Promise;
-use wasm_bindgen_futures::future_to_promise;
 use datex_core::delegate_com_interface_info;
-use datex_core::network::com_hub::ComHub;
 use datex_core::network::com_interfaces::com_interface::{
     ComInterface, ComInterfaceInfo, ComInterfaceSockets, ComInterfaceUUID,
 };
