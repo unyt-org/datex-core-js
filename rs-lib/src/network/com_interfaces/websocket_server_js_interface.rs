@@ -39,7 +39,6 @@ impl MultipleSocketProvider for WebSocketServerJSInterface {
 
 wrap_error_for_js!(JSWebSocketServerError, datex_core::network::com_interfaces::default_com_interfaces::websocket::websocket_common::WebSocketServerError);
 
-#[wasm_bindgen]
 impl WebSocketServerJSInterface {
     pub fn open() -> Result<WebSocketServerJSInterface, JSWebSocketServerError>
     {
@@ -51,7 +50,10 @@ impl WebSocketServerJSInterface {
         })
     }
 
-    pub fn register_socket(&mut self, web_socket: web_sys::WebSocket) {
+    pub fn register_socket(
+        &mut self,
+        web_socket: web_sys::WebSocket,
+    ) -> ComInterfaceSocketUUID {
         let interface_uuid = self.get_uuid().clone();
         let socket = ComInterfaceSocket::new(
             interface_uuid,
@@ -79,6 +81,7 @@ impl WebSocketServerJSInterface {
         on_error.forget();
         on_close.forget();
         self.sockets.insert(socket_uuid.clone(), web_socket);
+        socket_uuid
     }
 
     fn create_onmessage_callback(

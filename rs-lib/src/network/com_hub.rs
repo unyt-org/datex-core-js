@@ -21,6 +21,7 @@ use crate::network::com_interfaces::{
 #[wasm_bindgen]
 pub struct JSComHub {
     com_hub: Arc<Mutex<ComHub>>,
+    websocket: WebSocketServerRegistry,
 }
 
 /**
@@ -28,16 +29,17 @@ pub struct JSComHub {
  */
 impl JSComHub {
     pub fn new(com_hub: Arc<Mutex<ComHub>>) -> JSComHub {
-        JSComHub { com_hub }
+        JSComHub {
+            com_hub: com_hub.clone(),
+            websocket: WebSocketServerRegistry { com_hub },
+        }
     }
 }
 
 // #[cfg(feature = "ws-interface")]
 #[wasm_bindgen]
 impl JSComHub {
-    pub async fn create_websocket_server_interface(
-        &self,
-    ) -> Result<String, JsError> {
+    pub fn create_websocket_server_interface(&self) -> Result<String, JsError> {
         let com_hub = self.com_hub.clone();
         let websocket_interface = WebSocketServerJSInterface::open()?;
         let uuid = websocket_interface.get_uuid().clone();
@@ -47,6 +49,80 @@ impl JSComHub {
             .add_interface(Rc::new(RefCell::new(websocket_interface)))
             .map_err(|e| JsError::new(&format!("{:?}", e)))?;
         Ok(uuid.0.to_string())
+    }
+}
+
+pub struct WebSocketServerRegistry {
+    com_hub: Arc<Mutex<ComHub>>,
+}
+impl WebSocketServerRegistry {
+    pub fn create_server(&self) -> Result<String, JsError> {
+        let com_hub = self.com_hub.clone();
+        let websocket_interface = WebSocketServerJSInterface::open()?;
+        let uuid = websocket_interface.get_uuid().clone();
+
+        let mut com_hub = com_hub.lock().unwrap();
+        com_hub
+            .add_interface(Rc::new(RefCell::new(websocket_interface)))
+            .map_err(|e| JsError::new(&format!("{:?}", e)))?;
+        Ok(uuid.0.to_string())
+    }
+    pub fn add_socket(
+        &self,
+        interface_uuid: String,
+        websocket: web_sys::WebSocket,
+    ) -> JsValue {
+        let interface_uuid =
+            ComInterfaceUUID(UUID::from_string(interface_uuid));
+
+        let com_hub = self.com_hub.clone();
+        let com_hub = com_hub.lock().unwrap();
+        let interface = com_hub
+            .get_interface_by_uuid_mut::<WebSocketServerJSInterface>(
+                &interface_uuid,
+            );
+        if interface.is_some() {
+            interface.unwrap().register_socket(websocket);
+            JsValue::undefined()
+        } else {
+            error!("Failed to find WebSocket interface");
+            JsError::new("Failed to find WebSocket interface").into()
+        }
+    }
+    pub fn close(&self, interface_uuid: String) -> Promise {
+        let interface_uuid =
+            ComInterfaceUUID(UUID::from_string(interface_uuid));
+        let com_hub = self.com_hub.clone();
+        future_to_promise(async move {
+            let com_hub = com_hub.clone();
+
+            let has_interface = {
+                let com_hub_mut = com_hub
+                    .lock()
+                    .map_err(|_| JsError::new("Failed to lock ComHub"))?;
+
+                let interface = com_hub_mut
+                    .get_interface_by_uuid::<WebSocketServerJSInterface>(
+                        &interface_uuid.clone(),
+                    );
+                interface.is_some()
+            };
+            if has_interface {
+                let com_hub = com_hub.clone();
+                let mut com_hub_mut = com_hub
+                    .lock()
+                    .map_err(|_| JsError::new("Failed to lock ComHub"))?;
+
+                com_hub_mut
+                    .remove_interface(interface_uuid.clone())
+                    .await
+                    .map_err(|e| JsError::new(&format!("{:?}", e)))?;
+                Ok(JsValue::TRUE)
+            } else {
+                error!("Failed to find WebSocket interface");
+                Err(JsError::new("Failed to find WebSocket interface").into())
+            }
+        })
     }
 }
 

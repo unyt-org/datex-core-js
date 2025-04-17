@@ -13,11 +13,11 @@ export function decompile(
 export class JSComHub {
     private constructor();
     free(): void;
+    create_websocket_server_interface(): string;
     add_ws_interface(address: string): Promise<any>;
     close_websocket_server_interface(
         interface_uuid: string,
     ): Promise<Promise<any>>;
-    create_websocket_server_interface(): Promise<Promise<any>>;
     add_websocket_to_server_interface(
         interface_uuid: string,
         websocket: WebSocket,
@@ -52,4 +52,10 @@ export class SerialJSInterface {
     private constructor();
     free(): void;
     static open(baud_rate: number): Promise<SerialJSInterface>;
+}
+export class WebSocketServerJSInterface {
+    private constructor();
+    free(): void;
+    static open(): WebSocketServerJSInterface;
+    register_socket(web_socket: WebSocket): void;
 }
