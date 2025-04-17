@@ -31,7 +31,6 @@ pub struct WebSocketServerJSInterface {
     sockets: HashMap<ComInterfaceSocketUUID, web_sys::WebSocket>,
     info: ComInterfaceInfo,
 }
-
 impl MultipleSocketProvider for WebSocketServerJSInterface {
     fn provide_sockets(&self) -> Arc<Mutex<ComInterfaceSockets>> {
         self.get_sockets().clone()
@@ -42,8 +41,8 @@ wrap_error_for_js!(JSWebSocketServerError, datex_core::network::com_interfaces::
 
 #[wasm_bindgen]
 impl WebSocketServerJSInterface {
-    pub async fn open(
-    ) -> Result<WebSocketServerJSInterface, JSWebSocketServerError> {
+    pub fn open() -> Result<WebSocketServerJSInterface, JSWebSocketServerError>
+    {
         Ok(WebSocketServerJSInterface {
             info: ComInterfaceInfo::new_with_state(
                 ComInterfaceState::Connected,

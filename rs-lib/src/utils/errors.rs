@@ -14,5 +14,10 @@ macro_rules! wrap_error_for_js {
                 wasm_bindgen::JsValue::from_str(&err.0.to_string())
             }
         }
+        impl From<$wrapper> for wasm_bindgen::JsError {
+            fn from(err: $wrapper) -> wasm_bindgen::JsError {
+                wasm_bindgen::JsError::new(&err.0.to_string())
+            }
+        }
     };
 }
