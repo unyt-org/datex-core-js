@@ -965,7 +965,6 @@ dependencies = [
  "hex",
  "hyper",
  "itertools",
- "js-sys",
  "lazy_static",
  "log",
  "matchbox_signaling",

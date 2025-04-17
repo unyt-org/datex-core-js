@@ -21,8 +21,8 @@ macro_rules! define_registry {
 
         #[wasm_bindgen]
         impl $name {
-            pub fn close(&self, interface_uuid: String) -> js_sys::Promise {
-                let interface_uuid = ComInterfaceUUID(
+            pub fn close(&self, interface_uuid: String) -> web_sys::js_sys::Promise {
+                let interface_uuid = datex_core::network::com_interfaces::com_interface::ComInterfaceUUID(
                     datex_core::utils::uuid::UUID::from_string(interface_uuid),
                 );
                 let com_hub = self.com_hub.clone();
