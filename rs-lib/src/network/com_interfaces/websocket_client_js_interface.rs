@@ -198,6 +198,7 @@ impl ComInterface for WebSocketClientJSInterface {
 
 define_registry!(WebSocketClientRegistry);
 
+#[wasm_bindgen]
 impl WebSocketClientRegistry {
     pub async fn register(&self, address: String) -> Promise {
         let com_hub = self.com_hub.clone();

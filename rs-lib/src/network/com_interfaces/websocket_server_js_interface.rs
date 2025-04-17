@@ -181,6 +181,7 @@ impl ComInterface for WebSocketServerJSInterface {
 
 define_registry!(WebSocketServerRegistry);
 
+#[wasm_bindgen]
 impl WebSocketServerRegistry {
     pub fn register(&self) -> Result<String, JsError> {
         let com_hub = self.com_hub.clone();
