@@ -29,25 +29,25 @@ url = "2.5.4"
 wasm-bindgen = "=0.2.100"
 wasm-bindgen-futures = "0.4.50"
 
-# wasm
-futures = { version = "0.3", default-features = false }
-matchbox_socket = { version = "0.11.0", default-features = false, features = [
-    #"ggrs",
-] }
-futures-timer = { version = "3", features = ["wasm-bindgen"] }
-# wasm
+# webrtc
+# futures = { version = "0.3", default-features = false }
+matchbox_socket = { version = "0.11", features = [], default-features = false }
+
+# futures-timer = { version = "3", features = ["wasm-bindgen"] }
 uuid = { version = "1.15.1", features = ["js"] }
+# webrtc
 
 tokio = { version = "1.43.0", default-features = false, features = [
     "sync",
     "macros",
-    # "io-util",
+    "io-util",
     "rt",
-    # "time",
+    "time",
 ] }
-
 [dependencies.web-sys]
 version = "0.3.69"
+
+
 features = [
     "Window",
     "BinaryType",

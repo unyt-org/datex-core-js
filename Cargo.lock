@@ -358,7 +358,6 @@ checksum = "edca88bc138befd0323b20752846e6587272d3b03b0343c8ea28a6f819e6e71f"
 dependencies = [
  "async-trait",
  "axum-core",
- "base64 0.22.1",
  "bytes",
  "futures-util",
  "http",
@@ -377,10 +376,8 @@ dependencies = [
  "serde_json",
  "serde_path_to_error",
  "serde_urlencoded",
- "sha1",
  "sync_wrapper",
  "tokio",
- "tokio-tungstenite 0.24.0",
  "tower",
  "tower-layer",
  "tower-service",
@@ -967,7 +964,6 @@ dependencies = [
  "itertools",
  "lazy_static",
  "log",
- "matchbox_signaling",
  "matchbox_socket",
  "modular-bitfield",
  "mopa",
@@ -987,7 +983,7 @@ dependencies = [
  "thiserror 2.0.12",
  "tokio",
  "tokio-stream",
- "tokio-tungstenite 0.21.0",
+ "tokio-tungstenite",
  "tungstenite 0.21.0",
  "url",
  "uuid",
@@ -998,8 +994,6 @@ name = "datex-core-js"
 version = "0.0.1"
 dependencies = [
  "datex-core",
- "futures",
- "futures-timer",
  "lazy_static",
  "log",
  "matchbox_socket",
@@ -2285,28 +2279,6 @@ dependencies = [
  "cfg-if 1.0.0",
  "derive_more",
  "serde",
- "serde_json",
- "uuid",
-]
-
-[[package]]
-name = "matchbox_signaling"
-version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9c9344a34a381a1428895494d11064b0a1877ceb5de30c5d4ef601bf03140c65"
-dependencies = [
- "async-trait",
- "axum",
- "futures",
- "hyper",
- "matchbox_protocol",
- "serde",
- "serde_json",
- "thiserror 2.0.12",
- "tokio",
- "tokio-stream",
- "tower-http",
- "tracing",
  "uuid",
 ]
 
@@ -3795,18 +3767,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tokio-tungstenite"
-version = "0.24.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "edc5f74e248dc973e0dbb7b74c7e0d6fcc301c694ff50049504004ef4d0cdcd9"
-dependencies = [
- "futures-util",
- "log",
- "tokio",
- "tungstenite 0.24.0",
-]
-
-[[package]]
 name = "tokio-util"
 version = "0.7.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3854,22 +3814,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tower-http"
-version = "0.6.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "403fa3b783d4b626a8ad51d766ab03cb6d2dbfc46b1c5d4448395e6628dc9697"
-dependencies = [
- "bitflags 2.9.0",
- "bytes",
- "http",
- "http-body",
- "pin-project-lite",
- "tower-layer",
- "tower-service",
- "tracing",
-]
-
-[[package]]
 name = "tower-layer"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3889,19 +3833,7 @@ checksum = "784e0ac535deb450455cbfa28a6f0df145ea1bb7ae51b821cf5e7927fdcfbdd0"
 dependencies = [
  "log",
  "pin-project-lite",
- "tracing-attributes",
  "tracing-core",
-]
-
-[[package]]
-name = "tracing-attributes"
-version = "0.1.28"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "395ae124c09f9e6918a2310af6038fba074bcf474ac352496d5910dd59a2226d"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.99",
 ]
 
 [[package]]
