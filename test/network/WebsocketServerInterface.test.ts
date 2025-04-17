@@ -5,8 +5,8 @@ import * as uuid from "jsr:@std/uuid";
 Deno.test("connect client and server", async () => {
     const PORT = 8082;
     const runtime = new Runtime("@unyt");
-    const serverInterfaceUUID = await runtime.comHub
-        .create_websocket_server_interface();
+    const websocketServer = runtime.comHub.websocket_server;
+    const serverInterfaceUUID = websocketServer.create();
     assert(uuid.validate(serverInterfaceUUID), "Invalid UUID");
     const sockets: WebSocket[] = [];
     const server = Deno.serve({
@@ -18,7 +18,7 @@ Deno.test("connect client and server", async () => {
         const { socket, response } = Deno.upgradeWebSocket(req);
         sockets.push(socket);
         assert(
-            await runtime.comHub.add_websocket_to_server_interface(
+            await websocketServer.add_socket(
                 serverInterfaceUUID,
                 socket,
             ),
@@ -44,7 +44,7 @@ Deno.test("connect client and server", async () => {
     await new Promise<void>((resolve) =>
         setTimeout(async () => {
             assert(
-                await runtime.comHub.close_websocket_server_interface(
+                await websocketServer.close(
                     serverInterfaceUUID,
                 ),
             );

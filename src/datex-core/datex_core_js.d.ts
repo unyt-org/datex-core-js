@@ -13,16 +13,9 @@ export function decompile(
 export class JSComHub {
     private constructor();
     free(): void;
-    create_websocket_server_interface(): string;
     add_ws_interface(address: string): Promise<any>;
-    close_websocket_server_interface(
-        interface_uuid: string,
-    ): Promise<Promise<any>>;
-    add_websocket_to_server_interface(
-        interface_uuid: string,
-        websocket: WebSocket,
-    ): Promise<any>;
     _update(): Promise<void>;
+    readonly websocket_server: WebSocketServerRegistry;
     readonly _incoming_blocks: Uint8Array[];
 }
 export class JSMemory {
@@ -56,6 +49,11 @@ export class SerialJSInterface {
 export class WebSocketServerJSInterface {
     private constructor();
     free(): void;
-    static open(): WebSocketServerJSInterface;
-    register_socket(web_socket: WebSocket): void;
+}
+export class WebSocketServerRegistry {
+    private constructor();
+    free(): void;
+    create(): string;
+    add_socket(interface_uuid: string, websocket: WebSocket): any;
+    close(interface_uuid: string): Promise<any>;
 }
