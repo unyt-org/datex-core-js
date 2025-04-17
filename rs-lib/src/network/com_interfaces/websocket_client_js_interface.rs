@@ -1,8 +1,12 @@
+use std::cell::RefCell;
 use std::future::Future;
 use std::pin::Pin;
+use std::rc::Rc;
 use std::sync::Mutex;
 use std::time::Duration; // FIXME no-std
 
+use js_sys::Promise;
+use wasm_bindgen_futures::future_to_promise;
 use datex_core::delegate_com_interface_info;
 use datex_core::network::com_interfaces::com_interface::{
     ComInterface, ComInterfaceInfo, ComInterfaceSockets, ComInterfaceUUID,
@@ -20,11 +24,16 @@ use datex_core::stdlib::sync::Arc;
 use datex_core::network::com_interfaces::com_interface::ComInterfaceState;
 use datex_core::network::com_interfaces::default_com_interfaces::websocket::websocket_common::parse_url;
 
+use datex_core::utils::uuid::UUID;
 use log::{debug, error, info, warn};
 use tokio::sync::oneshot;
 use url::Url;
+use wasm_bindgen::prelude::wasm_bindgen;
 use wasm_bindgen::{prelude::Closure, JsCast};
+use wasm_bindgen::{JsError, JsValue};
 use web_sys::{js_sys, ErrorEvent, MessageEvent};
+
+use crate::define_registry;
 
 pub struct WebSocketClientJSInterface {
     pub address: Url,
@@ -185,4 +194,35 @@ impl ComInterface for WebSocketClientJSInterface {
         Box::pin(async move { true })
     }
     delegate_com_interface_info!();
+}
+
+define_registry!(WebSocketClientRegistry);
+
+impl WebSocketClientRegistry {
+    pub async fn register(&self, address: String) -> Promise {
+        let com_hub = self.com_hub.clone();
+        let address_clone = address.clone();
+        future_to_promise(async move {
+            let websocket_interface =
+                WebSocketClientJSInterface::open(&address_clone)
+                    .await
+                    .map_err(|e| JsError::new(&format!("{:?}", e)))?;
+            let interface_uuid = websocket_interface.get_uuid().clone();
+
+            if websocket_interface.get_state() != ComInterfaceState::Connected {
+                error!("Failed to connect to WebSocket");
+                return Err(
+                    JsError::new("Failed to connect to WebSocket").into()
+                );
+            }
+            let websocket_interface =
+                Rc::new(RefCell::new(websocket_interface));
+            com_hub
+                .lock()
+                .unwrap()
+                .add_interface(websocket_interface.clone())
+                .map_err(|e| JsError::new(&format!("{:?}", e)))?;
+            Ok(JsValue::from_str(&interface_uuid.0.to_string()))
+        })
+    }
 }

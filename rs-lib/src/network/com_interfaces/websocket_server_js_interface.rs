@@ -1,10 +1,15 @@
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::future::Future;
 use std::pin::Pin;
+use std::rc::Rc;
 use std::sync::Mutex;
 use std::time::Duration; // FIXME no-std
 
+use js_sys::Promise;
+use wasm_bindgen_futures::future_to_promise;
 use datex_core::delegate_com_interface_info;
+use datex_core::network::com_hub::ComHub;
 use datex_core::network::com_interfaces::com_interface::{
     ComInterface, ComInterfaceInfo, ComInterfaceSockets, ComInterfaceUUID,
 };
@@ -19,14 +24,15 @@ use datex_core::network::com_interfaces::socket_provider::MultipleSocketProvider
 use datex_core::stdlib::sync::Arc;
 
 use datex_core::network::com_interfaces::com_interface::ComInterfaceState;
+use datex_core::utils::uuid::UUID;
 use log::{debug, error, info};
 use wasm_bindgen::prelude::wasm_bindgen;
 use wasm_bindgen::{prelude::Closure, JsCast};
+use wasm_bindgen::{JsError, JsValue};
 use web_sys::{js_sys, ErrorEvent, MessageEvent};
 
-use crate::wrap_error_for_js;
+use crate::{define_registry, wrap_error_for_js};
 
-#[wasm_bindgen]
 pub struct WebSocketServerJSInterface {
     sockets: HashMap<ComInterfaceSocketUUID, web_sys::WebSocket>,
     info: ComInterfaceInfo,
@@ -171,4 +177,42 @@ impl ComInterface for WebSocketServerJSInterface {
         Box::pin(async move { true })
     }
     delegate_com_interface_info!();
+}
+
+define_registry!(WebSocketServerRegistry);
+
+impl WebSocketServerRegistry {
+    pub fn register(&self) -> Result<String, JsError> {
+        let com_hub = self.com_hub.clone();
+        let websocket_interface = WebSocketServerJSInterface::open()?;
+        let uuid = websocket_interface.get_uuid().clone();
+
+        let mut com_hub = com_hub.lock().unwrap();
+        com_hub
+            .add_interface(Rc::new(RefCell::new(websocket_interface)))
+            .map_err(|e| JsError::new(&format!("{:?}", e)))?;
+        Ok(uuid.0.to_string())
+    }
+    pub fn add_socket(
+        &self,
+        interface_uuid: String,
+        websocket: web_sys::WebSocket,
+    ) -> JsValue {
+        let interface_uuid =
+            ComInterfaceUUID(UUID::from_string(interface_uuid));
+
+        let com_hub = self.com_hub.clone();
+        let com_hub = com_hub.lock().unwrap();
+        let interface = com_hub
+            .get_interface_by_uuid_mut::<WebSocketServerJSInterface>(
+                &interface_uuid,
+            );
+        if interface.is_some() {
+            let uuid = interface.unwrap().register_socket(websocket);
+            JsValue::from_str(&uuid.0.to_string())
+        } else {
+            error!("Failed to find WebSocket interface");
+            JsError::new("Failed to find WebSocket interface").into()
+        }
+    }
 }

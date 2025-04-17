@@ -1,5 +1,7 @@
+use std::cell::RefCell;
 use std::future::Future;
 use std::pin::Pin;
+use std::rc::Rc;
 use std::sync::Mutex;
 use std::time::Duration; // FIXME no-std
 
@@ -17,7 +19,7 @@ use datex_core::network::com_interfaces::com_interface::ComInterfaceState;
 use log::{debug, error};
 use tokio::task::spawn_local;
 use wasm_bindgen::prelude::wasm_bindgen;
-use wasm_bindgen::{JsCast, JsValue};
+use wasm_bindgen::{JsCast, JsError, JsValue};
 use wasm_bindgen_futures::JsFuture;
 use web_sys::js_sys::Uint8Array;
 use web_sys::SerialPort;
@@ -26,9 +28,8 @@ use web_sys::{
     WritableStreamDefaultWriter,
 };
 
-use crate::wrap_error_for_js;
+use crate::{define_registry, wrap_error_for_js};
 
-#[wasm_bindgen]
 pub struct SerialJSInterface {
     port: Option<SerialPort>,
     tx: Option<Arc<Mutex<WritableStreamDefaultWriter>>>,
@@ -37,7 +38,6 @@ pub struct SerialJSInterface {
 
 wrap_error_for_js!(JsSerialError, datex_core::network::com_interfaces::default_com_interfaces::serial::serial_common::SerialError);
 
-#[wasm_bindgen]
 impl SerialJSInterface {
     pub async fn open(
         baud_rate: u32,
@@ -159,4 +159,21 @@ impl ComInterface for SerialJSInterface {
         })
     }
     delegate_com_interface_info!();
+}
+
+define_registry!(SerialRegistry);
+
+#[wasm_bindgen]
+impl SerialRegistry {
+    pub async fn register(&self, baud_rate: u32) -> Result<String, JsError> {
+        let com_hub = self.com_hub.clone();
+        let websocket_interface = SerialJSInterface::open(baud_rate).await?;
+        let uuid = websocket_interface.get_uuid().clone();
+
+        let mut com_hub = com_hub.lock().unwrap();
+        com_hub
+            .add_interface(Rc::new(RefCell::new(websocket_interface)))
+            .map_err(|e| JsError::new(&format!("{:?}", e)))?;
+        Ok(uuid.0.to_string())
+    }
 }

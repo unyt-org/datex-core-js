@@ -1,5 +1,12 @@
 use std::sync::{Arc, Mutex};
 
+#[cfg(feature = "wasm_serial")]
+use super::com_interfaces::serial_js_interface::SerialRegistry;
+#[cfg(feature = "wasm_websocket_client")]
+use super::com_interfaces::websocket_client_js_interface::WebSocketClientRegistry;
+#[cfg(feature = "wasm_websocket_server")]
+use super::com_interfaces::websocket_server_js_interface::WebSocketServerRegistry;
+
 use datex_core::network::com_interfaces::com_interface::{
     ComInterfaceState, ComInterfaceUUID,
 };
@@ -13,15 +20,9 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::future_to_promise;
 use web_sys::js_sys::{self, Promise};
 
-use crate::network::com_interfaces::{
-    websocket_client_js_interface::WebSocketClientJSInterface,
-    websocket_server_js_interface::WebSocketServerJSInterface,
-};
-
 #[wasm_bindgen]
 pub struct JSComHub {
     com_hub: Arc<Mutex<ComHub>>,
-    websocket: WebSocketServerRegistry,
 }
 
 /**
@@ -31,48 +32,6 @@ impl JSComHub {
     pub fn new(com_hub: Arc<Mutex<ComHub>>) -> JSComHub {
         JSComHub {
             com_hub: com_hub.clone(),
-            websocket: WebSocketServerRegistry { com_hub },
-        }
-    }
-}
-
-#[wasm_bindgen]
-pub struct WebSocketServerRegistry {
-    com_hub: Arc<Mutex<ComHub>>,
-}
-#[wasm_bindgen]
-impl WebSocketServerRegistry {
-    pub fn register(&self) -> Result<String, JsError> {
-        let com_hub = self.com_hub.clone();
-        let websocket_interface = WebSocketServerJSInterface::open()?;
-        let uuid = websocket_interface.get_uuid().clone();
-
-        let mut com_hub = com_hub.lock().unwrap();
-        com_hub
-            .add_interface(Rc::new(RefCell::new(websocket_interface)))
-            .map_err(|e| JsError::new(&format!("{:?}", e)))?;
-        Ok(uuid.0.to_string())
-    }
-    pub fn add_socket(
-        &self,
-        interface_uuid: String,
-        websocket: web_sys::WebSocket,
-    ) -> JsValue {
-        let interface_uuid =
-            ComInterfaceUUID(UUID::from_string(interface_uuid));
-
-        let com_hub = self.com_hub.clone();
-        let com_hub = com_hub.lock().unwrap();
-        let interface = com_hub
-            .get_interface_by_uuid_mut::<WebSocketServerJSInterface>(
-                &interface_uuid,
-            );
-        if interface.is_some() {
-            let uuid = interface.unwrap().register_socket(websocket);
-            JsValue::from_str(&uuid.0.to_string())
-        } else {
-            error!("Failed to find WebSocket interface");
-            JsError::new("Failed to find WebSocket interface").into()
         }
     }
 }
@@ -82,33 +41,6 @@ impl WebSocketServerRegistry {
  */
 #[wasm_bindgen]
 impl JSComHub {
-    pub fn add_ws_interface(&mut self, address: String) -> Promise {
-        let com_hub = self.com_hub.clone();
-        let address_clone = address.clone();
-
-        future_to_promise(async move {
-            let websocket_interface =
-                WebSocketClientJSInterface::open(&address_clone)
-                    .await
-                    .map_err(|e| JsError::new(&format!("{:?}", e)))?;
-            let interface_uuid = websocket_interface.get_uuid().clone();
-
-            if websocket_interface.get_state() != ComInterfaceState::Connected {
-                error!("Failed to connect to WebSocket");
-                return Err(
-                    JsError::new("Failed to connect to WebSocket").into()
-                );
-            }
-            let websocket_interface =
-                Rc::new(RefCell::new(websocket_interface));
-            com_hub
-                .lock()
-                .unwrap()
-                .add_interface(websocket_interface.clone())
-                .map_err(|e| JsError::new(&format!("{:?}", e)))?;
-            Ok(JsValue::from_str(&interface_uuid.0.to_string()))
-        })
-    }
     pub fn close_interface(&self, interface_uuid: String) -> Promise {
         let interface_uuid =
             ComInterfaceUUID(UUID::from_string(interface_uuid));
@@ -143,11 +75,22 @@ impl JSComHub {
         self.com_hub.lock().unwrap().update().await;
     }
 
+    #[cfg(feature = "wasm_websocket_server")]
     #[wasm_bindgen(getter)]
     pub fn websocket_server(&self) -> WebSocketServerRegistry {
-        WebSocketServerRegistry {
-            com_hub: self.com_hub.clone(),
-        }
+        WebSocketServerRegistry::new(self.com_hub.clone())
+    }
+
+    #[cfg(feature = "wasm_websocket_client")]
+    #[wasm_bindgen(getter)]
+    pub fn websocket_client(&self) -> WebSocketClientRegistry {
+        WebSocketClientRegistry::new(self.com_hub.clone())
+    }
+
+    #[cfg(feature = "wasm_serial")]
+    #[wasm_bindgen(getter)]
+    pub fn serial(&self) -> SerialRegistry {
+        SerialRegistry::new(self.com_hub.clone())
     }
 
     #[wasm_bindgen(getter)]
