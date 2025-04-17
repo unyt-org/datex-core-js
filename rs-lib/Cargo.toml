@@ -67,6 +67,6 @@ wasm-bindgen-test = "0.3.50"
 
 [features]
 default = ["wasm_websocket_client", "wasm_websocket_server", "wasm_serial"]
-wasm_websocket_server = []
-wasm_websocket_client = []
-wasm_serial = []
+wasm_websocket_server = []                                                  # only required for a backend js runtime
+wasm_websocket_client = []                                                  # full support
+wasm_serial = []                                                            # only required for frontend js runtime
