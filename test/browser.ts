@@ -8,7 +8,8 @@ document.getElementById("serial")!.addEventListener("click", async () => {
     console.log(serial);
 });
 
-document.getElementById("webrtc")!.addEventListener("click", async () => {
-    const serial = await Datex.comHub.webrtc.register("ws://localhost:8080");
-    console.log(serial);
-});
+// TODO
+// document.getElementById("webrtc")!.addEventListener("click", async () => {
+//     const webrtc = await Datex.comHub.webrtc.register("ws://localhost:8080");
+//     console.log(webrtc);
+// });

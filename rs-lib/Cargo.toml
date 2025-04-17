@@ -30,13 +30,12 @@ wasm-bindgen = "=0.2.100"
 wasm-bindgen-futures = "0.4.50"
 
 # webrtc
-# futures = { version = "0.3", default-features = false }
-matchbox_socket = { version = "0.11", features = [], default-features = false }
+futures = { version = "0.3", default-features = false }
+matchbox_socket = { version = "0.11", optional = true, default-features = false }
+futures-timer = { version = "3", features = ["wasm-bindgen"] }
+uuid = { version = "1.15.1", features = ["js"], optional = true }
 
-# futures-timer = { version = "3", features = ["wasm-bindgen"] }
-uuid = { version = "1.15.1", features = ["js"] }
 # webrtc
-
 tokio = { version = "1.43.0", default-features = false, features = [
     "sync",
     "macros",
@@ -82,3 +81,4 @@ default = ["wasm_websocket_client", "wasm_websocket_server", "wasm_serial"]
 wasm_websocket_server = []                                                  # only required for a backend js runtime
 wasm_websocket_client = []                                                  # full support
 wasm_serial = []                                                            # only required for frontend js runtime
+webrtc = ["matchbox_socket", "uuid"]                                        # only required for frontend js runtime

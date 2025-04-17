@@ -2,6 +2,7 @@ use std::sync::{Arc, Mutex};
 
 #[cfg(feature = "wasm_serial")]
 use super::com_interfaces::serial_js_interface::SerialRegistry;
+#[cfg(feature = "webrtc")]
 use super::com_interfaces::webrtc_js_interface::WebRTCClientRegistry;
 #[cfg(feature = "wasm_websocket_client")]
 use super::com_interfaces::websocket_client_js_interface::WebSocketClientRegistry;
@@ -89,6 +90,7 @@ impl JSComHub {
         SerialRegistry::new(self.com_hub.clone())
     }
 
+    #[cfg(feature = "webrtc")]
     #[wasm_bindgen(getter)]
     pub fn webrtc(&self) -> WebRTCClientRegistry {
         WebRTCClientRegistry::new(self.com_hub.clone())

@@ -1,3 +1,8 @@
+// TODO this file should only contain the registry, not a duplicated js version of the interface
+// since in the best cast we should get the matchbox crate compiled for both targets, WASM and native
+// We are currently facing the issue with the mio dependency, that seems to be pulled in by tokio-util which is
+// a dependency of matchbox_socket and not WASM compatible
+// $ cargo tree -i mio --target wasm32-unknown-unknown
 use std::{cell::RefCell, rc::Rc};
 
 use datex_core::network::com_interfaces::{
