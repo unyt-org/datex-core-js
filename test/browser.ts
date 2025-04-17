@@ -9,7 +9,7 @@ document.getElementById("serial")!.addEventListener("click", async () => {
 });
 
 // TODO
-// document.getElementById("webrtc")!.addEventListener("click", async () => {
-//     const webrtc = await Datex.comHub.webrtc.register("ws://localhost:8080");
-//     console.log(webrtc);
-// });
+document.getElementById("webrtc")!.addEventListener("click", async () => {
+    const webrtc = await Datex.comHub.webrtc.register("ws://localhost:8080");
+    console.log(webrtc);
+});

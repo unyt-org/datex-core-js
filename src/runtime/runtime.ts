@@ -15,7 +15,7 @@ export class Runtime {
     readonly #memory: JSMemory;
     readonly #comHub: JSComHub;
 
-    constructor(endpoint: string) {
+    constructor(endpoint: string = "@unyt") {
         this.#runtime = init_runtime(endpoint);
         this.#memory = this.#runtime.memory;
         this.#comHub = this.#runtime.com_hub;
