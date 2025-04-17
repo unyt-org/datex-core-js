@@ -24,15 +24,14 @@ use datex_core::stdlib::sync::Arc;
 use datex_core::network::com_interfaces::com_interface::ComInterfaceState;
 use datex_core::network::com_interfaces::default_com_interfaces::websocket::websocket_common::parse_url;
 
+use crate::define_registry;
+use futures::channel::oneshot;
 use log::{debug, error, info, warn};
-use tokio::sync::oneshot;
 use url::Url;
 use wasm_bindgen::prelude::wasm_bindgen;
 use wasm_bindgen::{prelude::Closure, JsCast};
 use wasm_bindgen::{JsError, JsValue};
 use web_sys::{js_sys, ErrorEvent, MessageEvent};
-
-use crate::define_registry;
 
 pub struct WebSocketClientJSInterface {
     pub address: Url,

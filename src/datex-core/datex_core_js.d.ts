@@ -18,6 +18,7 @@ export class JSComHub {
     readonly websocket_server: WebSocketServerRegistry;
     readonly websocket_client: WebSocketClientRegistry;
     readonly serial: SerialRegistry;
+    readonly webrtc: WebRTCClientRegistry;
     readonly _incoming_blocks: Uint8Array[];
 }
 export class JSMemory {
@@ -48,6 +49,12 @@ export class SerialRegistry {
     free(): void;
     close(interface_uuid: string): Promise<any>;
     register(baud_rate: number): Promise<string>;
+}
+export class WebRTCClientRegistry {
+    private constructor();
+    free(): void;
+    close(interface_uuid: string): Promise<any>;
+    register(address: string): Promise<Promise<any>>;
 }
 export class WebSocketClientRegistry {
     private constructor();

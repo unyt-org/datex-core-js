@@ -22,7 +22,8 @@ log = { version = "0.4", features = ["std", "serde"] }
 datex-core = { path = "./datex-core", default-features = false, features = [
     "std",
     "wasm_logger",
-    # "webrtc",
+    "wasm_runtime",
+    "webrtc",
 ] }
 lazy_static = "1.4.0"
 url = "2.5.4"
@@ -30,19 +31,13 @@ wasm-bindgen = "=0.2.100"
 wasm-bindgen-futures = "0.4.50"
 
 # webrtc
-futures = { version = "0.3", default-features = false }
-matchbox_socket = { version = "0.11", optional = true, default-features = false }
+futures = { version = "0.3", default-features = false } # = "0.11", 
+# matchbox_socket = { path = "/Users/jonas/Downloads/matchbox/matchbox_socket", optional = true, default-features = false }
 futures-timer = { version = "3", features = ["wasm-bindgen"] }
 uuid = { version = "1.15.1", features = ["js"], optional = true }
 
 # webrtc
-tokio = { version = "1.43.0", default-features = false, features = [
-    "sync",
-    "macros",
-    "io-util",
-    "rt",
-    "time",
-] }
+# tokio = { version = "1.43.0", default-features = false, features = [] }
 [dependencies.web-sys]
 version = "0.3.69"
 
@@ -77,8 +72,13 @@ features = [
 wasm-bindgen-test = "0.3.50"
 
 [features]
-default = ["wasm_websocket_client", "wasm_websocket_server", "wasm_serial"]
-wasm_websocket_server = []                                                  # only required for a backend js runtime
-wasm_websocket_client = []                                                  # full support
-wasm_serial = []                                                            # only required for frontend js runtime
-webrtc = ["matchbox_socket", "uuid"]                                        # only required for frontend js runtime
+default = [
+    "wasm_websocket_client",
+    "wasm_websocket_server",
+    "wasm_serial",
+    "webrtc",
+]
+wasm_websocket_server = [] # only required for a backend js runtime
+wasm_websocket_client = [] # full support
+wasm_serial = [] # only required for frontend js runtime
+webrtc = ["uuid"] # only required for frontend js runtime

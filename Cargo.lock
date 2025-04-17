@@ -991,6 +991,7 @@ dependencies = [
  "tungstenite 0.21.0",
  "url",
  "uuid",
+ "wasm-bindgen-futures",
 ]
 
 [[package]]
@@ -1002,8 +1003,6 @@ dependencies = [
  "futures-timer",
  "lazy_static",
  "log",
- "matchbox_socket",
- "tokio",
  "url",
  "uuid",
  "wasm-bindgen",
@@ -2300,6 +2299,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "matchbox_protocol"
+version = "0.11.0"
+source = "git+https://github.com/unyt-org/matchbox#dc72acd8753d812cb4266041187c9f337271a2da"
+dependencies = [
+ "cfg-if 1.0.0",
+ "derive_more",
+ "serde",
+ "uuid",
+]
+
+[[package]]
 name = "matchbox_signaling"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2309,7 +2319,7 @@ dependencies = [
  "axum",
  "futures",
  "hyper",
- "matchbox_protocol",
+ "matchbox_protocol 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde",
  "serde_json",
  "thiserror 2.0.12",
@@ -2323,8 +2333,7 @@ dependencies = [
 [[package]]
 name = "matchbox_socket"
 version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dbe6e951ae32d3c7f6d137babb3f7ff00a1756943b1fc566575aac55a63c7cbd"
+source = "git+https://github.com/unyt-org/matchbox#dc72acd8753d812cb4266041187c9f337271a2da"
 dependencies = [
  "async-compat",
  "async-trait",
@@ -2338,7 +2347,7 @@ dependencies = [
  "futures-util",
  "js-sys",
  "log",
- "matchbox_protocol",
+ "matchbox_protocol 0.11.0 (git+https://github.com/unyt-org/matchbox)",
  "once_cell",
  "serde",
  "serde-wasm-bindgen",

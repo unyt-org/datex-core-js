@@ -16,8 +16,8 @@ use datex_core::stdlib::sync::Arc;
 
 use datex_core::network::com_interfaces::com_interface::ComInterfaceState;
 
+use datex_core::task::spawn_local;
 use log::{debug, error};
-use tokio::task::spawn_local;
 use wasm_bindgen::prelude::wasm_bindgen;
 use wasm_bindgen::{JsCast, JsError, JsValue};
 use wasm_bindgen_futures::JsFuture;
