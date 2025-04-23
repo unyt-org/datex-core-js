@@ -1,3 +1,4 @@
+pub mod base_interface;
 #[cfg(feature = "wasm_serial")]
 pub mod serial_js_interface;
 #[cfg(feature = "webrtc")]

@@ -1,3 +1,4 @@
+use std::cell::RefMut;
 use std::sync::{Arc, Mutex};
 
 #[cfg(feature = "wasm_serial")]
@@ -9,7 +10,9 @@ use super::com_interfaces::websocket_client_js_interface::WebSocketClientRegistr
 #[cfg(feature = "wasm_websocket_server")]
 use super::com_interfaces::websocket_server_js_interface::WebSocketServerRegistry;
 
-use datex_core::network::com_interfaces::com_interface::ComInterfaceUUID;
+use datex_core::network::com_interfaces::com_interface::{
+    ComInterface, ComInterfaceUUID,
+};
 use datex_core::stdlib::{cell::RefCell, rc::Rc};
 use datex_core::{network::com_hub::ComHub, utils::uuid::UUID};
 use log::error;
@@ -38,6 +41,31 @@ impl JSComHub {
  */
 #[wasm_bindgen]
 impl JSComHub {
+    pub(crate) fn add_interface<T: ComInterface>(&self, interface: T) {
+        self.com_hub
+            .lock()
+            .unwrap()
+            .add_interface(Rc::new(RefCell::new(interface)))
+            .expect("Failed to add interface");
+    }
+    pub(crate) fn get_interface_by_uuid<T: ComInterface>(
+        &mut self,
+        interface_uuid: ComInterfaceUUID,
+    ) -> &mut T {
+        let com_hub = self.com_hub.lock().unwrap();
+        let interface = com_hub.get_interface_ref_by_uuid(&interface_uuid);
+        if interface.is_none() {
+            error!("Failed to get interface");
+        }
+        let interface = interface.unwrap();
+        let x = interface
+            .borrow_mut()
+            .as_any_mut()
+            .downcast_mut::<T>()
+            .expect("Failed to downcast interface");
+        x
+    }
+
     pub fn close_interface(&self, interface_uuid: String) -> Promise {
         let interface_uuid =
             ComInterfaceUUID(UUID::from_string(interface_uuid));
