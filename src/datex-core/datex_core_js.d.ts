@@ -10,6 +10,13 @@ export function decompile(
     colorized: boolean,
     resolve_slots: boolean,
 ): string;
+export class BaseJSInterface {
+    free(): void;
+    constructor(com_hub: JSComHub, name: string);
+    register_socket(direction: string): string;
+    receive(socket_uuid: string, data: Uint8Array): Promise<void>;
+    readonly uuid: string;
+}
 export class JSComHub {
     private constructor();
     free(): void;

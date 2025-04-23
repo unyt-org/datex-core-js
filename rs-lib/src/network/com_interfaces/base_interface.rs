@@ -34,17 +34,26 @@ struct BaseJSInterface {
 #[wasm_bindgen]
 impl BaseJSInterface {
     #[wasm_bindgen(constructor)]
-    pub async fn new(com_hub: JSComHub, name: &str) -> BaseJSInterface {
+    pub fn new(com_hub: JSComHub, name: &str) -> BaseJSInterface {
         let interface = BaseInterface::new(name);
         let interface = Rc::new(RefCell::new(interface));
         com_hub.add_interface(interface.clone());
         BaseJSInterface { com_hub, interface }
     }
 
-    pub fn register_socket(&self, direction: &str) {
-        self.interface.borrow_mut().register_new_socket(
-            InterfaceDirection::from_str(direction).unwrap(),
-        );
+    #[wasm_bindgen(getter)]
+    pub fn uuid(&self) -> String {
+        self.interface.borrow().get_uuid().0.to_string()
+    }
+
+    pub fn register_socket(&self, direction: &str) -> String {
+        self.interface
+            .borrow_mut()
+            .register_new_socket(
+                InterfaceDirection::from_str(direction).unwrap(),
+            )
+            .0
+            .to_string()
     }
 
     pub async fn receive(
