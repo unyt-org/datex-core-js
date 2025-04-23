@@ -41,55 +41,26 @@ impl JSComHub {
  */
 #[wasm_bindgen]
 impl JSComHub {
-    pub(crate) fn add_interface<T: ComInterface>(&self, interface: T) {
+    pub(crate) fn add_interface<T: ComInterface>(
+        &self,
+        interface: Rc<RefCell<T>>,
+    ) {
         self.com_hub
             .lock()
             .unwrap()
-            .add_interface(Rc::new(RefCell::new(interface)))
+            .add_interface(interface)
             .expect("Failed to add interface");
     }
-    pub(crate) fn assss<T: ComInterface + 'static>(
-        &self,
-        interface_uuid: &ComInterfaceUUID,
-    ) -> Option<Ref<T>> {
-        let com_hub = self.com_hub.lock().unwrap();
-        let x = com_hub.get_interface_by_uuid::<T>(interface_uuid).unwrap();
-        x
-    }
 
-    pub(crate) fn get_interface_by_uuid<T: 'static + ComInterface>(
+    pub(crate) fn get_interface_by_uuid(
         &self,
         interface_uuid: &ComInterfaceUUID,
-    ) -> &T {
+    ) -> Option<Rc<RefCell<dyn ComInterface>>> {
         let com_hub = self.com_hub.lock().unwrap();
         let interface = com_hub
             .get_interface_ref_by_uuid(&interface_uuid)
-            .unwrap_or_else(|| panic!("Failed to get interface"));
-
-        // Clone the Rc so we return a valid owned pointer
-        let rc = Rc::clone(&interface);
-
-        // Check & downcast inside the borrow
-        // Borrow and extract a reference to T
-        let inner = rc.borrow();
-        let _t_ref: &T = inner
-            .as_any()
-            .downcast_ref::<T>()
-            .expect("Failed to downcast interface");
-        _t_ref
-
-        // let com_hub = self.com_hub.lock().unwrap();
-        // let interface = com_hub.get_interface_ref_by_uuid(&interface_uuid);
-        // if interface.is_none() {
-        //     error!("Failed to get interface");
-        // }
-        // let interface = interface.unwrap();
-        // let x = interface
-        //     .borrow_mut()
-        //     .as_any_mut()
-        //     .downcast_mut::<T>()
-        //     .expect("Failed to downcast interface");
-        // x
+            .map(|interface| interface.clone());
+        interface
     }
 
     pub fn close_interface(&self, interface_uuid: String) -> Promise {
