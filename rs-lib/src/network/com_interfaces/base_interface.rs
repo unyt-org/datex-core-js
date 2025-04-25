@@ -1,5 +1,7 @@
 use std::{
     cell::RefCell,
+    future::Future,
+    pin::Pin,
     rc::Rc,
     str::FromStr,
     sync::{Arc, Mutex},
@@ -12,13 +14,18 @@ use datex_core::{
             com_interface::{ComInterface, ComInterfaceUUID},
             com_interface_properties::InterfaceDirection,
             com_interface_socket::ComInterfaceSocketUUID,
-            default_com_interfaces::base_interface::{self, BaseInterface},
+            default_com_interfaces::base_interface::{
+                self, BaseInterface, OnSendCallback,
+            },
         },
     },
     runtime::{self, global_context::get_global_context},
     utils::uuid::UUID,
 };
-use wasm_bindgen::{prelude::wasm_bindgen, JsError};
+use log::info;
+use wasm_bindgen::{prelude::wasm_bindgen, JsCast, JsError, JsValue};
+use wasm_bindgen_futures::JsFuture;
+use web_sys::js_sys::{self, Function, Promise, Uint8Array};
 
 use crate::{define_registry, network::com_hub::JSComHub, wrap_error_for_js};
 
@@ -44,6 +51,40 @@ impl BaseJSInterface {
     #[wasm_bindgen(getter)]
     pub fn uuid(&self) -> String {
         self.interface.borrow().get_uuid().0.to_string()
+    }
+
+    #[wasm_bindgen(js_name = setCallback)]
+    pub fn set_callback(&mut self, func: Function) {
+        let callback = move |data: &[u8],
+                             uuid: ComInterfaceSocketUUID|
+              -> Pin<Box<dyn Future<Output = bool>>> {
+            let func = func.clone();
+            let data = data.to_vec();
+            let uuid_str = uuid.0.to_string();
+            info!("Sending data to JS: {:?}", data);
+            info!("Socket UUID: {:?}", uuid_str);
+            let future = async move {
+                let js_data = Uint8Array::from(&data[..]);
+                let this = JsValue::NULL;
+                let js_uuid = JsValue::from_str(&uuid_str);
+                let result = func.call2(&this, &js_data.into(), &js_uuid);
+                match result {
+                    Ok(js_val) => {
+                        let js_promise = Promise::from(js_val);
+                        match JsFuture::from(js_promise).await {
+                            Ok(val) => val.as_bool().unwrap_or(false),
+                            Err(_) => false,
+                        }
+                    }
+                    Err(_) => false,
+                }
+            };
+
+            Box::pin(future)
+        };
+        self.interface
+            .borrow_mut()
+            .set_on_send_callback(Box::new(callback));
     }
 
     pub fn register_socket(&self, direction: &str) -> String {
