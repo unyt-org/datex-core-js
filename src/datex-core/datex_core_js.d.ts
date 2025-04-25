@@ -13,7 +13,7 @@ export function decompile(
 export class BaseJSInterface {
     free(): void;
     constructor(com_hub: JSComHub, name: string);
-    _testSendBlock(socket_uuid: string, data: Uint8Array): Promise<boolean>;
+    _testSendBlock(socket_uuid: string, data: Uint8Array): Promise<any>;
     setCallback(func: Function): void;
     register_socket(direction: string): string;
     receive(socket_uuid: string, data: Uint8Array): Promise<void>;

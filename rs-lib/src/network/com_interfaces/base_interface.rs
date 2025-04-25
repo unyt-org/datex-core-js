@@ -59,14 +59,18 @@ impl BaseJSInterface {
         &self,
         socket_uuid: String,
         data: &[u8],
-    ) -> bool {
-        self.interface
-            .borrow_mut()
-            .send_block(
-                data,
-                ComInterfaceSocketUUID(UUID::from_string(socket_uuid)),
-            )
-            .await
+    ) -> Result<JsValue, JsValue> {
+        // let result = self
+        //     .interface
+        //     .borrow_mut()
+        //     .send_block(
+        //         data,
+        //         ComInterfaceSocketUUID(UUID::from_string(socket_uuid)),
+        //     )
+        //     .await;
+        Ok(JsValue::from_bool(false))
+        // info!("test_send_block result: {:?}", result);
+        // Ok(JsValue::from_bool(result))
     }
 
     #[wasm_bindgen(js_name = setCallback)]
