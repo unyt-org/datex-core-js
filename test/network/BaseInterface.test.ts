@@ -40,7 +40,7 @@ Deno.test("test receive and send", async () => {
     );
     assert(
         await baseInterface._testSendBlock(
-            socketA,
+            socket,
             new Uint8Array([1, 2, 3, 4, 5, 6]),
         ),
         "Valid socket should return true",
