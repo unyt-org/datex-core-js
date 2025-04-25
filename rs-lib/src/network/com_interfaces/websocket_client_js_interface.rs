@@ -75,7 +75,7 @@ impl WebSocketClientJSInterface {
         let (sender, receiver) = oneshot::channel::<()>();
         let uuid = self.get_uuid().clone();
         let com_interface_sockets = self.get_sockets().clone();
-        let state = self.get_info().get_state();
+        let state = self.get_info().state.clone();
         let open_callback = Closure::once(move |_: MessageEvent| {
             let socket = ComInterfaceSocket::new(
                 uuid.clone(),
@@ -88,10 +88,7 @@ impl WebSocketClientJSInterface {
                 .lock()
                 .unwrap()
                 .add_socket(Arc::new(Mutex::new(socket)));
-            state
-                .lock()
-                .unwrap()
-                .set_state(ComInterfaceState::Connected);
+            state.lock().unwrap().set(ComInterfaceState::Connected);
 
             sender.send(()).unwrap_or_else(|_| {
                 error!("Failed to send onopen event");
@@ -153,10 +150,10 @@ impl WebSocketClientJSInterface {
     }
 
     fn create_onclose_callback(&self) -> Closure<dyn FnMut()> {
-        let state = self.get_info().get_state();
+        let state = self.get_info().state.clone();
         Closure::new(move || {
             warn!("Socket closed");
-            state.lock().unwrap().set_state(ComInterfaceState::Closed);
+            state.lock().unwrap().set(ComInterfaceState::Closed);
         })
     }
 }
