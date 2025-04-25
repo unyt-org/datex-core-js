@@ -88,6 +88,17 @@
         "jsr:@std/tar"
       ]
     },
+    "@deno/wasmbuild@0.19.2": {
+      "integrity": "f4a92beae788e2fd68189aefb6a6d8c3be79519c3ef8429a10519296379c33d1",
+      "dependencies": [
+        "jsr:@david/path",
+        "jsr:@david/temp",
+        "jsr:@std/encoding",
+        "jsr:@std/fmt@^1.0.4",
+        "jsr:@std/fs@^1.0.10",
+        "jsr:@std/tar"
+      ]
+    },
     "@std/assert@0.223.0": {
       "integrity": "eb8d6d879d76e1cc431205bd346ed4d88dc051c6366365b1af47034b0670be24"
     },

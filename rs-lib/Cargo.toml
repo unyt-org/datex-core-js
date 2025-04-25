@@ -29,6 +29,7 @@ lazy_static = "1.4.0"
 url = "2.5.4"
 wasm-bindgen = "=0.2.100"
 wasm-bindgen-futures = "0.4.50"
+js-sys = "=0.3.77"
 
 # webrtc
 futures = { version = "0.3", default-features = false } # = "0.11", 
@@ -39,9 +40,7 @@ uuid = { version = "1.15.1", features = ["js"], optional = true }
 # webrtc
 # tokio = { version = "1.43.0", default-features = false, features = [] }
 [dependencies.web-sys]
-version = "0.3.69"
-
-
+version = "0.3.77"
 features = [
     "Window",
     "BinaryType",

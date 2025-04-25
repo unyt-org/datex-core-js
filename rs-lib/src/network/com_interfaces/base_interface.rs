@@ -25,7 +25,10 @@ use datex_core::{
 use log::info;
 use wasm_bindgen::{prelude::wasm_bindgen, JsCast, JsError, JsValue};
 use wasm_bindgen_futures::JsFuture;
-use web_sys::js_sys::{self, Function, Promise, Uint8Array};
+use web_sys::{
+    console::info,
+    js_sys::{Function, Promise, Uint8Array},
+};
 
 use crate::{define_registry, network::com_hub::JSComHub, wrap_error_for_js};
 
@@ -59,18 +62,27 @@ impl BaseJSInterface {
         &self,
         socket_uuid: String,
         data: &[u8],
-    ) -> JsValue {
-        // let result = self
-        //     .interface
-        //     .borrow_mut()
-        //     .send_block(
-        //         data,
-        //         ComInterfaceSocketUUID(UUID::from_string(socket_uuid)),
-        //     )
-        //     .await;
-        JsValue::from_f64(0.1)
-        // info!("test_send_block result: {:?}", result);
-        // Ok(JsValue::from_bool(result))
+    ) -> bool {
+        let result = self
+            .interface
+            .borrow_mut()
+            .send_block(
+                data,
+                ComInterfaceSocketUUID(UUID::from_string(socket_uuid)),
+            )
+            .await;
+
+        let x = JsValue::TRUE;
+        info!("Result1: {:?}", x);
+        info!("Result2: {:?}", JsValue::as_bool(&x));
+        info!("Result3: {:?}", JsValue::from_bool(false));
+
+        let x = JsValue::from(JsValue::as_bool(&JsValue::FALSE));
+        info!("Result1: {:?}", x);
+        info!("Result2: {:?}", JsValue::as_bool(&x));
+        info!("Result3: {:?}", JsValue::from_bool(false));
+
+        true
     }
 
     #[wasm_bindgen(js_name = setCallback)]

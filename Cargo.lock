@@ -1001,6 +1001,7 @@ dependencies = [
  "datex-core",
  "futures",
  "futures-timer",
+ "js-sys",
  "lazy_static",
  "log",
  "url",
