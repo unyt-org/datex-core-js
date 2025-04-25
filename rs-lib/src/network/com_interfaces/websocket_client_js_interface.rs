@@ -79,7 +79,7 @@ impl WebSocketClientJSInterface {
         let open_callback = Closure::once(move |_: MessageEvent| {
             let socket = ComInterfaceSocket::new(
                 uuid.clone(),
-                InterfaceDirection::IN_OUT,
+                InterfaceDirection::InOut,
                 1,
             );
             info!("Socket opened: {:?}", socket.uuid);

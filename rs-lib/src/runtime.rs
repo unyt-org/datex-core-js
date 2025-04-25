@@ -29,10 +29,10 @@ impl JSRuntime {
     pub fn create(endpoint: Endpoint) -> JSRuntime {
         let runtime = Runtime::init(
             endpoint,
-            GlobalContext {
-                crypto: Arc::new(Mutex::new(CryptoJS)),
-                time: Arc::new(Mutex::new(TimeJS)),
-            },
+            GlobalContext::new(
+                Arc::new(Mutex::new(CryptoJS)),
+                Arc::new(Mutex::new(TimeJS)),
+            ),
         );
         runtime.memory.borrow_mut().store_pointer(
             [

@@ -60,7 +60,7 @@ impl WebSocketServerJSInterface {
         let interface_uuid = self.get_uuid().clone();
         let socket = ComInterfaceSocket::new(
             interface_uuid,
-            InterfaceDirection::IN_OUT,
+            InterfaceDirection::InOut,
             1,
         );
         let socket_uuid = socket.uuid.clone();
