@@ -59,7 +59,7 @@ impl BaseJSInterface {
         &self,
         socket_uuid: String,
         data: &[u8],
-    ) -> Result<JsValue, JsValue> {
+    ) -> JsValue {
         // let result = self
         //     .interface
         //     .borrow_mut()
@@ -68,7 +68,7 @@ impl BaseJSInterface {
         //         ComInterfaceSocketUUID(UUID::from_string(socket_uuid)),
         //     )
         //     .await;
-        Ok(JsValue::from_bool(false))
+        JsValue::from_f64(0.1)
         // info!("test_send_block result: {:?}", result);
         // Ok(JsValue::from_bool(result))
     }
