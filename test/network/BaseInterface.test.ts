@@ -14,6 +14,20 @@ Deno.test("add interface and sockets", async () => {
     assert(uuid.validate(socketA), "Invalid UUID");
     assert(uuid.validate(socketB), "Invalid UUID");
 
+    baseInterface.setCallback(async (data: Uint8Array, socket: string) => {
+        console.warn(socket, data);
+        // await sleep(1000);
+        return false;
+    });
+    const r = await baseInterface._testSendBlock(
+        socketA,
+        new Uint8Array([1, 2, 3, 4, 5, 6]),
+    );
+    console.log(r, "<--");
+    assert(
+        r,
+    );
+
     await baseInterface.receive(
         socketA,
         new Uint8Array([0x01, 0x02, 0x03, 0x04]),

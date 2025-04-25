@@ -53,33 +53,40 @@ impl BaseJSInterface {
         self.interface.borrow().get_uuid().0.to_string()
     }
 
+    // test method
+    #[wasm_bindgen(js_name = _testSendBlock)]
+    pub async fn test_send_block(
+        &self,
+        socket_uuid: String,
+        data: &[u8],
+    ) -> bool {
+        self.interface
+            .borrow_mut()
+            .send_block(
+                data,
+                ComInterfaceSocketUUID(UUID::from_string(socket_uuid)),
+            )
+            .await
+    }
+
     #[wasm_bindgen(js_name = setCallback)]
     pub fn set_callback(&mut self, func: Function) {
-        let callback = move |data: &[u8],
+        let callback = move |block: &[u8],
                              uuid: ComInterfaceSocketUUID|
               -> Pin<Box<dyn Future<Output = bool>>> {
-            let func = func.clone();
-            let data = data.to_vec();
-            let uuid_str = uuid.0.to_string();
-            info!("Sending data to JS: {:?}", data);
-            info!("Socket UUID: {:?}", uuid_str);
+            let block = Uint8Array::from(block);
+            let socket_val = JsValue::from(uuid.0.to_string());
+
+            let result = func
+                .call2(&JsValue::NULL, &block.into(), &socket_val)
+                .expect("Callback threw");
+
             let future = async move {
-                let js_data = Uint8Array::from(&data[..]);
-                let this = JsValue::NULL;
-                let js_uuid = JsValue::from_str(&uuid_str);
-                let result = func.call2(&this, &js_data.into(), &js_uuid);
-                match result {
-                    Ok(js_val) => {
-                        let js_promise = Promise::from(js_val);
-                        match JsFuture::from(js_promise).await {
-                            Ok(val) => val.as_bool().unwrap_or(false),
-                            Err(_) => false,
-                        }
-                    }
+                match JsFuture::from(Promise::from(result)).await {
+                    Ok(val) => val.as_bool().unwrap_or(false),
                     Err(_) => false,
                 }
             };
-
             Box::pin(future)
         };
         self.interface
