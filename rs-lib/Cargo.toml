@@ -27,7 +27,7 @@ datex-core = { path = "./datex-core", default-features = false, features = [
 ] }
 lazy_static = "1.4.0"
 url = "2.5.4"
-wasm-bindgen = "=0.2.100"
+wasm-bindgen = { version = "=0.2.100", features = ["serde-serialize"] }
 wasm-bindgen-futures = "0.4.50"
 js-sys = "=0.3.77"
 
