@@ -24,7 +24,7 @@ Deno.test("test receive and send", async () => {
         new Uint8Array([1, 2, 3, 4, 5, 6]),
     );
     console.dir(r);
-    console.log(typeof r, r, "<--");
+    console.log(typeof r, "<--");
     assert(
         r,
     );
