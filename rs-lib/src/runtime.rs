@@ -54,7 +54,6 @@ impl JSRuntime {
  */
 #[wasm_bindgen]
 impl JSRuntime {
-    #[wasm_bindgen]
     pub async fn crypto_test_tmp(&self) -> Promise {
         future_to_promise(async move {
             let crypto = CryptoJS {};
@@ -133,7 +132,6 @@ impl JSRuntime {
         JSComHub::new(self.runtime.com_hub.clone())
     }
 
-    #[wasm_bindgen]
     pub fn _create_block(
         &self,
         body: Option<Vec<u8>>,
