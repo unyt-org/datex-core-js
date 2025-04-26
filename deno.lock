@@ -7,6 +7,7 @@
     "jsr:@deno/cache-dir@~0.10.3": "0.10.3",
     "jsr:@deno/dnt@~0.41.3": "0.41.3",
     "jsr:@deno/graph@~0.73.1": "0.73.1",
+    "jsr:@qnighy/dedent@*": "0.1.2",
     "jsr:@std/assert@*": "1.0.8",
     "jsr:@std/assert@0.223": "0.223.0",
     "jsr:@std/assert@0.226": "0.226.0",
@@ -98,6 +99,9 @@
         "jsr:@std/fs@^1.0.10",
         "jsr:@std/tar"
       ]
+    },
+    "@qnighy/dedent@0.1.2": {
+      "integrity": "9e420cff5b0082dba168385c9dfc56f25ef9a07999605e5fc9bc2058529998ee"
     },
     "@std/assert@0.223.0": {
       "integrity": "eb8d6d879d76e1cc431205bd346ed4d88dc051c6366365b1af47034b0670be24"

@@ -3,6 +3,7 @@ import { Path } from "jsr:@david/path@^0.2.0";
 import { format } from "https://deno.land/std@0.224.0/fmt/bytes.ts";
 import { parseArgs } from "jsr:@std/cli/parse-args";
 import { parse } from "https://deno.land/std@0.224.0/toml/mod.ts";
+import { dedent } from "jsr:@qnighy/dedent";
 
 const DEFAULT_FLAGS: string[] = []; // "--no-default-features"
 const configText = await Deno.readTextFile(".cargo/config.toml");
@@ -14,9 +15,9 @@ const PREVIOUS_RUSTFLAGS = Deno.env.has("RUSTFLAGS")
 Deno.env.set("RUSTFLAGS", RUST_FLAGS.join(" "));
 
 const flags = parseArgs(Deno.args, {
-    boolean: ["opt"],
+    boolean: ["opt", "inline"],
     string: ["profile"],
-    default: { "opt": true, profile: "release" },
+    default: { "opt": true, "inline": false, "profile": "release" },
     negatable: ["opt"],
 });
 
@@ -28,7 +29,7 @@ try {
         outDir,
         profile: flags.profile === "release" ? "release" : "debug",
         kind: "build",
-        inline: false,
+        inline: flags.inline,
         bindingJsFileExt: "js",
         project: "datex-core-js",
         cargoFlags: DEFAULT_FLAGS,
@@ -44,18 +45,22 @@ try {
     }
 }
 
-const jsFile = `import * as imports from "./${NAME}.internal.js";
-const wasm = (await WebAssembly.instantiateStreaming(
-    fetch(new URL("${NAME}.wasm", import.meta.url)),
-    {
-        "./${NAME}.internal.js": imports,
-    },
-)).instance;
-export * from "./${NAME}.internal.js";
-import { __wbg_set_wasm } from "./${NAME}.internal.js";
-__wbg_set_wasm(wasm.exports);
-`;
+if (!flags.inline) {
+    const jsFile = dedent`
+        import * as imports from "./${NAME}.internal.js";
+        const wasm = (await WebAssembly.instantiateStreaming(
+            fetch(new URL("${NAME}.wasm", import.meta.url)),
+            {
+                "./${NAME}.internal.js": imports,
+            },
+        )).instance;
+        export * from "./${NAME}.internal.js";
+        import { __wbg_set_wasm } from "./${NAME}.internal.js";
+        __wbg_set_wasm(wasm.exports);
+        wasm.exports.__wbindgen_start();
+    `.trimStart();
 
-await outDir.resolve(`${NAME}.js`).writeText(jsFile);
+    await outDir.resolve(`${NAME}.js`).writeText(jsFile);
+}
 const fileSize = (await outDir.resolve(`${NAME}.wasm`).stat())!.size;
 console.info(`✅ Build complete: (${format(fileSize)})`);

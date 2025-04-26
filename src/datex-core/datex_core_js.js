@@ -8,3 +8,4 @@ const wasm = (await WebAssembly.instantiateStreaming(
 export * from "./datex_core_js.internal.js";
 import { __wbg_set_wasm } from "./datex_core_js.internal.js";
 __wbg_set_wasm(wasm.exports);
+wasm.exports.__wbindgen_start();

@@ -1,24 +1,22 @@
-use std::{
-    cell::RefCell,
-    future::Future,
-    pin::Pin,
-    rc::Rc,
-    str::FromStr,
-};
+use std::{cell::RefCell, future::Future, pin::Pin, rc::Rc, str::FromStr};
 
 use datex_core::{
     network::com_interfaces::{
-            com_interface::ComInterface,
-            com_interface_properties::InterfaceDirection,
-            com_interface_socket::ComInterfaceSocketUUID,
-            default_com_interfaces::base_interface::BaseInterface,
-        },
+        com_interface::ComInterface,
+        com_interface_properties::InterfaceDirection,
+        com_interface_socket::ComInterfaceSocketUUID,
+        default_com_interfaces::base_interface::BaseInterface,
+    },
     utils::uuid::UUID,
 };
+use js_sys::Error;
 use log::info;
 use wasm_bindgen::{prelude::wasm_bindgen, JsValue};
 use wasm_bindgen_futures::JsFuture;
-use web_sys::js_sys::{Function, Promise, Uint8Array};
+use web_sys::{
+    console,
+    js_sys::{Function, Promise, Uint8Array},
+};
 
 use crate::{network::com_hub::JSComHub, wrap_error_for_js};
 
@@ -26,7 +24,7 @@ use crate::{network::com_hub::JSComHub, wrap_error_for_js};
 wrap_error_for_js!(JsBaseInterfaceError, datex_core::network::com_interfaces::default_com_interfaces::base_interface::BaseInterfaceError);
 
 #[wasm_bindgen]
-struct BaseJSInterface {
+pub struct BaseJSInterface {
     com_hub: JSComHub,
     interface: Rc<RefCell<BaseInterface>>,
 }
@@ -47,7 +45,6 @@ impl BaseJSInterface {
     }
 
     // test method
-    #[wasm_bindgen(js_name = _testSendBlock)]
     pub async fn test_send_block(
         &self,
         socket_uuid: String,
@@ -62,10 +59,10 @@ impl BaseJSInterface {
             )
             .await;
 
-        let x = JsValue::TRUE;
+        let x = JsValue::from(true);
         info!("Result1: {x:?}");
         info!("Result2: {:?}", JsValue::as_bool(&x));
-        info!("Result3: {:?}", JsValue::from_bool(false));
+        console::log_1(&x);
 
         let x = JsValue::from(JsValue::as_bool(&JsValue::FALSE));
         info!("Result1: {x:?}");
@@ -75,18 +72,15 @@ impl BaseJSInterface {
         true
     }
 
-    #[wasm_bindgen(js_name = setCallback)]
-    pub fn set_callback(&mut self, func: Function) {
+    pub fn on_send(&mut self, func: Function) {
         let callback = move |block: &[u8],
                              uuid: ComInterfaceSocketUUID|
               -> Pin<Box<dyn Future<Output = bool>>> {
             let block = Uint8Array::from(block);
-            let socket_val = JsValue::from(uuid.0.to_string());
-
+            let socket_uuid = JsValue::from(uuid.0.to_string());
             let result = func
-                .call2(&JsValue::NULL, &block.into(), &socket_val)
+                .call2(&JsValue::NULL, &block.into(), &socket_uuid)
                 .expect("Callback threw");
-
             let future = async move {
                 match JsFuture::from(Promise::from(result)).await {
                     Ok(val) => val.as_bool().unwrap_or(false),
@@ -100,14 +94,16 @@ impl BaseJSInterface {
             .set_on_send_callback(Box::new(callback));
     }
 
-    pub fn register_socket(&self, direction: &str) -> String {
-        self.interface
+    pub fn register_socket(&self, direction: &str) -> Result<String, Error> {
+        let direction = InterfaceDirection::from_str(direction)
+            .map_err(|_| Error::new("Invalid direction"))?;
+        info!("Registering socket with direction: {:?}", direction);
+        Ok(self
+            .interface
             .borrow_mut()
-            .register_new_socket(
-                InterfaceDirection::from_str(direction).unwrap(),
-            )
+            .register_new_socket(direction)
             .0
-            .to_string()
+            .to_string())
     }
 
     pub async fn receive(
