@@ -1,6 +1,5 @@
 use std::cell::RefCell;
 use std::future::Future;
-use std::io::Error;
 use std::pin::Pin;
 use std::rc::Rc;
 use std::sync::Mutex;

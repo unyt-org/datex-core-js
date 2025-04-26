@@ -24,7 +24,7 @@ use datex_core::network::com_interfaces::default_com_interfaces::websocket::webs
 
 use crate::{define_registry, wrap_error_for_js};
 use futures::channel::oneshot;
-use log::{debug, error, info, warn};
+use log::{error, info, warn};
 use url::Url;
 use wasm_bindgen::prelude::wasm_bindgen;
 use wasm_bindgen::{prelude::Closure, JsCast};
