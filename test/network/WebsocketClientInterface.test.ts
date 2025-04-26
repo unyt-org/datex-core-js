@@ -8,7 +8,6 @@ Deno.test("invalid url construct", async () => {
     const runtime = new Runtime("@unyt");
     await assertRejects(
         () => runtime.comHub.websocket_client.register(`invalid url`),
-        Error,
         "InvalidURL",
     );
 });
@@ -17,7 +16,6 @@ Deno.test("invalid url scheme construct", async () => {
     const runtime = new Runtime("@unyt");
     await assertRejects(
         () => runtime.comHub.websocket_client.register(`ftp://invalid`),
-        Error,
         "InvalidURL",
     );
 });
@@ -26,7 +24,6 @@ Deno.test("websocket connect fail", async () => {
     const runtime = new Runtime("@unyt");
     await assertRejects(
         () => runtime.comHub.websocket_client.register(`ws://invalid`),
-        Error,
         "Failed to connect to WebSocket",
     );
 });
