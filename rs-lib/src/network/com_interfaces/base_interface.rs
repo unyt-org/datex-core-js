@@ -34,7 +34,10 @@ impl BaseJSInterface {
     pub fn new(com_hub: JSComHub, name: &str) -> BaseJSInterface {
         let interface = BaseInterface::new(name);
         let interface = Rc::new(RefCell::new(interface));
-        com_hub.add_interface(interface.clone());
+        interface.borrow_mut().open().unwrap();
+        com_hub
+            .add_interface(interface.clone())
+            .expect("Could not add base interface");
         BaseJSInterface { com_hub, interface }
     }
 

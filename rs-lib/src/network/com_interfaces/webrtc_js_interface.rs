@@ -19,10 +19,13 @@ impl WebRTCClientRegistry {
         let com_hub = self.com_hub.clone();
         let address_clone = address.clone();
         future_to_promise(async move {
-            let webrtc_interface =
+            let mut webrtc_interface =
                 WebRTCClientInterface::new_reliable(&address_clone, None)
                     .map_err(|e| JsError::new(&format!("{e:?}")))?;
-
+            webrtc_interface.open().await.map_err(|e| {
+                error!("Failed to open WebRTC interface: {e:?}");
+                JsError::new(&format!("{e:?}"))
+            })?;
             let interface_uuid = webrtc_interface.get_uuid().clone();
             com_hub
                 .lock()

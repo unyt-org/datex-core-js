@@ -40,16 +40,27 @@ impl JSComHub {
  */
 #[wasm_bindgen]
 impl JSComHub {
-    pub(crate) async fn add_interface<T: ComInterface>(
+    pub(crate) async fn open_and_add_interface<T: ComInterface>(
         &self,
         interface: Rc<RefCell<T>>,
     ) {
+        interface.clone().borrow_mut().handle_open().await;
         self.com_hub
             .lock()
             .unwrap()
-            .open_and_add_interface(interface)
-            .await
+            .add_interface(interface)
             .expect("Failed to add interface");
+    }
+    pub(crate) fn add_interface<T: ComInterface>(
+        &self,
+        interface: Rc<RefCell<T>>,
+    ) -> Result<(), JsValue> {
+        self.com_hub
+            .lock()
+            .unwrap()
+            .add_interface(interface)
+            .map_err(|e| JsError::new(&format!("{e:?}")))?;
+        Ok(())
     }
 
     pub(crate) fn get_interface_by_uuid(

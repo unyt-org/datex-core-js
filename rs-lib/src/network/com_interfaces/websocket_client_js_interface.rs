@@ -71,24 +71,17 @@ impl WebSocketClientJSInterface {
         let (sender, receiver) = oneshot::channel::<()>();
         let uuid = self.get_uuid().clone();
         let com_interface_sockets = self.get_sockets().clone();
-        let state = self.get_info().state.clone();
         let open_callback = Closure::once(move |_: MessageEvent| {
             let socket = ComInterfaceSocket::new(
                 uuid.clone(),
                 InterfaceDirection::InOut,
                 1,
             );
-            info!("Socket opened: {:?}", socket.uuid);
-
             com_interface_sockets
                 .lock()
                 .unwrap()
                 .add_socket(Arc::new(Mutex::new(socket)));
-            state.lock().unwrap().set(ComInterfaceState::Connected);
-
-            sender.send(()).unwrap_or_else(|_| {
-                error!("Failed to send onopen event");
-            });
+            sender.send(()).expect("Failed to send onopen event");
         });
         let close_callback = self.create_onclose_callback();
 
@@ -99,14 +92,15 @@ impl WebSocketClientJSInterface {
 
         self.ws
             .set_onclose(Some(close_callback.as_ref().unchecked_ref()));
-
         self.ws
             .set_onopen(Some(open_callback.as_ref().unchecked_ref()));
 
+        self.set_state(ComInterfaceState::Connecting);
         receiver.await.map_err(|_| {
             error!("Failed to receive onopen event");
             WebSocketError::Other("Failed to receive onopen event".to_string())
         })?;
+        self.set_state(ComInterfaceState::Connected);
 
         message_callback.forget();
         error_callback.forget();
@@ -133,8 +127,6 @@ impl WebSocketClientJSInterface {
                     array.to_vec().len(),
                     receive_queue
                 );
-            } else {
-                info!("message event, received Unknown: {:?}", e.data());
             }
         })
     }
@@ -161,7 +153,6 @@ impl ComInterface for WebSocketClientJSInterface {
         _: ComInterfaceSocketUUID,
     ) -> Pin<Box<dyn Future<Output = bool> + 'a>> {
         Box::pin(async move {
-            debug!("Sending block: {block:?}");
             self.ws
                 .send_with_u8_array(block)
                 .map_err(|e| {
@@ -180,9 +171,12 @@ impl ComInterface for WebSocketClientJSInterface {
             ..InterfaceProperties::default()
         }
     }
-    fn close<'a>(&'a mut self) -> Pin<Box<dyn Future<Output = bool> + 'a>> {
-        // TODO
-        Box::pin(async move { true })
+    fn handle_close<'a>(&'a mut self) -> Pin<Box<dyn Future<Output = bool> + 'a>> {
+        let state = self.get_info().state.clone();
+        Box::pin(async move {
+            state.lock().unwrap().set(ComInterfaceState::NotConnected);
+            self.ws.close().is_ok()
+        })
     }
     delegate_com_interface_info!();
     set_opener!(open);

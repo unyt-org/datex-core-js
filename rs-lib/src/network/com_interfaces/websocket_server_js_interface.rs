@@ -169,7 +169,7 @@ impl ComInterface for WebSocketServerJSInterface {
             ..InterfaceProperties::default()
         }
     }
-    fn close<'a>(&'a mut self) -> Pin<Box<dyn Future<Output = bool> + 'a>> {
+    fn handle_close<'a>(&'a mut self) -> Pin<Box<dyn Future<Output = bool> + 'a>> {
         for (_, socket) in self.sockets.iter() {
             // FIXME
             // Do we have to remove the event listeners here
