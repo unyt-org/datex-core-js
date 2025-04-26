@@ -153,7 +153,7 @@ impl WebSocketClientJSInterface {
         let state = self.get_info().state.clone();
         Closure::new(move || {
             warn!("Socket closed");
-            state.lock().unwrap().set(ComInterfaceState::Closed);
+            state.lock().unwrap().set(ComInterfaceState::Destroyed);
         })
     }
 }
