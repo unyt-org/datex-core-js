@@ -178,13 +178,16 @@ define_registry!(SerialRegistry);
 impl SerialRegistry {
     pub async fn register(&self, baud_rate: u32) -> Result<String, JsError> {
         let com_hub = self.com_hub.clone();
-        let serial_interface = SerialJSInterface::new(baud_rate)?;
+        let mut serial_interface = SerialJSInterface::new(baud_rate)?;
         let uuid = serial_interface.get_uuid().clone();
+        serial_interface
+            .open()
+            .await
+            .map_err(|e| JsError::new(&format!("{e:?}")))?;
 
         let mut com_hub = com_hub.lock().unwrap();
         com_hub
-            .open_and_add_interface(Rc::new(RefCell::new(serial_interface)))
-            .await
+            .add_interface(Rc::new(RefCell::new(serial_interface)))
             .map_err(|e| JsError::new(&format!("{e:?}")))?;
         Ok(uuid.0.to_string())
     }
