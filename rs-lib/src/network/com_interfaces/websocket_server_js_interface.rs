@@ -6,7 +6,7 @@ use std::rc::Rc;
 use std::sync::Mutex;
 use std::time::Duration; // FIXME no-std
 
-use datex_core::delegate_com_interface_info;
+use datex_core::{delegate_com_interface_info, set_opener, set_sync_opener};
 use datex_core::network::com_interfaces::com_interface::{
     ComInterface, ComInterfaceInfo, ComInterfaceSockets, ComInterfaceUUID,
 };
@@ -43,14 +43,16 @@ impl MultipleSocketProvider for WebSocketServerJSInterface {
 wrap_error_for_js!(JSWebSocketServerError, datex_core::network::com_interfaces::default_com_interfaces::websocket::websocket_common::WebSocketServerError);
 
 impl WebSocketServerJSInterface {
-    pub fn open() -> Result<WebSocketServerJSInterface, JSWebSocketServerError>
-    {
-        Ok(WebSocketServerJSInterface {
-            info: ComInterfaceInfo::new_with_state(
-                ComInterfaceState::Connected,
-            ),
+    pub fn new() -> WebSocketServerJSInterface {
+        WebSocketServerJSInterface {
+            info: ComInterfaceInfo::default(),
             sockets: HashMap::new(),
-        })
+        }
+    }
+
+    pub fn open(&mut self) -> Result<(), ()> {
+        self.set_state(ComInterfaceState::Connected);
+        Ok(())
     }
 
     pub fn register_socket(
@@ -174,20 +176,22 @@ impl ComInterface for WebSocketServerJSInterface {
         Box::pin(async move { true })
     }
     delegate_com_interface_info!();
+    set_sync_opener!(open);
 }
 
 define_registry!(WebSocketServerRegistry);
 
 #[wasm_bindgen]
 impl WebSocketServerRegistry {
-    pub fn register(&self) -> Result<String, JsError> {
+    pub async fn register(&self) -> Result<String, JsError> {
         let com_hub = self.com_hub.clone();
-        let websocket_interface = WebSocketServerJSInterface::open()?;
+        let websocket_interface = WebSocketServerJSInterface::new();
         let uuid = websocket_interface.get_uuid().clone();
 
         let mut com_hub = com_hub.lock().unwrap();
         com_hub
             .add_interface(Rc::new(RefCell::new(websocket_interface)))
+            .await
             .map_err(|e| JsError::new(&format!("{e:?}")))?;
         Ok(uuid.0.to_string())
     }

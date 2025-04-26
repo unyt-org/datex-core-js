@@ -20,14 +20,15 @@ impl WebRTCClientRegistry {
         let address_clone = address.clone();
         future_to_promise(async move {
             let webrtc_interface =
-                WebRTCClientInterface::open_reliable(&address_clone, None)
-                    .await
+                WebRTCClientInterface::new_reliable(&address_clone, None)
                     .map_err(|e| JsError::new(&format!("{e:?}")))?;
+
             let interface_uuid = webrtc_interface.get_uuid().clone();
             com_hub
                 .lock()
                 .unwrap()
                 .add_interface(Rc::new(RefCell::new(webrtc_interface)))
+                .await
                 .map_err(|e| JsError::new(&format!("{e:?}")))?;
             Ok(JsValue::from_str(&interface_uuid.0.to_string()))
         })

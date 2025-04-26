@@ -7,7 +7,7 @@ use std::time::Duration; // FIXME no-std
 
 use js_sys::Promise;
 use wasm_bindgen_futures::future_to_promise;
-use datex_core::delegate_com_interface_info;
+use datex_core::{delegate_com_interface_info, set_opener};
 use datex_core::network::com_interfaces::com_interface::{
     ComInterface, ComInterfaceInfo, ComInterfaceSockets, ComInterfaceUUID,
 };
@@ -46,25 +46,22 @@ impl SingleSocketProvider for WebSocketClientJSInterface {
 }
 
 impl WebSocketClientJSInterface {
-    pub async fn open(
+    pub fn new(
         address: &str,
     ) -> Result<WebSocketClientJSInterface, WebSocketError> {
         let address =
             parse_url(address).map_err(|_| WebSocketError::InvalidURL)?;
-
         let ws = web_sys::WebSocket::new(address.as_ref())
-            .map_err(|_| WebSocketError::ConnectionError)?;
-
-        let mut interface = WebSocketClientJSInterface {
+            .map_err(|_| WebSocketError::InvalidURL)?;
+        let interface = WebSocketClientJSInterface {
             address,
             info: ComInterfaceInfo::new(),
             ws,
         };
-        interface.start().await?;
         Ok(interface)
     }
 
-    async fn start(&mut self) -> Result<(), WebSocketError> {
+    pub async fn open(&mut self) -> Result<(), WebSocketError> {
         let address = self.address.clone();
         info!("Connecting to WebSocket server at {address}");
 
@@ -189,6 +186,7 @@ impl ComInterface for WebSocketClientJSInterface {
         Box::pin(async move { true })
     }
     delegate_com_interface_info!();
+    set_opener!(open);
 }
 
 define_registry!(WebSocketClientRegistry);
@@ -199,9 +197,8 @@ impl WebSocketClientRegistry {
         let com_hub = self.com_hub.clone();
         let address_clone = address.clone();
         future_to_promise(async move {
-            let websocket_interface =
-                WebSocketClientJSInterface::open(&address_clone)
-                    .await
+            let mut websocket_interface =
+                WebSocketClientJSInterface::new(&address_clone)
                     .map_err(|e| JsError::new(&format!("{e:?}")))?;
             let interface_uuid = websocket_interface.get_uuid().clone();
 
@@ -217,6 +214,7 @@ impl WebSocketClientRegistry {
                 .lock()
                 .unwrap()
                 .add_interface(websocket_interface.clone())
+                .await
                 .map_err(|e| JsError::new(&format!("{e:?}")))?;
             Ok(JsValue::from_str(&interface_uuid.0.to_string()))
         })

@@ -40,7 +40,7 @@ impl JSComHub {
  */
 #[wasm_bindgen]
 impl JSComHub {
-    pub(crate) fn add_interface<T: ComInterface>(
+    pub(crate) async fn add_interface<T: ComInterface>(
         &self,
         interface: Rc<RefCell<T>>,
     ) {
@@ -48,6 +48,7 @@ impl JSComHub {
             .lock()
             .unwrap()
             .add_interface(interface)
+            .await
             .expect("Failed to add interface");
     }
 
@@ -56,9 +57,8 @@ impl JSComHub {
         interface_uuid: &ComInterfaceUUID,
     ) -> Option<Rc<RefCell<dyn ComInterface>>> {
         let com_hub = self.com_hub.lock().unwrap();
-        
-        com_hub
-            .get_interface_ref_by_uuid(interface_uuid)
+
+        com_hub.get_interface_ref_by_uuid(interface_uuid)
     }
 
     pub fn close_interface(&self, interface_uuid: String) -> Promise {

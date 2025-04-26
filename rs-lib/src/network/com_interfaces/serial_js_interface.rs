@@ -5,7 +5,7 @@ use std::rc::Rc;
 use std::sync::Mutex;
 use std::time::Duration; // FIXME no-std
 
-use datex_core::delegate_com_interface_info;
+use datex_core::{delegate_com_interface_info, set_opener, set_sync_opener};
 use datex_core::network::com_interfaces::com_interface::{
     ComInterface, ComInterfaceInfo, ComInterfaceSockets, ComInterfaceUUID,
 };
@@ -34,28 +34,23 @@ pub struct SerialJSInterface {
     port: Option<SerialPort>,
     tx: Option<Arc<Mutex<WritableStreamDefaultWriter>>>,
     info: ComInterfaceInfo,
+    options: SerialOptions,
 }
 
 wrap_error_for_js!(JsSerialError, datex_core::network::com_interfaces::default_com_interfaces::serial::serial_common::SerialError);
 
 impl SerialJSInterface {
-    pub async fn open(
-        baud_rate: u32,
-    ) -> Result<SerialJSInterface, JsSerialError> {
-        let mut interface = SerialJSInterface {
+    pub fn new(baud_rate: u32) -> Result<SerialJSInterface, JsSerialError> {
+        let interface = SerialJSInterface {
             info: ComInterfaceInfo::new(),
             tx: None,
             port: None,
+            options: SerialOptions::new(baud_rate),
         };
-        let options = SerialOptions::new(baud_rate);
-        interface.start(&options).await?;
         Ok(interface)
     }
 
-    async fn start(
-        &mut self,
-        options: &SerialOptions,
-    ) -> Result<(), SerialError> {
+    async fn open(&mut self) -> Result<(), SerialError> {
         let window = web_sys::window()
             .ok_or(SerialError::Other("Unsupported platform".to_string()))?;
         let navigator = window.navigator();
@@ -67,7 +62,7 @@ impl SerialJSInterface {
             .map_err(|_| SerialError::PermissionError)?;
         let port: SerialPort = port_js.into();
 
-        JsFuture::from(port.open(options))
+        JsFuture::from(port.open(&self.options))
             .await
             .map_err(|_| SerialError::PortNotFound)?;
 
@@ -159,6 +154,7 @@ impl ComInterface for SerialJSInterface {
         })
     }
     delegate_com_interface_info!();
+    set_opener!(open);
 }
 
 define_registry!(SerialRegistry);
@@ -167,12 +163,13 @@ define_registry!(SerialRegistry);
 impl SerialRegistry {
     pub async fn register(&self, baud_rate: u32) -> Result<String, JsError> {
         let com_hub = self.com_hub.clone();
-        let serial_interface = SerialJSInterface::open(baud_rate).await?;
+        let serial_interface = SerialJSInterface::new(baud_rate)?;
         let uuid = serial_interface.get_uuid().clone();
 
         let mut com_hub = com_hub.lock().unwrap();
         com_hub
             .add_interface(Rc::new(RefCell::new(serial_interface)))
+            .await
             .map_err(|e| JsError::new(&format!("{e:?}")))?;
         Ok(uuid.0.to_string())
     }
