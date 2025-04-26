@@ -5,7 +5,7 @@ use std::rc::Rc;
 use std::sync::Mutex;
 use std::time::Duration; // FIXME no-std
 
-use datex_core::{delegate_com_interface_info, set_opener};
+use datex_core::{delegate_com_interface, delegate_com_interface_info, set_opener};
 use datex_core::network::com_interfaces::com_interface::{
     ComInterface, ComInterfaceInfo, ComInterfaceSockets, ComInterfaceUUID,
 };
@@ -45,6 +45,7 @@ impl SingleSocketProvider for WebSocketClientJSInterface {
 wrap_error_for_js!(JSWebSocketError, datex_core::network::com_interfaces::default_com_interfaces::websocket::websocket_common::WebSocketError);
 
 impl WebSocketClientJSInterface {
+    delegate_com_interface!();
     pub fn new(
         address: &str,
     ) -> Result<WebSocketClientJSInterface, WebSocketError> {
