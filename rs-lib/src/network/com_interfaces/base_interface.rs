@@ -13,13 +13,9 @@ use datex_core::{
     utils::uuid::UUID,
 };
 use js_sys::Error;
-use log::info;
 use wasm_bindgen::{prelude::wasm_bindgen, JsValue};
 use wasm_bindgen_futures::JsFuture;
-use web_sys::{
-    console,
-    js_sys::{Function, Promise, Uint8Array},
-};
+use web_sys::js_sys::{Function, Promise, Uint8Array};
 
 use crate::{network::com_hub::JSComHub, wrap_error_for_js};
 
