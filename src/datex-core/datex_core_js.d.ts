@@ -16,6 +16,7 @@ export class BaseJSInterface {
     test_send_block(socket_uuid: string, data: Uint8Array): Promise<boolean>;
     on_send(func: Function): void;
     register_socket(direction: string): string;
+    destroy_socket(socket_uuid: string): void;
     receive(socket_uuid: string, data: Uint8Array): Promise<void>;
     readonly uuid: string;
 }

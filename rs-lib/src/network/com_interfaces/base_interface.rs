@@ -5,7 +5,10 @@ use datex_core::{
         com_interface::ComInterface,
         com_interface_properties::InterfaceDirection,
         com_interface_socket::ComInterfaceSocketUUID,
-        default_com_interfaces::base_interface::BaseInterface,
+        default_com_interfaces::base_interface::{
+            BaseInterface, BaseInterfaceError,
+        },
+        socket_provider::MultipleSocketProvider,
     },
     utils::uuid::UUID,
 };
@@ -24,7 +27,7 @@ use crate::{network::com_hub::JSComHub, wrap_error_for_js};
 wrap_error_for_js!(JsBaseInterfaceError, datex_core::network::com_interfaces::default_com_interfaces::base_interface::BaseInterfaceError);
 
 #[wasm_bindgen]
-pub struct BaseJSInterface {
+struct BaseJSInterface {
     com_hub: JSComHub,
     interface: Rc<RefCell<BaseInterface>>,
 }
@@ -84,13 +87,30 @@ impl BaseJSInterface {
     pub fn register_socket(&self, direction: &str) -> Result<String, Error> {
         let direction = InterfaceDirection::from_str(direction)
             .map_err(|_| Error::new("Invalid direction"))?;
-        info!("Registering socket with direction: {:?}", direction);
         Ok(self
             .interface
             .borrow_mut()
             .register_new_socket(direction)
             .0
             .to_string())
+    }
+
+    pub fn destroy_socket(
+        &self,
+        socket_uuid: String,
+    ) -> Result<(), JsBaseInterfaceError> {
+        let socket_uuid =
+            ComInterfaceSocketUUID(UUID::from_string(socket_uuid));
+        if self
+            .interface
+            .borrow_mut()
+            .has_socket_with_uuid(socket_uuid.clone())
+        {
+            self.interface.borrow_mut().remove_socket(&socket_uuid);
+            Ok(())
+        } else {
+            Err(BaseInterfaceError::SocketNotFound.into())
+        }
     }
 
     pub async fn receive(
@@ -103,20 +123,4 @@ impl BaseJSInterface {
         self.interface.borrow_mut().receive(socket_uuid, data)?;
         Ok(())
     }
-
-    // #[wasm_bindgen]
-    // pub fn register_socket(&self, direction: &str) {
-    //     let interface_uuid = self.interface_uuid.clone();
-    //     let interface =
-    //         self.com_hub.get_interface_by_uuid(&interface_uuid).unwrap();
-    //     let interface = interface.clone();
-    //     let mut interface = interface.borrow_mut();
-    //     let base_interface = interface
-    //         .as_any_mut()
-    //         .downcast_mut::<BaseInterface>()
-    //         .unwrap();
-    //     base_interface.register_new_socket(
-    //         InterfaceDirection::from_str(direction).unwrap(),
-    //     );
-    // }
 }
