@@ -7,32 +7,16 @@ import { assertFalse } from "jsr:@std/assert/false";
 
 Deno.test("test receive and send", async () => {
     const runtime = new Runtime("@unyt");
-
     const baseInterface = new BaseJSInterface(runtime.comHub, "test");
     assert(uuid.validate(baseInterface.uuid), "Invalid UUID");
-    console.log("b");
-
     const socket = baseInterface.register_socket("InOut");
     assert(uuid.validate(socket), "Invalid UUID");
-    console.log("c");
 
     baseInterface.on_send(async (data: Uint8Array, socket: string) => {
         console.warn(socket, data);
         await sleep(1);
         return true;
     });
-
-    const r = await baseInterface.test_send_block(
-        socket,
-        new Uint8Array([1, 2, 3, 4, 5, 6]),
-    );
-    console.dir(r);
-    console.log(typeof r, r, "<--");
-    assert(
-        r,
-    );
-
-    return;
 
     assertFalse(
         await baseInterface.test_send_block(

@@ -50,26 +50,13 @@ impl BaseJSInterface {
         socket_uuid: String,
         data: &[u8],
     ) -> bool {
-        let result = self
-            .interface
+        self.interface
             .borrow_mut()
             .send_block(
                 data,
                 ComInterfaceSocketUUID(UUID::from_string(socket_uuid)),
             )
-            .await;
-
-        let x = JsValue::from(true);
-        info!("Result1: {x:?}");
-        info!("Result2: {:?}", JsValue::as_bool(&x));
-        console::log_1(&x);
-
-        let x = JsValue::from(JsValue::as_bool(&JsValue::FALSE));
-        info!("Result1: {x:?}");
-        info!("Result2: {:?}", JsValue::as_bool(&x));
-        info!("Result3: {:?}", JsValue::from_bool(false));
-
-        true
+            .await
     }
 
     pub fn on_send(&mut self, func: Function) {
