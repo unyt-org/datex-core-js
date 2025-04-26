@@ -6,7 +6,7 @@ use std::rc::Rc;
 use std::sync::Mutex;
 use std::time::Duration; // FIXME no-std
 
-use datex_core::{delegate_com_interface_info, set_sync_opener};
+use datex_core::{delegate_com_interface, delegate_com_interface_info, set_sync_opener};
 use datex_core::network::com_interfaces::com_interface::{
     ComInterface, ComInterfaceInfo, ComInterfaceSockets, ComInterfaceUUID,
 };
@@ -49,6 +49,7 @@ impl Default for WebSocketServerJSInterface {
 }
 
 impl WebSocketServerJSInterface {
+    delegate_com_interface!();
     pub fn new() -> WebSocketServerJSInterface {
         WebSocketServerJSInterface {
             info: ComInterfaceInfo::default(),
@@ -169,7 +170,9 @@ impl ComInterface for WebSocketServerJSInterface {
             ..InterfaceProperties::default()
         }
     }
-    fn handle_close<'a>(&'a mut self) -> Pin<Box<dyn Future<Output = bool> + 'a>> {
+    fn handle_close<'a>(
+        &'a mut self,
+    ) -> Pin<Box<dyn Future<Output = bool> + 'a>> {
         for (_, socket) in self.sockets.iter() {
             // FIXME
             // Do we have to remove the event listeners here

@@ -5,7 +5,7 @@ use std::rc::Rc;
 use std::sync::Mutex;
 use std::time::Duration; // FIXME no-std
 
-use datex_core::{delegate_com_interface_info, set_opener};
+use datex_core::{delegate_com_interface, delegate_com_interface_info, set_opener};
 use datex_core::network::com_interfaces::com_interface::{
     ComInterface, ComInterfaceInfo, ComInterfaceSockets, ComInterfaceUUID,
 };
@@ -40,6 +40,7 @@ pub struct SerialJSInterface {
 wrap_error_for_js!(JsSerialError, datex_core::network::com_interfaces::default_com_interfaces::serial::serial_common::SerialError);
 
 impl SerialJSInterface {
+    delegate_com_interface!();
     pub fn new(baud_rate: u32) -> Result<SerialJSInterface, JsSerialError> {
         let interface = SerialJSInterface {
             info: ComInterfaceInfo::new(),
