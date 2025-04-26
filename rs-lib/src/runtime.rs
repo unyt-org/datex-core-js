@@ -61,17 +61,17 @@ impl JSRuntime {
             let sign_key_pair = crypto
                 .new_sign_key_pair()
                 .await
-                .map_err(|e| JsValue::from_str(&format!("{:?}", e)))?;
+                .map_err(|e| JsValue::from_str(&format!("{e:?}")))?;
 
             let encryption_key_pair = crypto
                 .new_encryption_key_pair()
                 .await
-                .map_err(|e| JsValue::from_str(&format!("{:?}", e)))?;
+                .map_err(|e| JsValue::from_str(&format!("{e:?}")))?;
 
             let encrypted_message = crypto
                 .encrypt_rsa(vec![1, 2, 3], encryption_key_pair.0.clone())
                 .await
-                .map_err(|e| JsValue::from_str(&format!("{:?}", e)))?;
+                .map_err(|e| JsValue::from_str(&format!("{e:?}")))?;
 
             let decrypted_message = crypto
                 .decrypt_rsa(
@@ -79,12 +79,12 @@ impl JSRuntime {
                     encryption_key_pair.1.clone(),
                 )
                 .await
-                .map_err(|e| JsValue::from_str(&format!("{:?}", e)))?;
+                .map_err(|e| JsValue::from_str(&format!("{e:?}")))?;
 
             let signed_message = crypto
                 .sign_rsa(vec![1, 2, 3], sign_key_pair.1.clone())
                 .await
-                .map_err(|e| JsValue::from_str(&format!("{:?}", e)))?;
+                .map_err(|e| JsValue::from_str(&format!("{e:?}")))?;
 
             let verified = crypto
                 .verify_rsa(
@@ -93,7 +93,7 @@ impl JSRuntime {
                     sign_key_pair.0.clone(),
                 )
                 .await
-                .map_err(|e| JsValue::from_str(&format!("{:?}", e)))?;
+                .map_err(|e| JsValue::from_str(&format!("{e:?}")))?;
 
             if !verified {
                 return Err(JsValue::from_str("Verification failed"));

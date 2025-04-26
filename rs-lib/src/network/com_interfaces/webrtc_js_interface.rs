@@ -22,13 +22,13 @@ impl WebRTCClientRegistry {
             let webrtc_interface =
                 WebRTCClientInterface::open_reliable(&address_clone, None)
                     .await
-                    .map_err(|e| JsError::new(&format!("{:?}", e)))?;
+                    .map_err(|e| JsError::new(&format!("{e:?}")))?;
             let interface_uuid = webrtc_interface.get_uuid().clone();
             com_hub
                 .lock()
                 .unwrap()
                 .add_interface(Rc::new(RefCell::new(webrtc_interface)))
-                .map_err(|e| JsError::new(&format!("{:?}", e)))?;
+                .map_err(|e| JsError::new(&format!("{e:?}")))?;
             Ok(JsValue::from_str(&interface_uuid.0.to_string()))
         })
     }

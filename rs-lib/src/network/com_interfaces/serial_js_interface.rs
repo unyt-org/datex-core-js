@@ -100,7 +100,7 @@ impl SerialJSInterface {
                                 .dyn_into::<Uint8Array>()
                                 .unwrap()
                                 .to_vec();
-                            println!("Received bytes: {:?}", bytes);
+                            println!("Received bytes: {bytes:?}");
                         }
                     }
                     Err(_) => {
@@ -131,11 +131,11 @@ impl ComInterface for SerialJSInterface {
         Box::pin(async move {
             let js_array = Uint8Array::from(block);
             let promise = tx.lock().unwrap().write_with_chunk(&js_array);
-            debug!("Sending block: {:?}", block);
+            debug!("Sending block: {block:?}");
             match JsFuture::from(promise).await {
                 Ok(_) => true,
                 Err(e) => {
-                    error!("Error sending message: {:?}", e);
+                    error!("Error sending message: {e:?}");
                     false
                 }
             }
@@ -173,7 +173,7 @@ impl SerialRegistry {
         let mut com_hub = com_hub.lock().unwrap();
         com_hub
             .add_interface(Rc::new(RefCell::new(serial_interface)))
-            .map_err(|e| JsError::new(&format!("{:?}", e)))?;
+            .map_err(|e| JsError::new(&format!("{e:?}")))?;
         Ok(uuid.0.to_string())
     }
 }

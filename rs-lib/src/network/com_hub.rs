@@ -1,4 +1,3 @@
-use std::cell::{Ref, RefMut};
 use std::sync::{Arc, Mutex};
 
 #[cfg(feature = "wasm_serial")]
@@ -57,10 +56,9 @@ impl JSComHub {
         interface_uuid: &ComInterfaceUUID,
     ) -> Option<Rc<RefCell<dyn ComInterface>>> {
         let com_hub = self.com_hub.lock().unwrap();
-        let interface = com_hub
-            .get_interface_ref_by_uuid(&interface_uuid)
-            .map(|interface| interface.clone());
-        interface
+        
+        com_hub
+            .get_interface_ref_by_uuid(interface_uuid)
     }
 
     pub fn close_interface(&self, interface_uuid: String) -> Promise {
@@ -84,7 +82,7 @@ impl JSComHub {
                 com_hub_mut
                     .remove_interface(interface_uuid.clone())
                     .await
-                    .map_err(|e| JsError::new(&format!("{:?}", e)))?;
+                    .map_err(|e| JsError::new(&format!("{e:?}")))?;
                 Ok(JsValue::TRUE)
             } else {
                 error!("Failed to find interface");

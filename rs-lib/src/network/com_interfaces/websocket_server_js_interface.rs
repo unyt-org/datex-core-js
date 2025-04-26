@@ -139,16 +139,16 @@ impl ComInterface for WebSocketServerJSInterface {
         socket_uuid: ComInterfaceSocketUUID,
     ) -> Pin<Box<dyn Future<Output = bool> + 'a>> {
         Box::pin(async move {
-            debug!("Sending block: {:?}", block);
+            debug!("Sending block: {block:?}");
             self.sockets
                 .get(&socket_uuid)
                 .ok_or_else(|| {
-                    error!("Socket not found: {:?}", socket_uuid);
+                    error!("Socket not found: {socket_uuid:?}");
                     WebSocketError::SendError
                 })
                 .and_then(|socket| {
                     socket.send_with_u8_array(block).map_err(|e| {
-                        error!("Error sending message: {:?}", e);
+                        error!("Error sending message: {e:?}");
                         WebSocketError::SendError
                     })
                 })
@@ -188,7 +188,7 @@ impl WebSocketServerRegistry {
         let mut com_hub = com_hub.lock().unwrap();
         com_hub
             .add_interface(Rc::new(RefCell::new(websocket_interface)))
-            .map_err(|e| JsError::new(&format!("{:?}", e)))?;
+            .map_err(|e| JsError::new(&format!("{e:?}")))?;
         Ok(uuid.0.to_string())
     }
     pub fn add_socket(

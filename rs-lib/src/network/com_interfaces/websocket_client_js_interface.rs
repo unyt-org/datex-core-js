@@ -66,7 +66,7 @@ impl WebSocketClientJSInterface {
 
     async fn start(&mut self) -> Result<(), WebSocketError> {
         let address = self.address.clone();
-        info!("Connecting to WebSocket server at {}", address);
+        info!("Connecting to WebSocket server at {address}");
 
         self.ws.set_binary_type(web_sys::BinaryType::Arraybuffer);
 
@@ -165,11 +165,11 @@ impl ComInterface for WebSocketClientJSInterface {
         _: ComInterfaceSocketUUID,
     ) -> Pin<Box<dyn Future<Output = bool> + 'a>> {
         Box::pin(async move {
-            debug!("Sending block: {:?}", block);
+            debug!("Sending block: {block:?}");
             self.ws
                 .send_with_u8_array(block)
                 .map_err(|e| {
-                    error!("Error sending message: {:?}", e);
+                    error!("Error sending message: {e:?}");
                     false
                 })
                 .is_ok()
@@ -202,7 +202,7 @@ impl WebSocketClientRegistry {
             let websocket_interface =
                 WebSocketClientJSInterface::open(&address_clone)
                     .await
-                    .map_err(|e| JsError::new(&format!("{:?}", e)))?;
+                    .map_err(|e| JsError::new(&format!("{e:?}")))?;
             let interface_uuid = websocket_interface.get_uuid().clone();
 
             if websocket_interface.get_state() != ComInterfaceState::Connected {
@@ -217,7 +217,7 @@ impl WebSocketClientRegistry {
                 .lock()
                 .unwrap()
                 .add_interface(websocket_interface.clone())
-                .map_err(|e| JsError::new(&format!("{:?}", e)))?;
+                .map_err(|e| JsError::new(&format!("{e:?}")))?;
             Ok(JsValue::from_str(&interface_uuid.0.to_string()))
         })
     }

@@ -84,7 +84,7 @@ impl CryptoJS {
                 extractable,
                 &js_array(key_usages),
             )
-            .map_err(|e| CryptoError::Other(format!("{:?}", e)))?;
+            .map_err(|e| CryptoError::Other(format!("{e:?}")))?;
         let result: JsValue = JsFuture::from(key_generator_promise)
             .await
             .map_err(|_| CryptoError::KeyGeneratorFailed)?;

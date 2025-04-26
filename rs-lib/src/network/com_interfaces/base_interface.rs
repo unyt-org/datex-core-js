@@ -4,33 +4,23 @@ use std::{
     pin::Pin,
     rc::Rc,
     str::FromStr,
-    sync::{Arc, Mutex},
 };
 
 use datex_core::{
-    network::{
-        com_hub::ComHub,
-        com_interfaces::{
-            com_interface::{ComInterface, ComInterfaceUUID},
+    network::com_interfaces::{
+            com_interface::ComInterface,
             com_interface_properties::InterfaceDirection,
             com_interface_socket::ComInterfaceSocketUUID,
-            default_com_interfaces::base_interface::{
-                self, BaseInterface, OnSendCallback,
-            },
+            default_com_interfaces::base_interface::BaseInterface,
         },
-    },
-    runtime::{self, global_context::get_global_context},
     utils::uuid::UUID,
 };
 use log::info;
-use wasm_bindgen::{prelude::wasm_bindgen, JsCast, JsError, JsValue};
+use wasm_bindgen::{prelude::wasm_bindgen, JsValue};
 use wasm_bindgen_futures::JsFuture;
-use web_sys::{
-    console::info,
-    js_sys::{Function, Promise, Uint8Array},
-};
+use web_sys::js_sys::{Function, Promise, Uint8Array};
 
-use crate::{define_registry, network::com_hub::JSComHub, wrap_error_for_js};
+use crate::{network::com_hub::JSComHub, wrap_error_for_js};
 
 // define_registry!(BaseJSInterface);
 wrap_error_for_js!(JsBaseInterfaceError, datex_core::network::com_interfaces::default_com_interfaces::base_interface::BaseInterfaceError);
@@ -73,12 +63,12 @@ impl BaseJSInterface {
             .await;
 
         let x = JsValue::TRUE;
-        info!("Result1: {:?}", x);
+        info!("Result1: {x:?}");
         info!("Result2: {:?}", JsValue::as_bool(&x));
         info!("Result3: {:?}", JsValue::from_bool(false));
 
         let x = JsValue::from(JsValue::as_bool(&JsValue::FALSE));
-        info!("Result1: {:?}", x);
+        info!("Result1: {x:?}");
         info!("Result2: {:?}", JsValue::as_bool(&x));
         info!("Result3: {:?}", JsValue::from_bool(false));
 
