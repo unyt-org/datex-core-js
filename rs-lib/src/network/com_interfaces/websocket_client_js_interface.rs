@@ -5,8 +5,6 @@ use std::rc::Rc;
 use std::sync::Mutex;
 use std::time::Duration; // FIXME no-std
 
-use js_sys::Promise;
-use wasm_bindgen_futures::future_to_promise;
 use datex_core::{delegate_com_interface_info, set_opener};
 use datex_core::network::com_interfaces::com_interface::{
     ComInterface, ComInterfaceInfo, ComInterfaceSockets, ComInterfaceUUID,
@@ -205,7 +203,7 @@ impl WebSocketClientRegistry {
         websocket_interface
             .open()
             .await
-            .map_err(|e| JSWebSocketError::from(e))?;
+            .map_err(JSWebSocketError::from)?;
         let interface_uuid = websocket_interface.get_uuid().clone();
         let websocket_interface = Rc::new(RefCell::new(websocket_interface));
 
@@ -213,7 +211,7 @@ impl WebSocketClientRegistry {
             .lock()
             .unwrap()
             .add_interface(websocket_interface.clone())
-            .map_err(|e| WebSocketError::Other(format!("{:?}", e)))?;
+            .map_err(|e| WebSocketError::Other(format!("{e:?}")))?;
         Ok(interface_uuid.0.to_string())
     }
 }
