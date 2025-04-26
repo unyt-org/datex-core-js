@@ -61,52 +61,62 @@ impl WebSocketClientJSInterface {
     }
 
     pub async fn open(&mut self) -> Result<(), WebSocketError> {
-        let address = self.address.clone();
-        info!("Connecting to WebSocket server at {address}");
+        let res: Result<(), WebSocketError> = {
+            let address = self.address.clone();
+            info!("Connecting to WebSocket server at {address}");
 
-        self.ws.set_binary_type(web_sys::BinaryType::Arraybuffer);
+            self.ws.set_binary_type(web_sys::BinaryType::Arraybuffer);
 
-        let message_callback = self.create_onmessage_callback();
-        let error_callback = self.create_onerror_callback();
-        let (sender, receiver) = oneshot::channel::<()>();
-        let uuid = self.get_uuid().clone();
-        let com_interface_sockets = self.get_sockets().clone();
-        let open_callback = Closure::once(move |_: MessageEvent| {
-            let socket = ComInterfaceSocket::new(
-                uuid.clone(),
-                InterfaceDirection::InOut,
-                1,
-            );
-            com_interface_sockets
-                .lock()
-                .unwrap()
-                .add_socket(Arc::new(Mutex::new(socket)));
-            sender.send(()).expect("Failed to send onopen event");
-        });
-        let close_callback = self.create_onclose_callback();
+            let message_callback = self.create_onmessage_callback();
+            let error_callback = self.create_onerror_callback();
+            let (sender, receiver) = oneshot::channel::<()>();
+            let uuid = self.get_uuid().clone();
+            let com_interface_sockets = self.get_sockets().clone();
+            let open_callback = Closure::once(move |_: MessageEvent| {
+                let socket = ComInterfaceSocket::new(
+                    uuid.clone(),
+                    InterfaceDirection::InOut,
+                    1,
+                );
+                com_interface_sockets
+                    .lock()
+                    .unwrap()
+                    .add_socket(Arc::new(Mutex::new(socket)));
+                sender.send(()).expect("Failed to send onopen event");
+            });
+            let close_callback = self.create_onclose_callback();
 
-        self.ws
-            .set_onmessage(Some(message_callback.as_ref().unchecked_ref()));
-        self.ws
-            .set_onerror(Some(error_callback.as_ref().unchecked_ref()));
+            self.ws
+                .set_onmessage(Some(message_callback.as_ref().unchecked_ref()));
+            self.ws
+                .set_onerror(Some(error_callback.as_ref().unchecked_ref()));
 
-        self.ws
-            .set_onclose(Some(close_callback.as_ref().unchecked_ref()));
-        self.ws
-            .set_onopen(Some(open_callback.as_ref().unchecked_ref()));
+            self.ws
+                .set_onclose(Some(close_callback.as_ref().unchecked_ref()));
+            self.ws
+                .set_onopen(Some(open_callback.as_ref().unchecked_ref()));
 
-        self.set_state(ComInterfaceState::Connecting);
-        receiver.await.map_err(|_| {
-            error!("Failed to receive onopen event");
-            WebSocketError::Other("Failed to receive onopen event".to_string())
-        })?;
-        self.set_state(ComInterfaceState::Connected);
+            self.set_state(ComInterfaceState::Connecting);
+            receiver.await.map_err(|_| {
+                error!("Failed to receive onopen event");
+                WebSocketError::Other(
+                    "Failed to receive onopen event".to_string(),
+                )
+            })?;
+            self.set_state(ComInterfaceState::Connected);
 
-        message_callback.forget();
-        error_callback.forget();
-        open_callback.forget();
-        close_callback.forget();
-        Ok(())
+            message_callback.forget();
+            error_callback.forget();
+            open_callback.forget();
+            close_callback.forget();
+            Ok(())
+        };
+        if res.is_ok() {
+            self.set_state(ComInterfaceState::Connected);
+        } else {
+            self.set_state(ComInterfaceState::NotConnected);
+        }
+        res
     }
 
     fn create_onmessage_callback(
@@ -171,7 +181,9 @@ impl ComInterface for WebSocketClientJSInterface {
             ..InterfaceProperties::default()
         }
     }
-    fn handle_close<'a>(&'a mut self) -> Pin<Box<dyn Future<Output = bool> + 'a>> {
+    fn handle_close<'a>(
+        &'a mut self,
+    ) -> Pin<Box<dyn Future<Output = bool> + 'a>> {
         let state = self.get_info().state.clone();
         Box::pin(async move {
             state.lock().unwrap().set(ComInterfaceState::NotConnected);

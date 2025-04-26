@@ -30,8 +30,7 @@ impl WebRTCClientRegistry {
             com_hub
                 .lock()
                 .unwrap()
-                .open_and_add_interface(Rc::new(RefCell::new(webrtc_interface)))
-                .await
+                .add_interface(Rc::new(RefCell::new(webrtc_interface)))
                 .map_err(|e| JsError::new(&format!("{e:?}")))?;
             Ok(JsValue::from_str(&interface_uuid.0.to_string()))
         })
