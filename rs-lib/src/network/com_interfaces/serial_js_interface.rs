@@ -5,7 +5,7 @@ use std::rc::Rc;
 use std::sync::Mutex;
 use std::time::Duration; // FIXME no-std
 
-use datex_core::{delegate_com_interface_info, set_opener, set_sync_opener};
+use datex_core::{delegate_com_interface_info, set_opener};
 use datex_core::network::com_interfaces::com_interface::{
     ComInterface, ComInterfaceInfo, ComInterfaceSockets, ComInterfaceUUID,
 };

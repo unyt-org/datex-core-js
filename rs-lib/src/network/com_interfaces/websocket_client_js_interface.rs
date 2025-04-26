@@ -197,7 +197,7 @@ impl WebSocketClientRegistry {
         let com_hub = self.com_hub.clone();
         let address_clone = address.clone();
         future_to_promise(async move {
-            let mut websocket_interface =
+            let websocket_interface =
                 WebSocketClientJSInterface::new(&address_clone)
                     .map_err(|e| JsError::new(&format!("{e:?}")))?;
             let interface_uuid = websocket_interface.get_uuid().clone();
