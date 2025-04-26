@@ -6,16 +6,14 @@ use std::sync::Mutex;
 use std::time::Duration; // FIXME no-std
 
 use datex_core::{delegate_com_interface, delegate_com_interface_info, set_opener};
-use datex_core::network::com_interfaces::com_interface::{
-    ComInterface, ComInterfaceInfo, ComInterfaceSockets, ComInterfaceUUID,
-};
+use datex_core::network::com_interfaces::com_interface::{ComInterface, ComInterfaceError, ComInterfaceFactory, ComInterfaceInfo, ComInterfaceSockets, ComInterfaceUUID};
 use datex_core::network::com_interfaces::com_interface_properties::{
     InterfaceDirection, InterfaceProperties,
 };
 use datex_core::network::com_interfaces::com_interface_socket::{
     ComInterfaceSocket, ComInterfaceSocketUUID,
 };
-use datex_core::network::com_interfaces::default_com_interfaces::websocket::websocket_common::WebSocketError;
+use datex_core::network::com_interfaces::default_com_interfaces::websocket::websocket_common::{WebSocketClientInterfaceSetupData, WebSocketError};
 use datex_core::network::com_interfaces::socket_provider::SingleSocketProvider;
 use datex_core::stdlib::sync::Arc;
 
@@ -157,6 +155,26 @@ impl WebSocketClientJSInterface {
     }
 }
 
+impl ComInterfaceFactory<WebSocketClientInterfaceSetupData> for WebSocketClientJSInterface {
+    fn create(
+        setup_data: WebSocketClientInterfaceSetupData,
+    ) -> Result<WebSocketClientJSInterface, ComInterfaceError> {
+        WebSocketClientJSInterface::new(&setup_data.address).map_err(|_|
+            ComInterfaceError::InvalidSetupData
+        )
+    }
+
+    fn get_default_properties() -> InterfaceProperties {
+        InterfaceProperties {
+            interface_type: "websocket-client".to_string(),
+            channel: "websocket".to_string(),
+            round_trip_time: Duration::from_millis(40),
+            max_bandwidth: 1000,
+            ..InterfaceProperties::default()
+        }
+    }
+}
+
 impl ComInterface for WebSocketClientJSInterface {
     fn send_block<'a>(
         &'a mut self,
@@ -175,12 +193,7 @@ impl ComInterface for WebSocketClientJSInterface {
     }
 
     fn init_properties(&self) -> InterfaceProperties {
-        InterfaceProperties {
-            channel: "websocket".to_string(),
-            round_trip_time: Duration::from_millis(40),
-            max_bandwidth: 1000,
-            ..InterfaceProperties::default()
-        }
+        Self::get_default_properties()
     }
     fn handle_close<'a>(
         &'a mut self,

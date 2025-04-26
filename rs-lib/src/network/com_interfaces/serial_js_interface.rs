@@ -6,12 +6,10 @@ use std::sync::Mutex;
 use std::time::Duration; // FIXME no-std
 
 use datex_core::{delegate_com_interface, delegate_com_interface_info, set_opener};
-use datex_core::network::com_interfaces::com_interface::{
-    ComInterface, ComInterfaceInfo, ComInterfaceSockets, ComInterfaceUUID,
-};
+use datex_core::network::com_interfaces::com_interface::{ComInterface, ComInterfaceError, ComInterfaceFactory, ComInterfaceInfo, ComInterfaceSockets, ComInterfaceUUID};
 use datex_core::network::com_interfaces::com_interface_properties::InterfaceProperties;
 use datex_core::network::com_interfaces::com_interface_socket::ComInterfaceSocketUUID;
-use datex_core::network::com_interfaces::default_com_interfaces::serial::serial_common::SerialError;
+use datex_core::network::com_interfaces::default_com_interfaces::serial::serial_common::{SerialError, SerialInterfaceSetupData};
 use datex_core::stdlib::sync::Arc;
 
 use datex_core::network::com_interfaces::com_interface::ComInterfaceState;
@@ -27,7 +25,6 @@ use web_sys::{
     js_sys, ReadableStreamDefaultReader, SerialOptions,
     WritableStreamDefaultWriter,
 };
-
 use crate::{define_registry, wrap_error_for_js};
 
 pub struct SerialJSInterface {
@@ -124,6 +121,26 @@ impl SerialJSInterface {
     }
 }
 
+impl ComInterfaceFactory<SerialInterfaceSetupData> for SerialJSInterface {
+    fn create(
+        setup_data: SerialInterfaceSetupData,
+    ) -> Result<SerialJSInterface, ComInterfaceError> {
+        SerialJSInterface::new(setup_data.baud_rate).map_err(|_|
+            ComInterfaceError::InvalidSetupData
+        )
+    }
+
+    fn get_default_properties() -> InterfaceProperties {
+        InterfaceProperties {
+            interface_type: "serial".to_string(),
+            channel: "serial".to_string(),
+            round_trip_time: Duration::from_millis(40),
+            max_bandwidth: 100,
+            ..InterfaceProperties::default()
+        }
+    }
+}
+
 impl ComInterface for SerialJSInterface {
     fn send_block<'a>(
         &'a mut self,
@@ -151,12 +168,7 @@ impl ComInterface for SerialJSInterface {
     }
 
     fn init_properties(&self) -> InterfaceProperties {
-        InterfaceProperties {
-            channel: "serial".to_string(),
-            round_trip_time: Duration::from_millis(40),
-            max_bandwidth: 100,
-            ..InterfaceProperties::default()
-        }
+        Self::get_default_properties()
     }
     fn handle_close<'a>(
         &'a mut self,
