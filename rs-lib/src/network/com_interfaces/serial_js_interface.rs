@@ -168,7 +168,7 @@ impl SerialRegistry {
 
         let mut com_hub = com_hub.lock().unwrap();
         com_hub
-            .add_interface(Rc::new(RefCell::new(serial_interface)))
+            .open_and_add_interface(Rc::new(RefCell::new(serial_interface)))
             .await
             .map_err(|e| JsError::new(&format!("{e:?}")))?;
         Ok(uuid.0.to_string())

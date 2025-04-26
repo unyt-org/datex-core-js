@@ -70,12 +70,12 @@ export class WebSocketClientRegistry {
     private constructor();
     free(): void;
     close(interface_uuid: string): Promise<any>;
-    register(address: string): Promise<Promise<any>>;
+    register(address: string): Promise<string>;
 }
 export class WebSocketServerRegistry {
     private constructor();
     free(): void;
     close(interface_uuid: string): Promise<any>;
-    register(): string;
+    register(): Promise<string>;
     add_socket(interface_uuid: string, websocket: WebSocket): any;
 }

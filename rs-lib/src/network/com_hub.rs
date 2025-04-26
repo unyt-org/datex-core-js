@@ -47,7 +47,7 @@ impl JSComHub {
         self.com_hub
             .lock()
             .unwrap()
-            .add_interface(interface)
+            .open_and_add_interface(interface)
             .await
             .expect("Failed to add interface");
     }

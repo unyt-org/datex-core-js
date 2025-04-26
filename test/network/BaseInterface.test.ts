@@ -64,7 +64,7 @@ Deno.test("test receive and send", async () => {
     assertFalse(
         await baseInterface.test_send_block(
             "invalid socket",
-            new Uint8Array([1, 2, 3, 4, 5, 6]),
+            new Uint8Array([0]),
         ),
         "Invalid socket should return false",
     );

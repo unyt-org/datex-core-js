@@ -16,7 +16,7 @@ use datex_core::network::com_interfaces::com_interface_properties::{
 use datex_core::network::com_interfaces::com_interface_socket::{
     ComInterfaceSocket, ComInterfaceSocketUUID,
 };
-use datex_core::network::com_interfaces::default_com_interfaces::websocket::websocket_common::WebSocketError;
+use datex_core::network::com_interfaces::default_com_interfaces::websocket::websocket_common::{WebSocketError, WebSocketServerError};
 use datex_core::network::com_interfaces::socket_provider::MultipleSocketProvider;
 use datex_core::stdlib::sync::Arc;
 
@@ -72,11 +72,8 @@ impl WebSocketServerJSInterface {
             1,
         );
         let socket_uuid = socket.uuid.clone();
-        let sockets = self.get_sockets();
-        let mut sockets = sockets.lock().unwrap();
-        sockets
-            .sockets
-            .insert(socket_uuid.clone(), Arc::new(Mutex::new(socket)));
+        self.add_socket(Arc::new(Mutex::new(socket)));
+
         web_socket.set_binary_type(web_sys::BinaryType::Arraybuffer);
 
         let on_message = self.create_onmessage_callback(socket_uuid.clone());
@@ -189,16 +186,20 @@ define_registry!(WebSocketServerRegistry);
 
 #[wasm_bindgen]
 impl WebSocketServerRegistry {
-    pub async fn register(&self) -> Result<String, JsError> {
+    pub async fn register(&self) -> Result<String, JSWebSocketServerError> {
         let com_hub = self.com_hub.clone();
-        let websocket_interface = WebSocketServerJSInterface::new();
+        let mut websocket_interface = WebSocketServerJSInterface::new();
         let uuid = websocket_interface.get_uuid().clone();
-
+        websocket_interface.open().unwrap();
         let mut com_hub = com_hub.lock().unwrap();
         com_hub
             .add_interface(Rc::new(RefCell::new(websocket_interface)))
-            .await
-            .map_err(|e| JsError::new(&format!("{e:?}")))?;
+            .map_err(|_| {
+                WebSocketServerError::WebSocketError(
+                    WebSocketError::ConnectionError,
+                )
+            })?;
+
         Ok(uuid.0.to_string())
     }
     pub fn add_socket(
@@ -208,13 +209,16 @@ impl WebSocketServerRegistry {
     ) -> JsValue {
         let interface_uuid =
             ComInterfaceUUID(UUID::from_string(interface_uuid));
-
+        info!("add_socket start");
         let com_hub = self.com_hub.clone();
         let com_hub = com_hub.lock().unwrap();
+        info!("add_socket end");
+
         let interface = com_hub
             .get_interface_by_uuid_mut::<WebSocketServerJSInterface>(
                 &interface_uuid,
             );
+
         if interface.is_some() {
             let uuid = interface.unwrap().register_socket(websocket);
             JsValue::from_str(&uuid.0.to_string())
