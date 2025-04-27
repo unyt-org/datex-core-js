@@ -6,7 +6,7 @@ use std::rc::Rc;
 use std::sync::Mutex;
 use std::time::Duration; // FIXME no-std
 
-use datex_core::{delegate_com_interface, delegate_com_interface_info, set_sync_opener};
+use datex_core::{ delegate_com_interface_info, set_sync_opener};
 use datex_core::network::com_interfaces::com_interface::{ComInterface, ComInterfaceError, ComInterfaceFactory, ComInterfaceInfo, ComInterfaceSockets, ComInterfaceUUID};
 use datex_core::network::com_interfaces::com_interface_properties::{
     InterfaceDirection, InterfaceProperties,
@@ -45,9 +45,10 @@ impl Default for WebSocketServerJSInterface {
         Self::new()
     }
 }
+use datex_macros::{com_interface, create_opener};
 
+#[com_interface]
 impl WebSocketServerJSInterface {
-    delegate_com_interface!();
     pub fn new() -> WebSocketServerJSInterface {
         WebSocketServerJSInterface {
             info: ComInterfaceInfo::default(),
@@ -55,8 +56,8 @@ impl WebSocketServerJSInterface {
         }
     }
 
-    pub fn open(&mut self) -> Result<(), ()> {
-        self.set_state(ComInterfaceState::Connected);
+    #[create_opener]
+    fn open(&mut self) -> Result<(), ()> {
         Ok(())
     }
 
@@ -136,7 +137,9 @@ impl WebSocketServerJSInterface {
     }
 }
 
-impl ComInterfaceFactory<WebSocketServerInterfaceSetupData> for WebSocketServerJSInterface {
+impl ComInterfaceFactory<WebSocketServerInterfaceSetupData>
+    for WebSocketServerJSInterface
+{
     // TODO: how to handle create and bind to Deno.serve?
     fn create(
         setup_data: WebSocketServerInterfaceSetupData,

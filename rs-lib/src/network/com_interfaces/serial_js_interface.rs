@@ -5,7 +5,7 @@ use std::rc::Rc;
 use std::sync::Mutex;
 use std::time::Duration; // FIXME no-std
 
-use datex_core::{delegate_com_interface, delegate_com_interface_info, set_opener};
+use datex_core::{ delegate_com_interface_info, set_opener};
 use datex_core::network::com_interfaces::com_interface::{ComInterface, ComInterfaceError, ComInterfaceFactory, ComInterfaceInfo, ComInterfaceSockets, ComInterfaceUUID};
 use datex_core::network::com_interfaces::com_interface_properties::InterfaceProperties;
 use datex_core::network::com_interfaces::com_interface_socket::ComInterfaceSocketUUID;
@@ -14,6 +14,7 @@ use datex_core::stdlib::sync::Arc;
 
 use datex_core::network::com_interfaces::com_interface::ComInterfaceState;
 
+use crate::{define_registry, wrap_error_for_js};
 use datex_core::task::spawn_local;
 use log::{debug, error};
 use wasm_bindgen::prelude::wasm_bindgen;
@@ -25,7 +26,6 @@ use web_sys::{
     js_sys, ReadableStreamDefaultReader, SerialOptions,
     WritableStreamDefaultWriter,
 };
-use crate::{define_registry, wrap_error_for_js};
 
 pub struct SerialJSInterface {
     port: Option<SerialPort>,
@@ -36,8 +36,10 @@ pub struct SerialJSInterface {
 
 wrap_error_for_js!(JsSerialError, datex_core::network::com_interfaces::default_com_interfaces::serial::serial_common::SerialError);
 
+use datex_macros::{com_interface, create_opener};
+
+#[com_interface]
 impl SerialJSInterface {
-    delegate_com_interface!();
     pub fn new(baud_rate: u32) -> Result<SerialJSInterface, JsSerialError> {
         let interface = SerialJSInterface {
             info: ComInterfaceInfo::new(),
@@ -48,76 +50,65 @@ impl SerialJSInterface {
         Ok(interface)
     }
 
+    #[create_opener]
     async fn open(&mut self) -> Result<(), SerialError> {
-        self.set_state(ComInterfaceState::Connecting);
-        let res: Result<(), SerialError> = {
-            let window = web_sys::window().ok_or(SerialError::Other(
-                "Unsupported platform".to_string(),
-            ))?;
-            let navigator = window.navigator();
-            let serial = navigator.serial();
+        let window = web_sys::window()
+            .ok_or(SerialError::Other("Unsupported platform".to_string()))?;
+        let navigator = window.navigator();
+        let serial = navigator.serial();
 
-            let port_promise = serial.request_port();
-            let port_js = JsFuture::from(port_promise)
-                .await
-                .map_err(|_| SerialError::PermissionError)?;
-            let port: SerialPort = port_js.into();
+        let port_promise = serial.request_port();
+        let port_js = JsFuture::from(port_promise)
+            .await
+            .map_err(|_| SerialError::PermissionError)?;
+        let port: SerialPort = port_js.into();
 
-            JsFuture::from(port.open(&self.options))
-                .await
-                .map_err(|_| SerialError::PortNotFound)?;
+        JsFuture::from(port.open(&self.options))
+            .await
+            .map_err(|_| SerialError::PortNotFound)?;
 
-            let readable = port.readable();
-            let reader = readable
-                .get_reader()
-                .dyn_into::<ReadableStreamDefaultReader>()
-                .unwrap();
-            let writable = port.writable();
-            let writer = writable.get_writer().unwrap();
-            self.tx = Some(Arc::new(Mutex::new(writer)));
-            spawn_local(async move {
-                loop {
-                    let result = JsFuture::from(reader.read()).await;
-                    match result {
-                        Ok(value) => {
-                            let value =
-                                value.dyn_into::<js_sys::Object>().unwrap();
-                            let done =
-                                js_sys::Reflect::get(&value, &"done".into())
-                                    .unwrap()
-                                    .as_bool()
-                                    .unwrap_or(false);
-                            if done {
-                                break;
-                            }
-                            let value =
-                                js_sys::Reflect::get(&value, &"value".into())
-                                    .unwrap();
-                            if value.is_instance_of::<Uint8Array>() {
-                                let bytes = value
-                                    .dyn_into::<Uint8Array>()
-                                    .unwrap()
-                                    .to_vec();
-                                println!("Received bytes: {bytes:?}");
-                            }
-                        }
-                        Err(_) => {
-                            error!("Error reading from serial port");
+        let readable = port.readable();
+        let reader = readable
+            .get_reader()
+            .dyn_into::<ReadableStreamDefaultReader>()
+            .unwrap();
+        let writable = port.writable();
+        let writer = writable.get_writer().unwrap();
+        self.tx = Some(Arc::new(Mutex::new(writer)));
+        spawn_local(async move {
+            loop {
+                let result = JsFuture::from(reader.read()).await;
+                match result {
+                    Ok(value) => {
+                        let value = value.dyn_into::<js_sys::Object>().unwrap();
+                        let done = js_sys::Reflect::get(&value, &"done".into())
+                            .unwrap()
+                            .as_bool()
+                            .unwrap_or(false);
+                        if done {
                             break;
                         }
+                        let value =
+                            js_sys::Reflect::get(&value, &"value".into())
+                                .unwrap();
+                        if value.is_instance_of::<Uint8Array>() {
+                            let bytes = value
+                                .dyn_into::<Uint8Array>()
+                                .unwrap()
+                                .to_vec();
+                            println!("Received bytes: {bytes:?}");
+                        }
+                    }
+                    Err(_) => {
+                        error!("Error reading from serial port");
+                        break;
                     }
                 }
-                reader.release_lock();
-            });
-            self.port = Some(port.clone());
-            Ok(())
-        };
-        if res.is_ok() {
-            self.set_state(ComInterfaceState::Connected);
-        } else {
-            self.set_state(ComInterfaceState::NotConnected);
-        }
-        res
+            }
+            reader.release_lock();
+        });
+        self.port = Some(port.clone());
+        Ok(())
     }
 }
 
@@ -125,9 +116,8 @@ impl ComInterfaceFactory<SerialInterfaceSetupData> for SerialJSInterface {
     fn create(
         setup_data: SerialInterfaceSetupData,
     ) -> Result<SerialJSInterface, ComInterfaceError> {
-        SerialJSInterface::new(setup_data.baud_rate).map_err(|_|
-            ComInterfaceError::InvalidSetupData
-        )
+        SerialJSInterface::new(setup_data.baud_rate)
+            .map_err(|_| ComInterfaceError::InvalidSetupData)
     }
 
     fn get_default_properties() -> InterfaceProperties {

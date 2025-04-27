@@ -40,17 +40,21 @@ impl JSComHub {
  */
 #[wasm_bindgen]
 impl JSComHub {
-    pub(crate) async fn open_and_add_interface<T: ComInterface>(
-        &self,
-        interface: Rc<RefCell<T>>,
-    ) {
-        interface.clone().borrow_mut().handle_open().await;
-        self.com_hub
-            .lock()
-            .unwrap()
-            .add_interface(interface)
-            .expect("Failed to add interface");
-    }
+    // pub(crate) async fn open_and_add_interface<T: ComInterface>(
+    //     &self,
+    //     interface: Rc<RefCell<T>>,
+    // ) {
+    //     interface.clone().borrow_mut().handle_open().await;
+    //     self.com_hub
+    //         .lock()
+    //         .unwrap()
+    //         .add_interface(interface)
+    //         .expect("Failed to add interface");
+    // }
+
+    /// Add an interface to the ComHub. If the interface is not open,
+    /// it will not be opened by the ComHub.
+    /// This is useful for adding interfaces that are already open.
     pub(crate) fn add_interface<T: ComInterface>(
         &self,
         interface: Rc<RefCell<T>>,
