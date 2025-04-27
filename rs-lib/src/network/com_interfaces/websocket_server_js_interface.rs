@@ -14,7 +14,7 @@ use datex_core::network::com_interfaces::com_interface_properties::{
 use datex_core::network::com_interfaces::com_interface_socket::{
     ComInterfaceSocket, ComInterfaceSocketUUID,
 };
-use datex_core::network::com_interfaces::default_com_interfaces::websocket::websocket_common::{WebSocketClientInterfaceSetupData, WebSocketError, WebSocketServerError, WebSocketServerInterfaceSetupData};
+use datex_core::network::com_interfaces::default_com_interfaces::websocket::websocket_common::{WebSocketError, WebSocketServerError, WebSocketServerInterfaceSetupData};
 use datex_core::network::com_interfaces::socket_provider::MultipleSocketProvider;
 use datex_core::stdlib::sync::Arc;
 
@@ -27,7 +27,6 @@ use wasm_bindgen::{JsError, JsValue};
 use web_sys::{js_sys, ErrorEvent, MessageEvent};
 
 use crate::{define_registry, wrap_error_for_js};
-use crate::network::com_interfaces::websocket_client_js_interface::WebSocketClientJSInterface;
 
 pub struct WebSocketServerJSInterface {
     sockets: HashMap<ComInterfaceSocketUUID, web_sys::WebSocket>,
