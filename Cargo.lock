@@ -994,6 +994,7 @@ dependencies = [
  "rand",
  "regex",
  "rsa",
+ "serde",
  "serialport",
  "strum 0.24.1",
  "strum_macros 0.27.1",

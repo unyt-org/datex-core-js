@@ -3,7 +3,7 @@ use std::{cell::RefCell, future::Future, pin::Pin, rc::Rc, str::FromStr};
 use datex_core::{
     network::com_interfaces::{
         com_interface::ComInterface,
-        com_interface_properties::InterfaceDirection,
+        com_interface_properties::{InterfaceDirection, InterfaceProperties},
         com_interface_socket::ComInterfaceSocketUUID,
         default_com_interfaces::base_interface::{
             BaseInterface, BaseInterfaceError,
@@ -31,10 +31,22 @@ struct BaseJSInterface {
 #[wasm_bindgen]
 impl BaseJSInterface {
     #[wasm_bindgen(constructor)]
-    pub fn new(com_hub: JSComHub, name: &str) -> BaseJSInterface {
-        let interface = BaseInterface::new_with_name(name);
+    pub fn new(
+        com_hub: JSComHub,
+        name_or_properties: JsValue,
+    ) -> BaseJSInterface {
+        let mut interface = if name_or_properties.is_string() {
+            let name = name_or_properties.as_string().unwrap();
+            BaseInterface::new_with_name(&name)
+        } else {
+            // FIXME
+            let properties: InterfaceProperties =
+                name_or_properties.into_serde().unwrap();
+            BaseInterface::new_with_properties(properties)
+        };
+
+        interface.open().unwrap();
         let interface = Rc::new(RefCell::new(interface));
-        interface.borrow_mut().open().unwrap();
         com_hub
             .add_interface(interface.clone())
             .expect("Could not add base interface");
