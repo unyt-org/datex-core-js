@@ -32,7 +32,7 @@ struct BaseJSInterface {
 impl BaseJSInterface {
     #[wasm_bindgen(constructor)]
     pub fn new(com_hub: JSComHub, name: &str) -> BaseJSInterface {
-        let interface = BaseInterface::new(name);
+        let interface = BaseInterface::new_with_name(name);
         let interface = Rc::new(RefCell::new(interface));
         interface.borrow_mut().open().unwrap();
         com_hub
