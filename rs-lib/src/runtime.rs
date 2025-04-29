@@ -1,3 +1,4 @@
+use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 
 use datex_core::runtime::global_context::GlobalContext;
@@ -26,7 +27,7 @@ pub struct JSRuntime {
  * Internal impl of the JSRuntime, not exposed to JavaScript
  */
 impl JSRuntime {
-    pub fn create(endpoint: Endpoint) -> JSRuntime {
+    pub fn create(endpoint: impl Into<Endpoint>) -> JSRuntime {
         let runtime = Runtime::init(
             endpoint,
             GlobalContext::new(
@@ -146,7 +147,7 @@ impl JSRuntime {
         block.set_receivers(
             &receivers
                 .iter()
-                .map(|r| Endpoint::from_string(r))
+                .map(|r| Endpoint::from_str(r))
                 .collect::<Result<Vec<Endpoint>, _>>()
                 .unwrap(),
         );

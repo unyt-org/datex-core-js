@@ -38,7 +38,7 @@ extern "C" {
 #[wasm_bindgen]
 pub fn init_runtime(endpoint: &str) -> JSRuntime {
     JSRuntime::create(
-        Endpoint::from_string(endpoint).expect("Invalid endpoint"),
+        endpoint
     )
 }
 
