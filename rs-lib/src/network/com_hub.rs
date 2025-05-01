@@ -21,14 +21,14 @@ use web_sys::js_sys::{self, Promise};
 
 #[wasm_bindgen]
 pub struct JSComHub {
-    com_hub: Arc<Mutex<ComHub>>,
+    com_hub: Rc<RefCell<ComHub>>,
 }
 
 /**
  * Internal impl of the JSRuntime, not exposed to JavaScript
  */
 impl JSComHub {
-    pub fn new(com_hub: Arc<Mutex<ComHub>>) -> JSComHub {
+    pub fn new(com_hub: Rc<RefCell<ComHub>>) -> JSComHub {
         JSComHub {
             com_hub: com_hub.clone(),
         }
@@ -60,8 +60,7 @@ impl JSComHub {
         interface: Rc<RefCell<T>>,
     ) -> Result<(), JsValue> {
         self.com_hub
-            .lock()
-            .unwrap()
+            .borrow_mut()
             .add_interface(interface)
             .map_err(|e| JsError::new(&format!("{e:?}")))?;
         Ok(())
@@ -71,7 +70,7 @@ impl JSComHub {
         &self,
         interface_uuid: &ComInterfaceUUID,
     ) -> Option<Rc<RefCell<dyn ComInterface>>> {
-        let com_hub = self.com_hub.lock().unwrap();
+        let com_hub = self.com_hub.borrow();
 
         com_hub.get_interface_ref_by_uuid(interface_uuid)
     }
@@ -84,15 +83,13 @@ impl JSComHub {
             let com_hub = com_hub.clone();
             let has_interface = {
                 let com_hub = com_hub
-                    .lock()
-                    .map_err(|_| JsError::new("Failed to lock ComHub"))?;
+                    .borrow();
                 com_hub.has_interface(&interface_uuid)
             };
             if has_interface {
                 let com_hub = com_hub.clone();
                 let mut com_hub_mut = com_hub
-                    .lock()
-                    .map_err(|_| JsError::new("Failed to lock ComHub"))?;
+                    .borrow_mut();
 
                 com_hub_mut
                     .remove_interface(interface_uuid.clone())
@@ -107,7 +104,8 @@ impl JSComHub {
     }
 
     pub async fn _update(&mut self) {
-        self.com_hub.lock().unwrap().update().await;
+        todo!("Update was refactored")
+        //self.com_hub.borrow_mut().update().await;
     }
 
     #[cfg(feature = "wasm_websocket_server")]
@@ -136,13 +134,14 @@ impl JSComHub {
 
     #[wasm_bindgen(getter)]
     pub fn _incoming_blocks(&self) -> Vec<js_sys::Uint8Array> {
-        let vec: Rc<
+        todo!("Incoming blocks were refactored")
+        /*let vec: Rc<
             RefCell<
                 std::collections::VecDeque<
                     Rc<datex_core::global::dxb_block::DXBBlock>,
                 >,
             >,
-        > = self.com_hub.lock().unwrap().incoming_blocks.clone();
+        > = self.com_hub.borrow().incoming_blocks.clone();
         let vec = vec.borrow();
         vec.iter()
             .map(|block| {
@@ -152,6 +151,6 @@ impl JSComHub {
                 entry.copy_from(&bytes);
                 entry
             })
-            .collect::<Vec<_>>()
+            .collect::<Vec<_>>()*/
     }
 }

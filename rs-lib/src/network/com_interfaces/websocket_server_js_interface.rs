@@ -209,7 +209,7 @@ impl WebSocketServerRegistry {
         let mut websocket_interface = WebSocketServerJSInterface::new();
         let uuid = websocket_interface.get_uuid().clone();
         websocket_interface.open().unwrap();
-        let mut com_hub = com_hub.lock().unwrap();
+        let mut com_hub = com_hub.borrow_mut();
         com_hub
             .add_interface(Rc::new(RefCell::new(websocket_interface)))
             .map_err(|_| {
@@ -229,7 +229,7 @@ impl WebSocketServerRegistry {
             ComInterfaceUUID(UUID::from_string(interface_uuid));
         info!("add_socket start");
         let com_hub = self.com_hub.clone();
-        let com_hub = com_hub.lock().unwrap();
+        let com_hub = com_hub.borrow();
         info!("add_socket end");
 
         let interface = com_hub

@@ -12,7 +12,7 @@ export function decompile(
 ): string;
 export class BaseJSInterface {
     free(): void;
-    constructor(com_hub: JSComHub, name: string);
+    constructor(com_hub: JSComHub, name_or_properties: any);
     test_send_block(socket_uuid: string, data: Uint8Array): Promise<boolean>;
     on_send(func: Function): void;
     register_socket(direction: string): string;

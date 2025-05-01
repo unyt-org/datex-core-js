@@ -29,7 +29,7 @@ use web_sys::{
 
 pub struct SerialJSInterface {
     port: Option<SerialPort>,
-    tx: Option<Arc<Mutex<WritableStreamDefaultWriter>>>,
+    tx: Option<Rc<RefCell<WritableStreamDefaultWriter>>>,
     info: ComInterfaceInfo,
     options: SerialOptions,
 }
@@ -74,7 +74,7 @@ impl SerialJSInterface {
             .unwrap();
         let writable = port.writable();
         let writer = writable.get_writer().unwrap();
-        self.tx = Some(Arc::new(Mutex::new(writer)));
+        self.tx = Some(Rc::new(RefCell::new(writer)));
         spawn_local(async move {
             loop {
                 let result = JsFuture::from(reader.read()).await;
@@ -145,7 +145,7 @@ impl ComInterface for SerialJSInterface {
         let tx = tx.unwrap();
         Box::pin(async move {
             let js_array = Uint8Array::from(block);
-            let promise = tx.lock().unwrap().write_with_chunk(&js_array);
+            let promise = tx.borrow().write_with_chunk(&js_array);
             debug!("Sending block: {block:?}");
             match JsFuture::from(promise).await {
                 Ok(_) => true,
@@ -187,7 +187,7 @@ impl SerialRegistry {
             .await
             .map_err(|e| JsError::new(&format!("{e:?}")))?;
 
-        let mut com_hub = com_hub.lock().unwrap();
+        let mut com_hub = com_hub.borrow_mut();
         com_hub
             .add_interface(Rc::new(RefCell::new(serial_interface)))
             .map_err(|e| JsError::new(&format!("{e:?}")))?;

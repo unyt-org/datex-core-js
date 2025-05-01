@@ -4,15 +4,15 @@ macro_rules! define_registry {
         #[derive(Clone)]
         #[wasm_bindgen]
         pub struct $name {
-            com_hub: std::sync::Arc<
-                std::sync::Mutex<datex_core::network::com_hub::ComHub>,
+            com_hub: std::rc::Rc<
+                std::cell::RefCell<datex_core::network::com_hub::ComHub>,
             >,
         }
 
         impl $name {
             pub fn new(
-                com_hub: std::sync::Arc<
-                    std::sync::Mutex<datex_core::network::com_hub::ComHub>,
+                com_hub: std::rc::Rc<
+                    std::cell::RefCell<datex_core::network::com_hub::ComHub>,
                 >,
             ) -> Self {
                 Self { com_hub }
@@ -29,16 +29,12 @@ macro_rules! define_registry {
                 wasm_bindgen_futures::future_to_promise(async move {
                     let com_hub = com_hub.clone();
                     let has_interface = {
-                        let com_hub = com_hub.lock().map_err(|_| {
-                            JsError::new("Failed to lock ComHub")
-                        })?;
+                        let com_hub = com_hub.borrow();
                         com_hub.has_interface(&interface_uuid)
                     };
                     if has_interface {
                         let com_hub = com_hub.clone();
-                        let mut com_hub_mut = com_hub.lock().map_err(|_| {
-                            JsError::new("Failed to lock ComHub")
-                        })?;
+                        let mut com_hub_mut = com_hub.borrow_mut();
 
                         com_hub_mut
                             .remove_interface(interface_uuid.clone())
