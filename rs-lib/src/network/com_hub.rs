@@ -1,4 +1,3 @@
-use std::sync::{Arc, Mutex};
 
 #[cfg(feature = "wasm_serial")]
 use super::com_interfaces::serial_js_interface::SerialRegistry;

@@ -5,7 +5,6 @@
 
 // use datex_cli_core::CLI;
 use datex_core::compiler;
-use datex_core::datex_values::Endpoint;
 use datex_core::decompiler;
 
 use wasm_bindgen::prelude::*;
