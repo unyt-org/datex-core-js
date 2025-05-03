@@ -14,7 +14,7 @@ use datex_core::{
 };
 use js_sys::{Error, Object};
 use log::info;
-use wasm_bindgen::{prelude::wasm_bindgen, JsValue};
+use wasm_bindgen::{prelude::wasm_bindgen, JsCast, JsValue};
 use wasm_bindgen_futures::JsFuture;
 use web_sys::js_sys::{Function, Promise, Uint8Array};
 
@@ -29,12 +29,50 @@ struct BaseJSInterface {
     interface: Rc<RefCell<BaseInterface>>,
 }
 
+#[wasm_bindgen(typescript_custom_section)]
+const INTERFACE_PROPERTIES: &'static str = r#"
+type InterfaceProperties = {
+    name?: string;
+    interface_type: string;
+    channel: string;
+    direction: "In" | "Out" | "InOut";
+    round_trip_time: number;
+    max_bandwidth: number;
+    continuous_connection: boolean;
+    allow_redirects: boolean;
+    is_secure_channel: boolean;
+    reconnection_config: 
+        "NoReconnect" | 
+        "InstantReconnect" | 
+        {
+            ReconnectWithTimeout: {
+                timeout: number;
+            }
+        } | 
+        {
+            ReconnectWithTimeoutAndAttempts: {
+                timeout: number;
+                attempts: number;
+            }
+        };
+};
+"#;
+
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(typescript_type = "InterfaceProperties | string")]
+    pub type JSInterfacePropertiesOrName;
+
+    #[wasm_bindgen(typescript_type = "InterfaceProperties")]
+    pub type JSInterfaceProperties;
+}
+
 #[wasm_bindgen]
 impl BaseJSInterface {
     #[wasm_bindgen(constructor)]
     pub fn new(
         com_hub: JSComHub,
-        name_or_properties: JsValue,
+        name_or_properties: JSInterfacePropertiesOrName,
     ) -> BaseJSInterface {
         let mut interface = if name_or_properties.is_string() {
             let name = name_or_properties.as_string().unwrap();
@@ -42,7 +80,7 @@ impl BaseJSInterface {
         } else {
             let properties = name_or_properties;
             let properties: InterfaceProperties =
-                serde_wasm_bindgen::from_value(properties)
+                serde_wasm_bindgen::from_value(properties.into())
                     .expect("Failed to convert properties");
             info!("{:?}", properties);
             BaseInterface::new_with_properties(properties)
@@ -57,7 +95,7 @@ impl BaseJSInterface {
     }
 
     #[wasm_bindgen(getter)]
-    pub fn properties(&self) -> Object {
+    pub fn properties(&self) -> JSInterfaceProperties {
         let properties = serde_wasm_bindgen::to_value(
             &self.interface.borrow().init_properties(),
         )
@@ -69,7 +107,7 @@ impl BaseJSInterface {
             &JsValue::from_str("close_timestamp"),
         )
         .unwrap();
-        properties
+        properties.unchecked_into::<JSInterfaceProperties>()
     }
 
     #[wasm_bindgen(getter)]

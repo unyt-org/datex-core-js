@@ -1,15 +1,25 @@
 import { assert } from "jsr:@std/assert/assert";
 import { Runtime } from "../../src/runtime/runtime.ts";
 import * as uuid from "jsr:@std/uuid";
-import { BaseJSInterface } from "../../src/datex-core.ts";
+import {
+    BaseJSInterface,
+    type InterfaceProperties,
+} from "../../src/datex-core.ts";
 import { sleep } from "../utils.ts";
 import { assertFalse } from "jsr:@std/assert/false";
 import { assertEquals } from "jsr:@std/assert/equals";
 import { assertThrows } from "jsr:@std/assert/throws";
 
-Deno.test("custom properties", () => {
+Deno.test("with name", () => {
+    const type = "base-interface-test";
     const runtime = new Runtime("@unyt");
-    const config = {
+    const baseInterface = new BaseJSInterface(runtime.comHub, type);
+    assertEquals(baseInterface.properties.interface_type, type);
+});
+
+Deno.test("custom properties no reconnect", () => {
+    const runtime = new Runtime("@unyt");
+    const config: InterfaceProperties = {
         name: "base",
         interface_type: "base",
         channel: "test",
@@ -20,6 +30,29 @@ Deno.test("custom properties", () => {
         allow_redirects: true,
         is_secure_channel: true,
         reconnection_config: "NoReconnect",
+    };
+    const baseInterface = new BaseJSInterface(runtime.comHub, config);
+    assertEquals(baseInterface.properties, config);
+});
+
+Deno.test("custom properties with reconnect", () => {
+    const runtime = new Runtime("@unyt");
+    const config: InterfaceProperties = {
+        name: "base",
+        interface_type: "base",
+        channel: "test",
+        direction: "InOut",
+        round_trip_time: 1000,
+        max_bandwidth: 1,
+        continuous_connection: true,
+        allow_redirects: true,
+        is_secure_channel: true,
+        reconnection_config: {
+            ReconnectWithTimeoutAndAttempts: {
+                attempts: 5,
+                timeout: 1000,
+            },
+        },
     };
     const baseInterface = new BaseJSInterface(runtime.comHub, config);
     assertEquals(baseInterface.properties, config);

@@ -10,15 +10,45 @@ export function decompile(
     colorized: boolean,
     resolve_slots: boolean,
 ): string;
+
+type InterfaceProperties = {
+    name?: string;
+    interface_type: string;
+    channel: string;
+    direction: "In" | "Out" | "InOut";
+    round_trip_time: number;
+    max_bandwidth: number;
+    continuous_connection: boolean;
+    allow_redirects: boolean;
+    is_secure_channel: boolean;
+    reconnection_config:
+        | "NoReconnect"
+        | "InstantReconnect"
+        | {
+            ReconnectWithTimeout: {
+                timeout: number;
+            };
+        }
+        | {
+            ReconnectWithTimeoutAndAttempts: {
+                timeout: number;
+                attempts: number;
+            };
+        };
+};
+
 export class BaseJSInterface {
     free(): void;
-    constructor(com_hub: JSComHub, name_or_properties: any);
+    constructor(
+        com_hub: JSComHub,
+        name_or_properties: InterfaceProperties | string,
+    );
     test_send_block(socket_uuid: string, data: Uint8Array): Promise<boolean>;
     on_send(func: Function): void;
     register_socket(direction: string): string;
     destroy_socket(socket_uuid: string): void;
     receive(socket_uuid: string, data: Uint8Array): Promise<void>;
-    readonly properties: object;
+    readonly properties: InterfaceProperties;
     readonly uuid: string;
 }
 export class JSComHub {
