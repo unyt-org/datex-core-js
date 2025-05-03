@@ -7,6 +7,24 @@ import { assertFalse } from "jsr:@std/assert/false";
 import { assertEquals } from "jsr:@std/assert/equals";
 import { assertThrows } from "jsr:@std/assert/throws";
 
+Deno.test("custom properties", () => {
+    const runtime = new Runtime("@unyt");
+    const config = {
+        name: "base",
+        interface_type: "base",
+        channel: "test",
+        direction: "InOut",
+        round_trip_time: 1000,
+        max_bandwidth: 1,
+        continuous_connection: true,
+        allow_redirects: true,
+        is_secure_channel: true,
+        reconnection_config: "NoReconnect",
+    };
+    const baseInterface = new BaseJSInterface(runtime.comHub, config);
+    assertEquals(baseInterface.properties, config);
+});
+
 Deno.test("add interface and sockets", async () => {
     const runtime = new Runtime("@unyt");
     const baseInterface = new BaseJSInterface(runtime.comHub, "test");

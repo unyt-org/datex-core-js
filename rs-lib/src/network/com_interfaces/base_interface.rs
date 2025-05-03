@@ -12,7 +12,8 @@ use datex_core::{
     },
     utils::uuid::UUID,
 };
-use js_sys::Error;
+use js_sys::{Error, Object};
+use log::info;
 use wasm_bindgen::{prelude::wasm_bindgen, JsValue};
 use wasm_bindgen_futures::JsFuture;
 use web_sys::js_sys::{Function, Promise, Uint8Array};
@@ -39,9 +40,11 @@ impl BaseJSInterface {
             let name = name_or_properties.as_string().unwrap();
             BaseInterface::new_with_name(&name)
         } else {
-            // FIXME
+            let properties = name_or_properties;
             let properties: InterfaceProperties =
-                name_or_properties.into_serde().unwrap();
+                serde_wasm_bindgen::from_value(properties)
+                    .expect("Failed to convert properties");
+            info!("{:?}", properties);
             BaseInterface::new_with_properties(properties)
         };
 
@@ -51,6 +54,22 @@ impl BaseJSInterface {
             .add_interface(interface.clone())
             .expect("Could not add base interface");
         BaseJSInterface { com_hub, interface }
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn properties(&self) -> Object {
+        let properties = serde_wasm_bindgen::to_value(
+            &self.interface.borrow().init_properties(),
+        )
+        .expect("Failed to convert properties");
+        let properties = js_sys::Object::from(properties);
+
+        js_sys::Reflect::delete_property(
+            &properties,
+            &JsValue::from_str("close_timestamp"),
+        )
+        .unwrap();
+        properties
     }
 
     #[wasm_bindgen(getter)]

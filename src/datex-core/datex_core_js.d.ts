@@ -18,6 +18,7 @@ export class BaseJSInterface {
     register_socket(direction: string): string;
     destroy_socket(socket_uuid: string): void;
     receive(socket_uuid: string, data: Uint8Array): Promise<void>;
+    readonly properties: object;
     readonly uuid: string;
 }
 export class JSComHub {
