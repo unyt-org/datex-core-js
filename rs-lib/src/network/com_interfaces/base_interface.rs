@@ -12,8 +12,7 @@ use datex_core::{
     },
     utils::uuid::UUID,
 };
-use js_sys::{Error, Object};
-use log::info;
+use js_sys::Error;
 use wasm_bindgen::{prelude::wasm_bindgen, JsCast, JsValue};
 use wasm_bindgen_futures::JsFuture;
 use web_sys::js_sys::{Function, Promise, Uint8Array};
@@ -82,7 +81,6 @@ impl BaseJSInterface {
             let properties: InterfaceProperties =
                 serde_wasm_bindgen::from_value(properties.into())
                     .expect("Failed to convert properties");
-            info!("{:?}", properties);
             BaseInterface::new_with_properties(properties)
         };
 
@@ -101,7 +99,8 @@ impl BaseJSInterface {
         )
         .expect("Failed to convert properties");
         let properties = js_sys::Object::from(properties);
-
+        // Remove the close_timestamp property from the properties object
+        // to avoid exposing it to the JS side
         js_sys::Reflect::delete_property(
             &properties,
             &JsValue::from_str("close_timestamp"),
