@@ -20,14 +20,14 @@ use web_sys::js_sys::{self, Promise};
 
 #[wasm_bindgen]
 pub struct JSComHub {
-    com_hub: Rc<RefCell<ComHub>>,
+    com_hub: Rc<ComHub>,
 }
 
 /**
  * Internal impl of the JSRuntime, not exposed to JavaScript
  */
 impl JSComHub {
-    pub fn new(com_hub: Rc<RefCell<ComHub>>) -> JSComHub {
+    pub fn new(com_hub: Rc<ComHub>) -> JSComHub {
         JSComHub {
             com_hub: com_hub.clone(),
         }
@@ -59,7 +59,6 @@ impl JSComHub {
         interface: Rc<RefCell<T>>,
     ) -> Result<(), JsValue> {
         self.com_hub
-            .borrow_mut()
             .add_interface(interface)
             .map_err(|e| JsError::new(&format!("{e:?}")))?;
         Ok(())
@@ -69,9 +68,7 @@ impl JSComHub {
         &self,
         interface_uuid: &ComInterfaceUUID,
     ) -> Option<Rc<RefCell<dyn ComInterface>>> {
-        let com_hub = self.com_hub.borrow();
-
-        com_hub.get_interface_ref_by_uuid(interface_uuid)
+        self.com_hub.get_interface_ref_by_uuid(interface_uuid)
     }
 
     pub fn close_interface(&self, interface_uuid: String) -> Promise {
@@ -81,16 +78,12 @@ impl JSComHub {
         future_to_promise(async move {
             let com_hub = com_hub.clone();
             let has_interface = {
-                let com_hub = com_hub
-                    .borrow();
                 com_hub.has_interface(&interface_uuid)
             };
             if has_interface {
                 let com_hub = com_hub.clone();
-                let mut com_hub_mut = com_hub
-                    .borrow_mut();
 
-                com_hub_mut
+                com_hub
                     .remove_interface(interface_uuid.clone())
                     .await
                     .map_err(|e| JsError::new(&format!("{e:?}")))?;

@@ -187,7 +187,6 @@ impl SerialRegistry {
             .await
             .map_err(|e| JsError::new(&format!("{e:?}")))?;
 
-        let mut com_hub = com_hub.borrow_mut();
         com_hub
             .add_interface(Rc::new(RefCell::new(serial_interface)))
             .map_err(|e| JsError::new(&format!("{e:?}")))?;

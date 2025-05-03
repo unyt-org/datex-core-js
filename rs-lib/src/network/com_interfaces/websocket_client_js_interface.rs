@@ -213,7 +213,6 @@ impl WebSocketClientRegistry {
         let websocket_interface = Rc::new(RefCell::new(websocket_interface));
 
         com_hub
-            .borrow_mut()
             .add_interface(websocket_interface.clone())
             .map_err(|e| WebSocketError::Other(format!("{e:?}")))?;
         Ok(interface_uuid.0.to_string())

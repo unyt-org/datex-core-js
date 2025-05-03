@@ -209,7 +209,6 @@ impl WebSocketServerRegistry {
         let mut websocket_interface = WebSocketServerJSInterface::new();
         let uuid = websocket_interface.get_uuid().clone();
         websocket_interface.open().unwrap();
-        let mut com_hub = com_hub.borrow_mut();
         com_hub
             .add_interface(Rc::new(RefCell::new(websocket_interface)))
             .map_err(|_| {
@@ -229,16 +228,15 @@ impl WebSocketServerRegistry {
             ComInterfaceUUID(UUID::from_string(interface_uuid));
         info!("add_socket start");
         let com_hub = self.com_hub.clone();
-        let com_hub = com_hub.borrow();
         info!("add_socket end");
 
         let interface = com_hub
-            .get_interface_by_uuid_mut::<WebSocketServerJSInterface>(
+            .get_interface_by_uuid::<WebSocketServerJSInterface>(
                 &interface_uuid,
             );
 
         if interface.is_some() {
-            let uuid = interface.unwrap().register_socket(websocket);
+            let uuid = interface.unwrap().borrow_mut().register_socket(websocket);
             JsValue::from_str(&uuid.0.to_string())
         } else {
             error!("Failed to find WebSocket interface");

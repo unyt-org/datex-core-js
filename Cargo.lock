@@ -986,6 +986,7 @@ dependencies = [
  "modular-bitfield",
  "mopa",
  "nostd",
+ "ntest_timeout",
  "num-bigint",
  "num-integer",
  "num-traits",
@@ -2583,6 +2584,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fa3dd4c68516f7c5a1838eda0de376d4bc3c2aba3893da0ca2cf400bbc18435f"
 dependencies = [
  "memchr",
+]
+
+[[package]]
+name = "ntest_timeout"
+version = "0.9.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fcc7c92f190c97f79b4a332f5e81dcf68c8420af2045c936c9be0bc9de6f63b5"
+dependencies = [
+ "proc-macro-crate 3.3.0",
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
 ]
 
 [[package]]
