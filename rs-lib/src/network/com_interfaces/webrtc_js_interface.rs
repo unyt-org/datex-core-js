@@ -8,7 +8,7 @@ use log::error;
 use wasm_bindgen::{prelude::wasm_bindgen, JsError, JsValue};
 use wasm_bindgen_futures::future_to_promise;
 use web_sys::js_sys::Promise;
-
+use datex_core::network::com_hub::InterfacePriority;
 use crate::define_registry;
 
 define_registry!(WebRTCClientRegistry);
@@ -28,7 +28,7 @@ impl WebRTCClientRegistry {
             })?;
             let interface_uuid = webrtc_interface.get_uuid().clone();
             com_hub
-                .add_interface(Rc::new(RefCell::new(webrtc_interface)))
+                .add_interface(Rc::new(RefCell::new(webrtc_interface)), InterfacePriority::default())
                 .map_err(|e| JsError::new(&format!("{e:?}")))?;
             Ok(JsValue::from_str(&interface_uuid.0.to_string()))
         })

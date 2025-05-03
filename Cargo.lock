@@ -996,6 +996,7 @@ dependencies = [
  "pest_derive",
  "rand",
  "regex",
+ "ringmap",
  "rsa",
  "serde",
  "serde_json",
@@ -3190,6 +3191,16 @@ dependencies = [
  "libc",
  "untrusted",
  "windows-sys 0.52.0",
+]
+
+[[package]]
+name = "ringmap"
+version = "0.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "963156bc0da83715cf1aa699f60533a20fcd771c4bbb06548d628eccf1c1ac3e"
+dependencies = [
+ "equivalent",
+ "hashbrown 0.15.2",
 ]
 
 [[package]]

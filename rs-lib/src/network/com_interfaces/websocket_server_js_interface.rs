@@ -25,7 +25,7 @@ use wasm_bindgen::prelude::wasm_bindgen;
 use wasm_bindgen::{prelude::Closure, JsCast};
 use wasm_bindgen::{JsError, JsValue};
 use web_sys::{js_sys, ErrorEvent, MessageEvent};
-
+use datex_core::network::com_hub::InterfacePriority;
 use crate::{define_registry, wrap_error_for_js};
 
 pub struct WebSocketServerJSInterface {
@@ -210,7 +210,7 @@ impl WebSocketServerRegistry {
         let uuid = websocket_interface.get_uuid().clone();
         websocket_interface.open().unwrap();
         com_hub
-            .add_interface(Rc::new(RefCell::new(websocket_interface)))
+            .add_interface(Rc::new(RefCell::new(websocket_interface)), InterfacePriority::default())
             .map_err(|_| {
                 WebSocketServerError::WebSocketError(
                     WebSocketError::ConnectionError,

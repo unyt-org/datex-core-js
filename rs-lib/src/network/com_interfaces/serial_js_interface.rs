@@ -26,6 +26,7 @@ use web_sys::{
     js_sys, ReadableStreamDefaultReader, SerialOptions,
     WritableStreamDefaultWriter,
 };
+use datex_core::network::com_hub::InterfacePriority;
 
 pub struct SerialJSInterface {
     port: Option<SerialPort>,
@@ -188,7 +189,7 @@ impl SerialRegistry {
             .map_err(|e| JsError::new(&format!("{e:?}")))?;
 
         com_hub
-            .add_interface(Rc::new(RefCell::new(serial_interface)))
+            .add_interface(Rc::new(RefCell::new(serial_interface)), InterfacePriority::default())
             .map_err(|e| JsError::new(&format!("{e:?}")))?;
         Ok(uuid.0.to_string())
     }

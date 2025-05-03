@@ -17,6 +17,7 @@ use log::error;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::future_to_promise;
 use web_sys::js_sys::{self, Promise};
+use datex_core::network::com_hub::InterfacePriority;
 
 #[wasm_bindgen]
 pub struct JSComHub {
@@ -58,8 +59,9 @@ impl JSComHub {
         &self,
         interface: Rc<RefCell<T>>,
     ) -> Result<(), JsValue> {
+        // TODO: set custom interface priority
         self.com_hub
-            .add_interface(interface)
+            .add_interface(interface, InterfacePriority::default())
             .map_err(|e| JsError::new(&format!("{e:?}")))?;
         Ok(())
     }
