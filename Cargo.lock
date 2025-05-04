@@ -1012,6 +1012,7 @@ dependencies = [
  "url",
  "uuid",
  "wasm-bindgen-futures",
+ "webrtc",
 ]
 
 [[package]]
