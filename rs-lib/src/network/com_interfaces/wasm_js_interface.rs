@@ -8,27 +8,18 @@ use std::time::Duration; // FIXME no-std
 use async_trait::async_trait;
 use datex_core::datex_values::Endpoint;
 use datex_core::{ delegate_com_interface_info, set_opener};
-use datex_core::network::com_interfaces::com_interface::{ComInterface, ComInterfaceError, ComInterfaceFactory, ComInterfaceInfo, ComInterfaceSockets, ComInterfaceUUID};
+use datex_core::network::com_interfaces::com_interface::{ComInterface, ComInterfaceInfo, ComInterfaceSockets, ComInterfaceUUID};
 use datex_core::network::com_interfaces::com_interface_properties::InterfaceProperties;
 use datex_core::network::com_interfaces::com_interface_socket::ComInterfaceSocketUUID;
-use datex_core::network::com_interfaces::default_com_interfaces::serial::serial_common::{SerialError, SerialInterfaceSetupData};
 use datex_core::stdlib::sync::Arc;
 
 use datex_core::network::com_interfaces::com_interface::ComInterfaceState;
-use web_sys::console::info;
 
-use crate::{define_registry, wrap_error_for_js};
-use datex_core::task::spawn_local;
-use log::{debug, error, info};
+use crate::define_registry;
+use log::{error, info};
 use wasm_bindgen::prelude::{wasm_bindgen, Closure};
 use wasm_bindgen::{JsCast, JsError, JsValue};
-use wasm_bindgen_futures::JsFuture;
-use web_sys::js_sys::Uint8Array;
-use web_sys::{MessageEvent, RtcPeerConnection, SerialPort};
-use web_sys::{
-    js_sys, ReadableStreamDefaultReader, SerialOptions,
-    WritableStreamDefaultWriter,
-};
+use web_sys::{MessageEvent, RtcPeerConnection};
 use datex_core::network::com_hub::InterfacePriority;
 use datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common::{RTCIceServer, WebRTCError, WebRTCInterfaceTrait};
 use datex_macros::{com_interface, create_opener};
@@ -90,7 +81,7 @@ impl WebRTCJSInterface {
         let onmessage_callback =
             Closure::<dyn FnMut(_)>::new(move |ev: MessageEvent| {
                 if let Some(message) = ev.data().as_string() {
-                    info!("Received message: {}", message);
+                    info!("Received message: {message}");
                     data_channel_clone
                         .send_with_u8_array(&[0, 1, 2, 3])
                         .unwrap();
