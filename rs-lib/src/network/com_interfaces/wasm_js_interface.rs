@@ -68,16 +68,25 @@ impl WebRTCInterfaceTrait for WebRTCJSInterface {
     }
     async fn create_offer(&self, use_reliable_connection: bool) -> Vec<u8> {
         let peer_connection = self.peer_connection.as_ref().unwrap();
-        let data_channel = peer_connection.create_data_channel("datex");
+        let data_channel = peer_connection.create_data_channel("xxx");
+
         let sockets = self.get_sockets();
         let onmessage_callback = Self::on_receive(sockets.clone());
         data_channel
             .set_onmessage(Some(onmessage_callback.as_ref().unchecked_ref()));
+        let data_channel_clone = data_channel.clone();
+        let self_data_channel = self.data_channel.clone();
+        let onopen_callback = Closure::<dyn FnMut()>::new(move || {
+            info!("Data channel opened sender");
+            self_data_channel
+                .clone()
+                .lock()
+                .unwrap()
+                .replace(data_channel_clone.clone());
+        });
+        data_channel.set_onopen(Some(onopen_callback.as_ref().unchecked_ref()));
+
         onmessage_callback.forget();
-        self.data_channel
-            .lock()
-            .unwrap()
-            .replace(data_channel.clone());
 
         let offer = JsFuture::from(peer_connection.create_offer())
             .await
@@ -88,6 +97,9 @@ impl WebRTCInterfaceTrait for WebRTCJSInterface {
             .unwrap()
             .as_string()
             .unwrap();
+
+        info!("Offer created {}", offer_sdp);
+
         let offer_obj = RtcSessionDescriptionInit::new(RtcSdpType::Offer);
         offer_obj.set_sdp(&offer_sdp);
         let sld_promise = peer_connection.set_local_description(&offer_obj);
@@ -186,6 +198,7 @@ impl WebRTCJSInterface {
         let self_data_channel = self.data_channel.clone();
         let ondatachannel_callback =
             Closure::<dyn FnMut(_)>::new(move |ev: RtcDataChannelEvent| {
+                info!("Data channel event");
                 let data_channel = ev.channel();
                 let self_data_channel_clone = self_data_channel.clone();
                 let onmessage_callback = Self::on_receive(sockets.clone());
@@ -211,24 +224,19 @@ impl WebRTCJSInterface {
             ondatachannel_callback.as_ref().unchecked_ref(),
         ));
         ondatachannel_callback.forget();
+        info!("Connecting to {}...", self.remote_endpoint);
 
         let ice_candidates = self.ice_candidates.clone();
         let self_callback = self.on_ice_candidate.clone();
         let other_endpoint = self.remote_endpoint.to_string().clone();
         let onicecandidate_callback = Closure::<dyn FnMut(_)>::new(
             move |ev: RtcPeerConnectionIceEvent| {
-                info!("{} ICE candidate event", other_endpoint);
-                if ev.candidate().is_none() {
-                    info!("ICE candidate event: no candidate");
-                    return;
-                }
                 if let Some(candidate) = ev.candidate() {
                     let candidate_init = candidate.to_json();
                     let candidate_init = JSON::stringify(&candidate_init)
                         .unwrap()
                         .as_string()
                         .unwrap();
-                    info!("ICE candidate: {}", candidate_init);
                     let candidate_init = serialize(&candidate_init).unwrap();
 
                     if let Some(callback) = self_callback.borrow().as_ref() {
@@ -246,8 +254,25 @@ impl WebRTCJSInterface {
             onicecandidate_callback.as_ref().unchecked_ref(),
         ));
         onicecandidate_callback.forget();
+        let self_connection = self.peer_connection.clone();
 
-        self.peer_connection = Some(connection.clone());
+        let remote_endpoint = self.remote_endpoint.clone().to_string();
+        let oniceconnectionstatechange_callback =
+            Closure::<dyn FnMut()>::new(move || {
+                let state =
+                    self_connection.clone().unwrap().ice_connection_state();
+                info!(
+                    "ICE connection state to {}: {:?}",
+                    remote_endpoint, state
+                );
+            });
+
+        connection.set_oniceconnectionstatechange(Some(
+            oniceconnectionstatechange_callback.as_ref().unchecked_ref(),
+        ));
+        oniceconnectionstatechange_callback.forget();
+        self.peer_connection = Some(connection);
+
         Ok(())
     }
 
@@ -273,7 +298,15 @@ impl ComInterface for WebRTCJSInterface {
         block: &'a [u8],
         _: ComInterfaceSocketUUID,
     ) -> Pin<Box<dyn Future<Output = bool> + 'a>> {
-        Box::pin(async move { false })
+        Box::pin(async move {
+            let data_channel = self.data_channel.lock().unwrap();
+            if let Some(data_channel) = data_channel.as_ref() {
+                data_channel.send_with_u8_array(&block).unwrap();
+                true
+            } else {
+                false
+            }
+        })
     }
 
     fn init_properties(&self) -> InterfaceProperties {

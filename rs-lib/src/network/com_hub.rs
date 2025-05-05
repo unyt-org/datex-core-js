@@ -13,6 +13,7 @@ use datex_core::network::com_hub::InterfacePriority;
 use datex_core::network::com_interfaces::com_interface::{
     ComInterface, ComInterfaceUUID,
 };
+use datex_core::network::com_interfaces::com_interface_socket::ComInterfaceSocketUUID;
 use datex_core::stdlib::{cell::RefCell, rc::Rc};
 use datex_core::{network::com_hub::ComHub, utils::uuid::UUID};
 use log::error;
@@ -129,6 +130,27 @@ impl JSComHub {
     #[wasm_bindgen(getter)]
     pub fn webrtc(&self) -> WebRTCRegistry {
         WebRTCRegistry::new(self.com_hub.clone())
+    }
+
+    /// Send a block to the given interface and socket
+    /// This does not involve the routing on the ComHub level.
+    /// The socket UUID is used to identify the socket to send the block over
+    /// The interface UUID is used to identify the interface to send the block over
+    pub async fn send_block(
+        &self,
+        block: &[u8],
+        interface_uuid: String,
+        socket_uuid: String,
+    ) -> bool {
+        let interface_uuid =
+            ComInterfaceUUID(UUID::from_string(interface_uuid));
+        let socket_uuid =
+            ComInterfaceSocketUUID(UUID::from_string(socket_uuid));
+        self.get_interface_by_uuid(&interface_uuid)
+            .expect("Failed to find interface")
+            .borrow_mut()
+            .send_block(block, socket_uuid)
+            .await
     }
 
     #[wasm_bindgen(getter)]

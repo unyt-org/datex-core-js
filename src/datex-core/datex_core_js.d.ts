@@ -56,6 +56,17 @@ export class JSComHub {
     free(): void;
     close_interface(interface_uuid: string): Promise<any>;
     _update(): Promise<void>;
+    /**
+     * Send a block to the given interface and socket
+     * This does not involve the routing on the ComHub level.
+     * The socket UUID is used to identify the socket to send the block over
+     * The interface UUID is used to identify the interface to send the block over
+     */
+    send_block(
+        block: Uint8Array,
+        interface_uuid: string,
+        socket_uuid: string,
+    ): Promise<boolean>;
     readonly websocket_server: WebSocketServerRegistry;
     readonly websocket_client: WebSocketClientRegistry;
     readonly serial: SerialRegistry;
