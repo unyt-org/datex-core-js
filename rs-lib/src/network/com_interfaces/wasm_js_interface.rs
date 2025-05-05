@@ -17,21 +17,23 @@ use datex_core::stdlib::sync::Arc;
 use datex_core::{delegate_com_interface_info, set_opener};
 
 use datex_core::network::com_interfaces::com_interface::ComInterfaceState;
+use wasm_bindgen_futures::JsFuture;
 
 use crate::define_registry;
 use crate::js_utils::TryAsByteSlice;
 use log::{debug, error, info};
 use wasm_bindgen::prelude::{wasm_bindgen, Closure};
 use wasm_bindgen::{JsCast, JsError, JsValue};
-use web_sys::{MessageEvent, RtcPeerConnection};
+use web_sys::{MessageEvent, RtcDataChannelEvent, RtcPeerConnection, RtcSdpType, RtcSessionDescriptionInit};
 use datex_core::network::com_hub::InterfacePriority;
-use datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common::{RTCIceServer, WebRTCError, WebRTCInterfaceTrait};
+use datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common::{deserialize, RTCIceServer, WebRTCError, WebRTCInterfaceTrait};
 use datex_macros::{com_interface, create_opener};
 
 pub struct WebRTCJSInterface {
     info: ComInterfaceInfo,
+    pub remote_endpoint: Endpoint,
     peer_connection: Option<RtcPeerConnection>,
-    data_channel: Option<web_sys::RtcDataChannel>,
+    data_channel: Arc<Mutex<Option<web_sys::RtcDataChannel>>>,
 }
 
 #[async_trait(?Send)]
@@ -39,8 +41,9 @@ impl WebRTCInterfaceTrait for WebRTCJSInterface {
     fn new(endpoint: impl Into<Endpoint>) -> Self {
         let endpoint = endpoint.into();
         WebRTCJSInterface {
+            remote_endpoint: endpoint,
             peer_connection: None,
-            data_channel: None,
+            data_channel: Arc::new(Mutex::new(None)),
             info: ComInterfaceInfo::new(),
         }
     }
@@ -50,11 +53,7 @@ impl WebRTCInterfaceTrait for WebRTCJSInterface {
     }
     fn new_with_media_support(endpoint: impl Into<Endpoint>) -> Self {
         let endpoint = endpoint.into();
-        WebRTCJSInterface {
-            data_channel: None,
-            peer_connection: None,
-            info: ComInterfaceInfo::new(),
-        }
+        WebRTCJSInterface::new(endpoint)
     }
     async fn create_offer(&mut self, use_reliable_connection: bool) -> Vec<u8> {
         let peer_connection = self.peer_connection.as_ref().unwrap();
@@ -64,7 +63,7 @@ impl WebRTCInterfaceTrait for WebRTCJSInterface {
         data_channel
             .set_onmessage(Some(onmessage_callback.as_ref().unchecked_ref()));
         onmessage_callback.forget();
-        self.data_channel = Some(data_channel.clone());
+        self.data_channel = Arc::new(Mutex::new(Some(data_channel)));
 
         vec![]
     }
@@ -72,8 +71,21 @@ impl WebRTCInterfaceTrait for WebRTCJSInterface {
         &self,
         description: Vec<u8>,
     ) -> Result<(), WebRTCError> {
+        let offer_obj = RtcSessionDescriptionInit::new(RtcSdpType::Offer);
+        let sdp = deserialize::<String>(&description)
+            .map_err(|_| WebRTCError::InvalidSdp)?;
+        offer_obj.set_sdp(&sdp);
+        let srd_promise = self
+            .peer_connection
+            .as_ref()
+            .unwrap()
+            .set_remote_description(&offer_obj);
+        JsFuture::from(srd_promise)
+            .await
+            .map_err(|_| WebRTCError::InvalidSdp)?;
         Ok(())
     }
+
     async fn add_ice_candidate(
         &mut self,
         candidate: Vec<u8>,
@@ -97,32 +109,36 @@ impl WebRTCJSInterface {
     async fn open(&mut self) -> Result<(), WebRTCError> {
         let connection =
             RtcPeerConnection::new().map_err(|_| WebRTCError::Unsupported)?;
-
+        let sockets = self.get_sockets();
+        let self_data_channel = self.data_channel.clone();
         let ondatachannel_callback =
             Closure::<dyn FnMut(_)>::new(move |ev: RtcDataChannelEvent| {
-                let dc2 = ev.channel();
-
-                let onmessage_callback =
-                    Self::on_receive(self.get_sockets().clone());
-                dc2.set_onmessage(Some(
+                let data_channel = ev.channel();
+                let self_data_channel_clone = self_data_channel.clone();
+                let onmessage_callback = Self::on_receive(sockets.clone());
+                data_channel.set_onmessage(Some(
                     onmessage_callback.as_ref().unchecked_ref(),
                 ));
                 onmessage_callback.forget();
 
-                let dc2_clone = dc2.clone();
+                let data_channel_clone = data_channel.clone();
                 let onopen_callback = Closure::<dyn FnMut()>::new(move || {
-                    dc2_clone.send_with_str("Ping from pc2.dc!").unwrap();
+                    let mut self_channel =
+                        self_data_channel_clone.lock().unwrap();
+                    if self_channel.is_none() {
+                        info!("Data channel received");
+                        self_channel.replace(data_channel_clone.clone());
+                    }
                 });
-                dc2.set_onopen(Some(onopen_callback.as_ref().unchecked_ref()));
+                data_channel
+                    .set_onopen(Some(onopen_callback.as_ref().unchecked_ref()));
                 onopen_callback.forget();
             });
         connection.set_ondatachannel(Some(
             ondatachannel_callback.as_ref().unchecked_ref(),
         ));
         ondatachannel_callback.forget();
-
         self.peer_connection = Some(connection.clone());
-
         Ok(())
     }
 

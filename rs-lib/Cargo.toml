@@ -73,6 +73,15 @@ features = [
     "ReadableStreamDefaultReader",
     "WritableStreamDefaultWriter",
     "EventTarget",
+    "MessageEvent",
+    "RtcPeerConnection",
+    "RtcSignalingState",
+    "RtcSdpType",
+    "RtcSessionDescriptionInit",
+    "RtcPeerConnectionIceEvent",
+    "RtcIceCandidate",
+    "RtcDataChannel",
+    "RtcDataChannelEvent",
 ]
 
 [dev-dependencies]
