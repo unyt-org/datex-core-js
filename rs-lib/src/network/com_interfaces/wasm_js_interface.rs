@@ -17,6 +17,7 @@ use datex_core::stdlib::sync::Arc;
 use datex_core::{delegate_com_interface_info, set_opener};
 
 use datex_core::network::com_interfaces::com_interface::ComInterfaceState;
+use js_sys::Reflect;
 use wasm_bindgen_futures::JsFuture;
 
 use crate::define_registry;
@@ -26,7 +27,7 @@ use wasm_bindgen::prelude::{wasm_bindgen, Closure};
 use wasm_bindgen::{JsCast, JsError, JsValue};
 use web_sys::{MessageEvent, RtcDataChannelEvent, RtcPeerConnection, RtcSdpType, RtcSessionDescriptionInit};
 use datex_core::network::com_hub::InterfacePriority;
-use datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common::{deserialize, RTCIceServer, WebRTCError, WebRTCInterfaceTrait};
+use datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common::{deserialize, serialize, RTCIceServer, WebRTCError, WebRTCInterfaceTrait};
 use datex_macros::{com_interface, create_opener};
 
 pub struct WebRTCJSInterface {
@@ -65,7 +66,15 @@ impl WebRTCInterfaceTrait for WebRTCJSInterface {
         onmessage_callback.forget();
         self.data_channel = Arc::new(Mutex::new(Some(data_channel)));
 
-        vec![]
+        let offer = JsFuture::from(peer_connection.create_offer())
+            .await
+            .unwrap();
+        // FIXME only sdp or also other fields?
+        let offer_sdp = Reflect::get(&offer, &JsValue::from_str("sdp"))
+            .unwrap()
+            .as_string()
+            .unwrap();
+        serialize::<String>(&offer_sdp).unwrap()
     }
     async fn set_remote_description(
         &self,
