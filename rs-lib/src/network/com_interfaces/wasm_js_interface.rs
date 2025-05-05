@@ -14,6 +14,7 @@ use datex_core::network::com_interfaces::com_interface_properties::InterfaceProp
 use datex_core::network::com_interfaces::com_interface_socket::ComInterfaceSocketUUID;
 use datex_core::network::com_interfaces::socket_provider::SingleSocketProvider;
 use datex_core::stdlib::sync::Arc;
+use datex_core::utils::uuid::UUID;
 use datex_core::{delegate_com_interface_info, set_opener};
 
 use datex_core::network::com_interfaces::com_interface::ComInterfaceState;
@@ -76,6 +77,24 @@ impl WebRTCInterfaceTrait for WebRTCJSInterface {
             .unwrap();
         serialize::<String>(&offer_sdp).unwrap()
     }
+
+    async fn create_answer(&self) -> Vec<u8> {
+        let peer_connection = self.peer_connection.as_ref().unwrap();
+        let answer = JsFuture::from(peer_connection.create_answer())
+            .await
+            .unwrap();
+        let answer_sdp = Reflect::get(&answer, &JsValue::from_str("sdp"))
+            .unwrap()
+            .as_string()
+            .unwrap();
+
+        let answer_obj = RtcSessionDescriptionInit::new(RtcSdpType::Answer);
+        answer_obj.set_sdp(&answer_sdp);
+        let sld_promise = peer_connection.set_local_description(&answer_obj);
+        JsFuture::from(sld_promise).await.unwrap();
+        serialize::<String>(&answer_sdp).unwrap()
+    }
+
     async fn set_remote_description(
         &self,
         description: Vec<u8>,
@@ -100,9 +119,6 @@ impl WebRTCInterfaceTrait for WebRTCJSInterface {
         candidate: Vec<u8>,
     ) -> Result<(), WebRTCError> {
         Ok(())
-    }
-    async fn create_answer(&self) -> Vec<u8> {
-        vec![]
     }
 }
 
@@ -214,5 +230,21 @@ impl WebRTCRegistry {
             )
             .map_err(|e| JsError::new(&format!("{e:?}")))?;
         Ok(uuid.0.to_string())
+    }
+    pub async fn create_offer(
+        &self,
+        interface_uuid: String,
+    ) -> Result<Vec<u8>, JsError> {
+        let interface_uuid =
+            ComInterfaceUUID(UUID::from_string(interface_uuid));
+        let com_hub = self.com_hub.clone();
+
+        let interface =
+            com_hub.get_interface_by_uuid::<WebRTCJSInterface>(&interface_uuid);
+        let interface = interface.unwrap();
+
+        let mut webrtc_interface = interface.borrow_mut();
+        let offer = webrtc_interface.create_offer(true).await;
+        Ok(offer)
     }
 }
