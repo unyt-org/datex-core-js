@@ -171,12 +171,11 @@ impl WebRTCJSInterface {
         let onicecandidate_callback1 = Closure::<dyn FnMut(_)>::new(
             move |ev: RtcPeerConnectionIceEvent| {
                 if let Some(candidate) = ev.candidate() {
-                    let candidate_init =
-                        candidate.to_json().to_string().as_string().unwrap();
+                    let candidate_init = candidate.candidate();
                     info!("ICE candidate: {:?}", candidate_init);
-                    ice_candidates.borrow_mut().push_back(
-                        serialize::<String>(&candidate_init).unwrap(),
-                    );
+                    ice_candidates
+                        .borrow_mut()
+                        .push_back(serialize(&candidate_init).unwrap());
                 }
             },
         );
