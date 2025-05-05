@@ -102,6 +102,11 @@ export class WebRTCRegistry {
         description: Uint8Array,
     ): Promise<void>;
     create_answer(interface_uuid: string): Promise<Uint8Array>;
+    set_on_ice_candidate(interface_uuid: string, callback: Function): void;
+    add_ice_candidate(
+        interface_uuid: string,
+        candidate: Uint8Array,
+    ): Promise<void>;
 }
 export class WebSocketClientRegistry {
     private constructor();

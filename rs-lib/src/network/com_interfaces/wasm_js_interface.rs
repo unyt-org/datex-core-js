@@ -15,11 +15,10 @@ use datex_core::network::com_interfaces::com_interface_properties::InterfaceProp
 use datex_core::network::com_interfaces::com_interface_socket::ComInterfaceSocketUUID;
 use datex_core::network::com_interfaces::socket_provider::SingleSocketProvider;
 use datex_core::stdlib::sync::Arc;
-use datex_core::utils::uuid::UUID;
 use datex_core::{delegate_com_interface_info, set_opener};
 
 use datex_core::network::com_interfaces::com_interface::ComInterfaceState;
-use js_sys::Reflect;
+use js_sys::{Function, Reflect, JSON};
 use wasm_bindgen_futures::JsFuture;
 
 use crate::define_registry;
@@ -27,7 +26,7 @@ use crate::js_utils::TryAsByteSlice;
 use log::{debug, error, info};
 use wasm_bindgen::prelude::{wasm_bindgen, Closure};
 use wasm_bindgen::{JsCast, JsError, JsValue};
-use web_sys::{MessageEvent, RtcDataChannelEvent, RtcPeerConnection, RtcPeerConnectionIceEvent, RtcSdpType, RtcSessionDescriptionInit};
+use web_sys::{MessageEvent, RtcDataChannelEvent, RtcIceCandidate, RtcIceCandidateInit, RtcPeerConnection, RtcPeerConnectionIceEvent, RtcSdpType, RtcSessionDescriptionInit};
 use datex_core::network::com_hub::InterfacePriority;
 use datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common::{deserialize, serialize, RTCIceServer, WebRTCError, WebRTCInterfaceTrait};
 use datex_macros::{com_interface, create_opener};
@@ -38,6 +37,8 @@ pub struct WebRTCJSInterface {
     peer_connection: Option<RtcPeerConnection>,
     data_channel: Arc<Mutex<Option<web_sys::RtcDataChannel>>>,
     pub ice_candidates: Rc<RefCell<VecDeque<Vec<u8>>>>,
+
+    on_ice_candidate: Rc<RefCell<Option<Function>>>,
 }
 
 #[async_trait(?Send)]
@@ -49,6 +50,7 @@ impl WebRTCInterfaceTrait for WebRTCJSInterface {
             peer_connection: None,
             data_channel: Arc::new(Mutex::new(None)),
             info: ComInterfaceInfo::new(),
+            on_ice_candidate: Rc::new(RefCell::new(None)),
             ice_candidates: Rc::new(RefCell::new(VecDeque::new())),
         }
     }
@@ -60,7 +62,7 @@ impl WebRTCInterfaceTrait for WebRTCJSInterface {
         let endpoint = endpoint.into();
         WebRTCJSInterface::new(endpoint)
     }
-    async fn create_offer(&mut self, use_reliable_connection: bool) -> Vec<u8> {
+    async fn create_offer(&self, use_reliable_connection: bool) -> Vec<u8> {
         let peer_connection = self.peer_connection.as_ref().unwrap();
         let data_channel = peer_connection.create_data_channel("datex");
         let sockets = self.get_sockets();
@@ -68,7 +70,10 @@ impl WebRTCInterfaceTrait for WebRTCJSInterface {
         data_channel
             .set_onmessage(Some(onmessage_callback.as_ref().unchecked_ref()));
         onmessage_callback.forget();
-        self.data_channel = Arc::new(Mutex::new(Some(data_channel)));
+        self.data_channel
+            .lock()
+            .unwrap()
+            .replace(data_channel.clone());
 
         let offer = JsFuture::from(peer_connection.create_offer())
             .await
@@ -118,9 +123,25 @@ impl WebRTCInterfaceTrait for WebRTCJSInterface {
     }
 
     async fn add_ice_candidate(
-        &mut self,
+        &self,
         candidate: Vec<u8>,
     ) -> Result<(), WebRTCError> {
+        let peer_connection = self.peer_connection.as_ref().unwrap();
+
+        let candidate_init = deserialize::<String>(&candidate).unwrap();
+        let js_val = JSON::parse(&candidate_init).unwrap();
+        let candidate_init: RtcIceCandidateInit = js_val.unchecked_into();
+
+        // Step 4: Create the candidate
+        let candidate = RtcIceCandidate::new(&candidate_init).unwrap();
+        let add_ice_candidate_promise = peer_connection
+            .add_ice_candidate_with_opt_rtc_ice_candidate(Some(&candidate));
+        JsFuture::from(add_ice_candidate_promise)
+            .await
+            .map_err(|_| {
+                error!("Failed to add ICE candidate");
+                WebRTCError::InvalidCandidate
+            })?;
         Ok(())
     }
 }
@@ -168,21 +189,33 @@ impl WebRTCJSInterface {
         ondatachannel_callback.forget();
 
         let ice_candidates = self.ice_candidates.clone();
-        let onicecandidate_callback1 = Closure::<dyn FnMut(_)>::new(
+        let self_callback = self.on_ice_candidate.clone();
+        let onicecandidate_callback = Closure::<dyn FnMut(_)>::new(
             move |ev: RtcPeerConnectionIceEvent| {
                 if let Some(candidate) = ev.candidate() {
-                    let candidate_init = candidate.candidate();
-                    info!("ICE candidate: {:?}", candidate_init);
-                    ice_candidates
-                        .borrow_mut()
-                        .push_back(serialize(&candidate_init).unwrap());
+                    let candidate_init = candidate.to_json();
+                    let candidate_init = JSON::stringify(&candidate_init)
+                        .unwrap()
+                        .as_string()
+                        .unwrap();
+                    info!("ICE candidate: {}", candidate_init);
+                    let candidate_init = serialize(&candidate_init).unwrap();
+
+                    if let Some(callback) = self_callback.borrow().as_ref() {
+                        let _ = callback.call1(
+                            &JsValue::NULL,
+                            &candidate_init.clone().into(),
+                        );
+                    }
+
+                    ice_candidates.borrow_mut().push_back(candidate_init);
                 }
             },
         );
         connection.set_onicecandidate(Some(
-            onicecandidate_callback1.as_ref().unchecked_ref(),
+            onicecandidate_callback.as_ref().unchecked_ref(),
         ));
-        onicecandidate_callback1.forget();
+        onicecandidate_callback.forget();
 
         self.peer_connection = Some(connection.clone());
         Ok(())
@@ -258,7 +291,7 @@ impl WebRTCRegistry {
         interface_uuid: String,
     ) -> Result<Vec<u8>, JsError> {
         let interface = self.get_interface(interface_uuid);
-        let mut webrtc_interface = interface.borrow_mut();
+        let webrtc_interface = interface.borrow();
         let offer = webrtc_interface.create_offer(true).await;
         Ok(offer)
     }
@@ -268,7 +301,7 @@ impl WebRTCRegistry {
         description: Vec<u8>,
     ) -> Result<(), JsError> {
         let interface = self.get_interface(interface_uuid);
-        let webrtc_interface = interface.borrow_mut();
+        let webrtc_interface = interface.borrow();
         webrtc_interface.set_remote_description(description).await?;
         Ok(())
     }
@@ -277,8 +310,31 @@ impl WebRTCRegistry {
         interface_uuid: String,
     ) -> Result<Vec<u8>, JsError> {
         let interface = self.get_interface(interface_uuid);
-        let webrtc_interface = interface.borrow_mut();
+        let webrtc_interface = interface.borrow();
         let answer = webrtc_interface.create_answer().await;
         Ok(answer)
+    }
+
+    pub fn set_on_ice_candidate(
+        &self,
+        interface_uuid: String,
+        callback: &Function,
+    ) {
+        let interface = self.get_interface(interface_uuid);
+        let webrtc_interface = interface.borrow();
+        webrtc_interface
+            .on_ice_candidate
+            .borrow_mut()
+            .replace(callback.clone());
+    }
+    pub async fn add_ice_candidate(
+        &self,
+        interface_uuid: String,
+        candidate: Vec<u8>,
+    ) -> Result<(), JsError> {
+        let interface = self.get_interface(interface_uuid);
+        let webrtc_interface = interface.borrow();
+        webrtc_interface.add_ice_candidate(candidate).await?;
+        Ok(())
     }
 }
