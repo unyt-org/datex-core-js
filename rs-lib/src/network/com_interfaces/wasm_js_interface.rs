@@ -11,8 +11,12 @@ use datex_core::datex_values::Endpoint;
 use datex_core::network::com_interfaces::com_interface::{
     ComInterface, ComInterfaceInfo, ComInterfaceSockets, ComInterfaceUUID,
 };
-use datex_core::network::com_interfaces::com_interface_properties::InterfaceProperties;
-use datex_core::network::com_interfaces::com_interface_socket::ComInterfaceSocketUUID;
+use datex_core::network::com_interfaces::com_interface_properties::{
+    InterfaceDirection, InterfaceProperties,
+};
+use datex_core::network::com_interfaces::com_interface_socket::{
+    ComInterfaceSocket, ComInterfaceSocketUUID,
+};
 use datex_core::network::com_interfaces::socket_provider::SingleSocketProvider;
 use datex_core::stdlib::sync::Arc;
 use datex_core::{delegate_com_interface_info, set_opener};
@@ -142,6 +146,21 @@ impl WebRTCInterfaceTrait for WebRTCJSInterface {
                 error!("Failed to add ICE candidate");
                 WebRTCError::InvalidCandidate
             })?;
+        let uuid = self.get_uuid();
+
+        let socket =
+            ComInterfaceSocket::new(uuid.clone(), InterfaceDirection::InOut, 1);
+        let socket_uuid = socket.uuid.clone();
+
+        if self.get_socket().is_none() {
+            self.add_socket(Arc::new(Mutex::new(socket)));
+            self.register_socket_endpoint(
+                socket_uuid,
+                self.remote_endpoint.clone(),
+                1,
+            )
+            .unwrap();
+        }
         Ok(())
     }
 }
@@ -192,6 +211,11 @@ impl WebRTCJSInterface {
         let self_callback = self.on_ice_candidate.clone();
         let onicecandidate_callback = Closure::<dyn FnMut(_)>::new(
             move |ev: RtcPeerConnectionIceEvent| {
+                info!("ICE candidate event");
+                if ev.candidate().is_none() {
+                    info!("ICE candidate event: no candidate");
+                    return;
+                }
                 if let Some(candidate) = ev.candidate() {
                     let candidate_init = candidate.to_json();
                     let candidate_init = JSON::stringify(&candidate_init)

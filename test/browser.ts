@@ -14,19 +14,20 @@ document.getElementById("webrtc")!.addEventListener("click", async () => {
     const webrtc = Datex.comHub.webrtc;
     const interface_a = await webrtc.register("@jonas");
     const interface_b = await webrtc.register("@ben");
-
+    console.log(interface_a, interface_b);
     webrtc.set_on_ice_candidate(interface_a, async (candidate: Uint8Array) => {
+        alert();
         await webrtc.add_ice_candidate(interface_b, candidate);
         console.log("ICE candidate added to interface B");
     });
     webrtc.set_on_ice_candidate(interface_b, async (candidate: Uint8Array) => {
-        await sleep(200);
-        webrtc.add_ice_candidate(interface_a, candidate);
+        await webrtc.add_ice_candidate(interface_a, candidate);
         console.log("ICE candidate added to interface A");
     });
 
     const offer_sdp = await webrtc.create_offer(interface_a);
     await webrtc.set_remote_description(interface_b, offer_sdp);
+
     const answer_sdp = await webrtc.create_answer(interface_b);
     await webrtc.set_remote_description(interface_a, answer_sdp);
 
