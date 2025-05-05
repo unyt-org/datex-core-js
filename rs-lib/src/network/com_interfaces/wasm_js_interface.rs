@@ -38,7 +38,7 @@ use datex_macros::{com_interface, create_opener};
 pub struct WebRTCJSInterface {
     info: ComInterfaceInfo,
     pub remote_endpoint: Endpoint,
-    peer_connection: Option<RtcPeerConnection>,
+    peer_connection: Rc<Option<RtcPeerConnection>>,
     data_channel: Arc<Mutex<Option<web_sys::RtcDataChannel>>>,
     pub ice_candidates: Rc<RefCell<VecDeque<Vec<u8>>>>,
 
@@ -51,7 +51,7 @@ impl WebRTCInterfaceTrait for WebRTCJSInterface {
         let endpoint = endpoint.into();
         WebRTCJSInterface {
             remote_endpoint: endpoint,
-            peer_connection: None,
+            peer_connection: Rc::new(None),
             data_channel: Arc::new(Mutex::new(None)),
             info: ComInterfaceInfo::new(),
             on_ice_candidate: Rc::new(RefCell::new(None)),
@@ -67,118 +67,138 @@ impl WebRTCInterfaceTrait for WebRTCJSInterface {
         WebRTCJSInterface::new(endpoint)
     }
     async fn create_offer(&self, use_reliable_connection: bool) -> Vec<u8> {
-        let peer_connection = self.peer_connection.as_ref().unwrap();
-        let data_channel = peer_connection.create_data_channel("xxx");
+        if let Some(peer_connection) = self.peer_connection.as_ref() {
+            let data_channel = peer_connection.create_data_channel("xxx");
 
-        let sockets = self.get_sockets();
-        let onmessage_callback = Self::on_receive(sockets.clone());
-        data_channel
-            .set_onmessage(Some(onmessage_callback.as_ref().unchecked_ref()));
-        let data_channel_clone = data_channel.clone();
-        let self_data_channel = self.data_channel.clone();
-        let onopen_callback = Closure::<dyn FnMut()>::new(move || {
-            info!("Data channel opened sender");
-            self_data_channel
-                .clone()
-                .lock()
+            let sockets = self.get_sockets();
+            let onmessage_callback = Self::on_receive(sockets.clone());
+            data_channel.set_onmessage(Some(
+                onmessage_callback.as_ref().unchecked_ref(),
+            ));
+            let data_channel_clone = data_channel.clone();
+            let self_data_channel = self.data_channel.clone();
+            let onopen_callback = Closure::<dyn FnMut()>::new(move || {
+                info!("Data channel opened sender");
+                self_data_channel
+                    .clone()
+                    .lock()
+                    .unwrap()
+                    .replace(data_channel_clone.clone());
+            });
+            data_channel
+                .set_onopen(Some(onopen_callback.as_ref().unchecked_ref()));
+
+            onmessage_callback.forget();
+
+            let offer = JsFuture::from(peer_connection.create_offer())
+                .await
+                .unwrap();
+
+            // FIXME only sdp or also other fields?
+            let offer_sdp = Reflect::get(&offer, &JsValue::from_str("sdp"))
                 .unwrap()
-                .replace(data_channel_clone.clone());
-        });
-        data_channel.set_onopen(Some(onopen_callback.as_ref().unchecked_ref()));
+                .as_string()
+                .unwrap();
 
-        onmessage_callback.forget();
+            info!("Offer created {}", offer_sdp);
 
-        let offer = JsFuture::from(peer_connection.create_offer())
-            .await
-            .unwrap();
-
-        // FIXME only sdp or also other fields?
-        let offer_sdp = Reflect::get(&offer, &JsValue::from_str("sdp"))
-            .unwrap()
-            .as_string()
-            .unwrap();
-
-        info!("Offer created {}", offer_sdp);
-
-        let offer_obj = RtcSessionDescriptionInit::new(RtcSdpType::Offer);
-        offer_obj.set_sdp(&offer_sdp);
-        let sld_promise = peer_connection.set_local_description(&offer_obj);
-        JsFuture::from(sld_promise).await.unwrap();
-        serialize::<String>(&offer_sdp).unwrap()
+            let offer_obj = RtcSessionDescriptionInit::new(RtcSdpType::Offer);
+            offer_obj.set_sdp(&offer_sdp);
+            let sld_promise = peer_connection.set_local_description(&offer_obj);
+            JsFuture::from(sld_promise).await.unwrap();
+            serialize::<String>(&offer_sdp).unwrap()
+        } else {
+            panic!("Peer connection is not initialized");
+        }
     }
 
     async fn create_answer(&self) -> Vec<u8> {
-        let peer_connection = self.peer_connection.as_ref().unwrap();
-        let answer = JsFuture::from(peer_connection.create_answer())
-            .await
-            .unwrap();
-        let answer_sdp = Reflect::get(&answer, &JsValue::from_str("sdp"))
-            .unwrap()
-            .as_string()
-            .unwrap();
+        if let Some(peer_connection) = self.peer_connection.as_ref() {
+            let answer = JsFuture::from(peer_connection.create_answer())
+                .await
+                .unwrap();
+            let answer_sdp = Reflect::get(&answer, &JsValue::from_str("sdp"))
+                .unwrap()
+                .as_string()
+                .unwrap();
 
-        let answer_obj = RtcSessionDescriptionInit::new(RtcSdpType::Answer);
-        answer_obj.set_sdp(&answer_sdp);
-        let sld_promise = peer_connection.set_local_description(&answer_obj);
-        JsFuture::from(sld_promise).await.unwrap();
-        serialize::<String>(&answer_sdp).unwrap()
+            let answer_obj = RtcSessionDescriptionInit::new(RtcSdpType::Answer);
+            answer_obj.set_sdp(&answer_sdp);
+            let sld_promise =
+                peer_connection.set_local_description(&answer_obj);
+            JsFuture::from(sld_promise).await.unwrap();
+            serialize::<String>(&answer_sdp).unwrap()
+        } else {
+            panic!("Peer connection is not initialized");
+        }
     }
 
     async fn set_remote_description(
         &self,
         description: Vec<u8>,
     ) -> Result<(), WebRTCError> {
-        let offer_obj = RtcSessionDescriptionInit::new(RtcSdpType::Offer);
-        let sdp = deserialize::<String>(&description)
-            .map_err(|_| WebRTCError::InvalidSdp)?;
-        offer_obj.set_sdp(&sdp);
-        let srd_promise = self
-            .peer_connection
-            .as_ref()
-            .unwrap()
-            .set_remote_description(&offer_obj);
-        JsFuture::from(srd_promise)
-            .await
-            .map_err(|_| WebRTCError::InvalidSdp)?;
-        Ok(())
+        if let Some(peer_connection) = self.peer_connection.as_ref() {
+            let offer_obj = RtcSessionDescriptionInit::new(RtcSdpType::Offer);
+            let sdp = deserialize::<String>(&description)
+                .map_err(|_| WebRTCError::InvalidSdp)?;
+            offer_obj.set_sdp(&sdp);
+            let srd_promise =
+                peer_connection.set_remote_description(&offer_obj);
+            JsFuture::from(srd_promise)
+                .await
+                .map_err(|_| WebRTCError::InvalidSdp)?;
+            Ok(())
+        } else {
+            error!("Peer connection is not initialized");
+            Err(WebRTCError::ConnectionError)
+        }
     }
 
     async fn add_ice_candidate(
         &self,
         candidate: Vec<u8>,
     ) -> Result<(), WebRTCError> {
-        let peer_connection = self.peer_connection.as_ref().unwrap();
+        if let Some(peer_connection) = self.peer_connection.as_ref() {
+            let candidate_init = deserialize::<String>(&candidate).unwrap();
+            let js_val = JSON::parse(&candidate_init).unwrap();
 
-        let candidate_init = deserialize::<String>(&candidate).unwrap();
-        let js_val = JSON::parse(&candidate_init).unwrap();
-        let candidate_init: RtcIceCandidateInit = js_val.unchecked_into();
+            info!("Adding ICE candidate: {:?}", js_val);
 
-        // Step 4: Create the candidate
-        let candidate = RtcIceCandidate::new(&candidate_init).unwrap();
-        let add_ice_candidate_promise = peer_connection
-            .add_ice_candidate_with_opt_rtc_ice_candidate(Some(&candidate));
-        JsFuture::from(add_ice_candidate_promise)
-            .await
-            .map_err(|_| {
-                error!("Failed to add ICE candidate");
-                WebRTCError::InvalidCandidate
-            })?;
-        let uuid = self.get_uuid();
+            let candidate_init: RtcIceCandidateInit = js_val.unchecked_into();
 
-        let socket =
-            ComInterfaceSocket::new(uuid.clone(), InterfaceDirection::InOut, 1);
-        let socket_uuid = socket.uuid.clone();
+            // Step 4: Create the candidate
+            let candidate = RtcIceCandidate::new(&candidate_init).unwrap();
+            let add_ice_candidate_promise = peer_connection
+                .add_ice_candidate_with_opt_rtc_ice_candidate(Some(&candidate));
+            JsFuture::from(add_ice_candidate_promise)
+                .await
+                .map_err(|_| {
+                    error!("Failed to add ICE candidate");
+                    WebRTCError::InvalidCandidate
+                })?;
+            let uuid = self.get_uuid();
 
-        if self.get_socket().is_none() {
-            self.add_socket(Arc::new(Mutex::new(socket)));
-            self.register_socket_endpoint(
-                socket_uuid,
-                self.remote_endpoint.clone(),
+            let socket = ComInterfaceSocket::new(
+                uuid.clone(),
+                InterfaceDirection::InOut,
                 1,
-            )
-            .unwrap();
+            );
+            let socket_uuid = socket.uuid.clone();
+
+            if self.get_socket().is_none() {
+                self.add_socket(Arc::new(Mutex::new(socket)));
+                self.register_socket_endpoint(
+                    socket_uuid,
+                    self.remote_endpoint.clone(),
+                    1,
+                )
+                .unwrap();
+            }
+            Ok(())
+        } else {
+            error!("Peer connection is not initialized");
+            Err(WebRTCError::ConnectionError)
         }
-        Ok(())
     }
 }
 
@@ -254,24 +274,28 @@ impl WebRTCJSInterface {
             onicecandidate_callback.as_ref().unchecked_ref(),
         ));
         onicecandidate_callback.forget();
-        let self_connection = self.peer_connection.clone();
+        let connection = Rc::new(Some(connection));
+        self.peer_connection = connection.clone();
 
+        let connection_clone = connection.clone();
         let remote_endpoint = self.remote_endpoint.clone().to_string();
         let oniceconnectionstatechange_callback =
             Closure::<dyn FnMut()>::new(move || {
-                let state =
-                    self_connection.clone().unwrap().ice_connection_state();
-                info!(
-                    "ICE connection state to {}: {:?}",
-                    remote_endpoint, state
-                );
+                if let Some(connection) = connection_clone.as_ref() {
+                    let state = connection.ice_connection_state();
+                    info!(
+                        "ICE connection state of remote {}: {:?}",
+                        remote_endpoint, state
+                    );
+                }
             });
 
-        connection.set_oniceconnectionstatechange(Some(
-            oniceconnectionstatechange_callback.as_ref().unchecked_ref(),
-        ));
-        oniceconnectionstatechange_callback.forget();
-        self.peer_connection = Some(connection);
+        if let Some(connection) = connection.as_ref() {
+            connection.clone().set_oniceconnectionstatechange(Some(
+                oniceconnectionstatechange_callback.as_ref().unchecked_ref(),
+            ));
+            oniceconnectionstatechange_callback.forget();
+        }
 
         Ok(())
     }
