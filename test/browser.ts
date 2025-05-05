@@ -10,6 +10,9 @@ document.getElementById("serial")!.addEventListener("click", async () => {
 
 // TODO
 document.getElementById("webrtc")!.addEventListener("click", async () => {
-    const webrtc = await Datex.comHub.webrtc.register("ws://localhost:8080");
-    console.log(webrtc);
+    const interface1 = await Datex.comHub.webrtc.register("@jonas");
+    console.log(interface1);
+
+    // const interface2 = await Datex.comHub.webrtc.register("@bob");
+    // console.log(interface2);
 });

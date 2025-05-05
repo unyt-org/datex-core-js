@@ -1,13 +1,15 @@
-
+#[cfg(feature = "wasm_matchbox")]
+use super::com_interfaces::matchbox_js_interface::MatchboxClientRegistry;
 #[cfg(feature = "wasm_serial")]
 use super::com_interfaces::serial_js_interface::SerialRegistry;
-#[cfg(feature = "webrtc")]
-use super::com_interfaces::webrtc_js_interface::WebRTCClientRegistry;
+#[cfg(feature = "wasm_webrtc")]
+use super::com_interfaces::wasm_js_interface::WebRTCRegistry;
 #[cfg(feature = "wasm_websocket_client")]
 use super::com_interfaces::websocket_client_js_interface::WebSocketClientRegistry;
 #[cfg(feature = "wasm_websocket_server")]
 use super::com_interfaces::websocket_server_js_interface::WebSocketServerRegistry;
 
+use datex_core::network::com_hub::InterfacePriority;
 use datex_core::network::com_interfaces::com_interface::{
     ComInterface, ComInterfaceUUID,
 };
@@ -17,7 +19,6 @@ use log::error;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::future_to_promise;
 use web_sys::js_sys::{self, Promise};
-use datex_core::network::com_hub::InterfacePriority;
 
 #[wasm_bindgen]
 pub struct JSComHub {
@@ -79,9 +80,7 @@ impl JSComHub {
         let com_hub = self.com_hub.clone();
         future_to_promise(async move {
             let com_hub = com_hub.clone();
-            let has_interface = {
-                com_hub.has_interface(&interface_uuid)
-            };
+            let has_interface = { com_hub.has_interface(&interface_uuid) };
             if has_interface {
                 let com_hub = com_hub.clone();
 
@@ -120,10 +119,16 @@ impl JSComHub {
         SerialRegistry::new(self.com_hub.clone())
     }
 
-    #[cfg(feature = "webrtc")]
+    #[cfg(feature = "wasm_matchbox")]
     #[wasm_bindgen(getter)]
-    pub fn webrtc(&self) -> WebRTCClientRegistry {
-        WebRTCClientRegistry::new(self.com_hub.clone())
+    pub fn matchbox(&self) -> MatchboxClientRegistry {
+        MatchboxClientRegistry::new(self.com_hub.clone())
+    }
+
+    #[cfg(feature = "wasm_webrtc")]
+    #[wasm_bindgen(getter)]
+    pub fn webrtc(&self) -> WebRTCRegistry {
+        WebRTCRegistry::new(self.com_hub.clone())
     }
 
     #[wasm_bindgen(getter)]
