@@ -82,11 +82,16 @@ impl WebRTCInterfaceTrait for WebRTCJSInterface {
         let offer = JsFuture::from(peer_connection.create_offer())
             .await
             .unwrap();
+
         // FIXME only sdp or also other fields?
         let offer_sdp = Reflect::get(&offer, &JsValue::from_str("sdp"))
             .unwrap()
             .as_string()
             .unwrap();
+        let offer_obj = RtcSessionDescriptionInit::new(RtcSdpType::Offer);
+        offer_obj.set_sdp(&offer_sdp);
+        let sld_promise = peer_connection.set_local_description(&offer_obj);
+        JsFuture::from(sld_promise).await.unwrap();
         serialize::<String>(&offer_sdp).unwrap()
     }
 
@@ -209,9 +214,10 @@ impl WebRTCJSInterface {
 
         let ice_candidates = self.ice_candidates.clone();
         let self_callback = self.on_ice_candidate.clone();
+        let other_endpoint = self.remote_endpoint.to_string().clone();
         let onicecandidate_callback = Closure::<dyn FnMut(_)>::new(
             move |ev: RtcPeerConnectionIceEvent| {
-                info!("ICE candidate event");
+                info!("{} ICE candidate event", other_endpoint);
                 if ev.candidate().is_none() {
                     info!("ICE candidate event: no candidate");
                     return;
