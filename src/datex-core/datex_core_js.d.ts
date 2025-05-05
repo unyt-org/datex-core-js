@@ -96,6 +96,12 @@ export class WebRTCRegistry {
     free(): void;
     close(interface_uuid: string): Promise<any>;
     register(endpoint: string): Promise<string>;
+    create_offer(interface_uuid: string): Promise<Uint8Array>;
+    set_remote_description(
+        interface_uuid: string,
+        description: Uint8Array,
+    ): Promise<void>;
+    create_answer(interface_uuid: string): Promise<Uint8Array>;
 }
 export class WebSocketClientRegistry {
     private constructor();

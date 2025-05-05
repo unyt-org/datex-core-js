@@ -10,9 +10,13 @@ document.getElementById("serial")!.addEventListener("click", async () => {
 
 // TODO
 document.getElementById("webrtc")!.addEventListener("click", async () => {
-    const interface1 = await Datex.comHub.webrtc.register("@jonas");
-    console.log(interface1);
+    const webrtc = Datex.comHub.webrtc;
+    const interface_a = await webrtc.register("@jonas");
+    const interface_b = await webrtc.register("@ben");
+    const offer_sdp = await webrtc.create_offer(interface_a);
+    await webrtc.set_remote_description(interface_b, offer_sdp);
+    const answer_sdp = await webrtc.create_answer(interface_b);
+    await webrtc.set_remote_description(interface_a, answer_sdp);
 
-    // const interface2 = await Datex.comHub.webrtc.register("@bob");
-    // console.log(interface2);
+    console.log(offer_sdp, answer_sdp);
 });

@@ -1,6 +1,6 @@
 #[macro_export]
 macro_rules! define_registry {
-    ($name:ident) => {
+    ($name:ident, $interface_type:ident) => {
         #[derive(Clone)]
         #[wasm_bindgen]
         pub struct $name {
@@ -21,6 +21,19 @@ macro_rules! define_registry {
 
         #[wasm_bindgen]
         impl $name {
+
+            fn get_interface(
+                &self,
+                interface_uuid: String,
+            ) -> Rc<RefCell<$interface_type>> {
+                let interface_uuid =
+                    ComInterfaceUUID(datex_core::utils::uuid::UUID::from_string(interface_uuid));
+                let com_hub = self.com_hub.clone();
+
+                let interface = com_hub.get_interface_by_uuid::<$interface_type>(&interface_uuid);
+                let interface = interface.unwrap();
+                return interface;
+            }
             pub fn close(&self, interface_uuid: String) -> web_sys::js_sys::Promise {
                 let interface_uuid = datex_core::network::com_interfaces::com_interface::ComInterfaceUUID(
                     datex_core::utils::uuid::UUID::from_string(interface_uuid),

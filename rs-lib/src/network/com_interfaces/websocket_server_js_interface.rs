@@ -18,6 +18,8 @@ use datex_core::network::com_interfaces::default_com_interfaces::websocket::webs
 use datex_core::network::com_interfaces::socket_provider::MultipleSocketProvider;
 use datex_core::stdlib::sync::Arc;
 
+use crate::{define_registry, wrap_error_for_js};
+use datex_core::network::com_hub::InterfacePriority;
 use datex_core::network::com_interfaces::com_interface::ComInterfaceState;
 use datex_core::utils::uuid::UUID;
 use log::{debug, error, info};
@@ -25,8 +27,6 @@ use wasm_bindgen::prelude::wasm_bindgen;
 use wasm_bindgen::{prelude::Closure, JsCast};
 use wasm_bindgen::{JsError, JsValue};
 use web_sys::{js_sys, ErrorEvent, MessageEvent};
-use datex_core::network::com_hub::InterfacePriority;
-use crate::{define_registry, wrap_error_for_js};
 
 pub struct WebSocketServerJSInterface {
     sockets: HashMap<ComInterfaceSocketUUID, web_sys::WebSocket>,
@@ -200,7 +200,7 @@ impl ComInterface for WebSocketServerJSInterface {
     set_sync_opener!(open);
 }
 
-define_registry!(WebSocketServerRegistry);
+define_registry!(WebSocketServerRegistry, WebSocketServerJSInterface);
 
 #[wasm_bindgen]
 impl WebSocketServerRegistry {
@@ -210,7 +210,10 @@ impl WebSocketServerRegistry {
         let uuid = websocket_interface.get_uuid().clone();
         websocket_interface.open().unwrap();
         com_hub
-            .add_interface(Rc::new(RefCell::new(websocket_interface)), InterfacePriority::default())
+            .add_interface(
+                Rc::new(RefCell::new(websocket_interface)),
+                InterfacePriority::default(),
+            )
             .map_err(|_| {
                 WebSocketServerError::WebSocketError(
                     WebSocketError::ConnectionError,
@@ -236,7 +239,8 @@ impl WebSocketServerRegistry {
             );
 
         if interface.is_some() {
-            let uuid = interface.unwrap().borrow_mut().register_socket(websocket);
+            let uuid =
+                interface.unwrap().borrow_mut().register_socket(websocket);
             JsValue::from_str(&uuid.0.to_string())
         } else {
             error!("Failed to find WebSocket interface");

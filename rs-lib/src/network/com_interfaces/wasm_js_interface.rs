@@ -1,4 +1,5 @@
 use std::cell::RefCell;
+use std::collections::VecDeque;
 use std::future::Future;
 use std::pin::Pin;
 use std::rc::Rc;
@@ -26,7 +27,7 @@ use crate::js_utils::TryAsByteSlice;
 use log::{debug, error, info};
 use wasm_bindgen::prelude::{wasm_bindgen, Closure};
 use wasm_bindgen::{JsCast, JsError, JsValue};
-use web_sys::{MessageEvent, RtcDataChannelEvent, RtcPeerConnection, RtcSdpType, RtcSessionDescriptionInit};
+use web_sys::{MessageEvent, RtcDataChannelEvent, RtcPeerConnection, RtcPeerConnectionIceEvent, RtcSdpType, RtcSessionDescriptionInit};
 use datex_core::network::com_hub::InterfacePriority;
 use datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common::{deserialize, serialize, RTCIceServer, WebRTCError, WebRTCInterfaceTrait};
 use datex_macros::{com_interface, create_opener};
@@ -36,6 +37,7 @@ pub struct WebRTCJSInterface {
     pub remote_endpoint: Endpoint,
     peer_connection: Option<RtcPeerConnection>,
     data_channel: Arc<Mutex<Option<web_sys::RtcDataChannel>>>,
+    pub ice_candidates: Rc<RefCell<VecDeque<Vec<u8>>>>,
 }
 
 #[async_trait(?Send)]
@@ -47,6 +49,7 @@ impl WebRTCInterfaceTrait for WebRTCJSInterface {
             peer_connection: None,
             data_channel: Arc::new(Mutex::new(None)),
             info: ComInterfaceInfo::new(),
+            ice_candidates: Rc::new(RefCell::new(VecDeque::new())),
         }
     }
 
@@ -163,6 +166,25 @@ impl WebRTCJSInterface {
             ondatachannel_callback.as_ref().unchecked_ref(),
         ));
         ondatachannel_callback.forget();
+
+        let ice_candidates = self.ice_candidates.clone();
+        let onicecandidate_callback1 = Closure::<dyn FnMut(_)>::new(
+            move |ev: RtcPeerConnectionIceEvent| {
+                if let Some(candidate) = ev.candidate() {
+                    let candidate_init =
+                        candidate.to_json().to_string().as_string().unwrap();
+                    info!("ICE candidate: {:?}", candidate_init);
+                    ice_candidates.borrow_mut().push_back(
+                        serialize::<String>(&candidate_init).unwrap(),
+                    );
+                }
+            },
+        );
+        connection.set_onicecandidate(Some(
+            onicecandidate_callback1.as_ref().unchecked_ref(),
+        ));
+        onicecandidate_callback1.forget();
+
         self.peer_connection = Some(connection.clone());
         Ok(())
     }
@@ -210,7 +232,7 @@ impl ComInterface for WebRTCJSInterface {
     set_opener!(open);
 }
 
-define_registry!(WebRTCRegistry);
+define_registry!(WebRTCRegistry, WebRTCJSInterface);
 
 #[wasm_bindgen]
 impl WebRTCRegistry {
@@ -231,20 +253,33 @@ impl WebRTCRegistry {
             .map_err(|e| JsError::new(&format!("{e:?}")))?;
         Ok(uuid.0.to_string())
     }
+
     pub async fn create_offer(
         &self,
         interface_uuid: String,
     ) -> Result<Vec<u8>, JsError> {
-        let interface_uuid =
-            ComInterfaceUUID(UUID::from_string(interface_uuid));
-        let com_hub = self.com_hub.clone();
-
-        let interface =
-            com_hub.get_interface_by_uuid::<WebRTCJSInterface>(&interface_uuid);
-        let interface = interface.unwrap();
-
+        let interface = self.get_interface(interface_uuid);
         let mut webrtc_interface = interface.borrow_mut();
         let offer = webrtc_interface.create_offer(true).await;
         Ok(offer)
+    }
+    pub async fn set_remote_description(
+        &self,
+        interface_uuid: String,
+        description: Vec<u8>,
+    ) -> Result<(), JsError> {
+        let interface = self.get_interface(interface_uuid);
+        let webrtc_interface = interface.borrow_mut();
+        webrtc_interface.set_remote_description(description).await?;
+        Ok(())
+    }
+    pub async fn create_answer(
+        &self,
+        interface_uuid: String,
+    ) -> Result<Vec<u8>, JsError> {
+        let interface = self.get_interface(interface_uuid);
+        let webrtc_interface = interface.borrow_mut();
+        let answer = webrtc_interface.create_answer().await;
+        Ok(answer)
     }
 }

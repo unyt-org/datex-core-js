@@ -4,14 +4,14 @@ use crate::define_registry;
 use datex_core::network::com_hub::InterfacePriority;
 use datex_core::network::com_interfaces::{
     com_interface::ComInterface,
-    default_com_interfaces::webrtc::webrtc_client_interface::WebRTCClientInterface,
+    default_com_interfaces::webrtc::matchbox_client_interface::MatchboxClientInterface,
 };
 use log::error;
 use wasm_bindgen::{prelude::wasm_bindgen, JsError, JsValue};
 use wasm_bindgen_futures::future_to_promise;
 use web_sys::js_sys::Promise;
 
-define_registry!(MatchboxClientRegistry);
+define_registry!(MatchboxClientRegistry, MatchboxClientInterface);
 
 #[wasm_bindgen]
 impl MatchboxClientRegistry {
@@ -20,7 +20,7 @@ impl MatchboxClientRegistry {
         let address_clone = address.clone();
         future_to_promise(async move {
             let mut webrtc_interface =
-                WebRTCClientInterface::new_reliable(&address_clone, None)
+                MatchboxClientInterface::new_reliable(&address_clone, None)
                     .map_err(|e| JsError::new(&format!("{e:?}")))?;
             webrtc_interface.open().await.map_err(|e| {
                 error!("Failed to open WebRTC interface: {e:?}");

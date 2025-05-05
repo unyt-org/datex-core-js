@@ -21,6 +21,7 @@ use datex_core::network::com_interfaces::com_interface::ComInterfaceState;
 use datex_core::network::com_interfaces::default_com_interfaces::websocket::websocket_common::parse_url;
 
 use crate::{define_registry, wrap_error_for_js};
+use datex_core::network::com_hub::InterfacePriority;
 use futures::channel::oneshot;
 use log::{error, info, warn};
 use url::Url;
@@ -28,7 +29,6 @@ use wasm_bindgen::prelude::wasm_bindgen;
 use wasm_bindgen::{prelude::Closure, JsCast};
 use wasm_bindgen::{JsError, JsValue};
 use web_sys::{js_sys, ErrorEvent, MessageEvent};
-use datex_core::network::com_hub::InterfacePriority;
 
 pub struct WebSocketClientJSInterface {
     pub address: Url,
@@ -194,7 +194,7 @@ impl ComInterface for WebSocketClientJSInterface {
     set_opener!(open);
 }
 
-define_registry!(WebSocketClientRegistry);
+define_registry!(WebSocketClientRegistry, WebSocketClientJSInterface);
 
 #[wasm_bindgen]
 impl WebSocketClientRegistry {
@@ -214,7 +214,10 @@ impl WebSocketClientRegistry {
         let websocket_interface = Rc::new(RefCell::new(websocket_interface));
 
         com_hub
-            .add_interface(websocket_interface.clone(), InterfacePriority::default())
+            .add_interface(
+                websocket_interface.clone(),
+                InterfacePriority::default(),
+            )
             .map_err(|e| WebSocketError::Other(format!("{e:?}")))?;
         Ok(interface_uuid.0.to_string())
     }
