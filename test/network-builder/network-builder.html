@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <title>Network Builder</title>
+        <link rel="icon" href="./assets/datex-logo-light.png" />
+        <style>
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                padding: 0; 
+                overflow: hidden; 
+                font-family: Arial, sans-serif;
+                font-size: 14px;
+            }
+            #cy { 
+                width: 100vw; 
+                height: 100vh; 
+                display: block;
+                position: fixed;
+                z-index: 0;
+            }
+            button {
+                border: 1px solid rgba(0, 0, 0, 0.278);
+                padding: 10px 15px;
+                border-radius: 5px;
+                background-color: transparent;
+                cursor: pointer;
+                font-size: 14px;
+                margin: 5px;
+                &:hover {
+                    background-color: rgba(0, 0, 0, 0.1);
+                }
+                &:active {
+                    background-color: rgba(0, 0, 0, 0.2);
+                }
+            }
+            .control-panel {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                background-color: rgba(255, 255, 255, 0.8);
+                padding: 10px;
+                position: absolute;
+                margin: auto;
+                left: 0;
+                flex-wrap: wrap;
+                right: 0;
+                border-radius: 5px;
+                box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+                z-index: 1;
+                gap: 6px;
+            }
+            #top-controls {
+                width: calc(100% - 20px);
+                max-width: 800px;
+                top: 10px;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="cy"></div>
+        <div id="top-controls" class="control-panel">
+            <button data-action="add-node">Add Node</button>
+            <button data-action="add-edge">Add Edge</button>
+            <button data-action="remove">Remove</button>
+            <button data-action="save">Save</button>
+            <button data-action="load">Load</button>
+            <button data-action="clear">Clear</button>
+        </div>
+        <script type="module" src="./network-builder.ts"></script>
+    </body>
+</html>
