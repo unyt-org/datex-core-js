@@ -74,7 +74,7 @@ const loadNetwork = async (name: string) => {
     }
 };
 
-const container = document.getElementById("cy");
+const container = document.getElementById("cy")!;
 const cy = cytoscape({
     container,
     style: [
@@ -130,6 +130,10 @@ const cy = cytoscape({
             },
         },
     ],
+    userZoomingEnabled: true,
+    userPanningEnabled: true,
+    boxSelectionEnabled: false,
+    autoungrabify: false,
     elements: [],
 });
 
@@ -193,7 +197,7 @@ document.addEventListener("keydown", (e) => {
 });
 
 cy.on("tap", function (evt) {
-    if (evt.target !== cy) {
+    if (evt.target !== cy || !evt.originalEvent.shiftKey) {
         return;
     }
     addNode(undefined, evt.position);
@@ -223,6 +227,33 @@ const addEdge = (source: string, target: string, priority = 0) => {
         });
     }
 };
+
+let sourceNode: cytoscape.NodeSingular | null = null;
+
+cy.on("tapstart", "node", (e) => {
+    if (e.originalEvent.shiftKey) {
+        sourceNode = e.target;
+        console.log("mousedown", sourceNode);
+        sourceNode?.ungrabify();
+    }
+});
+
+cy.on("tapend", "node", (e) => {
+    if (sourceNode && e.target !== sourceNode) {
+        sourceNode.grabify();
+        sourceNode.unselect();
+        const targetNode = e.target;
+        addEdge(
+            sourceNode.id(),
+            targetNode.id(),
+        );
+    }
+    sourceNode = null;
+});
+container.addEventListener(
+    "contextmenu",
+    (e) => e.preventDefault(),
+);
 
 document.querySelectorAll("[data-action]").forEach((el) => {
     el.addEventListener("click", async (e) => {
