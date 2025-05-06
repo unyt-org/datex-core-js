@@ -5,6 +5,9 @@
         <title>Network Builder</title>
         <link rel="icon" href="./assets/datex-logo-light.png" />
         <style>
+            h1, h2, h3, h4, h5, h6 {
+                margin: 0;
+            }
             * {
                 box-sizing: border-box;
             }
@@ -30,6 +33,8 @@
                 cursor: pointer;
                 font-size: 14px;
                 margin: 5px;
+                max-width: 100px;
+                width: 100%;
                 &:hover {
                     background-color: rgba(0, 0, 0, 0.1);
                 }
@@ -58,6 +63,13 @@
                 max-width: 800px;
                 top: 10px;
             }
+            #edge-controls {
+                right: 0;
+                width: 200px;
+                top: 100px;
+                left: unset;
+                flex-direction: column;
+            }
         </style>
     </head>
     <body>
@@ -69,6 +81,23 @@
             <button data-action="save">Save</button>
             <button data-action="load">Load</button>
             <button data-action="clear">Clear</button>
+        </div>
+        <div id="edge-controls" class="control-panel">
+            <h3>Link Controls</h3>
+            <div>Name: <span id="edge-id"></span></div>
+            <label>Priority:
+                <input type="number" id="edge-priority-select" min="1" max="10">
+            </label>
+            <label>Type:
+                <select id="edge-type-select">
+                    <option value="default">Default</option>
+                    <option value="info">Info</option>
+                    <option value="warning">Warning</option>
+                    <option value="danger">Danger</option>
+                </select>
+            </label>
+            <button data-action="edge-flip">Flip</button>
+            <button data-action="edge-delete">Delete</button>
         </div>
         <script type="module" src="./network-builder.ts"></script>
     </body>

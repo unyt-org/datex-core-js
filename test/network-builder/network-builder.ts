@@ -95,6 +95,35 @@ const addNode = (id?: string, position?: { x: number; y: number }) => {
         layout(true);
     }
 };
+const remove = (node: cytoscape.SingularElementReturnValue) => {
+    const id = node.data("id");
+    const edges = node.connectedEdges();
+    edges.forEach((edge) => {
+        const target = edge.target();
+        if (target.id() === id) {
+            edge.remove();
+        }
+    });
+    node.remove();
+};
+const removeSelected = () => {
+    const collection = cy.$(":selected");
+    if (collection.length > 0) {
+        collection.forEach((node) => {
+            remove(node);
+        });
+        layout();
+    }
+};
+document.addEventListener("keydown", (e) => {
+    const collection = cy.$(":selected");
+    if (
+        (e.key === "Delete" || e.key === "Backspace") && collection.length > 0
+    ) {
+        removeSelected();
+        layout();
+    }
+});
 
 cy.on("tap", function (evt) {
     if (evt.target !== cy) {
@@ -103,12 +132,17 @@ cy.on("tap", function (evt) {
     addNode(undefined, evt.position);
     layout();
 });
-
+let selectedEdge: cytoscape.EdgeSingular | null = null;
+cy.on("tap", "edge", (evt) => {
+    selectedEdge = evt.target;
+});
 document.querySelectorAll("[data-action]").forEach((el) => {
     el.addEventListener("click", (e) => {
         const action = (e.target as HTMLElement).dataset.action;
         if (action === "add-node") {
             addNode();
+        } else if (action === "remove") {
+            removeSelected();
         }
     });
 });
