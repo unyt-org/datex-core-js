@@ -8,7 +8,7 @@ cytoscape.use(coseBilkent);
 cytoscape.use(fcose as unknown as (cy: typeof cytoscape) => void);
 
 type NetworkDefinition = {
-    nodes: Array<{ id: string; label: string }>;
+    nodes: Array<{ id: string; label: string; endpoint?: string }>;
     edges: Array<{
         id: string;
         source: string;
@@ -184,7 +184,11 @@ const getRandomName = (len = 4) => {
     return Array.from(array, (byte) => chars[byte % chars.length]).join("");
 };
 
-const addNode = (id?: string, position?: { x: number; y: number }) => {
+const addNode = (
+    id?: string,
+    position?: { x: number; y: number },
+    endpoint?: string,
+) => {
     if (!id) {
         id = getRandomName();
     }
@@ -193,7 +197,7 @@ const addNode = (id?: string, position?: { x: number; y: number }) => {
     }
     cy.add({
         group: "nodes",
-        data: { id, label: `@${id}` },
+        data: { id, label: `@${id}`, endpoint: endpoint },
         position,
     });
     if (!position) {
@@ -255,6 +259,10 @@ const openEdgeInfo = (edge: cytoscape.EdgeSingular) => {
     }`;
     html<HTMLInputElement>("edge-bidirectional").checked =
         cy.getElementById(otherEdgeId).length > 0;
+
+    html<HTMLInputElement>("with-known-endpoint").checked = edge.data(
+        "endpoint",
+    );
 };
 cy.on("unselect", "edge", () => {
     html("edge-controls").style.display = "none";
@@ -361,6 +369,16 @@ document.querySelectorAll("[data-action]").forEach((el) => {
                     const target = edge.data("target");
                     addEdge(target, source, edge.data("type"));
                 }
+            } else if (action == "with-known-endpoint") {
+                const edge = cy.edges(":selected");
+                if (edge.length === 1) {
+                    console.log("edge", edge, target.checked);
+                    edge.data;
+                    edge.data(
+                        "endpoint",
+                        target.checked ? "@" + edge[0].target().id() : null,
+                    );
+                }
             }
         });
     } else {
@@ -402,7 +420,13 @@ document.querySelectorAll("[data-action]").forEach((el) => {
                     prompt("Enter network name");
                 if (networkName) {
                     const nodes = cy.nodes().map((node) => node.data());
-                    const edges = cy.edges().map((edge) => edge.data());
+                    const edges = cy.edges().map((edge) => {
+                        const data = edge.data();
+                        if (!data["endpoint"]) {
+                            delete data["endpoint"];
+                        }
+                        return data;
+                    });
                     const networkData = { nodes: nodes, edges: edges };
                     const handle = await (globalThis as any).showSaveFilePicker(
                         {
