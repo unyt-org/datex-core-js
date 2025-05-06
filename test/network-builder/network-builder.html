@@ -74,6 +74,18 @@
     </head>
     <body>
         <div id="cy"></div>
+        <dialog id="network-dialog">
+            <form method="dialog">
+              <label for="network-select">Choose a network:</label>
+              <select id="network-select" name="network">
+              </select>
+              <div style="margin-top: 10px;">
+                <button value="cancel">Cancel</button>
+                <button data-action="load-network" value="ok">OK</button>
+              </div>
+            </form>
+        </dialog>
+        
         <div id="top-controls" class="control-panel">
             <button data-action="add-node">Add Node</button>
             <button data-action="add-edge">Add Edge</button>
