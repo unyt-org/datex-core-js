@@ -68,6 +68,7 @@
                 width: 200px;
                 top: 100px;
                 left: unset;
+                display: none;
                 flex-direction: column;
             }
         </style>
@@ -98,10 +99,10 @@
             <h3>Link Controls</h3>
             <div>Name: <span id="edge-id"></span></div>
             <label>Priority:
-                <input type="number" id="edge-priority-select" min="1" max="10">
+                <input type="number" data-action="edge-priority-select" id="edge-priority-select" min="1" max="20" value="0" />
             </label>
             <label>Type:
-                <select id="edge-type-select">
+                <select id="edge-type-select" data-action="edge-type-select">
                     <option value="default">Default</option>
                     <option value="info">Info</option>
                     <option value="warning">Warning</option>
