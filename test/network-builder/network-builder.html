@@ -103,14 +103,17 @@
             </label>
             <label>Type:
                 <select id="edge-type-select" data-action="edge-type-select">
-                    <option value="default">Default</option>
-                    <option value="info">Info</option>
-                    <option value="warning">Warning</option>
-                    <option value="danger">Danger</option>
+                    <option value="mockup">mockup</option>
+                    <option value="websocket">websocket</option>
+                    <option value="webrtc">webrtc</option>
                 </select>
             </label>
             <button data-action="edge-flip">Flip</button>
             <button data-action="remove">Remove</button>
+            <label>
+                Bidirectional:
+                <input type="checkbox" id="edge-bidirectional" data-action="edge-bidirectional" />
+            </label>
         </div>
         <script type="module" src="./network-builder.ts"></script>
     </body>

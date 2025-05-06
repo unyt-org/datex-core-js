@@ -239,7 +239,6 @@ cy.on("tap", function (evt) {
     layout();
 });
 cy.on("select", "edge", (evt) => {
-    console.log("select");
     openEdgeInfo(evt.target);
 });
 
@@ -251,16 +250,19 @@ const openEdgeInfo = (edge: cytoscape.EdgeSingular) => {
     );
     html<HTMLOptionElement>("edge-type-select").value = edge.data("type") ||
         "info";
-    console.log("Edge info:", edge.id());
+    const otherEdgeId = `${edge.data("type")}-${edge.data("target")}-${
+        edge.data("source")
+    }`;
+    html<HTMLInputElement>("edge-bidirectional").checked =
+        cy.getElementById(otherEdgeId).length > 0;
 };
 cy.on("unselect", "edge", () => {
-    console.log("unselect");
     html("edge-controls").style.display = "none";
 });
 const addEdge = (
     source: string,
     target: string,
-    type: string,
+    type: string = "mockup",
     priority = 0,
 ) => {
     const edgeId = `${type}-${source}-${target}`;
@@ -304,7 +306,6 @@ cy.on("tapend", "node", (e) => {
         addEdge(
             sourceNode.id(),
             targetNode.id(),
-            "default",
         );
     }
     sourceNode?.grabify();
@@ -341,6 +342,25 @@ document.querySelectorAll("[data-action]").forEach((el) => {
                 if (edge.length === 1) {
                     edge.data("priority", +value);
                 }
+            } else if (action == "edge-bidirectional") {
+                const edge = cy.edges(":selected");
+                if (edge.length !== 1) {
+                    return;
+                }
+                const otherEdgeId = `${edge.data("type")}-${
+                    edge.data("target")
+                }-${edge.data("source")}`;
+
+                if (!target.checked) {
+                    const otherEdge = cy.getElementById(otherEdgeId);
+                    if (otherEdge.length) {
+                        otherEdge.remove();
+                    }
+                } else {
+                    const source = edge.data("source");
+                    const target = edge.data("target");
+                    addEdge(target, source, edge.data("type"));
+                }
             }
         });
     } else {
@@ -355,7 +375,7 @@ document.querySelectorAll("[data-action]").forEach((el) => {
                 if (selected.length === 2) {
                     const source = selected[0].id();
                     const target = selected[1].id();
-                    addEdge(source, target, "default");
+                    addEdge(source, target);
                     selected.unselect();
                     layout();
                 }
@@ -404,8 +424,8 @@ document.querySelectorAll("[data-action]").forEach((el) => {
                 }
             } else if (action === "clear") {
                 cy.elements().remove();
+                html("edge-controls").style.display = "none";
             } else if (action === "edge-flip") {
-                console.log("edge-flip");
                 const selected = cy.edges(":selected");
                 if (selected.length === 1) {
                     flipEdge(selected[0]);

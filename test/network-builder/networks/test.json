@@ -1,266 +1,72 @@
 {
 	"nodes": [
 		{
-			"id": "645",
-			"label": "@645"
+			"id": "1tba",
+			"label": "@1tba"
 		},
 		{
-			"id": "615",
-			"label": "@615"
+			"id": "ypc7",
+			"label": "@ypc7"
 		},
 		{
-			"id": "676",
-			"label": "@676"
+			"id": "cmt7",
+			"label": "@cmt7"
 		},
 		{
-			"id": "483",
-			"label": "@483"
+			"id": "vlas",
+			"label": "@vlas"
 		},
 		{
-			"id": "511",
-			"label": "@511"
+			"id": "wo1s",
+			"label": "@wo1s"
 		},
 		{
-			"id": "454",
-			"label": "@454"
-		},
-		{
-			"id": "148",
-			"label": "@148"
-		},
-		{
-			"id": "428",
-			"label": "@428"
-		},
-		{
-			"id": "26",
-			"label": "@26"
-		},
-		{
-			"id": "722",
-			"label": "@722"
-		},
-		{
-			"id": "387",
-			"label": "@387"
-		},
-		{
-			"id": "710",
-			"label": "@710"
-		},
-		{
-			"id": "27",
-			"label": "@27"
-		},
-		{
-			"id": "672",
-			"label": "@672"
-		},
-		{
-			"id": "282",
-			"label": "@282"
-		},
-		{
-			"id": "264",
-			"label": "@264"
+			"id": "pac1",
+			"label": "@pac1"
 		}
 	],
 	"edges": [
 		{
-			"id": "default-722-264",
-			"source": "722",
-			"target": "264",
-			"type": "default",
-			"priority": 13
-		},
-		{
-			"id": "default-148-722",
-			"source": "148",
-			"target": "722",
-			"type": "default",
+			"id": "mockup-1tba-cmt7",
+			"source": "1tba",
+			"target": "cmt7",
+			"type": "mockup",
 			"priority": 0
 		},
 		{
-			"id": "default-645-615",
-			"source": "645",
-			"target": "615",
-			"type": "warning",
+			"id": "mockup-cmt7-vlas",
+			"source": "cmt7",
+			"target": "vlas",
+			"type": "mockup",
 			"priority": 0
 		},
 		{
-			"id": "default-615-645",
-			"source": "615",
-			"target": "645",
-			"type": "default",
+			"id": "mockup-vlas-pac1",
+			"source": "vlas",
+			"target": "pac1",
+			"type": "mockup",
 			"priority": 0
 		},
 		{
-			"id": "default-27-264",
-			"source": "27",
-			"target": "264",
-			"type": "default",
+			"id": "mockup-pac1-wo1s",
+			"source": "pac1",
+			"target": "wo1s",
+			"type": "mockup",
 			"priority": 0
 		},
 		{
-			"id": "default-672-722",
-			"source": "672",
-			"target": "722",
-			"type": "default",
+			"id": "mockup-wo1s-ypc7",
+			"source": "wo1s",
+			"target": "ypc7",
+			"type": "mockup",
 			"priority": 0
 		},
 		{
-			"id": "default-676-454",
-			"source": "676",
-			"target": "454",
-			"type": "default",
+			"id": "mockup-ypc7-1tba",
+			"source": "ypc7",
+			"target": "1tba",
+			"type": "mockup",
 			"priority": 0
-		},
-		{
-			"id": "default-483-672",
-			"source": "483",
-			"target": "672",
-			"type": "default",
-			"priority": 6
-		},
-		{
-			"id": "default-511-483",
-			"source": "511",
-			"target": "483",
-			"type": "default",
-			"priority": 0
-		},
-		{
-			"id": "default-428-511",
-			"source": "428",
-			"target": "511",
-			"type": "default",
-			"priority": 0
-		},
-		{
-			"id": "default-483-511",
-			"source": "483",
-			"target": "511",
-			"type": "default",
-			"priority": 0
-		},
-		{
-			"id": "default-722-148",
-			"source": "722",
-			"target": "148",
-			"type": "default",
-			"priority": 0
-		},
-		{
-			"id": "default-387-26",
-			"source": "387",
-			"target": "26",
-			"type": "default",
-			"priority": 0
-		},
-		{
-			"id": "default-428-672",
-			"source": "428",
-			"target": "672",
-			"type": "default",
-			"priority": 0
-		},
-		{
-			"id": "default-710-672",
-			"source": "710",
-			"target": "672",
-			"type": "default",
-			"priority": 0
-		},
-		{
-			"id": "default-27-26",
-			"source": "27",
-			"target": "26",
-			"type": "default",
-			"priority": 0
-		},
-		{
-			"id": "default-282-26",
-			"source": "282",
-			"target": "26",
-			"type": "default",
-			"priority": 0
-		},
-		{
-			"id": "default-264-387",
-			"source": "264",
-			"target": "387",
-			"type": "default",
-			"priority": 0
-		},
-		{
-			"id": "default-264-722",
-			"source": "264",
-			"target": "722",
-			"type": "default",
-			"priority": 0
-		},
-		{
-			"id": "default-387-264",
-			"source": "387",
-			"target": "264",
-			"type": "default",
-			"priority": 0
-		},
-		{
-			"id": "default-26-387",
-			"source": "26",
-			"target": "387",
-			"type": "default",
-			"priority": 0
-		},
-		{
-			"id": "default-710-387",
-			"source": "710",
-			"target": "387",
-			"type": "default",
-			"priority": 0
-		},
-		{
-			"id": "default-387-710",
-			"source": "387",
-			"target": "710",
-			"type": "default",
-			"priority": 0
-		},
-		{
-			"id": "default-282-483",
-			"source": "282",
-			"target": "483",
-			"type": "default",
-			"priority": 0
-		},
-		{
-			"id": "default-264-148",
-			"source": "264",
-			"target": "148",
-			"type": "default",
-			"priority": 0
-		},
-		{
-			"id": "default-615-676",
-			"source": "615",
-			"target": "676",
-			"type": "default",
-			"priority": 0
-		},
-		{
-			"id": "default-615-282",
-			"source": "615",
-			"target": "282",
-			"type": "default",
-			"priority": 0
-		},
-		{
-			"id": "default-282-615",
-			"source": "282",
-			"target": "615",
-			"type": "info",
-			"priority": 3
 		}
 	]
 }
