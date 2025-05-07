@@ -74,32 +74,21 @@ const loadNetwork = async (name: string) => {
         globalThis.location.hash = "";
     }
 };
-const color = (ele: cytoscape.EdgeSingular, steps = 20) => {
-    const priority = ele.data("priority") || 0;
-    const hue = (priority / steps) * 360;
-    const saturation = 1;
-    const brightness = 1;
-    const c = brightness * saturation;
-    const x = c * (1 - Math.abs((hue / 60) % 2 - 1));
-    const m = brightness - c;
-    let r, g, b;
-    if (hue < 60) {
-        [r, g, b] = [c, x, 0];
-    } else if (hue < 120) {
-        [r, g, b] = [x, c, 0];
-    } else if (hue < 180) {
-        [r, g, b] = [0, c, x];
-    } else if (hue < 240) {
-        [r, g, b] = [0, x, c];
-    } else if (hue < 300) {
-        [r, g, b] = [x, 0, c];
-    } else {
-        [r, g, b] = [c, 0, x];
-    }
-    r = Math.round((r + m) * 255);
-    g = Math.round((g + m) * 255);
-    b = Math.round((b + m) * 255);
-    return `rgb(${r}, ${g}, ${b})`;
+const color = (ele: cytoscape.EdgeSingular) => {
+    const priority = ele.data("priority") + 1 || 0;
+    return [
+        "red",
+        "black",
+        "#303030",
+        "#505050",
+        "#707070",
+        "#909090",
+        "#A0A0A0",
+        "#C0C0C0",
+        "#D0D0D0",
+        "#F0F0F0",
+    ][priority] ||
+        "#8C9BAB";
 };
 const container = document.getElementById("cy")!;
 const cy = cytoscape({
@@ -111,10 +100,10 @@ const cy = cytoscape({
                 "label": "data(label)",
                 "text-valign": "center",
                 "text-halign": "center",
-                "font-size": 10,
+                "font-size": 7,
                 "shape": "roundrectangle",
-                "width": 40,
-                "height": 16,
+                "width": 30,
+                "height": 12,
                 "background-color": "black",
                 "border-color": "#000",
                 "border-opacity": 0.5,
@@ -123,32 +112,44 @@ const cy = cytoscape({
             },
         },
         {
+            selector: "node:selected",
+            style: {
+                "border-width": 0,
+                "border-color": "transparent",
+                "background-color": "#0074D9", // match default
+            },
+        },
+        {
+            selector: ":active",
+            style: {
+                "opacity": 0.8,
+                "overlay-color": "transparent",
+                "overlay-opacity": 0,
+            },
+        },
+        {
             selector: "edge",
             style: {
                 "label": "data(type)",
-                "width": 2,
+                "width": 1,
                 "target-arrow-color": color,
                 "target-arrow-shape": "triangle",
                 "curve-style": "bezier",
                 "line-color": color,
-                "font-size": 8,
+                "font-size": 4,
+                "arrow-scale": 0.5,
                 "text-background-color": "#fff",
-                "text-background-opacity": 0.8,
+                "text-background-opacity": 1,
                 "text-background-shape": "roundrectangle",
-                "text-border-color": "#000",
-                "text-border-opacity": 0.01,
                 "text-background-padding": "2px",
-                "text-justification": "left",
             },
         },
         {
-            selector: ":selected",
+            selector: "edge:selected",
             style: {
-                "outline-width": 2,
-                "outline-color": "#000",
-                "outline-offset": 4,
-                "outline-style": "solid",
-                "outline-opacity": 1,
+                "color": "#0074D9",
+                "target-arrow-color": "#0074D9",
+                "line-color": "#0074D9",
             },
         },
     ],
@@ -172,8 +173,9 @@ function layout(fit = false) {
     cy.layout({
         ...options,
         name: "fcose",
-        tilingPaddingVertical: 50,
-        tilingPaddingHorizontal: 50,
+        idealEdgeLength: 80,
+        tilingPaddingVertical: 100,
+        tilingPaddingHorizontal: 100,
     } as any).run();
 }
 
@@ -249,10 +251,10 @@ cy.on("select", "edge", (evt) => {
 const openEdgeInfo = (edge: cytoscape.EdgeSingular) => {
     html("edge-controls").style.display = "flex";
     html("edge-id").textContent = edge.id();
-    html<HTMLInputElement>("edge-priority-select").value = edge.data(
+    html<HTMLSelectElement>("edge-priority-select").value = edge.data(
         "priority",
     );
-    html<HTMLOptionElement>("edge-type-select").value = edge.data("type") ||
+    html<HTMLSelectElement>("edge-type-select").value = edge.data("type") ||
         "info";
     const otherEdgeId = `${edge.data("type")}-${edge.data("target")}-${
         edge.data("source")
@@ -338,19 +340,19 @@ document.querySelectorAll("[data-action]").forEach((el) => {
                 if (edge.length === 1) {
                     edge.data("type", selected.value);
                 }
+            } else if (action == "edge-priority-select") {
+                const edge = cy.edges(":selected");
+                console.log("edge", edge, selected.value);
+                if (edge.length === 1) {
+                    edge.data("priority", +selected.value);
+                }
             }
         });
     } else if (el instanceof HTMLInputElement) {
         el.addEventListener("input", (e) => {
             const action = (e.target as HTMLElement).dataset.action;
             const target = e.target as HTMLInputElement;
-            const value = target.value;
-            if (action == "edge-priority-select") {
-                const edge = cy.edges(":selected");
-                if (edge.length === 1) {
-                    edge.data("priority", +value);
-                }
-            } else if (action == "edge-bidirectional") {
+            if (action == "edge-bidirectional") {
                 const edge = cy.edges(":selected");
                 if (edge.length !== 1) {
                     return;
