@@ -97,9 +97,11 @@ impl JSComHub {
         })
     }
 
-    pub async fn _update(&mut self) {
-        todo!("Update was refactored")
-        //self.com_hub.borrow_mut().update().await;
+    pub fn start_update_loop(&self) {
+        ComHub::start_update_loop(self.com_hub.clone());
+    }
+    pub async fn update(&self) {
+        self.com_hub.update_async().await;
     }
 
     #[cfg(feature = "wasm_websocket_server")]

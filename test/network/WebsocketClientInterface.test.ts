@@ -56,7 +56,7 @@ Deno.test("websocket block retrieval", async () => {
     );
     server.send(block);
     await sleep(10);
-    await runtime.comHub._update();
+    await runtime.comHub.update();
 
     assert(runtime.comHub._incoming_blocks.length === 1);
     const incoming_block = runtime.comHub._incoming_blocks[0];

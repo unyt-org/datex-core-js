@@ -976,6 +976,7 @@ dependencies = [
  "futures",
  "futures-timer",
  "futures-util",
+ "gloo-timers 0.2.6",
  "hex",
  "hyper",
  "itertools 0.10.5",

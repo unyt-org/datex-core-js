@@ -55,7 +55,8 @@ export class JSComHub {
     private constructor();
     free(): void;
     close_interface(interface_uuid: string): Promise<any>;
-    _update(): Promise<void>;
+    start_update_loop(): void;
+    update(): Promise<void>;
     /**
      * Send a block to the given interface and socket
      * This does not involve the routing on the ComHub level.
