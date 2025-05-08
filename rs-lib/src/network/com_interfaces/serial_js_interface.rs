@@ -16,7 +16,7 @@ use datex_core::network::com_interfaces::com_interface::ComInterfaceState;
 
 use crate::{define_registry, wrap_error_for_js};
 use datex_core::network::com_hub::InterfacePriority;
-use datex_core::task::{spawn_local, spawn_with_panic_notify};
+use datex_core::task::spawn_with_panic_notify;
 use log::{debug, error};
 use wasm_bindgen::prelude::wasm_bindgen;
 use wasm_bindgen::{JsCast, JsError, JsValue};

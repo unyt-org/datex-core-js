@@ -3,7 +3,7 @@ use super::com_interfaces::matchbox_js_interface::MatchboxClientRegistry;
 #[cfg(feature = "wasm_serial")]
 use super::com_interfaces::serial_js_interface::SerialRegistry;
 #[cfg(feature = "wasm_webrtc")]
-use super::com_interfaces::wasm_js_interface::WebRTCRegistry;
+use super::com_interfaces::webrtc_js_interface::WebRTCRegistry;
 #[cfg(feature = "wasm_websocket_client")]
 use super::com_interfaces::websocket_client_js_interface::WebSocketClientRegistry;
 #[cfg(feature = "wasm_websocket_server")]
