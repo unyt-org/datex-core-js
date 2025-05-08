@@ -30,7 +30,7 @@ use crate::js_utils::TryAsByteSlice;
 use log::{debug, error, info};
 use wasm_bindgen::prelude::{wasm_bindgen, Closure};
 use wasm_bindgen::{JsCast, JsError, JsValue};
-use web_sys::{MessageEvent, RtcDataChannelEvent, RtcIceCandidate, RtcIceCandidateInit, RtcPeerConnection, RtcPeerConnectionIceEvent, RtcSdpType, RtcSessionDescriptionInit};
+use web_sys::{MessageEvent, RtcDataChannelEvent, RtcIceCandidate, RtcIceCandidateInit, RtcPeerConnection, RtcPeerConnectionIceEvent, RtcSdpType, RtcSessionDescriptionInit, RtcSignalingState};
 use datex_core::network::com_hub::InterfacePriority;
 use datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common::{deserialize, serialize, RTCIceServer, WebRTCError, WebRTCInterfaceTrait};
 use datex_macros::{com_interface, create_opener};
@@ -159,6 +159,16 @@ impl WebRTCInterfaceTrait for WebRTCJSInterface {
         candidate: Vec<u8>,
     ) -> Result<(), WebRTCError> {
         if let Some(peer_connection) = self.peer_connection.as_ref() {
+            let signaling_state = peer_connection.signaling_state();
+
+            // Ensure remote description is set
+            if signaling_state != RtcSignalingState::Stable
+                && signaling_state != RtcSignalingState::HaveLocalOffer
+                && signaling_state != RtcSignalingState::HaveRemoteOffer
+            {
+                return Err(WebRTCError::MissingRemoteDescription);
+            }
+
             let candidate_init = deserialize::<String>(&candidate).unwrap();
             let js_val = JSON::parse(&candidate_init).unwrap();
 
@@ -172,8 +182,8 @@ impl WebRTCInterfaceTrait for WebRTCJSInterface {
                 .add_ice_candidate_with_opt_rtc_ice_candidate(Some(&candidate));
             JsFuture::from(add_ice_candidate_promise)
                 .await
-                .map_err(|_| {
-                    error!("Failed to add ICE candidate");
+                .map_err(|e| {
+                    error!("Failed to add ICE candidate {:?}", e);
                     WebRTCError::InvalidCandidate
                 })?;
             let uuid = self.get_uuid();
