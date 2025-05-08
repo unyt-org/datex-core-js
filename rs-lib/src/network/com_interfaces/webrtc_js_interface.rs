@@ -40,9 +40,104 @@ pub struct WebRTCJSInterface {
     pub remote_endpoint: Endpoint,
     peer_connection: Rc<Option<RtcPeerConnection>>,
     data_channel: Arc<Mutex<Option<web_sys::RtcDataChannel>>>,
-    pub ice_candidates: Rc<RefCell<VecDeque<Vec<u8>>>>,
+    pub ice_candidates: RefCell<VecDeque<Vec<u8>>>,
 
     on_ice_candidate: Rc<RefCell<Option<Function>>>,
+}
+
+impl WebRTCJSInterface {
+    pub async fn create_answer_new(&self, offer: Vec<u8>) -> Vec<u8> {
+        if let Some(peer_connection) = self.peer_connection.as_ref() {
+            self.set_remote_description(offer).await.unwrap();
+
+            let answer = JsFuture::from(peer_connection.create_answer())
+                .await
+                .unwrap();
+            let answer_sdp = Reflect::get(&answer, &JsValue::from_str("sdp"))
+                .unwrap()
+                .as_string()
+                .unwrap();
+
+            let answer_obj = RtcSessionDescriptionInit::new(RtcSdpType::Answer);
+            answer_obj.set_sdp(&answer_sdp);
+            let sld_promise =
+                peer_connection.set_local_description(&answer_obj);
+            JsFuture::from(sld_promise).await.unwrap();
+            serialize::<String>(&answer_sdp).unwrap()
+        } else {
+            panic!("Peer connection is not initialized");
+        }
+    }
+}
+
+pub struct WebRTCCommon {
+    pub endpoint: Endpoint,
+    pub candidates: VecDeque<Vec<u8>>,
+    pub is_remote_description_set: bool,
+}
+
+#[async_trait(?Send)]
+pub trait WebRTCTrait {
+    fn new(peer_endpoint: impl Into<Endpoint>) -> Self;
+    fn get_info(&self) -> Rc<RefCell<WebRTCCommon>>;
+    async fn add_ice_candidate(
+        &self,
+        candidate: Vec<u8>,
+    ) -> Result<(), WebRTCError> {
+        let info = self.get_info();
+        if info.borrow().is_remote_description_set {
+            self.handle_add_ice_candidate(candidate).await?;
+        } else {
+            info.borrow_mut().candidates.push_back(candidate);
+        }
+        Ok(())
+    }
+    async fn create_offer(&self) -> Result<Vec<u8>, WebRTCError> {
+        self.handle_create_data_channel().await?;
+        self.handle_setup_data_channel().await?;
+        let offer = self.handle_create_offer().await?;
+        self.handle_set_local_description(offer.clone()).await?;
+        Ok(offer)
+    }
+    async fn create_answer(
+        &self,
+        offer: Vec<u8>,
+    ) -> Result<Vec<u8>, WebRTCError> {
+        self.set_remote_description(offer).await?;
+        let answer = self.handle_create_answer().await?;
+        self.handle_set_local_description(answer.clone()).await?;
+        Ok(answer)
+    }
+    async fn set_remote_description(
+        &self,
+        description: Vec<u8>,
+    ) -> Result<(), WebRTCError> {
+        self.handle_set_remote_description(description).await?;
+        self.get_info().borrow_mut().is_remote_description_set = true;
+        for candidate in self.get_info().borrow_mut().candidates.drain(..) {
+            self.handle_add_ice_candidate(candidate).await?;
+        }
+        Ok(())
+    }
+    async fn set_answer(&self, answer: Vec<u8>) -> Result<(), WebRTCError> {
+        self.handle_set_remote_description(answer).await
+    }
+    async fn handle_create_data_channel(&self) -> Result<(), WebRTCError>;
+    async fn handle_setup_data_channel(&self) -> Result<(), WebRTCError>;
+    async fn handle_create_offer(&self) -> Result<Vec<u8>, WebRTCError>;
+    async fn handle_add_ice_candidate(
+        &self,
+        candidate: Vec<u8>,
+    ) -> Result<(), WebRTCError>;
+    async fn handle_set_local_description(
+        &self,
+        description: Vec<u8>,
+    ) -> Result<(), WebRTCError>;
+    async fn handle_set_remote_description(
+        &self,
+        description: Vec<u8>,
+    ) -> Result<(), WebRTCError>;
+    async fn handle_create_answer(&self) -> Result<Vec<u8>, WebRTCError>;
 }
 
 #[async_trait(?Send)]
@@ -55,7 +150,7 @@ impl WebRTCInterfaceTrait for WebRTCJSInterface {
             data_channel: Arc::new(Mutex::new(None)),
             info: ComInterfaceInfo::new(),
             on_ice_candidate: Rc::new(RefCell::new(None)),
-            ice_candidates: Rc::new(RefCell::new(VecDeque::new())),
+            ice_candidates: RefCell::new(VecDeque::new()),
         }
     }
 
@@ -113,24 +208,7 @@ impl WebRTCInterfaceTrait for WebRTCJSInterface {
     }
 
     async fn create_answer(&self) -> Vec<u8> {
-        if let Some(peer_connection) = self.peer_connection.as_ref() {
-            let answer = JsFuture::from(peer_connection.create_answer())
-                .await
-                .unwrap();
-            let answer_sdp = Reflect::get(&answer, &JsValue::from_str("sdp"))
-                .unwrap()
-                .as_string()
-                .unwrap();
-
-            let answer_obj = RtcSessionDescriptionInit::new(RtcSdpType::Answer);
-            answer_obj.set_sdp(&answer_sdp);
-            let sld_promise =
-                peer_connection.set_local_description(&answer_obj);
-            JsFuture::from(sld_promise).await.unwrap();
-            serialize::<String>(&answer_sdp).unwrap()
-        } else {
-            panic!("Peer connection is not initialized");
-        }
+        unreachable!()
     }
 
     async fn set_remote_description(
@@ -147,6 +225,11 @@ impl WebRTCInterfaceTrait for WebRTCJSInterface {
             JsFuture::from(srd_promise)
                 .await
                 .map_err(|_| WebRTCError::InvalidSdp)?;
+
+            // dequeue all candidates
+            for candidate in self.ice_candidates.borrow_mut().drain(..) {
+                self.add_ice_candidate(candidate).await?;
+            }
             Ok(())
         } else {
             error!("Peer connection is not initialized");
@@ -259,6 +342,10 @@ impl WebRTCJSInterface {
         let ice_candidates = self.ice_candidates.clone();
         let self_callback = self.on_ice_candidate.clone();
         let other_endpoint = self.remote_endpoint.to_string().clone();
+        // closure
+        let add_endpoint = move |ice_candidate: Vec<u8>| {
+            ice_candidates.borrow_mut().push_back(ice_candidate);
+        };
         let onicecandidate_callback = Closure::<dyn FnMut(_)>::new(
             move |ev: RtcPeerConnectionIceEvent| {
                 if let Some(candidate) = ev.candidate() {
@@ -275,8 +362,9 @@ impl WebRTCJSInterface {
                             &candidate_init.clone().into(),
                         );
                     }
-
-                    ice_candidates.borrow_mut().push_back(candidate_init);
+                    // self.add_ice_candidate()
+                    add_endpoint(candidate_init.clone());
+                    // ice_candidates.borrow_mut().push_back(candidate_init);
                 }
             },
         );
