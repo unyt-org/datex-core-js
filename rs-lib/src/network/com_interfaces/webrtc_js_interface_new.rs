@@ -20,6 +20,7 @@ use datex_core::network::com_interfaces::com_interface::ComInterfaceState;
 use js_sys::{Function, Reflect};
 use serde::{Deserialize, Serialize};
 use wasm_bindgen_futures::{spawn_local, JsFuture};
+use web_sys::console::info;
 
 use crate::define_registry;
 use log::{error, info};
@@ -101,7 +102,11 @@ pub trait WebRTCTrait<T> {
     }
     async fn create_offer(&self) -> Result<Vec<u8>, WebRTCError> {
         let channel = self.handle_create_data_channel().await?;
-        self.setup_data_channel(&channel).await?;
+
+        info!("data cgabbel created!!");
+
+        Self::handle_setup_data_channel(channel, self.get_commons()).await?;
+        info!("data channel setup");
         let offer = self.handle_create_offer().await?;
         self.handle_set_local_description(offer.clone()).await?;
         let offer = serialize(&offer).unwrap();
@@ -144,17 +149,11 @@ pub trait WebRTCTrait<T> {
             .await
     }
     async fn handle_create_data_channel(&self) -> Result<T, WebRTCError>;
-    async fn setup_data_channel<'a>(
-        &'a self,
-        data_channel: &'a T,
-    ) -> Result<T, WebRTCError> {
-        Self::handle_setup_data_channel(&data_channel, self.get_commons()).await
-    }
 
     async fn handle_setup_data_channel<'a>(
-        data_channel: &'a T,
+        data_channel: T,
         commons: Rc<RefCell<WebRTCCommon<T>>>,
-    ) -> Result<T, WebRTCError>;
+    ) -> Result<(), WebRTCError>;
 
     async fn handle_create_offer(
         &self,
@@ -222,19 +221,19 @@ impl WebRTCTrait<web_sys::RtcDataChannel> for WebRTCJSInterfaceNew {
         }
     }
     async fn handle_setup_data_channel<'a>(
-        data_channel: &'a web_sys::RtcDataChannel,
+        data_channel: web_sys::RtcDataChannel,
         commons: Rc<RefCell<WebRTCCommon<web_sys::RtcDataChannel>>>,
-    ) -> Result<web_sys::RtcDataChannel, WebRTCError> {
-        let data_channel_clone = data_channel.clone();
+    ) -> Result<(), WebRTCError> {
+        // let data_channel_clone = data_channel.clone();
         let onopen_callback = Closure::<dyn FnMut()>::new(move || {
             info!("Data channel opened sender");
-            commons
-                .borrow_mut()
-                .add_channel(data_channel_clone.clone(), "datex");
         });
+        info!("waiting for data channel to open");
         data_channel.set_onopen(Some(onopen_callback.as_ref().unchecked_ref()));
+        commons.borrow_mut().add_channel(data_channel, "datex");
+
         onopen_callback.forget();
-        Ok(data_channel.clone())
+        Ok(())
     }
     async fn handle_create_offer(
         &self,
@@ -410,6 +409,7 @@ impl WebRTCJSInterfaceNew {
         let commons_clone = commons_clone.clone();
 
         let connection = Rc::new(Some(connection));
+        self.peer_connection = connection.clone();
 
         let connection_clone = connection.clone();
         let oniceconnectionstatechange_callback = Closure::<dyn FnMut()>::new(
@@ -422,6 +422,7 @@ impl WebRTCJSInterfaceNew {
                 }
             },
         );
+
         if let Some(connection) = connection.as_ref() {
             connection.clone().set_oniceconnectionstatechange(Some(
                 oniceconnectionstatechange_callback.as_ref().unchecked_ref(),
@@ -430,16 +431,18 @@ impl WebRTCJSInterfaceNew {
             let ondatachannel_callback =
                 Closure::<dyn FnMut(_)>::new(move |ev: RtcDataChannelEvent| {
                     let commons = commons_clone.clone();
+                    info!("Data channel opened receiver");
                     spawn_local(async move {
                         // FIXME how to handle this?
                         Self::handle_setup_data_channel(
-                            &ev.channel(),
+                            ev.channel(),
                             commons.clone(),
                         )
                         .await
                         .expect("Failed to setup data channel");
                     });
                 });
+            info!("set_ondatachannel");
             connection.set_ondatachannel(Some(
                 ondatachannel_callback.as_ref().unchecked_ref(),
             ));

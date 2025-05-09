@@ -16,7 +16,6 @@ document.getElementById("webrtc")!.addEventListener("click", async () => {
     const interface_b = await webrtc.register("@ben");
 
     webrtc.set_on_ice_candidate(interface_a, (candidate: Uint8Array) => {
-        console.log("ICE candidate for interface A:", candidate);
         webrtc.add_ice_candidate(interface_b, candidate)
             .then(() => console.log("ICE candidate added to interface B"))
             .catch((e) =>
@@ -28,7 +27,6 @@ document.getElementById("webrtc")!.addEventListener("click", async () => {
     });
 
     webrtc.set_on_ice_candidate(interface_b, (candidate: Uint8Array) => {
-        console.log("ICE candidate for interface B:", candidate);
         webrtc.add_ice_candidate(interface_a, candidate)
             .then(() => console.log("ICE candidate added to interface A"))
             .catch((e) =>
