@@ -4,6 +4,8 @@ use super::com_interfaces::matchbox_js_interface::MatchboxClientRegistry;
 use super::com_interfaces::serial_js_interface::SerialRegistry;
 #[cfg(feature = "wasm_webrtc")]
 use super::com_interfaces::webrtc_js_interface::WebRTCRegistry;
+#[cfg(feature = "wasm_webrtc")]
+use super::com_interfaces::webrtc_js_interface_new::WebRTCRegistryNew;
 #[cfg(feature = "wasm_websocket_client")]
 use super::com_interfaces::websocket_client_js_interface::WebSocketClientRegistry;
 #[cfg(feature = "wasm_websocket_server")]
@@ -132,6 +134,12 @@ impl JSComHub {
     #[wasm_bindgen(getter)]
     pub fn webrtc(&self) -> WebRTCRegistry {
         WebRTCRegistry::new(self.com_hub.clone())
+    }
+
+    #[cfg(feature = "wasm_webrtc")]
+    #[wasm_bindgen(getter)]
+    pub fn webrtcnew(&self) -> WebRTCRegistryNew {
+        WebRTCRegistryNew::new(self.com_hub.clone())
     }
 
     /// Send a block to the given interface and socket

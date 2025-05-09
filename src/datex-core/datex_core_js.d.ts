@@ -72,6 +72,7 @@ export class JSComHub {
     readonly websocket_client: WebSocketClientRegistry;
     readonly serial: SerialRegistry;
     readonly webrtc: WebRTCRegistry;
+    readonly webrtcnew: WebRTCRegistryNew;
     readonly _incoming_blocks: Uint8Array[];
 }
 export class JSMemory {
@@ -119,6 +120,18 @@ export class WebRTCRegistry {
         interface_uuid: string,
         candidate: Uint8Array,
     ): Promise<void>;
+}
+export class WebRTCRegistryNew {
+    private constructor();
+    free(): void;
+    close(interface_uuid: string): Promise<any>;
+    register(endpoint: string): Promise<string>;
+    create_offer(interface_uuid: string): Promise<Uint8Array>;
+    create_answer(
+        interface_uuid: string,
+        offer: Uint8Array,
+    ): Promise<Uint8Array>;
+    set_answer(interface_uuid: string, answer: Uint8Array): Promise<void>;
 }
 export class WebSocketClientRegistry {
     private constructor();

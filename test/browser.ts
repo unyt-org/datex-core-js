@@ -11,9 +11,15 @@ document.getElementById("serial")!.addEventListener("click", async () => {
 
 // TODO
 document.getElementById("webrtc")!.addEventListener("click", async () => {
-    const webrtc = Datex.comHub.webrtc;
+    const webrtc = Datex.comHub.webrtcnew;
     const interface_a = await webrtc.register("@jonas");
     const interface_b = await webrtc.register("@ben");
+
+    const offer = await webrtc.create_offer(interface_a);
+    console.log("Offer:", offer);
+    const answer = await webrtc.create_answer(interface_b, offer);
+    console.log("Answer:", answer);
+
     // const bufferA: Uint8Array[] = [];
     // const bufferB: Uint8Array[] = [];
 
