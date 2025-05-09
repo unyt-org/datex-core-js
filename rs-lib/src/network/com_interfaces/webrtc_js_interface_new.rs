@@ -18,6 +18,7 @@ use datex_core::network::com_interfaces::com_interface_properties::{
 use datex_core::network::com_interfaces::com_interface_socket::{
     ComInterfaceSocket, ComInterfaceSocketUUID,
 };
+use datex_core::network::com_interfaces::default_com_interfaces::serial;
 use datex_core::network::com_interfaces::socket_provider::SingleSocketProvider;
 use datex_core::stdlib::sync::Arc;
 use datex_core::{delegate_com_interface_info, set_opener};
@@ -37,13 +38,14 @@ use datex_core::network::com_hub::InterfacePriority;
 use datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common::{deserialize, serialize, RTCIceServer, WebRTCError, WebRTCInterfaceTrait};
 use datex_macros::{com_interface, create_opener};
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum RTCIceCandidate {}
 
 pub struct WebRTCCommon {
     pub endpoint: Endpoint,
     candidates: VecDeque<Vec<u8>>,
     is_remote_description_set: bool,
-    on_ice_candidate: Option<Box<dyn Fn(RTCIceCandidate)>>,
+    on_ice_candidate: Option<Box<dyn Fn(Vec<u8>)>>,
 }
 impl WebRTCCommon {
     pub fn new(endpoint: impl Into<Endpoint>) -> Self {
@@ -63,10 +65,7 @@ pub trait WebRTCTrait {
     fn remote_endpoint(&self) -> Endpoint {
         self.get_commons().borrow().endpoint.clone()
     }
-    fn set_on_ice_candidate(
-        &mut self,
-        on_ice_candidate: Box<dyn Fn(RTCIceCandidate)>,
-    ) {
+    fn set_on_ice_candidate(&mut self, on_ice_candidate: Box<dyn Fn(Vec<u8>)>) {
         self.get_commons().borrow_mut().on_ice_candidate =
             Some(on_ice_candidate);
     }
@@ -75,7 +74,11 @@ pub trait WebRTCTrait {
         let info = self.get_commons();
         let info = info.borrow();
         if let Some(ref on_ice_candidate) = info.on_ice_candidate {
-            on_ice_candidate(candidate);
+            if let Ok(candidate) = serialize(&candidate) {
+                on_ice_candidate(candidate);
+            } else {
+                error!("Failed to serialize candidate");
+            }
         } else {
             error!("No on_ice_candidate callback set");
         }
@@ -469,11 +472,10 @@ impl WebRTCRegistryNew {
         on_ice_candidate: Function,
     ) -> Result<(), JsError> {
         let interface = self.get_interface(interface_uuid);
-        let webrtc_interface = interface.borrow();
+        let mut webrtc_interface = interface.borrow_mut();
         webrtc_interface.set_on_ice_candidate(Box::new(move |candidate| {
-            let candidate_str = serialize(&candidate).unwrap();
             on_ice_candidate
-                .call1(&JsValue::NULL, &JsValue::from(candidate_str))
+                .call1(&JsValue::NULL, &JsValue::from(candidate))
                 .unwrap();
         }));
         Ok(())
