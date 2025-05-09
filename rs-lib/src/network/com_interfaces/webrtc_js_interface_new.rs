@@ -100,8 +100,8 @@ pub trait WebRTCTrait<T> {
         Ok(())
     }
     async fn create_offer(&self) -> Result<Vec<u8>, WebRTCError> {
-        self.handle_create_data_channel().await?;
-        // self.setup_data_channel().await?;
+        let channel = self.handle_create_data_channel().await?;
+        self.setup_data_channel(&channel).await?;
         let offer = self.handle_create_offer().await?;
         self.handle_set_local_description(offer.clone()).await?;
         let offer = serialize(&offer).unwrap();
@@ -143,8 +143,19 @@ pub trait WebRTCTrait<T> {
         self.handle_set_remote_description(session_description)
             .await
     }
-    async fn handle_create_data_channel(&self) -> Result<(), WebRTCError>;
-    async fn setup_data_channel(data_channel: T) -> Result<T, WebRTCError>;
+    async fn handle_create_data_channel(&self) -> Result<T, WebRTCError>;
+    async fn setup_data_channel<'a>(
+        &'a self,
+        data_channel: &'a T,
+    ) -> Result<T, WebRTCError> {
+        Self::handle_setup_data_channel(&data_channel, self.get_commons()).await
+    }
+
+    async fn handle_setup_data_channel<'a>(
+        data_channel: &'a T,
+        commons: Rc<RefCell<WebRTCCommon<T>>>,
+    ) -> Result<T, WebRTCError>;
+
     async fn handle_create_offer(
         &self,
     ) -> Result<RTCSessionDescriptionDX, WebRTCError>;
@@ -196,36 +207,34 @@ pub struct WebRTCJSInterfaceNew {
     pub info: ComInterfaceInfo,
     pub commons: Rc<RefCell<WebRTCCommon<web_sys::RtcDataChannel>>>,
     pub peer_connection: Rc<Option<RtcPeerConnection>>,
-    // data_channel: Rc<RefCell<Option<web_sys::RtcDataChannel>>>,
 }
 
 #[async_trait(?Send)]
 impl WebRTCTrait<web_sys::RtcDataChannel> for WebRTCJSInterfaceNew {
-    async fn handle_create_data_channel(&self) -> Result<(), WebRTCError> {
-        if let Some(peer_connection) = self.peer_connection.as_ref() {
-            let data_channel = peer_connection.create_data_channel("datex");
-            Self::setup_data_channel(data_channel).await?;
-            // self.data_channel.borrow_mut().replace(data_channel);
-        }
-        Ok(())
-    }
-    async fn setup_data_channel(
-        data_channel: web_sys::RtcDataChannel,
+    async fn handle_create_data_channel(
+        &self,
     ) -> Result<web_sys::RtcDataChannel, WebRTCError> {
-        // if self_data_channel.borrow().is_some() {
-        //     error!("Data channel already exists");
-        //     return Err(WebRTCError::Unsupported);
-        // }
-        // let data_channel_clone = data_channel.clone();
+        if let Some(peer_connection) = self.peer_connection.as_ref() {
+            Ok(peer_connection.create_data_channel("datex"))
+        } else {
+            error!("Peer connection is not initialized");
+            Err(WebRTCError::ConnectionError)
+        }
+    }
+    async fn handle_setup_data_channel<'a>(
+        data_channel: &'a web_sys::RtcDataChannel,
+        commons: Rc<RefCell<WebRTCCommon<web_sys::RtcDataChannel>>>,
+    ) -> Result<web_sys::RtcDataChannel, WebRTCError> {
+        let data_channel_clone = data_channel.clone();
         let onopen_callback = Closure::<dyn FnMut()>::new(move || {
             info!("Data channel opened sender");
-            // self_data_channel
-            //     .borrow_mut()
-            //     .replace(Some(data_channel_clone.clone()));
+            commons
+                .borrow_mut()
+                .add_channel(data_channel_clone.clone(), "datex");
         });
         data_channel.set_onopen(Some(onopen_callback.as_ref().unchecked_ref()));
         onopen_callback.forget();
-        Ok(data_channel)
+        Ok(data_channel.clone())
     }
     async fn handle_create_offer(
         &self,
@@ -419,9 +428,16 @@ impl WebRTCJSInterfaceNew {
             ));
             oniceconnectionstatechange_callback.forget();
             let ondatachannel_callback =
-                Closure::<dyn FnMut(_)>::new(|ev: RtcDataChannelEvent| {
+                Closure::<dyn FnMut(_)>::new(move |ev: RtcDataChannelEvent| {
+                    let commons = commons_clone.clone();
                     spawn_local(async move {
-                        Self::setup_data_channel(ev.channel()).await;
+                        // FIXME how to handle this?
+                        Self::handle_setup_data_channel(
+                            &ev.channel(),
+                            commons.clone(),
+                        )
+                        .await
+                        .expect("Failed to setup data channel");
                     });
                 });
             connection.set_ondatachannel(Some(
