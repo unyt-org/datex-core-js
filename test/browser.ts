@@ -39,9 +39,9 @@ document.getElementById("webrtc")!.addEventListener("click", async () => {
 
     const offer = await webrtc.create_offer(interface_a);
     console.log("Offer:", offer);
+
     const answer = await webrtc.create_answer(interface_b, offer);
     console.log("Answer:", answer);
-
     await webrtc.set_answer(interface_a, answer);
 });
 class WebRTCInterface {

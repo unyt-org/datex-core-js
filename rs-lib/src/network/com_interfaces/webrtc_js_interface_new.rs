@@ -55,6 +55,7 @@ impl<T> WebRTCCommon<T> {
         }
         self.channels
             .insert(name.to_string(), Rc::new(RefCell::new(channel)));
+        info!("Channel added");
     }
     fn on_ice_candidate(&self, candidate: RTCIceCandidateInitDX) {
         if let Some(ref on_ice_candidate) = self.on_ice_candidate {
