@@ -1,5 +1,6 @@
 use std::cell::RefCell;
 use std::collections::VecDeque;
+use std::default;
 use std::future::Future;
 use std::pin::Pin;
 use std::rc::Rc;
@@ -23,6 +24,7 @@ use datex_core::{delegate_com_interface_info, set_opener};
 
 use datex_core::network::com_interfaces::com_interface::ComInterfaceState;
 use js_sys::{Function, Reflect, JSON};
+use serde::{Deserialize, Serialize};
 use wasm_bindgen_futures::JsFuture;
 
 use crate::define_registry;
@@ -109,6 +111,7 @@ pub trait WebRTCTrait {
         self.handle_setup_data_channel().await?;
         let offer = self.handle_create_offer().await?;
         self.handle_set_local_description(offer.clone()).await?;
+        let offer = serialize(&offer).unwrap();
         Ok(offer)
     }
     async fn create_answer(
@@ -118,6 +121,7 @@ pub trait WebRTCTrait {
         self.set_remote_description(offer).await?;
         let answer = self.handle_create_answer().await?;
         self.handle_set_local_description(answer.clone()).await?;
+        let answer = serialize(&answer).unwrap();
         Ok(answer)
     }
     async fn set_remote_description(
@@ -132,24 +136,46 @@ pub trait WebRTCTrait {
         Ok(())
     }
     async fn set_answer(&self, answer: Vec<u8>) -> Result<(), WebRTCError> {
-        self.handle_set_remote_description(answer).await
+        let session_description = deserialize::<RTCSessionDescription>(&answer)
+            .map_err(|_| WebRTCError::InvalidSdp)?;
+        self.handle_set_remote_description(session_description)
+            .await
     }
     async fn handle_create_data_channel(&self) -> Result<(), WebRTCError>;
     async fn handle_setup_data_channel(&self) -> Result<(), WebRTCError>;
-    async fn handle_create_offer(&self) -> Result<Vec<u8>, WebRTCError>;
+    async fn handle_create_offer(
+        &self,
+    ) -> Result<RTCSessionDescription, WebRTCError>;
     async fn handle_add_ice_candidate(
         &self,
         candidate: Vec<u8>,
     ) -> Result<(), WebRTCError>;
     async fn handle_set_local_description(
         &self,
-        sdp: Vec<u8>,
+        description: RTCSessionDescription,
     ) -> Result<(), WebRTCError>;
     async fn handle_set_remote_description(
         &self,
-        sdp: Vec<u8>,
+        description: RTCSessionDescription,
     ) -> Result<(), WebRTCError>;
-    async fn handle_create_answer(&self) -> Result<Vec<u8>, WebRTCError>;
+    async fn handle_create_answer(
+        &self,
+    ) -> Result<RTCSessionDescription, WebRTCError>;
+}
+
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
+pub enum RTCSdpType {
+    #[default]
+    Unspecified,
+    Answer,
+    Offer,
+}
+
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
+pub struct RTCSessionDescription {
+    #[serde(rename = "type")]
+    pub sdp_type: RTCSdpType,
+    pub sdp: String,
 }
 
 pub struct WebRTCJSInterfaceNew {
