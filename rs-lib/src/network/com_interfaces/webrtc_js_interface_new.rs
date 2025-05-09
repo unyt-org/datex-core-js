@@ -408,6 +408,7 @@ impl WebRTCJSInterfaceNew {
                 let onopen_callback = Closure::<dyn FnMut()>::new(move || {
                     info!("Data channel opened receiver");
                 });
+
                 data_channel
                     .set_onopen(Some(onopen_callback.as_ref().unchecked_ref()));
                 onopen_callback.forget();
