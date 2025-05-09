@@ -102,9 +102,7 @@ pub trait WebRTCTrait<T> {
     }
     async fn create_offer(&self) -> Result<Vec<u8>, WebRTCError> {
         let channel = self.handle_create_data_channel().await?;
-
         info!("data cgabbel created!!");
-
         Self::handle_setup_data_channel(channel, self.get_commons()).await?;
         info!("data channel setup");
         let offer = self.handle_create_offer().await?;
@@ -150,7 +148,7 @@ pub trait WebRTCTrait<T> {
     }
     async fn handle_create_data_channel(&self) -> Result<T, WebRTCError>;
 
-    async fn handle_setup_data_channel<'a>(
+    async fn handle_setup_data_channel(
         data_channel: T,
         commons: Rc<RefCell<WebRTCCommon<T>>>,
     ) -> Result<(), WebRTCError>;
@@ -220,7 +218,7 @@ impl WebRTCTrait<web_sys::RtcDataChannel> for WebRTCJSInterfaceNew {
             Err(WebRTCError::ConnectionError)
         }
     }
-    async fn handle_setup_data_channel<'a>(
+    async fn handle_setup_data_channel(
         data_channel: web_sys::RtcDataChannel,
         commons: Rc<RefCell<WebRTCCommon<web_sys::RtcDataChannel>>>,
     ) -> Result<(), WebRTCError> {
