@@ -19,7 +19,7 @@ use datex_core::{delegate_com_interface_info, set_opener};
 use datex_core::network::com_interfaces::com_interface::ComInterfaceState;
 use js_sys::{Function, Reflect};
 use serde::{Deserialize, Serialize};
-use wasm_bindgen_futures::JsFuture;
+use wasm_bindgen_futures::{spawn_local, JsFuture};
 
 use crate::define_registry;
 use log::{error, info};
@@ -36,7 +36,6 @@ pub struct WebRTCCommon<T> {
     candidates: VecDeque<Vec<u8>>,
     is_remote_description_set: bool,
     on_ice_candidate: Option<Box<dyn Fn(Vec<u8>)>>,
-    web_rtc_trate: Box<dyn WebRTCTrait<T>>,
 }
 impl<T> WebRTCCommon<T> {
     pub fn new(endpoint: impl Into<Endpoint>) -> Self {
@@ -102,7 +101,7 @@ pub trait WebRTCTrait<T> {
     }
     async fn create_offer(&self) -> Result<Vec<u8>, WebRTCError> {
         self.handle_create_data_channel().await?;
-        // Self::setup_data_channel().await?;
+        // self.setup_data_channel().await?;
         let offer = self.handle_create_offer().await?;
         self.handle_set_local_description(offer.clone()).await?;
         let offer = serialize(&offer).unwrap();
@@ -145,7 +144,7 @@ pub trait WebRTCTrait<T> {
             .await
     }
     async fn handle_create_data_channel(&self) -> Result<(), WebRTCError>;
-    async fn setup_data_channel(&self) -> Result<(), WebRTCError>;
+    async fn setup_data_channel(data_channel: T) -> Result<T, WebRTCError>;
     async fn handle_create_offer(
         &self,
     ) -> Result<RTCSessionDescriptionDX, WebRTCError>;
@@ -205,28 +204,28 @@ impl WebRTCTrait<web_sys::RtcDataChannel> for WebRTCJSInterfaceNew {
     async fn handle_create_data_channel(&self) -> Result<(), WebRTCError> {
         if let Some(peer_connection) = self.peer_connection.as_ref() {
             let data_channel = peer_connection.create_data_channel("datex");
+            Self::setup_data_channel(data_channel).await?;
             // self.data_channel.borrow_mut().replace(data_channel);
         }
         Ok(())
     }
-    async fn setup_data_channel(&self) -> Result<(), WebRTCError> {
+    async fn setup_data_channel(
+        data_channel: web_sys::RtcDataChannel,
+    ) -> Result<web_sys::RtcDataChannel, WebRTCError> {
         // if self_data_channel.borrow().is_some() {
         //     error!("Data channel already exists");
         //     return Err(WebRTCError::Unsupported);
         // }
         // let data_channel_clone = data_channel.clone();
-        // let onopen_callback = Closure::<dyn FnMut()>::new(move || {
-        //     info!("Data channel opened sender");
-        //     // self_data_channel
-        //     //     .borrow_mut()
-        //     //     .replace(Some(data_channel_clone.clone()));
-        // });
-        // data_channel
-        //     .dyn_ref::<web_sys::RtcDataChannel>()
-        //     .unwrap()
-        //     .set_onopen(Some(onopen_callback.as_ref().unchecked_ref()));
-        // onopen_callback.forget();
-        Ok(())
+        let onopen_callback = Closure::<dyn FnMut()>::new(move || {
+            info!("Data channel opened sender");
+            // self_data_channel
+            //     .borrow_mut()
+            //     .replace(Some(data_channel_clone.clone()));
+        });
+        data_channel.set_onopen(Some(onopen_callback.as_ref().unchecked_ref()));
+        onopen_callback.forget();
+        Ok(data_channel)
     }
     async fn handle_create_offer(
         &self,
@@ -400,16 +399,6 @@ impl WebRTCJSInterfaceNew {
         ));
         onicecandidate_callback.forget();
         let commons_clone = commons_clone.clone();
-        let ondatachannel_callback =
-            Closure::<dyn FnMut(_)>::new(move |ev: RtcDataChannelEvent| {
-                commons_clone
-                    .borrow_mut()
-                    .add_channel(ev.channel(), "datex");
-            });
-        connection.set_ondatachannel(Some(
-            ondatachannel_callback.as_ref().unchecked_ref(),
-        ));
-        ondatachannel_callback.forget();
 
         let connection = Rc::new(Some(connection));
 
@@ -429,6 +418,16 @@ impl WebRTCJSInterfaceNew {
                 oniceconnectionstatechange_callback.as_ref().unchecked_ref(),
             ));
             oniceconnectionstatechange_callback.forget();
+            let ondatachannel_callback =
+                Closure::<dyn FnMut(_)>::new(|ev: RtcDataChannelEvent| {
+                    spawn_local(async move {
+                        Self::setup_data_channel(ev.channel()).await;
+                    });
+                });
+            connection.set_ondatachannel(Some(
+                ondatachannel_callback.as_ref().unchecked_ref(),
+            ));
+            ondatachannel_callback.forget();
         }
         Ok(())
     }
