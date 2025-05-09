@@ -1,6 +1,5 @@
 use std::cell::RefCell;
 use std::collections::VecDeque;
-use std::default;
 use std::future::Future;
 use std::pin::Pin;
 use std::rc::Rc;
@@ -24,7 +23,6 @@ use datex_core::{delegate_com_interface_info, set_opener};
 
 use datex_core::network::com_interfaces::com_interface::ComInterfaceState;
 use js_sys::{Function, Reflect, JSON};
-use serde::{Deserialize, Serialize};
 use wasm_bindgen_futures::JsFuture;
 
 use crate::define_registry;
@@ -127,7 +125,7 @@ impl WebRTCInterfaceTrait for WebRTCJSInterface {
                 .as_string()
                 .unwrap();
 
-            info!("Offer created {}", offer_sdp);
+            info!("Offer created {offer_sdp}");
 
             let offer_obj = RtcSessionDescriptionInit::new(RtcSdpType::Offer);
             offer_obj.set_sdp(&offer_sdp);
@@ -187,7 +185,7 @@ impl WebRTCInterfaceTrait for WebRTCJSInterface {
             let candidate_init = deserialize::<String>(&candidate).unwrap();
             let js_val = JSON::parse(&candidate_init).unwrap();
 
-            info!("Adding ICE candidate: {:?}", js_val);
+            info!("Adding ICE candidate: {js_val:?}");
 
             let candidate_init: RtcIceCandidateInit = js_val.unchecked_into();
 
@@ -198,7 +196,7 @@ impl WebRTCInterfaceTrait for WebRTCJSInterface {
             JsFuture::from(add_ice_candidate_promise)
                 .await
                 .map_err(|e| {
-                    error!("Failed to add ICE candidate {:?}", e);
+                    error!("Failed to add ICE candidate {e:?}");
                     WebRTCError::InvalidCandidate
                 })?;
             let uuid = self.get_uuid();
@@ -314,8 +312,7 @@ impl WebRTCJSInterface {
                 if let Some(connection) = connection_clone.as_ref() {
                     let state = connection.ice_connection_state();
                     info!(
-                        "ICE connection state of remote {}: {:?}",
-                        remote_endpoint, state
+                        "ICE connection state of remote {remote_endpoint}: {state:?}"
                     );
                 }
             });
@@ -335,7 +332,7 @@ impl WebRTCJSInterface {
     ) -> Closure<dyn FnMut(MessageEvent)> {
         Closure::<dyn FnMut(_)>::new(move |ev: MessageEvent| {
             if let Ok(data) = ev.data().try_as_u8_slice() {
-                debug!("Received message: {:?}", data);
+                debug!("Received message: {data:?}");
                 let sockets = sockets.lock().unwrap();
                 let socket = sockets.sockets.values().next().unwrap();
                 let socket = socket.lock().unwrap();
@@ -355,7 +352,7 @@ impl ComInterface for WebRTCJSInterface {
         Box::pin(async move {
             let data_channel = self.data_channel.lock().unwrap();
             if let Some(data_channel) = data_channel.as_ref() {
-                data_channel.send_with_u8_array(&block).unwrap();
+                data_channel.send_with_u8_array(block).unwrap();
                 true
             } else {
                 false

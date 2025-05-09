@@ -1,6 +1,5 @@
 use std::cell::RefCell;
 use std::collections::VecDeque;
-use std::default;
 use std::future::Future;
 use std::pin::Pin;
 use std::rc::Rc;
@@ -12,30 +11,23 @@ use datex_core::datex_values::Endpoint;
 use datex_core::network::com_interfaces::com_interface::{
     ComInterface, ComInterfaceInfo, ComInterfaceSockets, ComInterfaceUUID,
 };
-use datex_core::network::com_interfaces::com_interface_properties::{
-    InterfaceDirection, InterfaceProperties,
-};
-use datex_core::network::com_interfaces::com_interface_socket::{
-    ComInterfaceSocket, ComInterfaceSocketUUID,
-};
-use datex_core::network::com_interfaces::default_com_interfaces::serial;
-use datex_core::network::com_interfaces::socket_provider::SingleSocketProvider;
+use datex_core::network::com_interfaces::com_interface_properties::InterfaceProperties;
+use datex_core::network::com_interfaces::com_interface_socket::ComInterfaceSocketUUID;
 use datex_core::stdlib::sync::Arc;
 use datex_core::{delegate_com_interface_info, set_opener};
 
 use datex_core::network::com_interfaces::com_interface::ComInterfaceState;
-use js_sys::{Function, Reflect, JSON};
+use js_sys::{Function, Reflect};
 use serde::{Deserialize, Serialize};
 use wasm_bindgen_futures::JsFuture;
 
 use crate::define_registry;
-use crate::js_utils::TryAsByteSlice;
-use log::{debug, error, info};
+use log::{error, info};
 use wasm_bindgen::prelude::{wasm_bindgen, Closure};
 use wasm_bindgen::{JsCast, JsError, JsValue};
-use web_sys::{MessageEvent, RtcDataChannelEvent, RtcIceCandidate, RtcIceCandidateInit, RtcPeerConnection, RtcPeerConnectionIceEvent, RtcSdpType, RtcSessionDescriptionInit, RtcSignalingState};
+use web_sys::{RtcIceCandidateInit, RtcPeerConnection, RtcPeerConnectionIceEvent, RtcSdpType, RtcSessionDescriptionInit, RtcSignalingState};
 use datex_core::network::com_hub::InterfacePriority;
-use datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common::{deserialize, serialize, RTCIceServer, WebRTCError, WebRTCInterfaceTrait};
+use datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common::{deserialize, serialize, WebRTCError, WebRTCInterfaceTrait};
 use datex_macros::{com_interface, create_opener};
 
 pub struct WebRTCCommon {
@@ -244,7 +236,7 @@ impl WebRTCTrait for WebRTCJSInterfaceNew {
                 .unwrap()
                 .as_string()
                 .unwrap();
-            info!("Offer created {}", sdp);
+            info!("Offer created {sdp}");
             Ok(RTCSessionDescriptionDX {
                 sdp_type: RTCSdpTypeDX::Offer,
                 sdp,
@@ -282,7 +274,7 @@ impl WebRTCTrait for WebRTCJSInterfaceNew {
             )
             .await
             .map_err(|e| {
-                error!("Failed to add ICE candidate {:?}", e);
+                error!("Failed to add ICE candidate {e:?}");
                 WebRTCError::InvalidCandidate
             })?;
             Ok(())
@@ -410,8 +402,7 @@ impl WebRTCJSInterfaceNew {
                 if let Some(connection) = connection_clone.as_ref() {
                     let state = connection.ice_connection_state();
                     info!(
-                        "ICE connection state of remote {}: {:?}",
-                        remote_endpoint, state
+                        "ICE connection state of remote {remote_endpoint}: {state:?}"
                     );
                 }
             });
