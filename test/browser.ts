@@ -15,34 +15,8 @@ document.getElementById("webrtc")!.addEventListener("click", async () => {
     const interface_a = await webrtc.register("@jonas");
     const interface_b = await webrtc.register("@ben");
 
-    const offer = await webrtc.create_offer(interface_a);
-    console.log("Offer:", offer);
-    const answer = await webrtc.create_answer(interface_b, offer);
-    console.log("Answer:", answer);
-
-    // const bufferA: Uint8Array[] = [];
-    // const bufferB: Uint8Array[] = [];
-
-    // const peerA = new WebRTCInterface((msg) => console.log("Peer A got:", msg));
-    // const peerB = new WebRTCInterface((msg) => console.log("Peer B got:", msg));
-
-    // peerA.onICECandidate = (candidate) => peerB.setRemoteCandidate(candidate);
-    // peerB.onICECandidate = (candidate) => peerA.setRemoteCandidate(candidate);
-
-    // (async () => {
-    //     const offer = await peerA.createOffer();
-    //     await sleep(1000);
-    //     const answer = await peerB.createAnswer(offer);
-    //     await peerA.setAnswer(answer);
-
-    //     // Wait for connection to establish before sending
-    //     setTimeout(() => {
-    //         peerA.send("Hello from Peer A");
-    //     }, 1000);
-    // })();
-    // return;
-
     webrtc.set_on_ice_candidate(interface_a, (candidate: Uint8Array) => {
+        console.log("ICE candidate for interface A:", candidate);
         webrtc.add_ice_candidate(interface_b, candidate)
             .then(() => console.log("ICE candidate added to interface B"))
             .catch((e) =>
@@ -54,6 +28,7 @@ document.getElementById("webrtc")!.addEventListener("click", async () => {
     });
 
     webrtc.set_on_ice_candidate(interface_b, (candidate: Uint8Array) => {
+        console.log("ICE candidate for interface B:", candidate);
         webrtc.add_ice_candidate(interface_a, candidate)
             .then(() => console.log("ICE candidate added to interface A"))
             .catch((e) =>
@@ -64,10 +39,12 @@ document.getElementById("webrtc")!.addEventListener("click", async () => {
             );
     });
 
-    const offer_sdp = await webrtc.create_offer(interface_a);
-    await sleep(300);
-    const answer_sdp = await webrtc.create_answer(interface_b, offer_sdp);
-    await webrtc.set_answer(interface_a, answer_sdp);
+    const offer = await webrtc.create_offer(interface_a);
+    console.log("Offer:", offer);
+    const answer = await webrtc.create_answer(interface_b, offer);
+    console.log("Answer:", answer);
+
+    await webrtc.set_answer(interface_a, answer);
 });
 class WebRTCInterface {
     private peer: RTCPeerConnection;

@@ -132,6 +132,14 @@ export class WebRTCRegistryNew {
         offer: Uint8Array,
     ): Promise<Uint8Array>;
     set_answer(interface_uuid: string, answer: Uint8Array): Promise<void>;
+    set_on_ice_candidate(
+        interface_uuid: string,
+        on_ice_candidate: Function,
+    ): Promise<void>;
+    add_ice_candidate(
+        interface_uuid: string,
+        candidate: Uint8Array,
+    ): Promise<void>;
 }
 export class WebSocketClientRegistry {
     private constructor();

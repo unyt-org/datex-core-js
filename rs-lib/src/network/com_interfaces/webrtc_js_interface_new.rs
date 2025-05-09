@@ -38,9 +38,6 @@ use datex_core::network::com_hub::InterfacePriority;
 use datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common::{deserialize, serialize, RTCIceServer, WebRTCError, WebRTCInterfaceTrait};
 use datex_macros::{com_interface, create_opener};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum RTCIceCandidate {}
-
 pub struct WebRTCCommon {
     pub endpoint: Endpoint,
     candidates: VecDeque<Vec<u8>>,
@@ -54,6 +51,17 @@ impl WebRTCCommon {
             candidates: VecDeque::new(),
             is_remote_description_set: false,
             on_ice_candidate: None,
+        }
+    }
+    fn on_ice_candidate(&self, candidate: RTCIceCandidateInitDX) {
+        if let Some(ref on_ice_candidate) = self.on_ice_candidate {
+            if let Ok(candidate) = serialize(&candidate) {
+                on_ice_candidate(candidate);
+            } else {
+                error!("Failed to serialize candidate");
+            }
+        } else {
+            error!("No on_ice_candidate callback set");
         }
     }
 }
@@ -70,18 +78,9 @@ pub trait WebRTCTrait {
             Some(on_ice_candidate);
     }
 
-    fn on_ice_candidate(&self, candidate: RTCIceCandidate) {
-        let info = self.get_commons();
-        let info = info.borrow();
-        if let Some(ref on_ice_candidate) = info.on_ice_candidate {
-            if let Ok(candidate) = serialize(&candidate) {
-                on_ice_candidate(candidate);
-            } else {
-                error!("Failed to serialize candidate");
-            }
-        } else {
-            error!("No on_ice_candidate callback set");
-        }
+    fn on_ice_candidate(&self, candidate: RTCIceCandidateInitDX) {
+        let commons = self.get_commons();
+        commons.borrow().on_ice_candidate(candidate);
     }
 
     async fn add_ice_candidate(
@@ -90,6 +89,8 @@ pub trait WebRTCTrait {
     ) -> Result<(), WebRTCError> {
         let info = self.get_commons();
         if info.borrow().is_remote_description_set {
+            let candidate = deserialize::<RTCIceCandidateInitDX>(&candidate)
+                .map_err(|_| WebRTCError::InvalidCandidate)?;
             self.handle_add_ice_candidate(candidate).await?;
         } else {
             info.borrow_mut().candidates.push_back(candidate);
@@ -118,18 +119,25 @@ pub trait WebRTCTrait {
         &self,
         description: Vec<u8>,
     ) -> Result<(), WebRTCError> {
-        let description = deserialize::<RTCSessionDescription>(&description)
+        let description = deserialize::<RTCSessionDescriptionDX>(&description)
             .map_err(|_| WebRTCError::InvalidSdp)?;
         self.handle_set_remote_description(description).await?;
         self.get_commons().borrow_mut().is_remote_description_set = true;
         for candidate in self.get_commons().borrow_mut().candidates.drain(..) {
-            self.handle_add_ice_candidate(candidate).await?;
+            if let Ok(candidate) =
+                deserialize::<RTCIceCandidateInitDX>(&candidate)
+            {
+                self.handle_add_ice_candidate(candidate).await?;
+            } else {
+                error!("Failed to deserialize candidate");
+            }
         }
         Ok(())
     }
     async fn set_answer(&self, answer: Vec<u8>) -> Result<(), WebRTCError> {
-        let session_description = deserialize::<RTCSessionDescription>(&answer)
-            .map_err(|_| WebRTCError::InvalidSdp)?;
+        let session_description =
+            deserialize::<RTCSessionDescriptionDX>(&answer)
+                .map_err(|_| WebRTCError::InvalidSdp)?;
         self.handle_set_remote_description(session_description)
             .await
     }
@@ -137,26 +145,36 @@ pub trait WebRTCTrait {
     async fn handle_setup_data_channel(&self) -> Result<(), WebRTCError>;
     async fn handle_create_offer(
         &self,
-    ) -> Result<RTCSessionDescription, WebRTCError>;
+    ) -> Result<RTCSessionDescriptionDX, WebRTCError>;
     async fn handle_add_ice_candidate(
         &self,
-        candidate: Vec<u8>,
+        candidate: RTCIceCandidateInitDX,
     ) -> Result<(), WebRTCError>;
     async fn handle_set_local_description(
         &self,
-        description: RTCSessionDescription,
+        description: RTCSessionDescriptionDX,
     ) -> Result<(), WebRTCError>;
     async fn handle_set_remote_description(
         &self,
-        description: RTCSessionDescription,
+        description: RTCSessionDescriptionDX,
     ) -> Result<(), WebRTCError>;
     async fn handle_create_answer(
         &self,
-    ) -> Result<RTCSessionDescription, WebRTCError>;
+    ) -> Result<RTCSessionDescriptionDX, WebRTCError>;
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RTCIceCandidateInitDX {
+    pub candidate: String,
+    pub sdp_mid: Option<String>,
+    #[serde(rename = "sdpMLineIndex")]
+    pub sdp_mline_index: Option<u16>,
+    pub username_fragment: Option<String>,
 }
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
-pub enum RTCSdpType {
+pub enum RTCSdpTypeDX {
     #[default]
     Unspecified,
     #[serde(rename = "answer")]
@@ -166,9 +184,9 @@ pub enum RTCSdpType {
 }
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
-pub struct RTCSessionDescription {
+pub struct RTCSessionDescriptionDX {
     #[serde(rename = "type")]
-    pub sdp_type: RTCSdpType,
+    pub sdp_type: RTCSdpTypeDX,
     pub sdp: String,
 }
 
@@ -217,7 +235,7 @@ impl WebRTCTrait for WebRTCJSInterfaceNew {
     }
     async fn handle_create_offer(
         &self,
-    ) -> Result<RTCSessionDescription, WebRTCError> {
+    ) -> Result<RTCSessionDescriptionDX, WebRTCError> {
         if let Some(peer_connection) = self.peer_connection.as_ref() {
             let offer = JsFuture::from(peer_connection.create_offer())
                 .await
@@ -227,8 +245,8 @@ impl WebRTCTrait for WebRTCJSInterfaceNew {
                 .as_string()
                 .unwrap();
             info!("Offer created {}", sdp);
-            Ok(RTCSessionDescription {
-                sdp_type: RTCSdpType::Offer,
+            Ok(RTCSessionDescriptionDX {
+                sdp_type: RTCSdpTypeDX::Offer,
                 sdp,
             })
         } else {
@@ -239,7 +257,7 @@ impl WebRTCTrait for WebRTCJSInterfaceNew {
 
     async fn handle_add_ice_candidate(
         &self,
-        candidate: Vec<u8>,
+        candidate_init: RTCIceCandidateInitDX,
     ) -> Result<(), WebRTCError> {
         if let Some(peer_connection) = self.peer_connection.as_ref() {
             let signaling_state = peer_connection.signaling_state();
@@ -251,21 +269,22 @@ impl WebRTCTrait for WebRTCJSInterfaceNew {
             {
                 return Err(WebRTCError::MissingRemoteDescription);
             }
-            let candidate_init = deserialize::<String>(&candidate).unwrap();
-            let js_val = JSON::parse(&candidate_init).unwrap();
-            info!("Adding ICE candidate: {:?}", js_val);
-            let candidate_init: RtcIceCandidateInit = js_val.unchecked_into();
-
-            // Step 4: Create the candidate
-            let candidate = RtcIceCandidate::new(&candidate_init).unwrap();
-            let add_ice_candidate_promise = peer_connection
-                .add_ice_candidate_with_opt_rtc_ice_candidate(Some(&candidate));
-            JsFuture::from(add_ice_candidate_promise)
-                .await
-                .map_err(|e| {
-                    error!("Failed to add ICE candidate {:?}", e);
-                    WebRTCError::InvalidCandidate
-                })?;
+            let js_candidate_init =
+                RtcIceCandidateInit::new(&candidate_init.candidate);
+            js_candidate_init.set_sdp_mid(candidate_init.sdp_mid.as_deref());
+            js_candidate_init
+                .set_sdp_m_line_index(candidate_init.sdp_mline_index);
+            JsFuture::from(
+                peer_connection
+                    .add_ice_candidate_with_opt_rtc_ice_candidate_init(Some(
+                        &js_candidate_init,
+                    )),
+            )
+            .await
+            .map_err(|e| {
+                error!("Failed to add ICE candidate {:?}", e);
+                WebRTCError::InvalidCandidate
+            })?;
             Ok(())
         } else {
             error!("Peer connection is not initialized");
@@ -275,13 +294,13 @@ impl WebRTCTrait for WebRTCJSInterfaceNew {
 
     async fn handle_set_local_description(
         &self,
-        description: RTCSessionDescription,
+        description: RTCSessionDescriptionDX,
     ) -> Result<(), WebRTCError> {
         if let Some(peer_connection) = self.peer_connection.as_ref() {
             let description_init =
                 RtcSessionDescriptionInit::new(match description.sdp_type {
-                    RTCSdpType::Offer => RtcSdpType::Offer,
-                    RTCSdpType::Answer => RtcSdpType::Answer,
+                    RTCSdpTypeDX::Offer => RtcSdpType::Offer,
+                    RTCSdpTypeDX::Answer => RtcSdpType::Answer,
                     _ => Err(WebRTCError::InvalidSdp)?,
                 });
             description_init.set_sdp(&description.sdp);
@@ -299,13 +318,13 @@ impl WebRTCTrait for WebRTCJSInterfaceNew {
 
     async fn handle_set_remote_description(
         &self,
-        description: RTCSessionDescription,
+        description: RTCSessionDescriptionDX,
     ) -> Result<(), WebRTCError> {
         if let Some(peer_connection) = self.peer_connection.as_ref() {
             let description_init =
                 RtcSessionDescriptionInit::new(match description.sdp_type {
-                    RTCSdpType::Offer => RtcSdpType::Offer,
-                    RTCSdpType::Answer => RtcSdpType::Answer,
+                    RTCSdpTypeDX::Offer => RtcSdpType::Offer,
+                    RTCSdpTypeDX::Answer => RtcSdpType::Answer,
                     _ => Err(WebRTCError::InvalidSdp)?,
                 });
             description_init.set_sdp(&description.sdp);
@@ -323,7 +342,7 @@ impl WebRTCTrait for WebRTCJSInterfaceNew {
 
     async fn handle_create_answer(
         &self,
-    ) -> Result<RTCSessionDescription, WebRTCError> {
+    ) -> Result<RTCSessionDescriptionDX, WebRTCError> {
         if let Some(peer_connection) = self.peer_connection.as_ref() {
             let answer = JsFuture::from(peer_connection.create_answer())
                 .await
@@ -332,8 +351,8 @@ impl WebRTCTrait for WebRTCJSInterfaceNew {
                 .unwrap()
                 .as_string()
                 .unwrap();
-            Ok(RTCSessionDescription {
-                sdp_type: RTCSdpType::Answer,
+            Ok(RTCSessionDescriptionDX {
+                sdp_type: RTCSdpTypeDX::Answer,
                 sdp,
             })
         } else {
@@ -361,11 +380,31 @@ impl WebRTCJSInterfaceNew {
     async fn open(&mut self) -> Result<(), WebRTCError> {
         let connection =
             RtcPeerConnection::new().map_err(|_| WebRTCError::Unsupported)?;
+        let remote_endpoint = self.remote_endpoint().clone().to_string();
+
+        let commons = self.get_commons();
+        let onicecandidate_callback = Closure::<dyn FnMut(_)>::new(
+            move |ev: RtcPeerConnectionIceEvent| {
+                if let Some(candidate) = ev.candidate() {
+                    commons.clone().borrow_mut().on_ice_candidate(
+                        RTCIceCandidateInitDX {
+                            candidate: candidate.candidate(),
+                            sdp_mid: candidate.sdp_mid(),
+                            sdp_mline_index: candidate.sdp_m_line_index(),
+                            username_fragment: None,
+                        },
+                    );
+                }
+            },
+        );
+        connection.set_onicecandidate(Some(
+            onicecandidate_callback.as_ref().unchecked_ref(),
+        ));
+        onicecandidate_callback.forget();
+
         let connection = Rc::new(Some(connection));
         self.peer_connection = connection.clone();
-
         let connection_clone = connection.clone();
-        let remote_endpoint = self.remote_endpoint().clone().to_string();
         let oniceconnectionstatechange_callback =
             Closure::<dyn FnMut()>::new(move || {
                 if let Some(connection) = connection_clone.as_ref() {
@@ -376,7 +415,6 @@ impl WebRTCJSInterfaceNew {
                     );
                 }
             });
-
         if let Some(connection) = connection.as_ref() {
             connection.clone().set_oniceconnectionstatechange(Some(
                 oniceconnectionstatechange_callback.as_ref().unchecked_ref(),
@@ -478,6 +516,17 @@ impl WebRTCRegistryNew {
                 .call1(&JsValue::NULL, &JsValue::from(candidate))
                 .unwrap();
         }));
+        Ok(())
+    }
+
+    pub async fn add_ice_candidate(
+        &self,
+        interface_uuid: String,
+        candidate: Vec<u8>,
+    ) -> Result<(), JsError> {
+        let interface = self.get_interface(interface_uuid);
+        let webrtc_interface = interface.borrow();
+        webrtc_interface.add_ice_candidate(candidate).await?;
         Ok(())
     }
 }
