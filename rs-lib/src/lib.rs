@@ -36,9 +36,7 @@ extern "C" {
 // export compiler/runtime functions to JavaScript
 #[wasm_bindgen]
 pub fn init_runtime(endpoint: &str) -> JSRuntime {
-    JSRuntime::create(
-        endpoint
-    )
+    JSRuntime::create(endpoint)
 }
 
 #[wasm_bindgen]

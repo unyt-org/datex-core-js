@@ -307,15 +307,16 @@ impl WebRTCJSInterface {
 
         let connection_clone = connection.clone();
         let remote_endpoint = self.remote_endpoint.clone().to_string();
-        let oniceconnectionstatechange_callback =
-            Closure::<dyn FnMut()>::new(move || {
+        let oniceconnectionstatechange_callback = Closure::<dyn FnMut()>::new(
+            move || {
                 if let Some(connection) = connection_clone.as_ref() {
                     let state = connection.ice_connection_state();
                     info!(
                         "ICE connection state of remote {remote_endpoint}: {state:?}"
                     );
                 }
-            });
+            },
+        );
 
         if let Some(connection) = connection.as_ref() {
             connection.clone().set_oniceconnectionstatechange(Some(
