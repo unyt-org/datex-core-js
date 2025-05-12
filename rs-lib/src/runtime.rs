@@ -34,11 +34,11 @@ pub struct JSDebugFlags {
 }
 
 #[cfg(feature = "debug")]
-impl Into<DebugFlags> for JSDebugFlags {
-    fn into(self) -> DebugFlags {
+impl From<JSDebugFlags> for DebugFlags {
+    fn from(val: JSDebugFlags) -> Self {
         DebugFlags {
-            allow_unsigned_blocks: self.allow_unsigned_blocks.unwrap_or(false),
-            enable_deterministic_behavior: self
+            allow_unsigned_blocks: val.allow_unsigned_blocks.unwrap_or(false),
+            enable_deterministic_behavior: val
                 .enable_deterministic_behavior
                 .unwrap_or(false),
         }
