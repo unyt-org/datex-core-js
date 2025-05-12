@@ -16,7 +16,7 @@
         "build-npm": "deno run -A scripts/build-npm.ts",
         "serve": "deno run -A https://raw.githubusercontent.com/unyt-org/ts-file-server/main/src/run.ts -w --minify=false --port 8042",
         "fmt": "deno fmt && cargo fmt",
-        "lint": "deno lint --fix && cargo clippy --fix -- --feature debug"
+        "lint": "deno lint --fix && cargo clippy --fix --features debug"
     },
     "fmt": {
         "indentWidth": 4,
