@@ -137,7 +137,7 @@ export class WebRTCRegistryNew {
     set_on_ice_candidate(
         interface_uuid: string,
         on_ice_candidate: Function,
-    ): Promise<void>;
+    ): void;
     add_ice_candidate(
         interface_uuid: string,
         candidate: Uint8Array,

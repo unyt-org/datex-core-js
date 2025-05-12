@@ -23,7 +23,7 @@ use datex_core::network::com_interfaces::default_com_interfaces::websocket::webs
 use crate::{define_registry, wrap_error_for_js};
 use datex_core::network::com_hub::InterfacePriority;
 use datex_core::task::spawn_with_panic_notify;
-use futures::channel::{mpsc, oneshot};
+use futures::channel::mpsc;
 use futures::{SinkExt, StreamExt};
 use log::{error, info, warn};
 use url::Url;
@@ -147,7 +147,7 @@ impl WebSocketClientJSInterface {
 
     fn create_onerror_callback(
         &self,
-        mut sender: mpsc::Sender<Result<(), WebSocketError>>,
+        sender: mpsc::Sender<Result<(), WebSocketError>>,
     ) -> Closure<dyn FnMut(ErrorEvent)> {
         Closure::new(move |e: ErrorEvent| {
             error!("Socket error event: {:?}", e.message());
