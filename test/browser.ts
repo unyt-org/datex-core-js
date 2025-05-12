@@ -1,5 +1,4 @@
 import { Datex } from "../src/mod.ts";
-import { sleep } from "./utils.ts";
 
 // @ts-ignore global variable for debugging
 globalThis.Datex = Datex;
@@ -44,6 +43,7 @@ document.getElementById("webrtc")!.addEventListener("click", async () => {
     console.log("Answer:", answer);
     await webrtc.set_answer(interface_a, answer);
 });
+// deno-lint-ignore no-unused-vars
 class WebRTCInterface {
     private peer: RTCPeerConnection;
     private dataChannel?: RTCDataChannel;
