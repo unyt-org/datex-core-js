@@ -21,6 +21,7 @@ type InterfaceProperties = {
     continuous_connection: boolean;
     allow_redirects: boolean;
     is_secure_channel: boolean;
+    reconnect_attempts?: number;
     reconnection_config:
         | "NoReconnect"
         | "InstantReconnect"
@@ -56,6 +57,7 @@ export class JSComHub {
     free(): void;
     close_interface(interface_uuid: string): Promise<any>;
     start_update_loop(): void;
+    stop_update_loop(): void;
     update(): Promise<void>;
     /**
      * Send a block to the given interface and socket

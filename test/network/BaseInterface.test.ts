@@ -30,6 +30,7 @@ Deno.test("custom properties no reconnect", () => {
         allow_redirects: true,
         is_secure_channel: true,
         reconnection_config: "NoReconnect",
+        reconnect_attempts: undefined,
     };
     const baseInterface = new BaseJSInterface(runtime.comHub, config);
     assertEquals(baseInterface.properties, config);
@@ -53,6 +54,7 @@ Deno.test("custom properties with reconnect", () => {
                 timeout: 1000,
             },
         },
+        reconnect_attempts: undefined,
     };
     const baseInterface = new BaseJSInterface(runtime.comHub, config);
     assertEquals(baseInterface.properties, config);

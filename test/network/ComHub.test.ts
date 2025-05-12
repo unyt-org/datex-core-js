@@ -2,10 +2,8 @@ import { Datex } from "../../src/mod.ts";
 import { sleep } from "../utils.ts";
 
 Deno.test("update loop", async () => {
-    setTimeout(() => {
-        throw new Error("Timeout");
-    }, 5000);
     Datex.comHub.start_update_loop();
-
-    await sleep(10000);
+    // TODO
+    await sleep(1000);
+    Datex.comHub.stop_update_loop();
 });

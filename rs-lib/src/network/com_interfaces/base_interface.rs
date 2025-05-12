@@ -40,6 +40,7 @@ type InterfaceProperties = {
     continuous_connection: boolean;
     allow_redirects: boolean;
     is_secure_channel: boolean;
+    reconnect_attempts?: number;
     reconnection_config: 
         "NoReconnect" | 
         "InstantReconnect" | 
