@@ -26,7 +26,7 @@ use crate::define_registry;
 use log::{error, info};
 use wasm_bindgen::prelude::{wasm_bindgen, Closure};
 use wasm_bindgen::{JsCast, JsError, JsValue};
-use web_sys::{RtcDataChannelEvent, RtcIceCandidateInit, RtcPeerConnection, RtcPeerConnectionIceEvent, RtcSdpType, RtcSessionDescriptionInit, RtcSignalingState};
+use web_sys::{RtcConfiguration, RtcDataChannelEvent, RtcIceCandidateInit, RtcIceServer, RtcPeerConnection, RtcPeerConnectionIceEvent, RtcSdpType, RtcSessionDescriptionInit, RtcSignalingState};
 use datex_core::network::com_hub::InterfacePriority;
 use datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common::{deserialize, serialize, WebRTCError, WebRTCInterfaceTrait};
 use datex_macros::{com_interface, create_opener};
@@ -380,8 +380,16 @@ impl WebRTCJSInterfaceNew {
     }
     #[create_opener]
     async fn open(&mut self) -> Result<(), WebRTCError> {
-        let connection =
-            RtcPeerConnection::new().map_err(|_| WebRTCError::Unsupported)?;
+        let config = RtcConfiguration::new();
+        let ice_server = RtcIceServer::new();
+        ice_server.set_url("stun:stun.l.google.com:19302");
+
+        let ice_servers = js_sys::Array::new();
+        ice_servers.push(&ice_server);
+        config.set_ice_servers(&ice_servers);
+
+        let connection = RtcPeerConnection::new_with_configuration(&config)
+            .map_err(|_| WebRTCError::Unsupported)?;
         let remote_endpoint = self.remote_endpoint().clone().to_string();
 
         let commons = self.get_commons();
@@ -410,7 +418,6 @@ impl WebRTCJSInterfaceNew {
         let self_data_channel = self.data_channel.clone();
         let ondatachannel_callback =
             Closure::<dyn FnMut(_)>::new(move |ev: RtcDataChannelEvent| {
-                info!("Data channel event");
                 let data_channel = ev.channel();
                 let self_data_channel_clone = self_data_channel.clone();
 
