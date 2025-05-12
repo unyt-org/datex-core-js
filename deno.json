@@ -8,9 +8,9 @@
         "lib": ["deno.window", "dom"]
     },
     "tasks": {
-        "build": "deno run -A scripts/build-wasm.ts --profile release",
-        "debug": "deno run -A scripts/build-wasm.ts --profile debug",
-        "debug-no-opt": "deno task debug --no-opt",
+        "build": "deno run -A scripts/build-wasm.ts --profile debug",
+        "release": "deno run -A scripts/build-wasm.ts --profile release",
+        "debug-no-opt": "deno task build --no-opt",
         "test": "deno task build && deno test -A",
         "test-no-build": "deno test -A",
         "build-npm": "deno run -A scripts/build-npm.ts",

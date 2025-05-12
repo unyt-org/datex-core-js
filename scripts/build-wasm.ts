@@ -5,7 +5,7 @@ import { parseArgs } from "jsr:@std/cli/parse-args";
 import { parse } from "https://deno.land/std@0.224.0/toml/mod.ts";
 import { dedent } from "jsr:@qnighy/dedent";
 
-const DEFAULT_FLAGS: string[] = []; // "--no-default-features"
+const DEFAULT_FLAGS: string[] = ["--features", "debug"]; // "--no-default-features"
 const configText = await Deno.readTextFile(".cargo/config.toml");
 const RUST_FLAGS =
     (parse(configText).build as { rustflags?: string[] })?.rustflags ?? [];

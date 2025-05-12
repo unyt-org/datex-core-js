@@ -44,7 +44,7 @@ Deno.test("websocket block retrieval", async () => {
     const port = 8484;
     const mockupServer = createMockupServer(port);
 
-    const runtime = new Runtime("@unyt");
+    const runtime = new Runtime("@unyt", { allow_unsigned_blocks: true });
     runtime.comHub.websocket_client.register(`ws://localhost:${port}/`)
         .then(() => console.info("Connected"))
         .catch((err) => console.error("Error:", err));
@@ -58,9 +58,11 @@ Deno.test("websocket block retrieval", async () => {
     await sleep(10);
     await runtime.comHub.update();
 
-    console.log("blocks",runtime.comHub._incoming_blocks)
-    assert(runtime.comHub._incoming_blocks.length === 1);
-    const incoming_block = runtime.comHub._incoming_blocks[0];
+    const blocks = runtime.comHub._drain_incoming_blocks();
+
+    console.log("blocks", blocks);
+    assert(blocks.length === 1);
+    const incoming_block = blocks[0];
     assert(incoming_block.length === block.length);
     assertEquals(incoming_block, block);
 });

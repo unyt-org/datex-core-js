@@ -1,8 +1,10 @@
-use std::str::FromStr;
-use std::sync::{Arc, Mutex};
-
+#[cfg(feature = "debug")]
+use datex_core::runtime::global_context::DebugFlags;
 use datex_core::runtime::global_context::GlobalContext;
 use datex_core::stdlib::rc::Rc;
+use serde::{Deserialize, Serialize};
+use std::str::FromStr;
+use std::sync::{Arc, Mutex};
 
 use crate::crypto::crypto_js::CryptoJS;
 use crate::js_utils::js_array;
@@ -25,17 +27,41 @@ pub struct JSRuntime {
     runtime: Runtime,
 }
 
+#[derive(Serialize, Deserialize, Default)]
+pub struct JSDebugFlags {
+    pub allow_unsigned_blocks: Option<bool>,
+    pub enable_deterministic_behavior: Option<bool>,
+}
+
+#[cfg(feature = "debug")]
+impl Into<DebugFlags> for JSDebugFlags {
+    fn into(self) -> DebugFlags {
+        DebugFlags {
+            allow_unsigned_blocks: self.allow_unsigned_blocks.unwrap_or(false),
+            enable_deterministic_behavior: self
+                .enable_deterministic_behavior
+                .unwrap_or(false),
+        }
+    }
+}
+
 /**
  * Internal impl of the JSRuntime, not exposed to JavaScript
  */
 impl JSRuntime {
-    pub fn create(endpoint: impl Into<Endpoint>) -> JSRuntime {
+    pub fn create(
+        endpoint: impl Into<Endpoint>,
+        debug_flags: Option<JSDebugFlags>,
+    ) -> JSRuntime {
         let runtime = Runtime::init(
             endpoint,
-            GlobalContext::new(
-                Arc::new(Mutex::new(CryptoJS)),
-                Arc::new(Mutex::new(TimeJS)),
-            ),
+            GlobalContext {
+                crypto: Arc::new(Mutex::new(CryptoJS)),
+                time: Arc::new(Mutex::new(TimeJS)),
+
+                #[cfg(feature = "debug")]
+                debug_flags: debug_flags.unwrap_or_default().into(),
+            },
         );
         runtime.memory.borrow_mut().store_pointer(
             [

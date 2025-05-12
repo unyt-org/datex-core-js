@@ -169,8 +169,7 @@ impl JSComHub {
             .await
     }
 
-    #[wasm_bindgen(getter)]
-    pub fn _incoming_blocks(&self) -> Vec<js_sys::Uint8Array> {
+    pub fn _drain_incoming_blocks(&self) -> Vec<js_sys::Uint8Array> {
         let mut sections = self
             .com_hub
             .block_handler

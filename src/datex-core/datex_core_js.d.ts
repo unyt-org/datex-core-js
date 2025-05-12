@@ -2,7 +2,7 @@
 // deno-lint-ignore-file
 // deno-fmt-ignore-file
 
-export function init_runtime(endpoint: string): JSRuntime;
+export function init_runtime(endpoint: string, debug_flags: any): JSRuntime;
 export function compile(datex_script: string): void;
 export function decompile(
     dxb: Uint8Array,
@@ -70,12 +70,12 @@ export class JSComHub {
         interface_uuid: string,
         socket_uuid: string,
     ): Promise<boolean>;
+    _drain_incoming_blocks(): Uint8Array[];
     readonly websocket_server: WebSocketServerRegistry;
     readonly websocket_client: WebSocketClientRegistry;
     readonly serial: SerialRegistry;
     readonly webrtc: WebRTCRegistry;
     readonly webrtcnew: WebRTCRegistryNew;
-    readonly _incoming_blocks: Uint8Array[];
 }
 export class JSMemory {
     private constructor();

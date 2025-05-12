@@ -3,13 +3,14 @@
 
 // FIXME no-std
 
+use serde_wasm_bindgen::from_value;
 // use datex_cli_core::CLI;
 use datex_core::compiler;
 use datex_core::decompiler;
 
 use wasm_bindgen::prelude::*;
-
 mod runtime;
+use crate::runtime::JSDebugFlags;
 use runtime::JSRuntime;
 
 pub mod network;
@@ -35,8 +36,10 @@ extern "C" {
 
 // export compiler/runtime functions to JavaScript
 #[wasm_bindgen]
-pub fn init_runtime(endpoint: &str) -> JSRuntime {
-    JSRuntime::create(endpoint)
+pub fn init_runtime(endpoint: &str, debug_flags: JsValue) -> JSRuntime {
+    let debug_flags: Option<JSDebugFlags> =
+        from_value(debug_flags).unwrap_or_default();
+    JSRuntime::create(endpoint, debug_flags)
 }
 
 #[wasm_bindgen]

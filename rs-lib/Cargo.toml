@@ -24,7 +24,7 @@ datex-core = { path = "./datex-core", default-features = false, features = [
     "wasm_logger",
     "wasm_runtime",
     "wasm_webrtc",
-] }
+]}
 datex_macros = { path = "./datex-core/macros" }
 
 lazy_static = "1.4.0"
@@ -97,6 +97,7 @@ default = [
     "wasm_serial",
     "wasm_webrtc",
 ]
+debug = ["datex-core/debug"]
 wasm_websocket_server = [] # only required for a backend js runtime
 wasm_websocket_client = [] # full support
 wasm_serial = [] # only required for frontend js runtime
