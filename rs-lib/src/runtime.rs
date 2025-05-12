@@ -11,7 +11,7 @@ use datex_core::runtime::Runtime;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::future_to_promise;
 use web_sys::js_sys::Promise;
-
+use datex_core::global::protocol_structures::block_header::{BlockHeader, FlagsAndTimestamp};
 use crate::crypto::crypto_js::CryptoJS;
 use crate::js_utils::js_array;
 use crate::memory::JSMemory;
@@ -139,6 +139,12 @@ impl JSRuntime {
         receivers: Vec<String>,
     ) -> Vec<u8> {
         let mut block = DXBBlock {
+            block_header: BlockHeader {
+                flags_and_timestamp: FlagsAndTimestamp::default()
+                    .with_is_end_of_scope(true)
+                    .with_is_end_of_section(true),
+                ..BlockHeader::default()
+            },
             body: body.unwrap_or_default(),
             ..DXBBlock::default()
         };

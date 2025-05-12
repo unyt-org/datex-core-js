@@ -44,6 +44,7 @@ futures = { version = "0.3", default-features = false } # = "0.11",
 # matchbox_socket = { path = "/Users/jonas/Downloads/matchbox/matchbox_socket", optional = true, default-features = false }
 futures-timer = { version = "3", features = ["wasm-bindgen"] }
 uuid = { version = "1.15.1", features = ["js"], optional = true }
+futures-channel = "0.3.31"
 
 # webrtc
 # tokio = { version = "1.43.0", default-features = false, features = [] }

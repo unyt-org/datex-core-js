@@ -22,13 +22,15 @@ use datex_core::network::com_interfaces::default_com_interfaces::websocket::webs
 
 use crate::{define_registry, wrap_error_for_js};
 use datex_core::network::com_hub::InterfacePriority;
-use futures::channel::oneshot;
+use futures::channel::{mpsc, oneshot};
+use futures::{SinkExt, StreamExt};
 use log::{error, info, warn};
 use url::Url;
 use wasm_bindgen::prelude::wasm_bindgen;
 use wasm_bindgen::{prelude::Closure, JsCast};
 use wasm_bindgen::{JsError, JsValue};
 use web_sys::{js_sys, ErrorEvent, MessageEvent};
+use datex_core::task::spawn_with_panic_notify;
 
 pub struct WebSocketClientJSInterface {
     pub address: Url,
@@ -67,9 +69,11 @@ impl WebSocketClientJSInterface {
 
         self.ws.set_binary_type(web_sys::BinaryType::Arraybuffer);
 
+        let (mut sender, mut receiver) = mpsc::channel::<Result<(), WebSocketError>>(32); // buffer size of 32
+
         let message_callback = self.create_onmessage_callback();
-        let error_callback = self.create_onerror_callback();
-        let (sender, receiver) = oneshot::channel::<()>();
+        let error_callback = self.create_onerror_callback(sender.clone());
+
         let uuid = self.get_uuid().clone();
         let com_interface_sockets = self.get_sockets().clone();
         let open_callback = Closure::once(move |_: MessageEvent| {
@@ -82,7 +86,9 @@ impl WebSocketClientJSInterface {
                 .lock()
                 .unwrap()
                 .add_socket(Arc::new(Mutex::new(socket)));
-            sender.send(()).expect("Failed to send onopen event");
+            spawn_with_panic_notify(async move {
+                sender.send(Ok(())).await.expect("Failed to send onopen event");
+            });
         });
         let close_callback = self.create_onclose_callback();
 
@@ -95,10 +101,16 @@ impl WebSocketClientJSInterface {
             .set_onclose(Some(close_callback.as_ref().unchecked_ref()));
         self.ws
             .set_onopen(Some(open_callback.as_ref().unchecked_ref()));
-        receiver.await.map_err(|_| {
+
+        info!("Waiting for WebSocket connection to open...");
+       /* receiver.recv().await.map_err(|_| {
             error!("Failed to receive onopen event");
             WebSocketError::Other("Failed to receive onopen event".to_string())
-        })?;
+        })?;*/
+        receiver.next().await.ok_or_else(|| {
+            error!("Failed to receive onopen event");
+            WebSocketError::Other("Failed to receive onopen event".to_string())
+        })??;
 
         message_callback.forget();
         error_callback.forget();
@@ -129,9 +141,16 @@ impl WebSocketClientJSInterface {
         })
     }
 
-    fn create_onerror_callback(&self) -> Closure<dyn FnMut(ErrorEvent)> {
+    fn create_onerror_callback(&self, mut sender: mpsc::Sender<Result<(), WebSocketError>>) -> Closure<dyn FnMut(ErrorEvent)> {
         Closure::new(move |e: ErrorEvent| {
             error!("Socket error event: {:?}", e.message());
+            let mut sender = sender.clone();
+            spawn_with_panic_notify(async move {
+                sender
+                    .send(Err(WebSocketError::ConnectionError))
+                    .await
+                    .expect("Failed to send onerror event");
+            })
         })
     }
 

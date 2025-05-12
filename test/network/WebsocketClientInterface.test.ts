@@ -58,6 +58,7 @@ Deno.test("websocket block retrieval", async () => {
     await sleep(10);
     await runtime.comHub.update();
 
+    console.log("blocks",runtime.comHub._incoming_blocks)
     assert(runtime.comHub._incoming_blocks.length === 1);
     const incoming_block = runtime.comHub._incoming_blocks[0];
     assert(incoming_block.length === block.length);
