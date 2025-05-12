@@ -19,7 +19,9 @@ const flags = parseArgs(Deno.args, {
     default: { "opt": true, "inline": false, "profile": "release" },
     negatable: ["opt"],
 });
-const DEFAULT_FLAGS: string[] = flags.profile === "debug" ? ["--features", "debug"] : []; // "--no-default-features"
+const DEFAULT_FLAGS: string[] = flags.profile === "debug"
+    ? ["--features", "debug"]
+    : []; // "--no-default-features"
 
 const NAME = "datex_core_js";
 const outDir = new Path("./src/datex-core");
