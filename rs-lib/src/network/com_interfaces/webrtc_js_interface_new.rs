@@ -20,7 +20,6 @@ use datex_core::network::com_interfaces::com_interface::ComInterfaceState;
 use js_sys::{Function, Reflect};
 use serde::{Deserialize, Serialize};
 use wasm_bindgen_futures::JsFuture;
-use web_sys::console::info;
 
 use crate::define_registry;
 use log::{error, info};
