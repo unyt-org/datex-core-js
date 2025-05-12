@@ -4,19 +4,21 @@ use std::sync::{Arc, Mutex};
 use datex_core::runtime::global_context::GlobalContext;
 use datex_core::stdlib::rc::Rc;
 
-use datex_core::crypto::crypto::CryptoTrait;
-use datex_core::datex_values::{Endpoint, Pointer};
-use datex_core::global::dxb_block::DXBBlock;
-use datex_core::runtime::Runtime;
-use wasm_bindgen::prelude::*;
-use wasm_bindgen_futures::future_to_promise;
-use web_sys::js_sys::Promise;
-use datex_core::global::protocol_structures::block_header::{BlockHeader, FlagsAndTimestamp};
 use crate::crypto::crypto_js::CryptoJS;
 use crate::js_utils::js_array;
 use crate::memory::JSMemory;
 use crate::network::com_hub::JSComHub;
 use crate::utils::time::TimeJS;
+use datex_core::crypto::crypto::CryptoTrait;
+use datex_core::datex_values::{Endpoint, Pointer};
+use datex_core::global::dxb_block::DXBBlock;
+use datex_core::global::protocol_structures::block_header::{
+    BlockHeader, FlagsAndTimestamp,
+};
+use datex_core::runtime::Runtime;
+use wasm_bindgen::prelude::*;
+use wasm_bindgen_futures::future_to_promise;
+use web_sys::js_sys::Promise;
 
 #[wasm_bindgen]
 pub struct JSRuntime {

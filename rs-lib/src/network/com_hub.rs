@@ -11,6 +11,7 @@ use super::com_interfaces::websocket_client_js_interface::WebSocketClientRegistr
 #[cfg(feature = "wasm_websocket_server")]
 use super::com_interfaces::websocket_server_js_interface::WebSocketServerRegistry;
 
+use datex_core::global::dxb_block::IncomingSection;
 use datex_core::network::com_hub::InterfacePriority;
 use datex_core::network::com_interfaces::com_interface::{
     ComInterface, ComInterfaceUUID,
@@ -22,7 +23,6 @@ use log::error;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::future_to_promise;
 use web_sys::js_sys::{self, Promise};
-use datex_core::global::dxb_block::IncomingSection;
 
 #[wasm_bindgen]
 pub struct JSComHub {
@@ -171,8 +171,11 @@ impl JSComHub {
 
     #[wasm_bindgen(getter)]
     pub fn _incoming_blocks(&self) -> Vec<js_sys::Uint8Array> {
-        let mut sections =
-            self.com_hub.block_handler.incoming_sections_queue.borrow_mut();
+        let mut sections = self
+            .com_hub
+            .block_handler
+            .incoming_sections_queue
+            .borrow_mut();
         let sections = sections.drain(..).collect::<Vec<_>>();
 
         let mut blocks = vec![];
@@ -187,8 +190,9 @@ impl JSComHub {
                 }
             }
         }
-        
-        blocks.iter()
+
+        blocks
+            .iter()
             .map(|block| {
                 let bytes = block.to_bytes().unwrap();
                 let entry =
