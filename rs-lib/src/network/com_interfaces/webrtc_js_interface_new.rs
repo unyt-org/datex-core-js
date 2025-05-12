@@ -204,7 +204,7 @@ impl WebRTCTrait for WebRTCJSInterfaceNew {
 
     async fn handle_create_data_channel(&self) -> Result<(), WebRTCError> {
         if let Some(peer_connection) = self.peer_connection.as_ref() {
-            let data_channel = peer_connection.create_data_channel("datex");
+            let data_channel = peer_connection.create_data_channel("test");
             self.data_channel.borrow_mut().replace(data_channel);
         }
         Ok(())

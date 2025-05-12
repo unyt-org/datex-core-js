@@ -42,7 +42,6 @@ document.getElementById("webrtc")!.addEventListener("click", async () => {
 
     const answer = await webrtc.create_answer(interface_b, offer);
     console.log("Answer:", answer);
-    await sleep(1000);
     await webrtc.set_answer(interface_a, answer);
 });
 // deno-lint-ignore no-unused-vars
