@@ -32,7 +32,7 @@ macro_rules! define_registry {
 
                 let interface = com_hub.get_interface_by_uuid::<$interface_type>(&interface_uuid);
                 let interface = interface.unwrap();
-                return interface;
+                return interface.clone();
             }
             pub fn close(&self, interface_uuid: String) -> web_sys::js_sys::Promise {
                 let interface_uuid = datex_core::network::com_interfaces::com_interface::ComInterfaceUUID(
