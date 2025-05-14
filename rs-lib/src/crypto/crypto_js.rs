@@ -76,7 +76,7 @@ impl CryptoJS {
         key_usages: &[&str],
     ) -> Result<T, CryptoError>
     where
-        T: sealed::CryptoKeyType + std::convert::From<wasm_bindgen::JsValue>,
+        T: sealed::CryptoKeyType + From<JsValue>,
     {
         let key_generator_promise = Self::crypto_subtle()
             .generate_key_with_object(
@@ -119,58 +119,6 @@ impl CryptoJS {
 }
 
 impl CryptoTrait for CryptoJS {
-    fn create_uuid(&self) -> String {
-        Self::crypto().random_uuid()
-    }
-
-    fn random_bytes(&self, length: usize) -> Vec<u8> {
-        let buffer = &mut vec![0u8; length];
-        Self::crypto()
-            .get_random_values_with_u8_array(buffer)
-            .unwrap();
-        buffer.to_vec()
-    }
-
-    fn new_encryption_key_pair<'a>(
-        &self,
-    ) -> std::pin::Pin<
-        Box<
-            dyn std::prelude::rust_2024::Future<
-                Output = Result<(Vec<u8>, Vec<u8>), CryptoError>,
-            >,
-        >,
-    > {
-        Box::pin(async move {
-            let key = Self::new_encryption_key_pair().await?;
-            let public_key =
-                Self::export_crypto_key(&key.get_public_key(), "spki").await?;
-            let private_key =
-                Self::export_crypto_key(&key.get_private_key(), "pkcs8")
-                    .await?;
-            Ok((public_key, private_key))
-        })
-    }
-
-    fn new_sign_key_pair(
-        &self,
-    ) -> std::pin::Pin<
-        Box<
-            dyn std::prelude::rust_2024::Future<
-                Output = Result<(Vec<u8>, Vec<u8>), CryptoError>,
-            >,
-        >,
-    > {
-        Box::pin(async move {
-            let key = Self::new_sign_key_pair().await?;
-            let public_key =
-                Self::export_crypto_key(&key.get_public_key(), "spki").await?;
-            let private_key =
-                Self::export_crypto_key(&key.get_private_key(), "pkcs8")
-                    .await?;
-            Ok((public_key, private_key))
-        })
-    }
-
     fn encrypt_rsa(
         &self,
         data: Vec<u8>, // FIXME how to handle lifetime and let data pass as slice
@@ -336,6 +284,58 @@ impl CryptoTrait for CryptoJS {
                 .ok_or(CryptoError::VerificationError)?;
 
             Ok(result)
+        })
+    }
+
+    fn create_uuid(&self) -> String {
+        Self::crypto().random_uuid()
+    }
+
+    fn random_bytes(&self, length: usize) -> Vec<u8> {
+        let buffer = &mut vec![0u8; length];
+        Self::crypto()
+            .get_random_values_with_u8_array(buffer)
+            .unwrap();
+        buffer.to_vec()
+    }
+
+    fn new_encryption_key_pair<'a>(
+        &self,
+    ) -> Pin<
+        Box<
+            dyn Future<
+                Output = Result<(Vec<u8>, Vec<u8>), CryptoError>,
+            >,
+        >,
+    > {
+        Box::pin(async move {
+            let key = Self::new_encryption_key_pair().await?;
+            let public_key =
+                Self::export_crypto_key(&key.get_public_key(), "spki").await?;
+            let private_key =
+                Self::export_crypto_key(&key.get_private_key(), "pkcs8")
+                    .await?;
+            Ok((public_key, private_key))
+        })
+    }
+
+    fn new_sign_key_pair(
+        &self,
+    ) -> Pin<
+        Box<
+            dyn Future<
+                Output = Result<(Vec<u8>, Vec<u8>), CryptoError>,
+            >,
+        >,
+    > {
+        Box::pin(async move {
+            let key = Self::new_sign_key_pair().await?;
+            let public_key =
+                Self::export_crypto_key(&key.get_public_key(), "spki").await?;
+            let private_key =
+                Self::export_crypto_key(&key.get_private_key(), "pkcs8")
+                    .await?;
+            Ok((public_key, private_key))
         })
     }
 }
