@@ -75,7 +75,7 @@ impl JSComHub {
         &self,
         interface_uuid: &ComInterfaceUUID,
     ) -> Option<Rc<RefCell<dyn ComInterface>>> {
-        self.com_hub.get_interface_ref_by_uuid(interface_uuid)
+        self.com_hub.get_dyn_interface_by_uuid(interface_uuid)
     }
 
     pub fn close_interface(&self, interface_uuid: String) -> Promise {
