@@ -301,13 +301,8 @@ impl CryptoTrait for CryptoJS {
 
     fn new_encryption_key_pair<'a>(
         &self,
-    ) -> Pin<
-        Box<
-            dyn Future<
-                Output = Result<(Vec<u8>, Vec<u8>), CryptoError>,
-            >,
-        >,
-    > {
+    ) -> Pin<Box<dyn Future<Output = Result<(Vec<u8>, Vec<u8>), CryptoError>>>>
+    {
         Box::pin(async move {
             let key = Self::new_encryption_key_pair().await?;
             let public_key =
@@ -321,13 +316,8 @@ impl CryptoTrait for CryptoJS {
 
     fn new_sign_key_pair(
         &self,
-    ) -> Pin<
-        Box<
-            dyn Future<
-                Output = Result<(Vec<u8>, Vec<u8>), CryptoError>,
-            >,
-        >,
-    > {
+    ) -> Pin<Box<dyn Future<Output = Result<(Vec<u8>, Vec<u8>), CryptoError>>>>
+    {
         Box::pin(async move {
             let key = Self::new_sign_key_pair().await?;
             let public_key =
