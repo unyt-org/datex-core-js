@@ -14,6 +14,7 @@ use datex_core::network::com_interfaces::com_interface::{
 use datex_core::network::com_interfaces::com_interface_properties::InterfaceProperties;
 use datex_core::network::com_interfaces::com_interface_socket::ComInterfaceSocketUUID;
 use datex_core::stdlib::sync::Arc;
+use datex_core::task::spawn_local;
 use datex_core::{delegate_com_interface_info, set_opener};
 
 use datex_core::network::com_interfaces::com_interface::ComInterfaceState;
@@ -125,6 +126,28 @@ pub trait WebRTCTrait<T: 'static> {
     fn provide_data_channels(&self) -> Rc<RefCell<DataChannels<T>>>;
     fn new(peer_endpoint: impl Into<Endpoint>) -> Self;
     fn get_commons(&self) -> Rc<RefCell<WebRTCCommon>>;
+
+    // This must be called in the open method
+    fn setup(&self) {
+        let data_channels = self.provide_data_channels();
+        let data_channels_clone = data_channels.clone();
+
+        data_channels.borrow_mut().on_add =
+            Some(Box::new(move |data_channel| {
+                let data_channel = data_channel.clone();
+                let data_channels_clone = data_channels_clone.clone();
+                Box::pin(async move {
+                    let label = data_channel.borrow().label.clone();
+                    info!("Data channel created: {}", label);
+                    Self::setup_data_channel(
+                        data_channels_clone.clone(),
+                        data_channel,
+                    )
+                    .await
+                    .unwrap()
+                })
+            }));
+    }
     fn remote_endpoint(&self) -> Endpoint {
         self.get_commons().borrow().endpoint.clone()
     }
@@ -169,25 +192,6 @@ pub trait WebRTCTrait<T: 'static> {
         &self,
         offer: Vec<u8>,
     ) -> Result<Vec<u8>, WebRTCError> {
-        let data_channels = self.provide_data_channels();
-        let data_channels_clone = data_channels.clone();
-
-        data_channels.borrow_mut().on_add =
-            Some(Box::new(move |data_channel| {
-                let data_channel = data_channel.clone();
-                let data_channels_clone = data_channels_clone.clone();
-                Box::pin(async move {
-                    let label = data_channel.borrow().label.clone();
-                    info!("Data channel created: {}", label);
-                    Self::setup_data_channel(
-                        data_channels_clone.clone(),
-                        data_channel,
-                    )
-                    .await
-                    .unwrap()
-                })
-            }));
-
         self.set_remote_description(offer).await?;
         let answer = self.handle_create_answer().await?;
         self.handle_set_local_description(answer.clone()).await?;
@@ -533,10 +537,17 @@ impl WebRTCJSInterfaceNew {
         let data_channels = self.data_channels.clone();
         let ondatachannel_callback =
             Closure::<dyn FnMut(_)>::new(move |ev: RtcDataChannelEvent| {
-                data_channels.borrow_mut().create_data_channel(
-                    "DATEX".to_string(),
-                    ev.channel().clone(),
-                );
+                let data_channels = data_channels.clone();
+                spawn_local(async move {
+                    data_channels
+                        .clone()
+                        .borrow_mut()
+                        .create_data_channel(
+                            "DATEX".to_string(),
+                            ev.channel().clone(),
+                        )
+                        .await;
+                });
             });
 
         let connection_clone = connection.clone();
@@ -561,6 +572,7 @@ impl WebRTCJSInterfaceNew {
             ));
             ondatachannel_callback.forget();
         }
+        self.setup();
         Ok(())
     }
 }
