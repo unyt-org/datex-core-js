@@ -22,6 +22,7 @@ use datex_core::{network::com_hub::ComHub, utils::uuid::UUID};
 use log::error;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::future_to_promise;
+use web_sys::console::info;
 use web_sys::js_sys::{self, Promise};
 
 #[wasm_bindgen]

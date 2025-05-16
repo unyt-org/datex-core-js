@@ -19,6 +19,7 @@ use datex_core::network::com_interfaces::com_interface_socket::{
 };
 use datex_core::stdlib::sync::Arc;
 use datex_core::task::spawn_local;
+use datex_core::utils::uuid::UUID;
 use datex_core::{delegate_com_interface_info, set_opener};
 
 use datex_core::network::com_interfaces::com_interface::ComInterfaceState;
@@ -28,10 +29,11 @@ use wasm_bindgen_futures::JsFuture;
 use web_sys::console::info;
 
 use crate::define_registry;
+use crate::js_utils::TryAsByteSlice;
 use log::{error, info};
 use wasm_bindgen::prelude::{wasm_bindgen, Closure};
 use wasm_bindgen::{JsCast, JsError, JsValue};
-use web_sys::{RtcConfiguration, RtcDataChannel, RtcDataChannelEvent, RtcIceCandidateInit, RtcIceServer, RtcPeerConnection, RtcPeerConnectionIceEvent, RtcSdpType, RtcSessionDescriptionInit, RtcSignalingState};
+use web_sys::{MessageEvent, RtcConfiguration, RtcDataChannel, RtcDataChannelEvent, RtcIceCandidateInit, RtcIceServer, RtcPeerConnection, RtcPeerConnectionIceEvent, RtcSdpType, RtcSessionDescriptionInit, RtcSignalingState};
 use datex_core::network::com_hub::InterfacePriority;
 use datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common::{deserialize, serialize, WebRTCError, WebRTCInterfaceTrait};
 use datex_macros::{com_interface, create_opener};
@@ -387,21 +389,42 @@ impl WebRTCTrait<RtcDataChannel> for WebRTCJSInterfaceNew {
         channel: Rc<RefCell<DataChannel<RtcDataChannel>>>,
     ) -> Result<(), WebRTCError> {
         let channel_clone = channel.clone();
-        let onopen_callback = Closure::<dyn FnMut()>::new(move || {
-            let data_channel = channel_clone.borrow();
-            if let Some(ref open_channel) = data_channel.open_channel {
-                info!(
-                    "Data channel opened to {}",
-                    channel_clone.borrow().label
-                );
-                open_channel(channel_clone.clone());
-            }
-        });
-        channel
-            .borrow()
-            .data_channel
-            .set_onopen(Some(onopen_callback.as_ref().unchecked_ref()));
-        onopen_callback.forget();
+        {
+            let onopen_callback = Closure::<dyn FnMut()>::new(move || {
+                let data_channel = channel_clone.borrow();
+                if let Some(ref open_channel) = data_channel.open_channel {
+                    info!(
+                        "Data channel opened to {}",
+                        channel_clone.borrow().label
+                    );
+                    open_channel(channel_clone.clone());
+                }
+            });
+            channel
+                .clone()
+                .borrow()
+                .data_channel
+                .set_onopen(Some(onopen_callback.as_ref().unchecked_ref()));
+            onopen_callback.forget();
+        }
+        let channel_clone = channel.clone();
+        {
+            let onmessage_callback = Closure::<dyn FnMut(MessageEvent)>::new(
+                move |message_event: MessageEvent| {
+                    let data_channel = channel_clone.borrow();
+                    if let Some(ref on_message) = data_channel.on_message {
+                        let data = message_event.data().try_as_u8_slice();
+                        if let Ok(data) = data {
+                            on_message(data);
+                        }
+                    }
+                },
+            );
+            channel.clone().borrow().data_channel.set_onmessage(Some(
+                onmessage_callback.as_ref().unchecked_ref(),
+            ));
+            onmessage_callback.forget();
+        }
         Ok(())
     }
 

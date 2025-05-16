@@ -43,17 +43,16 @@ document.getElementById("webrtc")!.addEventListener("click", async () => {
     console.log("Answer:", answer);
     await webrtc.set_answer(interface_a, answer);
 
+    await sleep(1000);
     const success = await Datex.comHub.send_block(
         new Uint8Array([1, 2, 3, 4]),
         interface_a,
         "",
     );
 
-    await sleep(1000);
     if (!success) {
         console.error("Failed to send message");
     } else {
         console.log("Message sent successfully");
     }
-    // Datex.comHub.send_block(interface_a, "Hello from A", undefined);
 });
