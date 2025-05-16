@@ -1,4 +1,5 @@
 import { Datex } from "../src/mod.ts";
+import { sleep } from "./utils.ts";
 
 // @ts-ignore global variable for debugging
 globalThis.Datex = Datex;
@@ -7,7 +8,7 @@ document.getElementById("serial")!.addEventListener("click", async () => {
     const serial = await Datex.comHub.serial.register(19200);
     console.log(serial);
 });
-// TODO
+
 document.getElementById("webrtc")!.addEventListener("click", async () => {
     const webrtc = Datex.comHub.webrtcnew;
     const interface_a = await webrtc.register("@jonas");
@@ -41,4 +42,18 @@ document.getElementById("webrtc")!.addEventListener("click", async () => {
     const answer = await webrtc.create_answer(interface_b, offer);
     console.log("Answer:", answer);
     await webrtc.set_answer(interface_a, answer);
+
+    const success = await Datex.comHub.send_block(
+        new Uint8Array([1, 2, 3, 4]),
+        interface_a,
+        "",
+    );
+
+    await sleep(1000);
+    if (!success) {
+        console.error("Failed to send message");
+    } else {
+        console.log("Message sent successfully");
+    }
+    // Datex.comHub.send_block(interface_a, "Hello from A", undefined);
 });

@@ -641,6 +641,7 @@ impl ComInterface for WebRTCJSInterfaceNew {
         block: &'a [u8],
         _: ComInterfaceSocketUUID,
     ) -> Pin<Box<dyn Future<Output = bool> + 'a>> {
+        info!("Sending block: {:?}", block);
         let success = {
             if let Some(channel) =
                 self.data_channels.borrow().get_data_channel("DATEX")
