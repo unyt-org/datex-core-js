@@ -131,13 +131,19 @@ pub trait WebRTCTrait<T> {
     }
     async fn create_offer<'a>(&'a self) -> Result<Vec<u8>, WebRTCError> {
         let data_channels = self.provide_data_channels();
+        let data_channels_clone = data_channels.clone();
         data_channels.borrow_mut().on_add = Some(Box::new(move |label| {
             info!("Data channel added: {label}");
-            self.handle_setup_data_channel();
+            let binding = data_channels_clone.borrow();
+            let c = binding.data_channels.get(&label).unwrap();
+            Self::handle_setup_data_channel(c);
         }));
 
         self.handle_create_data_channel().await?;
-        self.handle_setup_data_channel().await?;
+        Self::handle_setup_data_channel(
+            data_channels.borrow().data_channels.get("DATEX").unwrap(),
+        )
+        .await?;
         let offer = self.handle_create_offer().await?;
         self.handle_set_local_description(offer.clone()).await?;
         let offer = serialize(&offer).unwrap();
@@ -182,7 +188,9 @@ pub trait WebRTCTrait<T> {
         self.set_remote_description(answer).await
     }
     async fn handle_create_data_channel(&self) -> Result<(), WebRTCError>;
-    async fn handle_setup_data_channel(&self) -> Result<(), WebRTCError>;
+    async fn handle_setup_data_channel(
+        channel: &DataChannel<T>,
+    ) -> Result<(), WebRTCError>;
     async fn handle_create_offer(
         &self,
     ) -> Result<RTCSessionDescriptionDX, WebRTCError>;
