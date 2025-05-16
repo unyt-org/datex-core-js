@@ -1,4 +1,4 @@
-use std::cell::{Ref, RefCell};
+use std::cell::RefCell;
 use std::collections::{HashMap, VecDeque};
 use std::future::Future;
 use std::pin::Pin;
@@ -80,6 +80,12 @@ pub struct DataChannels<T> {
         >,
     >,
 }
+impl<T> Default for DataChannels<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<T> DataChannels<T> {
     pub fn new() -> Self {
         DataChannels {
@@ -307,8 +313,7 @@ pub trait WebRTCTrait<T: 'static> {
                 let sockets = sockets_clone.lock().unwrap();
                 if let Some(socket) = sockets.sockets.get(&socket_uuid) {
                     info!(
-                        "Received data on socket: {:?} {}",
-                        data, socket_uuid
+                        "Received data on socket: {data:?} {socket_uuid}"
                     );
                     socket
                         .lock()
