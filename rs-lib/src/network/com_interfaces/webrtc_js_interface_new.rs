@@ -53,7 +53,7 @@ pub struct WebRTCCommon {
     candidates: VecDeque<Vec<u8>>,
     is_remote_description_set: bool,
     on_ice_candidate: Option<Box<dyn Fn(Vec<u8>)>>,
-    on_data_channel: Option<Box<dyn Fn(String)>>,
+    on_data_channel: Option<Box<dyn Fn(&Self, String)>>,
 }
 impl WebRTCCommon {
     pub fn new(endpoint: impl Into<Endpoint>) -> Self {
@@ -113,11 +113,15 @@ pub trait WebRTCTrait<T> {
         Ok(())
     }
     async fn create_offer(&self) -> Result<Vec<u8>, WebRTCError> {
+        // let x = *self.handle_create_data_channel;
+
         self.handle_create_data_channel().await?;
         self.handle_setup_data_channel().await?;
         let offer = self.handle_create_offer().await?;
         self.handle_set_local_description(offer.clone()).await?;
         let offer = serialize(&offer).unwrap();
+        self.get_commons().borrow_mut().on_data_channel =
+            self.handle_create_data_channel;
         Ok(offer)
     }
     async fn create_answer(
@@ -453,10 +457,17 @@ impl WebRTCJSInterfaceNew {
             // handle_setup_data_channel();
         };
         // self.set_on_data_channel_open()
-        // let x = on_channel.clone();
+        // let x = on_channel.clone();#
+        let commons = self.get_commons();
+
         let ondatachannel_callback =
             Closure::<dyn FnMut(_)>::new(move |ev: RtcDataChannelEvent| {
-                on_channel(ev.channel());
+                // on_channel(ev.channel());
+                if let Some(on_data_channel) = &commons.borrow().on_data_channel
+                {
+                    let channel_name = ev.channel().label();
+                    on_data_channel(channel_name);
+                }
                 // on_channel.clone();
                 // let data_channel = ev.channel();
                 // let self_data_channel_clone = self_data_channel.clone();
