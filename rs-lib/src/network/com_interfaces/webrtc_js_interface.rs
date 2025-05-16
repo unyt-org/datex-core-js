@@ -1,5 +1,4 @@
 use std::cell::RefCell;
-use std::collections::{HashMap, VecDeque};
 use std::future::Future;
 use std::pin::Pin;
 use std::rc::Rc;
@@ -11,12 +10,8 @@ use datex_core::datex_values::Endpoint;
 use datex_core::network::com_interfaces::com_interface::{
     ComInterface, ComInterfaceInfo, ComInterfaceSockets, ComInterfaceUUID,
 };
-use datex_core::network::com_interfaces::com_interface_properties::{
-    InterfaceDirection, InterfaceProperties,
-};
-use datex_core::network::com_interfaces::com_interface_socket::{
-    ComInterfaceSocket, ComInterfaceSocketUUID,
-};
+use datex_core::network::com_interfaces::com_interface_properties::InterfaceProperties;
+use datex_core::network::com_interfaces::com_interface_socket::ComInterfaceSocketUUID;
 use datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common_new::data_channels::{DataChannel, DataChannels};
 use datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common_new::structures::{RTCIceCandidateInitDX, RTCIceServer, RTCSdpTypeDX, RTCSessionDescriptionDX};
 use datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common_new::utils::WebRTCError;
@@ -28,7 +23,6 @@ use datex_core::{delegate_com_interface_info, set_opener};
 
 use datex_core::network::com_interfaces::com_interface::ComInterfaceState;
 use js_sys::{Array, Function, Reflect};
-use serde::{Deserialize, Serialize};
 use wasm_bindgen_futures::JsFuture;
 
 use crate::define_registry;
