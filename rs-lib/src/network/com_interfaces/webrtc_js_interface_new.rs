@@ -20,12 +20,13 @@ use datex_core::network::com_interfaces::com_interface::ComInterfaceState;
 use js_sys::{Function, Reflect};
 use serde::{Deserialize, Serialize};
 use wasm_bindgen_futures::JsFuture;
+use web_sys::console::info;
 
 use crate::define_registry;
 use log::{error, info};
 use wasm_bindgen::prelude::{wasm_bindgen, Closure};
 use wasm_bindgen::{JsCast, JsError, JsValue};
-use web_sys::{RtcConfiguration, RtcDataChannelEvent, RtcIceCandidateInit, RtcIceServer, RtcPeerConnection, RtcPeerConnectionIceEvent, RtcSdpType, RtcSessionDescriptionInit, RtcSignalingState};
+use web_sys::{RtcConfiguration, RtcDataChannel, RtcDataChannelEvent, RtcIceCandidateInit, RtcIceServer, RtcPeerConnection, RtcPeerConnectionIceEvent, RtcSdpType, RtcSessionDescriptionInit, RtcSignalingState};
 use datex_core::network::com_hub::InterfacePriority;
 use datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common::{deserialize, serialize, WebRTCError, WebRTCInterfaceTrait};
 use datex_macros::{com_interface, create_opener};
@@ -415,19 +416,27 @@ impl WebRTCJSInterfaceNew {
         self.peer_connection = connection.clone();
 
         let self_data_channel = self.data_channel.clone();
+        let on_channel = move |data_channel: RtcDataChannel| {
+            self_data_channel.borrow_mut().replace(data_channel.clone());
+            info!("Data channel opened sender");
+            handle_setup_data_channel();
+        };
+        // let x = on_channel.clone();
         let ondatachannel_callback =
             Closure::<dyn FnMut(_)>::new(move |ev: RtcDataChannelEvent| {
-                let data_channel = ev.channel();
-                let self_data_channel_clone = self_data_channel.clone();
+                on_channel(ev.channel());
+                // on_channel.clone();
+                // let data_channel = ev.channel();
+                // let self_data_channel_clone = self_data_channel.clone();
 
-                let data_channel_clone = data_channel.clone();
-                let onopen_callback = Closure::<dyn FnMut()>::new(move || {
-                    info!("Data channel opened receiver");
-                });
+                // let data_channel_clone = data_channel.clone();
+                // let onopen_callback = Closure::<dyn FnMut()>::new(move || {
+                //     info!("Data channel opened receiver");
+                // });
 
-                data_channel
-                    .set_onopen(Some(onopen_callback.as_ref().unchecked_ref()));
-                onopen_callback.forget();
+                // data_channel
+                //     .set_onopen(Some(onopen_callback.as_ref().unchecked_ref()));
+                // onopen_callback.forget();
             });
 
         let connection_clone = connection.clone();
