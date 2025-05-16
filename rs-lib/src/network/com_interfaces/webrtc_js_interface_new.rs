@@ -36,7 +36,7 @@ pub struct DataChannel<T> {
     pub label: String,
     pub data_channel: T,
     pub on_message: Option<Box<dyn Fn(Vec<u8>)>>,
-    pub on_open: Option<Box<dyn Fn(Rc<RefCell<DataChannel<T>>>)>>,
+    pub open_channel: Option<Box<dyn Fn(Rc<RefCell<DataChannel<T>>>)>>,
     pub on_close: Option<Box<dyn Fn()>>,
 }
 impl<T> DataChannel<T> {
@@ -45,7 +45,7 @@ impl<T> DataChannel<T> {
             label,
             data_channel,
             on_message: None,
-            on_open: None,
+            open_channel: None,
             on_close: None,
         }
     }
@@ -128,17 +128,14 @@ pub trait WebRTCTrait<T: 'static> {
     fn get_commons(&self) -> Rc<RefCell<WebRTCCommon>>;
 
     // This must be called in the open method
-    fn setup(&self) {
+    fn setup_listeners(&self) {
         let data_channels = self.provide_data_channels();
         let data_channels_clone = data_channels.clone();
-
         data_channels.borrow_mut().on_add =
             Some(Box::new(move |data_channel| {
                 let data_channel = data_channel.clone();
                 let data_channels_clone = data_channels_clone.clone();
                 Box::pin(async move {
-                    let label = data_channel.borrow().label.clone();
-                    info!("Data channel created: {}", label);
                     Self::setup_data_channel(
                         data_channels_clone.clone(),
                         data_channel,
@@ -228,7 +225,7 @@ pub trait WebRTCTrait<T: 'static> {
         data_channels: Rc<RefCell<DataChannels<T>>>,
         channel: Rc<RefCell<DataChannel<T>>>,
     ) -> Result<(), WebRTCError> {
-        channel.borrow_mut().on_open =
+        channel.borrow_mut().open_channel =
             Some(Box::new(move |channel: Rc<RefCell<DataChannel<T>>>| {
                 info!("Data channel opened and added to data channels");
                 data_channels.borrow_mut().add_data_channel(channel);
@@ -334,10 +331,13 @@ impl WebRTCTrait<RtcDataChannel> for WebRTCJSInterfaceNew {
     ) -> Result<(), WebRTCError> {
         let channel_clone = channel.clone();
         let onopen_callback = Closure::<dyn FnMut()>::new(move || {
-            info!("Data channel opened");
             let data_channel = channel_clone.borrow();
-            if let Some(ref on_open) = data_channel.on_open {
-                on_open(channel_clone.clone());
+            if let Some(ref open_channel) = data_channel.open_channel {
+                info!(
+                    "Data channel opened to {}",
+                    channel_clone.borrow().label
+                );
+                open_channel(channel_clone.clone());
             }
         });
         channel
@@ -572,7 +572,7 @@ impl WebRTCJSInterfaceNew {
             ));
             ondatachannel_callback.forget();
         }
-        self.setup();
+        self.setup_listeners();
         Ok(())
     }
 }
