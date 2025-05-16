@@ -48,6 +48,10 @@ document.getElementById("webrtc")!.addEventListener("click", async () => {
         new Uint8Array([1, 2, 3, 4]),
         interface_a,
         "",
+    ) && await Datex.comHub.send_block(
+        new Uint8Array([1, 2, 3, 4]),
+        interface_b,
+        "",
     );
 
     if (!success) {

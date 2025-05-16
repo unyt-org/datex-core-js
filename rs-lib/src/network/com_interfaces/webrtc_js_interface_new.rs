@@ -19,14 +19,12 @@ use datex_core::network::com_interfaces::com_interface_socket::{
 };
 use datex_core::stdlib::sync::Arc;
 use datex_core::task::spawn_local;
-use datex_core::utils::uuid::UUID;
 use datex_core::{delegate_com_interface_info, set_opener};
 
 use datex_core::network::com_interfaces::com_interface::ComInterfaceState;
 use js_sys::{Function, Reflect};
 use serde::{Deserialize, Serialize};
 use wasm_bindgen_futures::JsFuture;
-use web_sys::console::info;
 
 use crate::define_registry;
 use crate::js_utils::TryAsByteSlice;
@@ -44,7 +42,7 @@ pub struct DataChannel<T> {
     pub on_message: Option<Box<dyn Fn(Vec<u8>)>>,
     pub open_channel: Option<Box<dyn Fn(Rc<RefCell<DataChannel<T>>>)>>,
     pub on_close: Option<Box<dyn Fn()>>,
-    pub socket_uuid: Option<ComInterfaceSocketUUID>,
+    pub socket_uuid: RefCell<Option<ComInterfaceSocketUUID>>,
 }
 impl<T> DataChannel<T> {
     pub fn new(label: String, data_channel: T) -> Self {
@@ -54,14 +52,14 @@ impl<T> DataChannel<T> {
             on_message: None,
             open_channel: None,
             on_close: None,
-            socket_uuid: None,
+            socket_uuid: RefCell::new(None),
         }
     }
-    pub fn set_socket_uuid(&mut self, socket_uuid: ComInterfaceSocketUUID) {
-        self.socket_uuid = Some(socket_uuid);
+    pub fn set_socket_uuid(&self, socket_uuid: ComInterfaceSocketUUID) {
+        self.socket_uuid.replace(Some(socket_uuid));
     }
     pub fn get_socket_uuid(&self) -> Option<ComInterfaceSocketUUID> {
-        self.socket_uuid.clone()
+        self.socket_uuid.borrow().clone()
     }
 }
 
@@ -295,10 +293,10 @@ pub trait WebRTCTrait<T: 'static> {
                     interface_uuid.clone(),
                     sockets.clone(),
                 );
-                // channel
-                //     .clone()
-                //     .borrow_mut()
-                //     .set_socket_uuid(socket_uuid.clone());
+                channel
+                    .clone()
+                    .borrow()
+                    .set_socket_uuid(socket_uuid.clone());
                 data_channels.borrow_mut().add_data_channel(channel);
             }));
 
@@ -383,10 +381,9 @@ pub struct RTCSessionDescriptionDX {
 }
 
 pub struct WebRTCJSInterfaceNew {
-    pub info: ComInterfaceInfo,
-    pub commons: Rc<RefCell<WebRTCCommon>>,
-    pub peer_connection: Rc<Option<RtcPeerConnection>>,
-    data_channel: Rc<RefCell<Option<RtcDataChannel>>>,
+    info: ComInterfaceInfo,
+    commons: Rc<RefCell<WebRTCCommon>>,
+    peer_connection: Rc<Option<RtcPeerConnection>>,
     data_channels: Rc<RefCell<DataChannels<RtcDataChannel>>>,
 }
 #[async_trait(?Send)]
@@ -406,7 +403,6 @@ impl WebRTCTrait<RtcDataChannel> for WebRTCJSInterfaceNew {
             commons: Rc::new(RefCell::new(WebRTCCommon::new(peer_endpoint))),
             peer_connection: Rc::new(None),
             data_channels: Rc::new(RefCell::new(DataChannels::new())),
-            data_channel: Rc::new(RefCell::new(None)),
         }
     }
 
@@ -608,7 +604,6 @@ impl WebRTCJSInterfaceNew {
             info: ComInterfaceInfo::default(),
             commons: Rc::new(RefCell::new(WebRTCCommon::new(endpoint))),
             peer_connection: Rc::new(None),
-            data_channel: Rc::new(RefCell::new(None)),
             data_channels: Rc::new(RefCell::new(DataChannels::new())),
         }
     }
@@ -698,7 +693,6 @@ impl ComInterface for WebRTCJSInterfaceNew {
         block: &'a [u8],
         _: ComInterfaceSocketUUID,
     ) -> Pin<Box<dyn Future<Output = bool> + 'a>> {
-        info!("Sending block: {:?}", block);
         let success = {
             if let Some(channel) =
                 self.data_channels.borrow().get_data_channel("DATEX")
@@ -729,7 +723,25 @@ impl ComInterface for WebRTCJSInterfaceNew {
     fn handle_close<'a>(
         &'a mut self,
     ) -> Pin<Box<dyn Future<Output = bool> + 'a>> {
-        Box::pin(async move { false })
+        let success = {
+            if let Some(peer_connection) = self.peer_connection.as_ref() {
+                peer_connection.close();
+                let mut commons = self.commons.borrow_mut();
+                commons.is_remote_description_set = false;
+                commons.candidates.clear();
+                commons.on_ice_candidate = None;
+                self.peer_connection = Rc::new(None);
+
+                let mut data_channels = self.data_channels.borrow_mut();
+                data_channels.data_channels.clear();
+                data_channels.on_add = None;
+
+                true
+            } else {
+                false
+            }
+        };
+        Box::pin(async move { success })
     }
     delegate_com_interface_info!();
     set_opener!(open);
