@@ -44,6 +44,7 @@ pub struct DataChannel<T> {
     pub on_message: Option<Box<dyn Fn(Vec<u8>)>>,
     pub open_channel: Option<Box<dyn Fn(Rc<RefCell<DataChannel<T>>>)>>,
     pub on_close: Option<Box<dyn Fn()>>,
+    pub socket_uuid: Option<ComInterfaceSocketUUID>,
 }
 impl<T> DataChannel<T> {
     pub fn new(label: String, data_channel: T) -> Self {
@@ -53,7 +54,14 @@ impl<T> DataChannel<T> {
             on_message: None,
             open_channel: None,
             on_close: None,
+            socket_uuid: None,
         }
+    }
+    pub fn set_socket_uuid(&mut self, socket_uuid: ComInterfaceSocketUUID) {
+        self.socket_uuid = Some(socket_uuid);
+    }
+    pub fn get_socket_uuid(&self) -> Option<ComInterfaceSocketUUID> {
+        self.socket_uuid.clone()
     }
 }
 
@@ -196,7 +204,7 @@ pub trait WebRTCTrait<T: 'static> {
         endpoint: Endpoint,
         interface_uuid: ComInterfaceUUID,
         sockets: Arc<Mutex<ComInterfaceSockets>>,
-    ) {
+    ) -> ComInterfaceSocketUUID {
         // FIXME clean up old sockets
         let mut sockets = sockets.lock().unwrap();
         let socket = ComInterfaceSocket::new(
@@ -207,8 +215,9 @@ pub trait WebRTCTrait<T: 'static> {
         let socket_uuid = socket.uuid.clone();
         sockets.add_socket(Arc::new(Mutex::new(socket)));
         sockets
-            .register_socket_endpoint(socket_uuid, endpoint, 1)
+            .register_socket_endpoint(socket_uuid.clone(), endpoint, 1)
             .expect("Failed to register socket endpoint");
+        socket_uuid
     }
 
     async fn create_offer(&self) -> Result<Vec<u8>, WebRTCError> {
@@ -276,16 +285,43 @@ pub trait WebRTCTrait<T: 'static> {
         data_channels: Rc<RefCell<DataChannels<T>>>,
         channel: Rc<RefCell<DataChannel<T>>>,
     ) -> Result<(), WebRTCError> {
+        let channel_clone = channel.clone();
+        let sockets_clone = sockets.clone();
         channel.borrow_mut().open_channel =
             Some(Box::new(move |channel: Rc<RefCell<DataChannel<T>>>| {
                 info!("Data channel opened and added to data channels");
-                data_channels.borrow_mut().add_data_channel(channel);
-                Self::add_socket(
+                let socket_uuid = Self::add_socket(
                     endpoint.clone(),
                     interface_uuid.clone(),
                     sockets.clone(),
                 );
+                // channel
+                //     .clone()
+                //     .borrow_mut()
+                //     .set_socket_uuid(socket_uuid.clone());
+                data_channels.borrow_mut().add_data_channel(channel);
             }));
+
+        channel.borrow_mut().on_message = Some(Box::new(move |data| {
+            let data = data.to_vec();
+            if let Some(socket_uuid) = channel_clone.borrow().get_socket_uuid()
+            {
+                let sockets = sockets_clone.lock().unwrap();
+                if let Some(socket) = sockets.sockets.get(&socket_uuid) {
+                    info!(
+                        "Received data on socket: {:?} {}",
+                        data, socket_uuid
+                    );
+                    socket
+                        .lock()
+                        .unwrap()
+                        .receive_queue
+                        .lock()
+                        .unwrap()
+                        .extend(data);
+                }
+            }
+        }));
         Self::handle_setup_data_channel(channel).await?;
         Ok(())
     }
@@ -391,12 +427,10 @@ impl WebRTCTrait<RtcDataChannel> for WebRTCJSInterfaceNew {
         let channel_clone = channel.clone();
         {
             let onopen_callback = Closure::<dyn FnMut()>::new(move || {
-                let data_channel = channel_clone.borrow();
-                if let Some(ref open_channel) = data_channel.open_channel {
-                    info!(
-                        "Data channel opened to {}",
-                        channel_clone.borrow().label
-                    );
+                if let Some(ref open_channel) =
+                    channel_clone.borrow().open_channel
+                {
+                    info!("Data channel opened to");
                     open_channel(channel_clone.clone());
                 }
             });
