@@ -1,4 +1,4 @@
-use std::cell::RefCell;
+use std::cell::{Ref, RefCell};
 use std::collections::{HashMap, VecDeque};
 use std::future::Future;
 use std::pin::Pin;
@@ -32,14 +32,16 @@ use datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_
 use datex_macros::{com_interface, create_opener};
 
 pub struct DataChannel<T> {
+    pub label: String,
     pub data_channel: T,
     pub on_message: Option<Box<dyn Fn(Vec<u8>)>>,
-    pub on_open: Option<Box<dyn Fn()>>,
+    pub on_open: Option<Box<dyn Fn(Rc<RefCell<DataChannel<T>>>)>>,
     pub on_close: Option<Box<dyn Fn()>>,
 }
 impl<T> DataChannel<T> {
-    pub fn new(data_channel: T) -> Self {
+    pub fn new(label: String, data_channel: T) -> Self {
         DataChannel {
+            label,
             data_channel,
             on_message: None,
             on_open: None,
@@ -56,7 +58,7 @@ pub struct WebRTCCommon {
 }
 
 pub struct DataChannels<T> {
-    pub data_channels: HashMap<String, DataChannel<T>>,
+    pub data_channels: HashMap<String, Rc<RefCell<DataChannel<T>>>>,
     pub on_add: Option<Box<dyn Fn(String)>>,
 }
 impl<T> DataChannels<T> {
@@ -66,9 +68,24 @@ impl<T> DataChannels<T> {
             on_add: None,
         }
     }
-    pub fn add_data_channel(&mut self, label: String, channel: T) {
-        self.data_channels
-            .insert(label.clone(), DataChannel::new(channel));
+    pub fn get_data_channel(
+        &self,
+        label: &str,
+    ) -> Option<Rc<RefCell<DataChannel<T>>>> {
+        self.data_channels.get(label).cloned()
+    }
+    pub fn add_data_channel(
+        &mut self,
+        data_channel: Rc<RefCell<DataChannel<T>>>,
+    ) {
+        let label = data_channel.borrow().label.clone();
+        self.data_channels.insert(label, data_channel);
+    }
+    pub fn create_data_channel(&mut self, label: String, channel: T) {
+        self.data_channels.insert(
+            label.clone(),
+            Rc::new(RefCell::new(DataChannel::new(label.clone(), channel))),
+        );
         if let Some(ref on_add) = self.on_add {
             on_add(label.clone());
         }
@@ -98,7 +115,7 @@ impl WebRTCCommon {
 }
 
 #[async_trait(?Send)]
-pub trait WebRTCTrait<T> {
+pub trait WebRTCTrait<T: 'static> {
     fn provide_data_channels(&self) -> Rc<RefCell<DataChannels<T>>>;
     fn new(peer_endpoint: impl Into<Endpoint>) -> Self;
     fn get_commons(&self) -> Rc<RefCell<WebRTCCommon>>;
@@ -129,21 +146,12 @@ pub trait WebRTCTrait<T> {
         }
         Ok(())
     }
-    async fn create_offer<'a>(&'a self) -> Result<Vec<u8>, WebRTCError> {
-        let data_channels = self.provide_data_channels();
-        let data_channels_clone = data_channels.clone();
-        data_channels.borrow_mut().on_add = Some(Box::new(move |label| {
-            info!("Data channel added: {label}");
-            let binding = data_channels_clone.borrow();
-            let c = binding.data_channels.get(&label).unwrap();
-            Self::handle_setup_data_channel(c);
-        }));
 
-        self.handle_create_data_channel().await?;
-        Self::handle_setup_data_channel(
-            data_channels.borrow().data_channels.get("DATEX").unwrap(),
-        )
-        .await?;
+    async fn create_offer(&self) -> Result<Vec<u8>, WebRTCError> {
+        let data_channel = self.handle_create_data_channel().await?;
+        let data_channel_rc = Rc::new(RefCell::new(data_channel));
+        self.setup_data_channel(data_channel_rc.clone()).await?;
+
         let offer = self.handle_create_offer().await?;
         self.handle_set_local_description(offer.clone()).await?;
         let offer = serialize(&offer).unwrap();
@@ -184,12 +192,29 @@ pub trait WebRTCTrait<T> {
         }
         Ok(())
     }
+
+    async fn setup_data_channel(
+        &self,
+        channel: Rc<RefCell<DataChannel<T>>>,
+    ) -> Result<(), WebRTCError> {
+        let data_channels = self.provide_data_channels();
+        let data_channel_clone = channel.clone();
+        channel.borrow_mut().on_open =
+            Some(Box::new(move |channel: Rc<RefCell<DataChannel<T>>>| {
+                info!("Data channel opened and added to data channels");
+                data_channels.borrow_mut().add_data_channel(channel);
+            }));
+        Self::handle_setup_data_channel(channel).await?;
+    }
+
     async fn set_answer(&self, answer: Vec<u8>) -> Result<(), WebRTCError> {
         self.set_remote_description(answer).await
     }
-    async fn handle_create_data_channel(&self) -> Result<(), WebRTCError>;
+    async fn handle_create_data_channel(
+        &self,
+    ) -> Result<DataChannel<T>, WebRTCError>;
     async fn handle_setup_data_channel(
-        channel: &DataChannel<T>,
+        channel: Rc<RefCell<DataChannel<T>>>,
     ) -> Result<(), WebRTCError>;
     async fn handle_create_offer(
         &self,
@@ -263,32 +288,34 @@ impl WebRTCTrait<RtcDataChannel> for WebRTCJSInterfaceNew {
         }
     }
 
-    async fn handle_create_data_channel(&self) -> Result<(), WebRTCError> {
+    async fn handle_create_data_channel(
+        &self,
+    ) -> Result<DataChannel<RtcDataChannel>, WebRTCError> {
         if let Some(peer_connection) = self.peer_connection.as_ref() {
-            let data_channel = peer_connection.create_data_channel("datex");
-            self.data_channel.borrow_mut().replace(data_channel);
-            info!("Data channel created");
-        }
-        Ok(())
-    }
-    async fn handle_setup_data_channel(&self) -> Result<(), WebRTCError> {
-        if let Some(data_channel) = self.data_channel.borrow().as_ref() {
-            let data_channel_clone = data_channel.clone();
-            let self_data_channel = self.data_channel.clone();
-            let onopen_callback = Closure::<dyn FnMut()>::new(move || {
-                info!("Data channel opened sender");
-                self_data_channel
-                    .borrow_mut()
-                    .replace(data_channel_clone.clone());
-            });
-            data_channel
-                .set_onopen(Some(onopen_callback.as_ref().unchecked_ref()));
-            onopen_callback.forget();
-            Ok(())
+            let data_channel = peer_connection.create_data_channel("DATEX");
+            Ok(DataChannel::new(data_channel.label(), data_channel))
         } else {
-            error!("Data channel is not initialized");
+            error!("Peer connection is not initialized");
             Err(WebRTCError::ConnectionError)
         }
+    }
+    async fn handle_setup_data_channel(
+        channel: Rc<RefCell<DataChannel<RtcDataChannel>>>,
+    ) -> Result<(), WebRTCError> {
+        let channel_clone = channel.clone();
+        let onopen_callback = Closure::<dyn FnMut()>::new(move || {
+            info!("Data channel opened");
+            let data_channel = channel_clone.borrow();
+            if let Some(ref on_open) = data_channel.on_open {
+                on_open(channel_clone.clone());
+            }
+        });
+        channel
+            .borrow()
+            .data_channel
+            .set_onopen(Some(onopen_callback.as_ref().unchecked_ref()));
+        onopen_callback.forget();
+        Ok(())
     }
     async fn handle_create_offer(
         &self,
@@ -480,7 +507,7 @@ impl WebRTCJSInterfaceNew {
         let data_channels = self.data_channels.clone();
         let ondatachannel_callback =
             Closure::<dyn FnMut(_)>::new(move |ev: RtcDataChannelEvent| {
-                data_channels.borrow_mut().add_data_channel(
+                data_channels.borrow_mut().create_data_channel(
                     "DATEX".to_string(),
                     ev.channel().clone(),
                 );
