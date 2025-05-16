@@ -11,8 +11,12 @@ use datex_core::datex_values::Endpoint;
 use datex_core::network::com_interfaces::com_interface::{
     ComInterface, ComInterfaceInfo, ComInterfaceSockets, ComInterfaceUUID,
 };
-use datex_core::network::com_interfaces::com_interface_properties::InterfaceProperties;
-use datex_core::network::com_interfaces::com_interface_socket::ComInterfaceSocketUUID;
+use datex_core::network::com_interfaces::com_interface_properties::{
+    InterfaceDirection, InterfaceProperties,
+};
+use datex_core::network::com_interfaces::com_interface_socket::{
+    ComInterfaceSocket, ComInterfaceSocketUUID,
+};
 use datex_core::stdlib::sync::Arc;
 use datex_core::task::spawn_local;
 use datex_core::{delegate_com_interface_info, set_opener};
@@ -126,17 +130,30 @@ pub trait WebRTCTrait<T: 'static> {
     fn provide_data_channels(&self) -> Rc<RefCell<DataChannels<T>>>;
     fn new(peer_endpoint: impl Into<Endpoint>) -> Self;
     fn get_commons(&self) -> Rc<RefCell<WebRTCCommon>>;
+    fn provide_info(&self) -> &ComInterfaceInfo;
 
     // This must be called in the open method
     fn setup_listeners(&self) {
         let data_channels = self.provide_data_channels();
         let data_channels_clone = data_channels.clone();
+
+        let info = self.provide_info();
+        let interface_uuid = info.get_uuid().clone();
+        let sockets = info.com_interface_sockets();
+
+        let remote_endpoint = self.remote_endpoint();
         data_channels.borrow_mut().on_add =
             Some(Box::new(move |data_channel| {
                 let data_channel = data_channel.clone();
                 let data_channels_clone = data_channels_clone.clone();
+                let sockets = sockets.clone();
+                let interface_uuid = interface_uuid.clone();
+                let remote_endpoint = remote_endpoint.clone();
                 Box::pin(async move {
                     Self::setup_data_channel(
+                        remote_endpoint.clone(),
+                        interface_uuid.clone(),
+                        sockets.clone(),
                         data_channels_clone.clone(),
                         data_channel,
                     )
@@ -173,13 +190,42 @@ pub trait WebRTCTrait<T: 'static> {
         Ok(())
     }
 
+    fn add_socket(
+        endpoint: Endpoint,
+        interface_uuid: ComInterfaceUUID,
+        sockets: Arc<Mutex<ComInterfaceSockets>>,
+    ) {
+        // FIXME clean up old sockets
+        let mut sockets = sockets.lock().unwrap();
+        let socket = ComInterfaceSocket::new(
+            interface_uuid,
+            InterfaceDirection::InOut,
+            1,
+        );
+        let socket_uuid = socket.uuid.clone();
+        sockets.add_socket(Arc::new(Mutex::new(socket)));
+        sockets
+            .register_socket_endpoint(socket_uuid, endpoint, 1)
+            .expect("Failed to register socket endpoint");
+    }
+
     async fn create_offer(&self) -> Result<Vec<u8>, WebRTCError> {
         let data_channel = self.handle_create_data_channel().await?;
         let data_channel_rc = Rc::new(RefCell::new(data_channel));
         let data_channels = self.provide_data_channels();
-        Self::setup_data_channel(data_channels, data_channel_rc.clone())
+        {
+            let info = self.provide_info();
+            let interface_uuid = info.get_uuid().clone();
+            let sockets = info.com_interface_sockets();
+            Self::setup_data_channel(
+                self.remote_endpoint(),
+                interface_uuid,
+                sockets.clone(),
+                data_channels,
+                data_channel_rc.clone(),
+            )
             .await?;
-
+        }
         let offer = self.handle_create_offer().await?;
         self.handle_set_local_description(offer.clone()).await?;
         let offer = serialize(&offer).unwrap();
@@ -222,6 +268,9 @@ pub trait WebRTCTrait<T: 'static> {
     }
 
     async fn setup_data_channel(
+        endpoint: Endpoint,
+        interface_uuid: ComInterfaceUUID,
+        sockets: Arc<Mutex<ComInterfaceSockets>>,
         data_channels: Rc<RefCell<DataChannels<T>>>,
         channel: Rc<RefCell<DataChannel<T>>>,
     ) -> Result<(), WebRTCError> {
@@ -229,6 +278,11 @@ pub trait WebRTCTrait<T: 'static> {
             Some(Box::new(move |channel: Rc<RefCell<DataChannel<T>>>| {
                 info!("Data channel opened and added to data channels");
                 data_channels.borrow_mut().add_data_channel(channel);
+                Self::add_socket(
+                    endpoint.clone(),
+                    interface_uuid.clone(),
+                    sockets.clone(),
+                );
             }));
         Self::handle_setup_data_channel(channel).await?;
         Ok(())
@@ -304,6 +358,9 @@ impl WebRTCTrait<RtcDataChannel> for WebRTCJSInterfaceNew {
     ) -> Rc<RefCell<DataChannels<RtcDataChannel>>> {
         self.data_channels.clone()
     }
+    fn provide_info(&self) -> &ComInterfaceInfo {
+        &self.info
+    }
 
     fn new(peer_endpoint: impl Into<Endpoint>) -> Self {
         WebRTCJSInterfaceNew {
@@ -347,6 +404,7 @@ impl WebRTCTrait<RtcDataChannel> for WebRTCJSInterfaceNew {
         onopen_callback.forget();
         Ok(())
     }
+
     async fn handle_create_offer(
         &self,
     ) -> Result<RTCSessionDescriptionDX, WebRTCError> {
@@ -583,7 +641,22 @@ impl ComInterface for WebRTCJSInterfaceNew {
         block: &'a [u8],
         _: ComInterfaceSocketUUID,
     ) -> Pin<Box<dyn Future<Output = bool> + 'a>> {
-        Box::pin(async move { false })
+        let success = {
+            if let Some(channel) =
+                self.data_channels.borrow().get_data_channel("DATEX")
+            {
+                channel
+                    .clone()
+                    .borrow_mut()
+                    .data_channel
+                    .send_with_u8_array(block)
+                    .is_ok()
+            } else {
+                error!("Failed to send message, data channel not found");
+                false
+            }
+        };
+        Box::pin(async move { success })
     }
 
     fn init_properties(&self) -> InterfaceProperties {
