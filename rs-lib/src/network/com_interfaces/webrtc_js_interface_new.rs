@@ -1,5 +1,5 @@
 use std::cell::RefCell;
-use std::collections::VecDeque;
+use std::collections::{HashMap, VecDeque};
 use std::future::Future;
 use std::pin::Pin;
 use std::rc::Rc;
@@ -31,11 +31,29 @@ use datex_core::network::com_hub::InterfacePriority;
 use datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common::{deserialize, serialize, WebRTCError, WebRTCInterfaceTrait};
 use datex_macros::{com_interface, create_opener};
 
+pub struct DataChannel<T> {
+    pub data_channel: T,
+    pub on_message: Option<Box<dyn Fn(Vec<u8>)>>,
+    pub on_open: Option<Box<dyn Fn()>>,
+    pub on_close: Option<Box<dyn Fn()>>,
+}
+impl<T> DataChannel<T> {
+    pub fn new(data_channel: T) -> Self {
+        DataChannel {
+            data_channel,
+            on_message: None,
+            on_open: None,
+            on_close: None,
+        }
+    }
+}
+
 pub struct WebRTCCommon {
     pub endpoint: Endpoint,
     candidates: VecDeque<Vec<u8>>,
     is_remote_description_set: bool,
     on_ice_candidate: Option<Box<dyn Fn(Vec<u8>)>>,
+    on_data_channel: Option<Box<dyn Fn(String)>>,
 }
 impl WebRTCCommon {
     pub fn new(endpoint: impl Into<Endpoint>) -> Self {
@@ -44,6 +62,7 @@ impl WebRTCCommon {
             candidates: VecDeque::new(),
             is_remote_description_set: false,
             on_ice_candidate: None,
+            on_data_channel: None,
         }
     }
     fn on_ice_candidate(&self, candidate: RTCIceCandidateInitDX) {
@@ -60,7 +79,10 @@ impl WebRTCCommon {
 }
 
 #[async_trait(?Send)]
-pub trait WebRTCTrait {
+pub trait WebRTCTrait<T> {
+    fn provide_data_channels(
+        &self,
+    ) -> Rc<RefCell<HashMap<String, DataChannel<T>>>>;
     fn new(peer_endpoint: impl Into<Endpoint>) -> Self;
     fn get_commons(&self) -> Rc<RefCell<WebRTCCommon>>;
     fn remote_endpoint(&self) -> Endpoint {
@@ -189,15 +211,23 @@ pub struct WebRTCJSInterfaceNew {
     pub info: ComInterfaceInfo,
     pub commons: Rc<RefCell<WebRTCCommon>>,
     pub peer_connection: Rc<Option<RtcPeerConnection>>,
-    data_channel: Rc<RefCell<Option<web_sys::RtcDataChannel>>>,
+    data_channel: Rc<RefCell<Option<RtcDataChannel>>>,
+    data_channels: Rc<RefCell<HashMap<String, DataChannel<RtcDataChannel>>>>,
 }
 #[async_trait(?Send)]
-impl WebRTCTrait for WebRTCJSInterfaceNew {
+impl WebRTCTrait<RtcDataChannel> for WebRTCJSInterfaceNew {
+    fn provide_data_channels(
+        &self,
+    ) -> Rc<RefCell<HashMap<String, DataChannel<RtcDataChannel>>>> {
+        self.data_channels.clone()
+    }
+
     fn new(peer_endpoint: impl Into<Endpoint>) -> Self {
         WebRTCJSInterfaceNew {
             info: ComInterfaceInfo::default(),
             commons: Rc::new(RefCell::new(WebRTCCommon::new(peer_endpoint))),
             peer_connection: Rc::new(None),
+            data_channels: Rc::new(RefCell::new(HashMap::new())),
             data_channel: Rc::new(RefCell::new(None)),
         }
     }
@@ -376,6 +406,7 @@ impl WebRTCJSInterfaceNew {
             commons: Rc::new(RefCell::new(WebRTCCommon::new(endpoint))),
             peer_connection: Rc::new(None),
             data_channel: Rc::new(RefCell::new(None)),
+            data_channels: Rc::new(RefCell::new(HashMap::new())),
         }
     }
     #[create_opener]
@@ -419,8 +450,9 @@ impl WebRTCJSInterfaceNew {
         let on_channel = move |data_channel: RtcDataChannel| {
             self_data_channel.borrow_mut().replace(data_channel.clone());
             info!("Data channel opened sender");
-            handle_setup_data_channel();
+            // handle_setup_data_channel();
         };
+        // self.set_on_data_channel_open()
         // let x = on_channel.clone();
         let ondatachannel_callback =
             Closure::<dyn FnMut(_)>::new(move |ev: RtcDataChannelEvent| {
