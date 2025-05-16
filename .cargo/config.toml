@@ -1,2 +1,6 @@
 [build]
 rustflags = ["--cfg=web_sys_unstable_apis"]
+
+[alias]
+test-debug = "test --features debug"
+clippy-debug = "clippy --fix --features debug"
