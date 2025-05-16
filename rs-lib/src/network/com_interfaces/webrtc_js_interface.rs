@@ -17,6 +17,7 @@ use datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_
 use datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common_new::utils::WebRTCError;
 use datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common_new::webrtc_commons::WebRTCCommon;
 use datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common_new::webrtc_trait::{WebRTCTrait, WebRTCTraitInternal};
+use datex_core::network::com_interfaces::socket_provider::SingleSocketProvider;
 use datex_core::stdlib::sync::Arc;
 use datex_core::task::spawn_local;
 use datex_core::{delegate_com_interface_info, set_opener};
@@ -44,7 +45,11 @@ pub struct WebRTCJSInterface {
     peer_connection: Rc<Option<RtcPeerConnection>>,
     data_channels: Rc<RefCell<DataChannels<RtcDataChannel>>>,
 }
-
+impl SingleSocketProvider for WebRTCJSInterface {
+    fn provide_sockets(&self) -> Arc<Mutex<ComInterfaceSockets>> {
+        self.get_sockets()
+    }
+}
 impl WebRTCTrait<RtcDataChannel> for WebRTCJSInterface {
     fn new(peer_endpoint: impl Into<Endpoint>) -> Self {
         WebRTCJSInterface {
