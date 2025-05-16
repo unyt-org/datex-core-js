@@ -6,7 +6,7 @@ use std::sync::Mutex;
 use std::time::Duration; // FIXME no-std
 
 use datex_core::{ delegate_com_interface_info, set_opener};
-use datex_core::network::com_interfaces::com_interface::{ComInterface, ComInterfaceError, ComInterfaceFactory, ComInterfaceInfo, ComInterfaceSockets, ComInterfaceUUID};
+use datex_core::network::com_interfaces::com_interface::{ComInterface, ComInterfaceError, ComInterfaceFactory, ComInterfaceInfo, ComInterfaceUUID};
 use datex_core::network::com_interfaces::com_interface_properties::InterfaceProperties;
 use datex_core::network::com_interfaces::com_interface_socket::ComInterfaceSocketUUID;
 use datex_core::network::com_interfaces::default_com_interfaces::serial::serial_common::{SerialError, SerialInterfaceSetupData};
