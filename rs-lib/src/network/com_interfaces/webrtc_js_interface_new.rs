@@ -59,7 +59,13 @@ pub struct WebRTCCommon {
 
 pub struct DataChannels<T> {
     pub data_channels: HashMap<String, Rc<RefCell<DataChannel<T>>>>,
-    pub on_add: Option<Box<dyn Fn(String)>>,
+    pub on_add: Option<
+        Box<
+            dyn Fn(
+                Rc<RefCell<DataChannel<T>>>,
+            ) -> Pin<Box<dyn Future<Output = ()> + 'static>>,
+        >,
+    >,
 }
 impl<T> DataChannels<T> {
     pub fn new() -> Self {
@@ -81,13 +87,13 @@ impl<T> DataChannels<T> {
         let label = data_channel.borrow().label.clone();
         self.data_channels.insert(label, data_channel);
     }
-    pub fn create_data_channel(&mut self, label: String, channel: T) {
-        self.data_channels.insert(
-            label.clone(),
-            Rc::new(RefCell::new(DataChannel::new(label.clone(), channel))),
-        );
-        if let Some(ref on_add) = self.on_add {
-            on_add(label.clone());
+    pub async fn create_data_channel(&mut self, label: String, channel: T) {
+        let data_channel =
+            Rc::new(RefCell::new(DataChannel::new(label.clone(), channel)));
+        self.data_channels
+            .insert(label.clone(), data_channel.clone());
+        if let Some(fut) = self.on_add.take() {
+            fut(data_channel).await;
         }
     }
 }
@@ -150,7 +156,9 @@ pub trait WebRTCTrait<T: 'static> {
     async fn create_offer(&self) -> Result<Vec<u8>, WebRTCError> {
         let data_channel = self.handle_create_data_channel().await?;
         let data_channel_rc = Rc::new(RefCell::new(data_channel));
-        self.setup_data_channel(data_channel_rc.clone()).await?;
+        let data_channels = self.provide_data_channels();
+        Self::setup_data_channel(data_channels, data_channel_rc.clone())
+            .await?;
 
         let offer = self.handle_create_offer().await?;
         self.handle_set_local_description(offer.clone()).await?;
@@ -161,6 +169,25 @@ pub trait WebRTCTrait<T: 'static> {
         &self,
         offer: Vec<u8>,
     ) -> Result<Vec<u8>, WebRTCError> {
+        let data_channels = self.provide_data_channels();
+        let data_channels_clone = data_channels.clone();
+
+        data_channels.borrow_mut().on_add =
+            Some(Box::new(move |data_channel| {
+                let data_channel = data_channel.clone();
+                let data_channels_clone = data_channels_clone.clone();
+                Box::pin(async move {
+                    let label = data_channel.borrow().label.clone();
+                    info!("Data channel created: {}", label);
+                    Self::setup_data_channel(
+                        data_channels_clone.clone(),
+                        data_channel,
+                    )
+                    .await
+                    .unwrap()
+                })
+            }));
+
         self.set_remote_description(offer).await?;
         let answer = self.handle_create_answer().await?;
         self.handle_set_local_description(answer.clone()).await?;
@@ -194,17 +221,16 @@ pub trait WebRTCTrait<T: 'static> {
     }
 
     async fn setup_data_channel(
-        &self,
+        data_channels: Rc<RefCell<DataChannels<T>>>,
         channel: Rc<RefCell<DataChannel<T>>>,
     ) -> Result<(), WebRTCError> {
-        let data_channels = self.provide_data_channels();
-        let data_channel_clone = channel.clone();
         channel.borrow_mut().on_open =
             Some(Box::new(move |channel: Rc<RefCell<DataChannel<T>>>| {
                 info!("Data channel opened and added to data channels");
                 data_channels.borrow_mut().add_data_channel(channel);
             }));
         Self::handle_setup_data_channel(channel).await?;
+        Ok(())
     }
 
     async fn set_answer(&self, answer: Vec<u8>) -> Result<(), WebRTCError> {
