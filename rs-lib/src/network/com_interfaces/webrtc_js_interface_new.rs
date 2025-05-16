@@ -18,9 +18,10 @@ use datex_core::network::com_interfaces::com_interface_socket::{
     ComInterfaceSocket, ComInterfaceSocketUUID,
 };
 use datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common_new::data_channels::{DataChannel, DataChannels};
-use datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common_new::structures::{RTCIceCandidateInitDX, RTCSdpTypeDX, RTCSessionDescriptionDX};
+use datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common_new::structures::{RTCIceCandidateInitDX, RTCIceServer, RTCSdpTypeDX, RTCSessionDescriptionDX};
+use datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common_new::utils::WebRTCError;
 use datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common_new::webrtc_commons::WebRTCCommon;
-use datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common_new::webrtc_trait::{PubWebRTCTrait, WebRTCTrait};
+use datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common_new::webrtc_trait::{WebRTCTrait, WebRTCTraitInternal};
 use datex_core::stdlib::sync::Arc;
 use datex_core::task::spawn_local;
 use datex_core::{delegate_com_interface_info, set_opener};
@@ -32,13 +33,17 @@ use wasm_bindgen_futures::JsFuture;
 
 use crate::define_registry;
 use crate::js_utils::TryAsByteSlice;
+use datex_core::network::com_hub::InterfacePriority;
+use datex_macros::{com_interface, create_opener};
 use log::{error, info};
 use wasm_bindgen::prelude::{wasm_bindgen, Closure};
 use wasm_bindgen::{JsCast, JsError, JsValue};
-use web_sys::{MessageEvent, RtcConfiguration, RtcDataChannel, RtcDataChannelEvent, RtcIceCandidateInit, RtcIceServer, RtcPeerConnection, RtcPeerConnectionIceEvent, RtcSdpType, RtcSessionDescriptionInit, RtcSignalingState};
-use datex_core::network::com_hub::InterfacePriority;
-use datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common::{deserialize, serialize, RTCIceServer, WebRTCError, WebRTCInterfaceTrait};
-use datex_macros::{com_interface, create_opener};
+use web_sys::{
+    MessageEvent, RtcConfiguration, RtcDataChannel, RtcDataChannelEvent,
+    RtcIceCandidateInit, RtcIceServer, RtcPeerConnection,
+    RtcPeerConnectionIceEvent, RtcSdpType, RtcSessionDescriptionInit,
+    RtcSignalingState,
+};
 pub struct WebRTCJSInterfaceNew {
     info: ComInterfaceInfo,
     commons: Rc<RefCell<WebRTCCommon>>,
@@ -46,7 +51,7 @@ pub struct WebRTCJSInterfaceNew {
     data_channels: Rc<RefCell<DataChannels<RtcDataChannel>>>,
 }
 
-impl PubWebRTCTrait<RtcDataChannel> for WebRTCJSInterfaceNew {
+impl WebRTCTrait<RtcDataChannel> for WebRTCJSInterfaceNew {
     fn new(peer_endpoint: impl Into<Endpoint>) -> Self {
         WebRTCJSInterfaceNew {
             info: ComInterfaceInfo::default(),
@@ -66,7 +71,7 @@ impl PubWebRTCTrait<RtcDataChannel> for WebRTCJSInterfaceNew {
 }
 
 #[async_trait(?Send)]
-impl WebRTCTrait<RtcDataChannel> for WebRTCJSInterfaceNew {
+impl WebRTCTraitInternal<RtcDataChannel> for WebRTCJSInterfaceNew {
     fn provide_data_channels(
         &self,
     ) -> Rc<RefCell<DataChannels<RtcDataChannel>>> {
@@ -87,6 +92,7 @@ impl WebRTCTrait<RtcDataChannel> for WebRTCJSInterfaceNew {
             Err(WebRTCError::ConnectionError)
         }
     }
+
     async fn handle_setup_data_channel(
         channel: Rc<RefCell<DataChannel<RtcDataChannel>>>,
     ) -> Result<(), WebRTCError> {
@@ -269,14 +275,6 @@ impl WebRTCTrait<RtcDataChannel> for WebRTCJSInterfaceNew {
 
 #[com_interface]
 impl WebRTCJSInterfaceNew {
-    pub fn new(endpoint: impl Into<Endpoint>) -> Self {
-        WebRTCJSInterfaceNew {
-            info: ComInterfaceInfo::default(),
-            commons: Rc::new(RefCell::new(WebRTCCommon::new(endpoint))),
-            peer_connection: Rc::new(None),
-            data_channels: Rc::new(RefCell::new(DataChannels::new())),
-        }
-    }
     #[create_opener]
     async fn open(&mut self) -> Result<(), WebRTCError> {
         let config = RtcConfiguration::new();
