@@ -4,6 +4,7 @@ pub mod base_interface;
 pub mod matchbox_js_interface;
 #[cfg(feature = "wasm_serial")]
 pub mod serial_js_interface;
+
 #[cfg(feature = "wasm_webrtc")]
 pub mod webrtc_js_interface;
 #[cfg(feature = "wasm_webrtc")]
