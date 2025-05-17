@@ -356,7 +356,7 @@ impl WebRTCJSInterface {
                         .lock()
                         .unwrap()
                         .create_data_channel(
-                            "DATEX".to_string(),
+                            ev.channel().label().to_string(),
                             ev.channel().clone(),
                         )
                         .await;
