@@ -8,6 +8,11 @@ const VERSION: string = await runtimeInterface
     .then(JSON.parse)
     .then((data: { version: string }) => data.version);
 
+interface DebugFlags {
+    allow_unsigned_blocks?: boolean;
+    enable_deterministic_behavior?: boolean;
+}
+
 export class Runtime {
     public readonly js_version = VERSION;
 
@@ -15,8 +20,8 @@ export class Runtime {
     readonly #memory: JSMemory;
     readonly #comHub: JSComHub;
 
-    constructor() {
-        this.#runtime = init_runtime();
+    constructor(endpoint: string = "@unyt", debug_flags?: DebugFlags) {
+        this.#runtime = init_runtime(endpoint, debug_flags);
         this.#memory = this.#runtime.memory;
         this.#comHub = this.#runtime.com_hub;
     }
@@ -24,6 +29,10 @@ export class Runtime {
     /**
      * properties from #runtime
      */
+    get endpoint(): string {
+        return this.#runtime.endpoint;
+    }
+
     get version(): string {
         return this.#runtime.version;
     }

@@ -7,6 +7,7 @@
     "jsr:@deno/cache-dir@~0.10.3": "0.10.3",
     "jsr:@deno/dnt@~0.41.3": "0.41.3",
     "jsr:@deno/graph@~0.73.1": "0.73.1",
+    "jsr:@qnighy/dedent@*": "0.1.2",
     "jsr:@std/assert@*": "1.0.8",
     "jsr:@std/assert@0.223": "0.223.0",
     "jsr:@std/assert@0.226": "0.226.0",
@@ -87,6 +88,20 @@
         "jsr:@std/fs@^1.0.10",
         "jsr:@std/tar"
       ]
+    },
+    "@deno/wasmbuild@0.19.2": {
+      "integrity": "f4a92beae788e2fd68189aefb6a6d8c3be79519c3ef8429a10519296379c33d1",
+      "dependencies": [
+        "jsr:@david/path",
+        "jsr:@david/temp",
+        "jsr:@std/encoding",
+        "jsr:@std/fmt@^1.0.4",
+        "jsr:@std/fs@^1.0.10",
+        "jsr:@std/tar"
+      ]
+    },
+    "@qnighy/dedent@0.1.2": {
+      "integrity": "9e420cff5b0082dba168385c9dfc56f25ef9a07999605e5fc9bc2058529998ee"
     },
     "@std/assert@0.223.0": {
       "integrity": "eb8d6d879d76e1cc431205bd346ed4d88dc051c6366365b1af47034b0670be24"
@@ -204,11 +219,26 @@
     }
   },
   "redirects": {
-    "https://deno.land/std/fs/walk.ts": "https://deno.land/std@0.224.0/fs/walk.ts"
+    "https://deno.land/std/fs/walk.ts": "https://deno.land/std@0.224.0/fs/walk.ts",
+    "https://deno.land/std/toml/mod.ts": "https://deno.land/std@0.224.0/toml/mod.ts",
+    "https://esm.sh/@types/cytoscape-fcose@~2.2.4/index.d.ts": "https://esm.sh/@types/cytoscape-fcose@2.2.4/index.d.ts",
+    "https://esm.sh/cose-base@^1.0.0?target=denonext": "https://esm.sh/cose-base@1.0.3?target=denonext",
+    "https://esm.sh/cose-base@^2.2.0?target=denonext": "https://esm.sh/cose-base@2.2.0?target=denonext",
+    "https://esm.sh/cytoscape-cose-bilkent": "https://esm.sh/cytoscape-cose-bilkent@4.1.0",
+    "https://esm.sh/cytoscape-fcose": "https://esm.sh/cytoscape-fcose@2.2.0",
+    "https://esm.sh/layout-base@^1.0.0?target=denonext": "https://esm.sh/layout-base@1.0.2?target=denonext",
+    "https://esm.sh/layout-base@^2.0.0?target=denonext": "https://esm.sh/layout-base@2.0.1?target=denonext",
+    "https://unpkg.com/cose-base/cose-base.js": "https://unpkg.com/cose-base@2.2.0/cose-base.js",
+    "https://unpkg.com/layout-base/layout-base.js": "https://unpkg.com/layout-base@2.0.1/layout-base.js"
   },
   "remote": {
+    "https://cdn.jsdelivr.net/npm/cytoscape-cose-bilkent@4.1.0/cytoscape-cose-bilkent.min.js": "e8050ad4198a618244ff627d966f44681b845567a15651db0925117d348be3f1",
+    "https://cdn.jsdelivr.net/npm/layout-base": "8f8b6b9cc6d6cb9e420aba4af689c8bd127fc3a360d976996a52c4d313ddbe22",
+    "https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.32.0/cytoscape.esm.mjs": "50ab060b64790e311baf40337a3eb4aee801e1022f4d44b018563d9db491be81",
     "https://deno.land/std@0.224.0/assert/assert.ts": "09d30564c09de846855b7b071e62b5974b001bb72a4b797958fe0660e7849834",
     "https://deno.land/std@0.224.0/assert/assertion_error.ts": "ba8752bd27ebc51f723702fac2f54d3e94447598f54264a6653d6413738a8917",
+    "https://deno.land/std@0.224.0/collections/_utils.ts": "b2ec8ada31b5a72ebb1d99774b849b4c09fe4b3a38d07794bd010bd218a16e0b",
+    "https://deno.land/std@0.224.0/collections/deep_merge.ts": "04f8d2a6cfa15c7580e788689bcb5e162512b9ccb18bab1241824b432a78551e",
     "https://deno.land/std@0.224.0/fmt/bytes.ts": "7b294a4b9cf0297efa55acb55d50610f3e116a0ac772d1df0ae00f0b833ccd4a",
     "https://deno.land/std@0.224.0/fs/_create_walk_entry.ts": "5d9d2aaec05bcf09a06748b1684224d33eba7a4de24cf4cf5599991ca6b5b412",
     "https://deno.land/std@0.224.0/fs/_to_path_string.ts": "29bfc9c6c112254961d75cbf6ba814d6de5349767818eb93090cecfa9665591e",
@@ -234,7 +264,27 @@
     "https://deno.land/std@0.224.0/path/windows/basename.ts": "6bbc57bac9df2cec43288c8c5334919418d784243a00bc10de67d392ab36d660",
     "https://deno.land/std@0.224.0/path/windows/from_file_url.ts": "ced2d587b6dff18f963f269d745c4a599cf82b0c4007356bd957cb4cb52efc01",
     "https://deno.land/std@0.224.0/path/windows/join.ts": "8d03530ab89195185103b7da9dfc6327af13eabdcd44c7c63e42e27808f50ecf",
-    "https://deno.land/std@0.224.0/path/windows/normalize.ts": "78126170ab917f0ca355a9af9e65ad6bfa5be14d574c5fb09bb1920f52577780"
+    "https://deno.land/std@0.224.0/path/windows/normalize.ts": "78126170ab917f0ca355a9af9e65ad6bfa5be14d574c5fb09bb1920f52577780",
+    "https://deno.land/std@0.224.0/toml/_parser.ts": "187560eb4465977808b18c68299e1f5a6e4631c0a181d868c8f24722cf9146d1",
+    "https://deno.land/std@0.224.0/toml/mod.ts": "a457ea7877a6d5e7f3d6985c43da4d2ecd7461038d5c4c7a0089737e90a7ee90",
+    "https://deno.land/std@0.224.0/toml/parse.ts": "2f0729a8f62c7e508af8dfada0386a4bc2c0d664ef4d26090df03cf495dcb25a",
+    "https://deno.land/std@0.224.0/toml/stringify.ts": "8b9ba3c1bf8fa7d58d7b62ad62b3174dbbc51050d5cc302aa8e2834089c00d73",
+    "https://esm.sh/cose-base@1.0.3/denonext/cose-base.mjs": "ede6e026ac176ff88825e93a42f07518d34760482e7e15b31f74f18f169108da",
+    "https://esm.sh/cose-base@1.0.3?target=denonext": "057886652775541b23c39fdf50ee426855e0ef2834249086e163b387bb38a35d",
+    "https://esm.sh/cose-base@2.2.0/denonext/cose-base.mjs": "ca97b62584fb2f8a19d3c26d892d1d9e2d1aa1e297e1f863e7ed4c8af9b63ada",
+    "https://esm.sh/cose-base@2.2.0?target=denonext": "dbfa7b440df04ecc7115ad7e288c9c230c9a5f97a284d3c9b8b03755a936e3bf",
+    "https://esm.sh/cytoscape-cose-bilkent@4.1.0": "b5821e738a91975e97ced4e63eb90a76bcac4547c806d5d387265877aec49773",
+    "https://esm.sh/cytoscape-cose-bilkent@4.1.0/denonext/cytoscape-cose-bilkent.mjs": "8b6eb6fb0990f1ac7d13c75c007a681af7b81ff79f260e369ca5074261e50ef4",
+    "https://esm.sh/cytoscape-fcose@2.2.0": "9dbe55512644e969d0ceec4eef249575abde8eb727e9af2ee5b9082d68b8e643",
+    "https://esm.sh/cytoscape-fcose@2.2.0/denonext/cytoscape-fcose.mjs": "a66065ab251658c2173730ba497c3b10ff86fe558a082a398fd02e224a7e12e6",
+    "https://esm.sh/cytoscape@3.32.0": "366857faa7370910ace367986b2ecebe8429794f3ebf66dcfa71f1133ed516fb",
+    "https://esm.sh/cytoscape@3.32.0/denonext/cytoscape.mjs": "8a916c48e76ab8809cf597ddb2121b51978e2fd3cd48cfa5aa7920b69e83cd12",
+    "https://esm.sh/layout-base@1.0.2/denonext/layout-base.mjs": "ef685af5af087080271c66164b9e978bbb98a3d0c46926d90ba0dabe32de2db8",
+    "https://esm.sh/layout-base@1.0.2?target=denonext": "c9a6855b1712976162fc03bdfeffbde2504932873bc312eb68fc3ae2400e8b37",
+    "https://esm.sh/layout-base@2.0.1/denonext/layout-base.mjs": "e779c7a5098bb79d3c6c78bc5b8f8eee0c795c6d39ce07fdf525aaf489f21654",
+    "https://esm.sh/layout-base@2.0.1?target=denonext": "6cae1fb18238190e3f037bc1b1f32ec25a9eac4e8588dd4f81f2fc2e55adb93f",
+    "https://unpkg.com/cose-base@2.2.0/cose-base.js": "7cae9509bd36235a63a85e71c8d9fa2cd0bc1d0c1ecc5b5a737976f39d040ddf",
+    "https://unpkg.com/layout-base@2.0.1/layout-base.js": "ec15ab5df9af3f20708f4faab994accf91cda71848cd5bb10a23432cc50b6745"
   },
   "workspace": {
     "dependencies": [

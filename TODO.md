@@ -13,10 +13,10 @@
     - pad
     - tokio
     - websockets
-- [ ] create a trait for everything that is platform-specific (e.g. websockets)
+- [x] create a trait for everything that is platform-specific (e.g. websockets)
       put the implementations of the traits behind feature flags (or in a
       seperate crate) features should be additive
-- [ ] `lazy_static` can be replaced by `core::cell::LazyCell` and
+- [x] `lazy_static` can be replaced by `core::cell::LazyCell` and
       `once_cell::sync::LazyLock`
 - [ ] `static`s should be avoided (GlobalContext)
 - [ ] generally generics should be preferred over dynamic dispatch (e.g. in

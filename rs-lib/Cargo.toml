@@ -20,18 +20,36 @@ panic = "abort"
 [dependencies]
 log = { version = "0.4", features = ["std", "serde"] }
 datex-core = { path = "./datex-core", default-features = false, features = [
-    "std",         # FIXME remove this once we have a proper std implementation for HashMap and stuff
+    "std",
     "wasm_logger",
-] }
+    "wasm_runtime",
+    "wasm_webrtc",
+]}
+datex_macros = { path = "./datex-core/macros" }
+
 lazy_static = "1.4.0"
+async-trait = "0.1.87"
 url = "2.5.4"
+wasm-bindgen = { version = "=0.2.100", features = [] }
+# FIXME make serde-wasm-bindgen optional
+serde-wasm-bindgen = "0.6"
+serde = { version = "1.0", features = ["derive"] }
+# serde-wasm-bindgen = "0.6"
 
-wasm-bindgen = "=0.2.100"
 wasm-bindgen-futures = "0.4.50"
-tokio = { version = "1.43.0", features = ["sync"] }
+js-sys = "=0.3.77"
 
+# webrtc
+futures = { version = "0.3", default-features = false } # = "0.11", 
+# matchbox_socket = { path = "/Users/jonas/Downloads/matchbox/matchbox_socket", optional = true, default-features = false }
+futures-timer = { version = "3", features = ["wasm-bindgen"] }
+uuid = { version = "1.15.1", features = ["js"], optional = true }
+futures-channel = "0.3.31"
+
+# webrtc
+# tokio = { version = "1.43.0", default-features = false, features = [] }
 [dependencies.web-sys]
-version = "0.3.69"
+version = "0.3.77"
 features = [
     "Window",
     "BinaryType",
@@ -47,7 +65,40 @@ features = [
     "CryptoKeyPair",
     "RsaOaepParams",
     "EcdsaParams",
+    "Serial",
+    "SerialPort",
+    "Navigator",
+    "ReadableStream",
+    "WritableStream",
+    "SerialOptions",
+    "ReadableStreamDefaultReader",
+    "WritableStreamDefaultWriter",
+    "EventTarget",
+    "MessageEvent",
+    "RtcPeerConnection",
+    "RtcSignalingState",
+    "RtcSdpType",
+    "RtcSessionDescriptionInit",
+    "RtcPeerConnectionIceEvent",
+    "RtcIceCandidate",
+    "RtcDataChannel",
+    "RtcDataChannelEvent",
+    "RtcConfiguration",
+    "RtcIceServer",
 ]
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.50"
+
+[features]
+default = [
+    "wasm_websocket_client",
+    "wasm_websocket_server",
+    "wasm_serial",
+    "wasm_webrtc",
+]
+debug = ["datex-core/debug"]
+wasm_websocket_server = [] # only required for a backend js runtime
+wasm_websocket_client = [] # full support
+wasm_serial = [] # only required for frontend js runtime
+wasm_webrtc = ["uuid"] # only required for frontend js runtime

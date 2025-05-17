@@ -24,7 +24,6 @@ impl JSMemory {
  */
 #[wasm_bindgen]
 impl JSMemory {
-    #[wasm_bindgen]
     pub fn get_pointer_by_id(
         &mut self,
         address: Uint8Array,
@@ -37,7 +36,6 @@ impl JSMemory {
         }
     }
 
-    #[wasm_bindgen]
     pub fn get_pointer_ids(&self) -> Vec<Uint8Array> {
         let binding = self.memory.borrow_mut();
         let mut ids: Vec<Uint8Array> = Vec::new();
