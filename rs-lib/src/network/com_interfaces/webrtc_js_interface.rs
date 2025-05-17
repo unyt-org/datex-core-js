@@ -98,12 +98,17 @@ impl WebRTCTraitInternal<RtcDataChannel> for WebRTCJSInterface {
         let channel_clone = channel.clone();
         {
             let onopen_callback = Closure::<dyn FnMut()>::new(move || {
-                if let Some(ref open_channel) =
-                    channel_clone.lock().unwrap().open_channel
-                {
-                    info!("Data channel opened to");
-                    open_channel();
-                }
+                let open_channel = {
+                    if let Some(open_channel) =
+                        channel_clone.lock().unwrap().open_channel.clone()
+                    {
+                        open_channel.clone()
+                    } else {
+                        return;
+                    }
+                };
+                info!("Data channel opened");
+                open_channel();
             });
             channel
                 .clone()
@@ -117,12 +122,18 @@ impl WebRTCTraitInternal<RtcDataChannel> for WebRTCJSInterface {
         {
             let onmessage_callback = Closure::<dyn FnMut(MessageEvent)>::new(
                 move |message_event: MessageEvent| {
-                    let data_channel = channel_clone.lock().unwrap();
-                    if let Some(ref on_message) = data_channel.on_message {
-                        let data = message_event.data().try_as_u8_slice();
-                        if let Ok(data) = data {
-                            on_message(data);
+                    let on_message = {
+                        if let Some(on_message) =
+                            channel_clone.lock().unwrap().on_message.clone()
+                        {
+                            on_message.clone()
+                        } else {
+                            return;
                         }
+                    };
+                    let data = message_event.data().try_as_u8_slice();
+                    if let Ok(data) = data {
+                        on_message(data);
                     }
                 },
             );
