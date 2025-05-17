@@ -41,9 +41,9 @@ use web_sys::{
 };
 pub struct WebRTCJSInterface {
     info: ComInterfaceInfo,
-    commons: Rc<RefCell<WebRTCCommon>>,
+    commons: Arc<Mutex<WebRTCCommon>>,
     peer_connection: Rc<Option<RtcPeerConnection>>,
-    data_channels: Rc<RefCell<DataChannels<RtcDataChannel>>>,
+    data_channels: Arc<Mutex<DataChannels<RtcDataChannel>>>,
 }
 impl SingleSocketProvider for WebRTCJSInterface {
     fn provide_sockets(&self) -> Arc<Mutex<ComInterfaceSockets>> {
@@ -54,9 +54,9 @@ impl WebRTCTrait<RtcDataChannel> for WebRTCJSInterface {
     fn new(peer_endpoint: impl Into<Endpoint>) -> Self {
         WebRTCJSInterface {
             info: ComInterfaceInfo::default(),
-            commons: Rc::new(RefCell::new(WebRTCCommon::new(peer_endpoint))),
+            commons: Arc::new(Mutex::new(WebRTCCommon::new(peer_endpoint))),
             peer_connection: Rc::new(None),
-            data_channels: Rc::new(RefCell::new(DataChannels::new())),
+            data_channels: Arc::new(Mutex::new(DataChannels::new())),
         }
     }
     fn new_with_ice_servers(
@@ -73,7 +73,7 @@ impl WebRTCTrait<RtcDataChannel> for WebRTCJSInterface {
 impl WebRTCTraitInternal<RtcDataChannel> for WebRTCJSInterface {
     fn provide_data_channels(
         &self,
-    ) -> Rc<RefCell<DataChannels<RtcDataChannel>>> {
+    ) -> Arc<Mutex<DataChannels<RtcDataChannel>>> {
         self.data_channels.clone()
     }
     fn provide_info(&self) -> &ComInterfaceInfo {
@@ -93,13 +93,18 @@ impl WebRTCTraitInternal<RtcDataChannel> for WebRTCJSInterface {
     }
 
     async fn handle_setup_data_channel(
-        channel: Rc<RefCell<DataChannel<RtcDataChannel>>>,
+        channel: Arc<Mutex<DataChannel<RtcDataChannel>>>,
     ) -> Result<(), WebRTCError> {
         let channel_clone = channel.clone();
         {
             let onopen_callback = Closure::<dyn FnMut()>::new(move || {
+                let open_channel_opt = {
+                    let channel = channel_clone.lock().unwrap();
+                    channel.open_channel.clone()
+                };
+
                 if let Some(ref open_channel) =
-                    channel_clone.borrow().open_channel
+                    channel_clone.lock().unwrap().open_channel
                 {
                     info!("Data channel opened to");
                     open_channel(channel_clone.clone());
@@ -107,7 +112,8 @@ impl WebRTCTraitInternal<RtcDataChannel> for WebRTCJSInterface {
             });
             channel
                 .clone()
-                .borrow()
+                .lock()
+                .unwrap()
                 .data_channel
                 .set_onopen(Some(onopen_callback.as_ref().unchecked_ref()));
             onopen_callback.forget();
@@ -116,7 +122,7 @@ impl WebRTCTraitInternal<RtcDataChannel> for WebRTCJSInterface {
         {
             let onmessage_callback = Closure::<dyn FnMut(MessageEvent)>::new(
                 move |message_event: MessageEvent| {
-                    let data_channel = channel_clone.borrow();
+                    let data_channel = channel_clone.lock().unwrap();
                     if let Some(ref on_message) = data_channel.on_message {
                         let data = message_event.data().try_as_u8_slice();
                         if let Ok(data) = data {
@@ -125,9 +131,14 @@ impl WebRTCTraitInternal<RtcDataChannel> for WebRTCJSInterface {
                     }
                 },
             );
-            channel.clone().borrow().data_channel.set_onmessage(Some(
-                onmessage_callback.as_ref().unchecked_ref(),
-            ));
+            channel
+                .clone()
+                .lock()
+                .unwrap()
+                .data_channel
+                .set_onmessage(Some(
+                    onmessage_callback.as_ref().unchecked_ref(),
+                ));
             onmessage_callback.forget();
         }
         Ok(())
@@ -267,7 +278,7 @@ impl WebRTCTraitInternal<RtcDataChannel> for WebRTCJSInterface {
         }
     }
 
-    fn get_commons(&self) -> Rc<RefCell<WebRTCCommon>> {
+    fn get_commons(&self) -> Arc<Mutex<WebRTCCommon>> {
         self.commons.clone()
     }
 }
@@ -280,7 +291,8 @@ impl WebRTCJSInterface {
 
         {
             // ICE servers
-            let ice_servers = self.get_commons().borrow().ice_servers.clone();
+            let ice_servers =
+                self.get_commons().lock().unwrap().ice_servers.clone();
             let js_ice_servers = js_sys::Array::new();
             for server in ice_servers {
                 let js_server = RtcIceServer::new();
@@ -309,7 +321,7 @@ impl WebRTCJSInterface {
         let onicecandidate_callback = Closure::<dyn FnMut(_)>::new(
             move |ev: RtcPeerConnectionIceEvent| {
                 if let Some(candidate) = ev.candidate() {
-                    commons.clone().borrow_mut().on_ice_candidate(
+                    commons.clone().lock().unwrap().on_ice_candidate(
                         RTCIceCandidateInitDX {
                             candidate: candidate.candidate(),
                             sdp_mid: candidate.sdp_mid(),
@@ -335,7 +347,8 @@ impl WebRTCJSInterface {
                 spawn_local(async move {
                     data_channels
                         .clone()
-                        .borrow_mut()
+                        .lock()
+                        .unwrap()
                         .create_data_channel(
                             "DATEX".to_string(),
                             ev.channel().clone(),
@@ -379,11 +392,12 @@ impl ComInterface for WebRTCJSInterface {
     ) -> Pin<Box<dyn Future<Output = bool> + 'a>> {
         let success = {
             if let Some(channel) =
-                self.data_channels.borrow().get_data_channel("DATEX")
+                self.data_channels.lock().unwrap().get_data_channel("DATEX")
             {
                 channel
                     .clone()
-                    .borrow_mut()
+                    .lock()
+                    .unwrap()
                     .data_channel
                     .send_with_u8_array(block)
                     .is_ok()
@@ -412,10 +426,10 @@ impl ComInterface for WebRTCJSInterface {
                 peer_connection.close();
                 self.peer_connection = Rc::new(None);
 
-                let mut commons = self.commons.borrow_mut();
+                let mut commons = self.commons.lock().unwrap();
                 commons.reset();
 
-                let mut data_channels = self.data_channels.borrow_mut();
+                let mut data_channels = self.data_channels.lock().unwrap();
                 data_channels.reset();
                 true
             } else {
