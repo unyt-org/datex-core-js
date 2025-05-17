@@ -98,16 +98,11 @@ impl WebRTCTraitInternal<RtcDataChannel> for WebRTCJSInterface {
         let channel_clone = channel.clone();
         {
             let onopen_callback = Closure::<dyn FnMut()>::new(move || {
-                let open_channel_opt = {
-                    let channel = channel_clone.lock().unwrap();
-                    channel.open_channel.clone()
-                };
-
                 if let Some(ref open_channel) =
                     channel_clone.lock().unwrap().open_channel
                 {
                     info!("Data channel opened to");
-                    open_channel(channel_clone.clone());
+                    open_channel();
                 }
             });
             channel
