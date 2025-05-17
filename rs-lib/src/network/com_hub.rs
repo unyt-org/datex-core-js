@@ -102,8 +102,8 @@ impl JSComHub {
         ComHub::start_update_loop(self.com_hub.clone());
     }
 
-    pub fn stop_update_loop(&self) {
-        ComHub::stop_update_loop(self.com_hub.as_ref());
+    pub async fn stop_update_loop(&self) {
+        ComHub::stop_update_loop(self.com_hub.as_ref()).await;
     }
 
     pub async fn update(&self) {
