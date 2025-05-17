@@ -410,16 +410,13 @@ impl ComInterface for WebRTCJSInterface {
         let success = {
             if let Some(peer_connection) = self.peer_connection.as_ref() {
                 peer_connection.close();
-                let mut commons = self.commons.borrow_mut();
-                commons.is_remote_description_set = false;
-                commons.candidates.clear();
-                commons.on_ice_candidate = None;
                 self.peer_connection = Rc::new(None);
 
-                let mut data_channels = self.data_channels.borrow_mut();
-                data_channels.data_channels.clear();
-                data_channels.on_add = None;
+                let mut commons = self.commons.borrow_mut();
+                commons.reset();
 
+                let mut data_channels = self.data_channels.borrow_mut();
+                data_channels.reset();
                 true
             } else {
                 false
