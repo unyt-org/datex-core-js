@@ -27,6 +27,7 @@ use js_sys::{Array, Function, Reflect};
 use wasm_bindgen_futures::JsFuture;
 
 use crate::define_registry;
+use crate::js_utils::TryAsByteSlice;
 use datex_core::network::com_hub::InterfacePriority;
 use datex_macros::{com_interface, create_opener};
 use log::{error, info};
@@ -123,19 +124,19 @@ impl WebRTCTraitInternal<RtcDataChannel> for WebRTCJSInterface {
             let onmessage_callback = Closure::<dyn FnMut(MessageEvent)>::new(
                 move |message_event: MessageEvent| {
                     let channel_clone = channel_clone.clone();
-                    // let on_message = {
-                    //     let x = channel_clone.clone();
-                    //     let x = x.borrow_mut();
-                    //     if let Some(on_message) = &x.on_message {
-                    //         on_message
-                    //     } else {
-                    //         return;
-                    //     }
-                    // };
-                    // let data = message_event.data().try_as_u8_slice();
-                    // if let Ok(data) = data {
-                    //     on_message(data);
-                    // }
+                    let data = message_event.data().try_as_u8_slice();
+                    if let Ok(data) = data
+                        && let Some(on_message) = channel_clone
+                            .clone()
+                            .borrow()
+                            .on_message
+                            .borrow()
+                            .as_ref()
+                    {
+                        on_message(data);
+                    } else {
+                        error!("Failed to convert message data");
+                    }
                 },
             );
             channel.clone().borrow().data_channel.set_onmessage(Some(

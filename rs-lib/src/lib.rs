@@ -1,3 +1,4 @@
+#![feature(let_chains)]
 #![feature(coroutines)]
 #![feature(iter_from_coroutine)]
 
