@@ -523,4 +523,14 @@ impl WebRTCRegistry {
         webrtc_interface.add_ice_candidate(candidate).await?;
         Ok(())
     }
+
+    pub async fn wait_for_connection(
+        &self,
+        interface_uuid: String,
+    ) -> Result<(), JsError> {
+        let interface = self.get_interface(interface_uuid);
+        let webrtc_interface = interface.borrow();
+        webrtc_interface.wait_for_connection().await?;
+        Ok(())
+    }
 }

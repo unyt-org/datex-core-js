@@ -124,6 +124,7 @@ export class WebRTCRegistry {
         interface_uuid: string,
         candidate: Uint8Array,
     ): Promise<void>;
+    wait_for_connection(interface_uuid: string): Promise<void>;
 }
 export class WebSocketClientRegistry {
     private constructor();
