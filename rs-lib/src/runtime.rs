@@ -1,3 +1,4 @@
+use datex_core::datex_values::core_values::endpoint::Endpoint;
 #[cfg(feature = "debug")]
 use datex_core::runtime::global_context::DebugFlags;
 use datex_core::runtime::global_context::GlobalContext;
@@ -12,7 +13,7 @@ use crate::memory::JSMemory;
 use crate::network::com_hub::JSComHub;
 use crate::utils::time::TimeJS;
 use datex_core::crypto::crypto::CryptoTrait;
-use datex_core::datex_values_old::{Endpoint, Pointer};
+use datex_core::datex_values_old::Pointer;
 use datex_core::global::dxb_block::DXBBlock;
 use datex_core::global::protocol_structures::block_header::{
     BlockHeader, FlagsAndTimestamp,
