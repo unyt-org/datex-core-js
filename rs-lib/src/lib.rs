@@ -45,7 +45,7 @@ pub fn init_runtime(endpoint: &str, debug_flags: JsValue) -> JSRuntime {
 
 #[wasm_bindgen]
 pub fn compile(datex_script: &str) {
-    compiler::compile(datex_script);
+    compiler::compile_block(datex_script);
 }
 
 #[wasm_bindgen]
