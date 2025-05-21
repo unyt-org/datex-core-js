@@ -1,4 +1,4 @@
-use datex_core::datex_values::Pointer;
+use datex_core::datex_values_old::Pointer;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]

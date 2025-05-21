@@ -6,7 +6,7 @@ use std::sync::Mutex;
 use std::time::Duration; // FIXME no-std
 
 use async_trait::async_trait;
-use datex_core::datex_values::Endpoint;
+use datex_core::datex_values::core_values::endpoint::Endpoint;
 use datex_core::network::com_interfaces::com_interface::{
     ComInterface, ComInterfaceInfo, ComInterfaceSockets, ComInterfaceUUID,
 };
@@ -43,7 +43,7 @@ pub struct WebRTCJSInterface {
     info: ComInterfaceInfo,
     commons: Arc<Mutex<WebRTCCommon>>,
     peer_connection: Rc<Option<RtcPeerConnection>>,
-    data_channels: Arc<Mutex<DataChannels<RtcDataChannel>>>,
+    data_channels: Rc<RefCell<DataChannels<RtcDataChannel>>>,
 }
 impl SingleSocketProvider for WebRTCJSInterface {
     fn provide_sockets(&self) -> Arc<Mutex<ComInterfaceSockets>> {
@@ -56,7 +56,7 @@ impl WebRTCTrait<RtcDataChannel> for WebRTCJSInterface {
             info: ComInterfaceInfo::default(),
             commons: Arc::new(Mutex::new(WebRTCCommon::new(peer_endpoint))),
             peer_connection: Rc::new(None),
-            data_channels: Arc::new(Mutex::new(DataChannels::new())),
+            data_channels: Rc::new(RefCell::new(DataChannels::default())),
         }
     }
     fn new_with_ice_servers(
@@ -73,7 +73,7 @@ impl WebRTCTrait<RtcDataChannel> for WebRTCJSInterface {
 impl WebRTCTraitInternal<RtcDataChannel> for WebRTCJSInterface {
     fn provide_data_channels(
         &self,
-    ) -> Arc<Mutex<DataChannels<RtcDataChannel>>> {
+    ) -> Rc<RefCell<DataChannels<RtcDataChannel>>> {
         self.data_channels.clone()
     }
     fn provide_info(&self) -> &ComInterfaceInfo {
@@ -93,16 +93,18 @@ impl WebRTCTraitInternal<RtcDataChannel> for WebRTCJSInterface {
     }
 
     async fn handle_setup_data_channel(
-        channel: Arc<Mutex<DataChannel<RtcDataChannel>>>,
+        channel: Rc<RefCell<DataChannel<RtcDataChannel>>>,
     ) -> Result<(), WebRTCError> {
         let channel_clone = channel.clone();
         {
             let onopen_callback = Closure::<dyn FnMut()>::new(move || {
                 let open_channel = {
+                    let channel_clone = channel_clone.clone();
+                    let channel_clone = channel_clone.borrow_mut();
                     if let Some(open_channel) =
-                        channel_clone.lock().unwrap().open_channel.clone()
+                        channel_clone.open_channel.take()
                     {
-                        open_channel.clone()
+                        open_channel
                     } else {
                         return;
                     }
@@ -112,8 +114,7 @@ impl WebRTCTraitInternal<RtcDataChannel> for WebRTCJSInterface {
             });
             channel
                 .clone()
-                .lock()
-                .unwrap()
+                .borrow()
                 .data_channel
                 .set_onopen(Some(onopen_callback.as_ref().unchecked_ref()));
             onopen_callback.forget();
@@ -122,29 +123,25 @@ impl WebRTCTraitInternal<RtcDataChannel> for WebRTCJSInterface {
         {
             let onmessage_callback = Closure::<dyn FnMut(MessageEvent)>::new(
                 move |message_event: MessageEvent| {
-                    let on_message = {
-                        if let Some(on_message) =
-                            channel_clone.lock().unwrap().on_message.clone()
-                        {
-                            on_message.clone()
-                        } else {
-                            return;
-                        }
-                    };
+                    let channel_clone = channel_clone.clone();
                     let data = message_event.data().try_as_u8_slice();
-                    if let Ok(data) = data {
+                    if let Ok(data) = data
+                        && let Some(on_message) = channel_clone
+                            .clone()
+                            .borrow()
+                            .on_message
+                            .borrow()
+                            .as_ref()
+                    {
                         on_message(data);
+                    } else {
+                        error!("Failed to convert message data");
                     }
                 },
             );
-            channel
-                .clone()
-                .lock()
-                .unwrap()
-                .data_channel
-                .set_onmessage(Some(
-                    onmessage_callback.as_ref().unchecked_ref(),
-                ));
+            channel.clone().borrow().data_channel.set_onmessage(Some(
+                onmessage_callback.as_ref().unchecked_ref(),
+            ));
             onmessage_callback.forget();
         }
         Ok(())
@@ -353,8 +350,7 @@ impl WebRTCJSInterface {
                 spawn_local(async move {
                     data_channels
                         .clone()
-                        .lock()
-                        .unwrap()
+                        .borrow_mut()
                         .create_data_channel(
                             ev.channel().label().to_string(),
                             ev.channel().clone(),
@@ -397,13 +393,15 @@ impl ComInterface for WebRTCJSInterface {
         _: ComInterfaceSocketUUID,
     ) -> Pin<Box<dyn Future<Output = bool> + 'a>> {
         let success = {
-            if let Some(channel) =
-                self.data_channels.lock().unwrap().get_data_channel("DATEX")
+            if let Some(channel) = self
+                .data_channels
+                .clone()
+                .borrow()
+                .get_data_channel("DATEX")
             {
                 channel
                     .clone()
-                    .lock()
-                    .unwrap()
+                    .borrow()
                     .data_channel
                     .send_with_u8_array(block)
                     .is_ok()
@@ -435,8 +433,8 @@ impl ComInterface for WebRTCJSInterface {
                 let mut commons = self.commons.lock().unwrap();
                 commons.reset();
 
-                let mut data_channels = self.data_channels.lock().unwrap();
-                data_channels.reset();
+                let data_channels = self.data_channels.clone();
+                data_channels.borrow_mut().reset();
                 true
             } else {
                 false
@@ -523,6 +521,16 @@ impl WebRTCRegistry {
         let interface = self.get_interface(interface_uuid);
         let webrtc_interface = interface.borrow();
         webrtc_interface.add_ice_candidate(candidate).await?;
+        Ok(())
+    }
+
+    pub async fn wait_for_connection(
+        &self,
+        interface_uuid: String,
+    ) -> Result<(), JsError> {
+        let interface = self.get_interface(interface_uuid);
+        let webrtc_interface = interface.borrow();
+        webrtc_interface.wait_for_connection().await?;
         Ok(())
     }
 }

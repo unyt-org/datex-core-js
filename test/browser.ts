@@ -1,5 +1,4 @@
 import { Datex } from "../src/mod.ts";
-import { sleep } from "./utils.ts";
 
 // @ts-ignore global variable for debugging
 globalThis.Datex = Datex;
@@ -43,7 +42,9 @@ document.getElementById("webrtc")!.addEventListener("click", async () => {
     console.log("Answer:", answer);
     await webrtc.set_answer(interface_a, answer);
 
-    await sleep(1000);
+    await webrtc.wait_for_connection(interface_a);
+    await webrtc.wait_for_connection(interface_b);
+
     const success = await Datex.comHub.send_block(
         new Uint8Array([1, 2, 3, 4]),
         interface_a,
