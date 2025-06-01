@@ -10,6 +10,8 @@ use datex_core::compiler;
 use datex_core::decompiler;
 
 use wasm_bindgen::prelude::*;
+use datex_core::decompiler::DecompileOptions;
+
 mod runtime;
 use crate::runtime::JSDebugFlags;
 use runtime::JSRuntime;
@@ -55,5 +57,5 @@ pub fn decompile(
     colorized: bool,
     resolve_slots: bool,
 ) -> String {
-    decompiler::decompile(dxb, formatted, colorized, resolve_slots)
+    decompiler::decompile(dxb, DecompileOptions {colorized, formatted, resolve_slots})
 }
