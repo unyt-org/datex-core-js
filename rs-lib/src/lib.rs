@@ -9,8 +9,8 @@ use serde_wasm_bindgen::from_value;
 use datex_core::compiler;
 use datex_core::decompiler;
 
-use wasm_bindgen::prelude::*;
 use datex_core::decompiler::DecompileOptions;
+use wasm_bindgen::prelude::*;
 
 mod runtime;
 use crate::runtime::JSDebugFlags;
@@ -56,6 +56,15 @@ pub fn decompile(
     formatted: bool,
     colorized: bool,
     resolve_slots: bool,
+    json_compat: bool,
 ) -> String {
-    decompiler::decompile(dxb, DecompileOptions {colorized, formatted, resolve_slots})
+    decompiler::decompile(
+        dxb,
+        DecompileOptions {
+            json_compat,
+            colorized,
+            formatted,
+            resolve_slots,
+        },
+    )
 }
