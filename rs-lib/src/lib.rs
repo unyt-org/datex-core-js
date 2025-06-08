@@ -1,7 +1,6 @@
 #![feature(let_chains)]
 #![feature(coroutines)]
 #![feature(iter_from_coroutine)]
-
 // FIXME no-std
 
 use serde_wasm_bindgen::from_value;
