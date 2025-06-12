@@ -6,9 +6,7 @@
 use serde_wasm_bindgen::from_value;
 // use datex_cli_core::CLI;
 use datex_core::compiler;
-use datex_core::decompiler;
 
-use datex_core::decompiler::DecompileOptions;
 use wasm_bindgen::prelude::*;
 
 mod runtime;
