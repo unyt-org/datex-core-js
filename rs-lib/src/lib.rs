@@ -48,22 +48,3 @@ pub fn init_runtime(endpoint: &str, debug_flags: JsValue) -> JSRuntime {
 pub fn compile(datex_script: &str) {
     compiler::compile_block(datex_script);
 }
-
-#[wasm_bindgen]
-pub fn decompile(
-    dxb: &[u8],
-    formatted: bool,
-    colorized: bool,
-    resolve_slots: bool,
-    json_compat: bool,
-) -> String {
-    decompiler::decompile(
-        dxb,
-        DecompileOptions {
-            json_compat,
-            colorized,
-            formatted,
-            resolve_slots,
-        },
-    )
-}
