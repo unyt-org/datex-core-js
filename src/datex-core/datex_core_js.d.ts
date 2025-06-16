@@ -4,12 +4,7 @@
 
 export function init_runtime(endpoint: string, debug_flags: any): JSRuntime;
 export function compile(datex_script: string): void;
-export function decompile(
-    dxb: Uint8Array,
-    formatted: boolean,
-    colorized: boolean,
-    resolve_slots: boolean,
-): string;
+export function execute(datex_script: string, formatted: boolean): string;
 
 type InterfaceProperties = {
     name?: string;

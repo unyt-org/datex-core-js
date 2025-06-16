@@ -8,6 +8,9 @@ use serde_wasm_bindgen::from_value;
 use datex_core::compiler;
 
 use wasm_bindgen::prelude::*;
+use datex_core::compiler::bytecode::{compile_script, compile_template};
+use datex_core::decompiler::{decompile_body, DecompileOptions};
+use datex_core::runtime::execution::{execute_dxb, ExecutionOptions};
 
 mod runtime;
 use crate::runtime::JSDebugFlags;
@@ -45,4 +48,26 @@ pub fn init_runtime(endpoint: &str, debug_flags: JsValue) -> JSRuntime {
 #[wasm_bindgen]
 pub fn compile(datex_script: &str) {
     compiler::compile_block(datex_script);
+}
+
+#[wasm_bindgen]
+pub fn execute(datex_script: &str, formatted: bool) -> String {
+    let dxb = compile_script(datex_script, None);
+    if let Ok(dxb) = dxb {
+        let result = execute_dxb(&dxb, ExecutionOptions {verbose: true, ..ExecutionOptions::default()}).unwrap_or_else(|err| {
+            panic!("Failed to execute script: {err:?}");
+        }).unwrap();
+        let result_dxb = compile_template("?", &[result], None).unwrap();
+        let string = decompile_body(&result_dxb, DecompileOptions {
+            colorized: formatted,
+            formatted,
+            json_compat: true,
+            ..DecompileOptions::default()
+        }).unwrap_or_else(|err| {
+            panic!("Failed to decompile result: {err:?}");
+        });
+        string
+    } else {
+        panic!("Failed to compile script: {:?}", dxb.err());
+    }
 }
