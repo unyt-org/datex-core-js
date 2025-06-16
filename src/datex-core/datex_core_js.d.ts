@@ -4,7 +4,15 @@
 
 export function init_runtime(endpoint: string, debug_flags: any): JSRuntime;
 export function compile(datex_script: string): void;
+/**
+ * Executes a Datex script and returns the result as a string.
+ */
 export function execute(datex_script: string, formatted: boolean): string;
+/**
+ * Executes a Datex script and returns true when execution was successful.
+ * Does not return the result of the script, but only indicates success or failure.
+ */
+export function execute_internal(datex_script: string): boolean;
 
 type InterfaceProperties = {
     name?: string;

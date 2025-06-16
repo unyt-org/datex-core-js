@@ -1,5 +1,5 @@
 import type { JSComHub, JSMemory, JSRuntime } from "../datex-core.ts";
-import { init_runtime, execute } from "../datex-core.ts";
+import { init_runtime, execute, execute_internal } from "../datex-core.ts";
 import { runtimeInterface } from "../utils/js-runtime-compat/runtime.ts";
 
 // get version from deno.json
@@ -54,5 +54,9 @@ export class Runtime {
 
     public execute(datex_script: string, formatted: boolean = false): string {
         return execute(datex_script, formatted);
+    }
+
+    public _execute_internal(datex_script: string): boolean {
+        return execute_internal(datex_script);
     }
 }
