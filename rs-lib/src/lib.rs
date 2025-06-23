@@ -8,9 +8,9 @@ use serde_wasm_bindgen::from_value;
 use datex_core::compiler;
 
 use wasm_bindgen::prelude::*;
-use datex_core::compiler::bytecode::{compile_script, compile_template};
+use datex_core::compiler::bytecode::{compile_script, compile_template, CompileOptions};
 use datex_core::decompiler::{decompile_body, DecompileOptions};
-use datex_core::runtime::execution::{execute_dxb, ExecutionOptions};
+use datex_core::runtime::execution::{execute_dxb, ExecutionContext, ExecutionInput, ExecutionOptions};
 
 mod runtime;
 use crate::runtime::JSDebugFlags;
@@ -53,12 +53,14 @@ pub fn compile(datex_script: &str) {
 /// Executes a Datex script and returns the result as a string.
 #[wasm_bindgen]
 pub fn execute(datex_script: &str, formatted: bool) -> String {
-    let dxb = compile_script(datex_script, None);
-    if let Ok(dxb) = dxb {
-        let result = execute_dxb(&dxb, ExecutionOptions {verbose: true, ..ExecutionOptions::default()}).unwrap_or_else(|err| {
+    let result = compile_script(datex_script, CompileOptions::default());
+    if let Ok((dxb, _)) = result {
+        let input = ExecutionInput::new_with_dxb_and_options(&dxb,  ExecutionOptions {verbose: true, ..ExecutionOptions::default()}); 
+        let (result, _) = execute_dxb(input).unwrap_or_else(|err| {
             panic!("Failed to execute script: {err:?}");
-        }).unwrap();
-        let result_dxb = compile_template("?", &[result], None).unwrap();
+        });
+        let result = result.unwrap();
+        let (result_dxb, _) = compile_template("?", &[result], CompileOptions::default()).unwrap();
         let string = decompile_body(&result_dxb, DecompileOptions {
             colorized: formatted,
             formatted,
@@ -69,7 +71,7 @@ pub fn execute(datex_script: &str, formatted: bool) -> String {
         });
         string
     } else {
-        panic!("Failed to compile script: {:?}", dxb.err());
+        panic!("Failed to compile script: {:?}", result.err());
     }
 }
 
@@ -77,13 +79,14 @@ pub fn execute(datex_script: &str, formatted: bool) -> String {
 /// Does not return the result of the script, but only indicates success or failure.
 #[wasm_bindgen]
 pub fn execute_internal(datex_script: &str) -> bool {
-    let dxb = compile_script(datex_script, None);
-    if let Ok(dxb) = dxb {
-        let result = execute_dxb(&dxb, ExecutionOptions {verbose: true, ..ExecutionOptions::default()}).unwrap_or_else(|err| {
+    let result = compile_script(datex_script, CompileOptions::default());
+    if let Ok((dxb, _)) = result {
+        let input = ExecutionInput::new_with_dxb_and_options(&dxb, ExecutionOptions {verbose: true, ..ExecutionOptions::default()});
+        let (result, _) = execute_dxb(input).unwrap_or_else(|err| {
             panic!("Failed to execute script: {err:?}");
         });
         result.is_some()
     } else {
-        panic!("Failed to compile script: {:?}", dxb.err());
+        panic!("Failed to compile script: {:?}", result.err());
     }
 }
