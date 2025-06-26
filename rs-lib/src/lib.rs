@@ -10,7 +10,7 @@ use datex_core::compiler;
 use wasm_bindgen::prelude::*;
 use datex_core::compiler::bytecode::{compile_script, compile_template, CompileOptions};
 use datex_core::decompiler::{decompile_body, DecompileOptions};
-use datex_core::runtime::execution::{execute_dxb, ExecutionContext, ExecutionInput, ExecutionOptions};
+use datex_core::runtime::execution::{execute_dxb, ExecutionInput, ExecutionOptions};
 
 mod runtime;
 use crate::runtime::JSDebugFlags;
