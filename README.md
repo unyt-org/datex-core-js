@@ -26,3 +26,7 @@ We welcome every contribution!<br> Please take a look at the
 [Twitter link]: https://twitter.com/intent/follow?screen_name=unytorg
 [Discord badge]: https://img.shields.io/discord/928247036770390016?logo=discord&style=social
 [Discord link]: https://unyt.org/discord
+
+---
+
+<sub>&copy; unyt 2025 • [unyt.org](https://unyt.org)</sub>
