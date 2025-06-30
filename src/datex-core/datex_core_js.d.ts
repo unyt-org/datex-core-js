@@ -4,12 +4,15 @@
 
 export function init_runtime(endpoint: string, debug_flags: any): JSRuntime;
 export function compile(datex_script: string): void;
-export function decompile(
-    dxb: Uint8Array,
-    formatted: boolean,
-    colorized: boolean,
-    resolve_slots: boolean,
-): string;
+/**
+ * Executes a Datex script and returns the result as a string.
+ */
+export function execute(datex_script: string, formatted: boolean): string;
+/**
+ * Executes a Datex script and returns true when execution was successful.
+ * Does not return the result of the script, but only indicates success or failure.
+ */
+export function execute_internal(datex_script: string): boolean;
 
 type InterfaceProperties = {
     name?: string;
@@ -124,6 +127,7 @@ export class WebRTCRegistry {
         interface_uuid: string,
         candidate: Uint8Array,
     ): Promise<void>;
+    wait_for_connection(interface_uuid: string): Promise<void>;
 }
 export class WebSocketClientRegistry {
     private constructor();

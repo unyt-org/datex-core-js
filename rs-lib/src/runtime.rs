@@ -1,3 +1,4 @@
+use datex_core::datex_values::core_values::endpoint::Endpoint;
 #[cfg(feature = "debug")]
 use datex_core::runtime::global_context::DebugFlags;
 use datex_core::runtime::global_context::GlobalContext;
@@ -12,7 +13,6 @@ use crate::memory::JSMemory;
 use crate::network::com_hub::JSComHub;
 use crate::utils::time::TimeJS;
 use datex_core::crypto::crypto::CryptoTrait;
-use datex_core::datex_values::{Endpoint, Pointer};
 use datex_core::global::dxb_block::DXBBlock;
 use datex_core::global::protocol_structures::block_header::{
     BlockHeader, FlagsAndTimestamp,
@@ -63,13 +63,13 @@ impl JSRuntime {
                 debug_flags: debug_flags.unwrap_or_default().into(),
             },
         );
-        runtime.memory.borrow_mut().store_pointer(
-            [
-                10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140,
-                150, 160, 170, 180, 190, 200, 210, 220, 230, 240, 250, 255,
-            ],
-            Pointer::from_id(Vec::new()),
-        );
+        // runtime.memory.borrow_mut().store_pointer(
+        //     [
+        //         10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140,
+        //         150, 160, 170, 180, 190, 200, 210, 220, 230, 240, 250, 255,
+        //     ],
+        //     Pointer::from_id(Vec::new()),
+        // );
         JSRuntime::new(runtime)
     }
 
