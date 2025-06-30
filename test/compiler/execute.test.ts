@@ -3,7 +3,7 @@ import { assertEquals } from "jsr:@std/assert";
 Deno.test("execute", () => {
     const runtime = new Runtime("@jonas");
     const script = "1 + 2";
-    const result = runtime.execute(script, true);
+    const result = runtime.execute(script, false);
     assertEquals(result, "3");
     console.log(result);
 });
