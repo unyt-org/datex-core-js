@@ -9,7 +9,7 @@ use datex_core::compiler;
 use datex_core::compiler::{compile_script, compile_template, CompileOptions};
 use datex_core::decompiler::{decompile_body, DecompileOptions};
 use datex_core::runtime::execution::{
-    execute_dxb, ExecutionInput, ExecutionOptions,
+    execute_dxb_sync, ExecutionInput, ExecutionOptions,
 };
 use wasm_bindgen::prelude::*;
 
@@ -63,7 +63,7 @@ pub fn execute(datex_script: &str, formatted: bool) -> String {
                 ..ExecutionOptions::default()
             },
         );
-        let (result, _) = execute_dxb(input).unwrap_or_else(|err| {
+        let (result, _) = execute_dxb_sync(input).unwrap_or_else(|err| {
             panic!("Failed to execute script: {err:?}");
         });
         let result = result.unwrap();
@@ -101,7 +101,7 @@ pub fn execute_internal(datex_script: &str) -> bool {
                 ..ExecutionOptions::default()
             },
         );
-        let (result, _) = execute_dxb(input).unwrap_or_else(|err| {
+        let (result, _) = execute_dxb_sync(input).unwrap_or_else(|err| {
             panic!("Failed to execute script: {err:?}");
         });
         result.is_some()
