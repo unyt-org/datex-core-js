@@ -63,7 +63,7 @@ pub fn execute(datex_script: &str, formatted: bool) -> String {
                 ..ExecutionOptions::default()
             },
         );
-        let (result, _) = execute_dxb_sync(input).unwrap_or_else(|err| {
+        let result = execute_dxb_sync(input).unwrap_or_else(|err| {
             panic!("Failed to execute script: {err:?}");
         });
         let result = result.unwrap();
@@ -101,7 +101,7 @@ pub fn execute_internal(datex_script: &str) -> bool {
                 ..ExecutionOptions::default()
             },
         );
-        let (result, _) = execute_dxb_sync(input).unwrap_or_else(|err| {
+        let result = execute_dxb_sync(input).unwrap_or_else(|err| {
             panic!("Failed to execute script: {err:?}");
         });
         result.is_some()
