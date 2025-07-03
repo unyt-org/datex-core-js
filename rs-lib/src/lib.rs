@@ -7,10 +7,12 @@ use serde_wasm_bindgen::from_value;
 // use datex_cli_core::CLI;
 use datex_core::compiler;
 
-use wasm_bindgen::prelude::*;
-use datex_core::compiler::bytecode::{compile_script, compile_template, CompileOptions};
+use datex_core::compiler::{compile_script, compile_template, CompileOptions};
 use datex_core::decompiler::{decompile_body, DecompileOptions};
-use datex_core::runtime::execution::{execute_dxb, ExecutionInput, ExecutionOptions};
+use datex_core::runtime::execution::{
+    execute_dxb, ExecutionInput, ExecutionOptions,
+};
+use wasm_bindgen::prelude::*;
 
 mod runtime;
 use crate::runtime::JSDebugFlags;
@@ -55,18 +57,30 @@ pub fn compile(datex_script: &str) {
 pub fn execute(datex_script: &str, formatted: bool) -> String {
     let result = compile_script(datex_script, CompileOptions::default());
     if let Ok((dxb, _)) = result {
-        let input = ExecutionInput::new_with_dxb_and_options(&dxb,  ExecutionOptions {verbose: true, ..ExecutionOptions::default()}); 
+        let input = ExecutionInput::new_with_dxb_and_options(
+            &dxb,
+            ExecutionOptions {
+                verbose: true,
+                ..ExecutionOptions::default()
+            },
+        );
         let (result, _) = execute_dxb(input).unwrap_or_else(|err| {
             panic!("Failed to execute script: {err:?}");
         });
         let result = result.unwrap();
-        let (result_dxb, _) = compile_template("?", &[result], CompileOptions::default()).unwrap();
-        let string = decompile_body(&result_dxb, DecompileOptions {
-            colorized: formatted,
-            formatted,
-            json_compat: true,
-            ..DecompileOptions::default()
-        }).unwrap_or_else(|err| {
+        let (result_dxb, _) =
+            compile_template("?", &[result], CompileOptions::default())
+                .unwrap();
+        let string = decompile_body(
+            &result_dxb,
+            DecompileOptions {
+                colorized: formatted,
+                formatted,
+                json_compat: true,
+                ..DecompileOptions::default()
+            },
+        )
+        .unwrap_or_else(|err| {
             panic!("Failed to decompile result: {err:?}");
         });
         string
@@ -81,7 +95,13 @@ pub fn execute(datex_script: &str, formatted: bool) -> String {
 pub fn execute_internal(datex_script: &str) -> bool {
     let result = compile_script(datex_script, CompileOptions::default());
     if let Ok((dxb, _)) = result {
-        let input = ExecutionInput::new_with_dxb_and_options(&dxb, ExecutionOptions {verbose: true, ..ExecutionOptions::default()});
+        let input = ExecutionInput::new_with_dxb_and_options(
+            &dxb,
+            ExecutionOptions {
+                verbose: true,
+                ..ExecutionOptions::default()
+            },
+        );
         let (result, _) = execute_dxb(input).unwrap_or_else(|err| {
             panic!("Failed to execute script: {err:?}");
         });
