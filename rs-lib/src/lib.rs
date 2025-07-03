@@ -71,7 +71,8 @@ pub fn execute(datex_script: &str, formatted: bool) -> String {
         let (result_dxb, _) =
             compile_template("?", &[result], CompileOptions::default())
                 .unwrap();
-        let string = decompile_body(
+        
+        decompile_body(
             &result_dxb,
             DecompileOptions {
                 colorized: formatted,
@@ -82,8 +83,7 @@ pub fn execute(datex_script: &str, formatted: bool) -> String {
         )
         .unwrap_or_else(|err| {
             panic!("Failed to decompile result: {err:?}");
-        });
-        string
+        })
     } else {
         panic!("Failed to compile script: {:?}", result.err());
     }
