@@ -6,7 +6,7 @@ authors = [
     "Benedikt Strehle <benedikt@unyt.org>",
     "Jonas Strehle <jonas@unyt.org>",
 ]
-edition = "2024"
+edition = "2021"
 
 [lib]
 crate-type = ["cdylib"]
