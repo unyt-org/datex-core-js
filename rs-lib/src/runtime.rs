@@ -169,7 +169,7 @@ impl JSRuntime {
         let mut block = DXBBlock {
             block_header: BlockHeader {
                 flags_and_timestamp: FlagsAndTimestamp::default()
-                    .with_is_end_of_scope(true)
+                    .with_is_end_of_context(true)
                     .with_is_end_of_section(true),
                 ..BlockHeader::default()
             },
