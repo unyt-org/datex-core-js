@@ -2,7 +2,7 @@ import type { JSComHub, JSMemory, JSRuntime } from "../datex-core.ts";
 import { execute, execute_internal, init_runtime } from "../datex-core.ts";
 
 // auto-generated version - do not edit:
-const VERSION: string = "0.0.2";
+const VERSION: string = "0.0.3";
 
 interface DebugFlags {
     allow_unsigned_blocks?: boolean;
