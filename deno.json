@@ -23,7 +23,7 @@
         "exclude": ["./rs-lib/datex-core", "./npm"]
     },
     "imports": {
-        "@deno/dnt": "jsr:@deno/dnt@^0.41.3"
+        "@deno/dnt": "jsr:@deno/dnt@^0.42.1"
     },
     "test": {
         "exclude": ["./rs-lib/datex-core", "./npm"]

@@ -50,12 +50,22 @@ try {
 if (!flags.inline) {
     const jsFile = dedent`
         import * as imports from "./${NAME}.internal.js";
-        const wasm = (await WebAssembly.instantiateStreaming(
-            fetch(new URL("${NAME}.wasm", import.meta.url)),
-            {
-                "./${NAME}.internal.js": imports,
-            },
-        )).instance;
+        const isNodeOrBun = !globalThis.Deno &&
+            (typeof globalThis.process !== "undefined") &&
+            (typeof globalThis.process.versions.node !== "undefined");
+        const wasm = (isNodeOrBun
+            ? await WebAssembly.instantiate(
+                await Deno.readFile(new URL("${NAME}.wasm", import.meta.url)),
+                {
+                    "./${NAME}.internal.js": imports,
+                },
+            )
+            : await WebAssembly.instantiateStreaming(
+                fetch(new URL("${NAME}.wasm", import.meta.url)),
+                {
+                   "./${NAME}.internal.js": imports,
+                },
+            )).instance;
         export * from "./${NAME}.internal.js";
         import { __wbg_set_wasm } from "./${NAME}.internal.js";
         __wbg_set_wasm(wasm.exports);
