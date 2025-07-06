@@ -50,11 +50,9 @@ try {
 if (!flags.inline) {
     const jsFile = dedent`
         import * as imports from "./${NAME}.internal.js";
-        // dnt-shim-ignore
-        const isNodeOrBun = !globalThis.Deno &&
-            (typeof globalThis.process !== "undefined") &&
-            (typeof globalThis.process.versions.node !== "undefined");
-        const wasm = (isNodeOrBun
+        // for deno-to-node builds, fetch does not support streaming webassembly instantiation
+        let isDntBuild = !!globalThis[Symbol.for("import-meta-ponyfill-commonjs")];
+        const wasm = (isDntBuild
             ? await WebAssembly.instantiate(
                 await Deno.readFile(new URL("${NAME}.wasm", import.meta.url)),
                 {

@@ -9,7 +9,6 @@ interface DebugFlags {
     enable_deterministic_behavior?: boolean;
 }
 
-
 export class Runtime {
     public readonly js_version = VERSION;
 
