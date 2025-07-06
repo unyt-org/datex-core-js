@@ -28,9 +28,16 @@ jobs:
               with:
                   deno-version: v2.x
 
+            - uses: dtolnay/rust-toolchain@stable
+              with:
+                  toolchain: nightly
+
             - name: Bump version using Deno
               id: bump_version
               run: deno run -A .github/tools/create-release.ts ${{ inputs.bump_type }}
+
+            - name: Update Cargo.lock
+              run: cargo build
 
             # - name: Configure Git
             #   run: |
