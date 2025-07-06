@@ -14,6 +14,9 @@ if (!["major", "minor", "patch"].includes(type)) {
 const cargoTomlPath = "./rs-lib/Cargo.toml";
 const cargoToml = await Deno.readTextFile(cargoTomlPath);
 
+const cargoLockPath = "./Cargo.lock";
+const cargoLock = await Deno.readTextFile(cargoLockPath);
+
 const denoJsonPath = "./deno.json";
 const denoJsonText = await Deno.readTextFile(denoJsonPath);
 const denoJson = JSON.parse(denoJsonText);
@@ -62,6 +65,13 @@ const updatedCargoToml = cargoToml.replace(
     `version = "${newVersion}"`,
 );
 await Deno.writeTextFile(cargoTomlPath, updatedCargoToml);
+
+// update Cargo.lock
+const updatedCargoLock = cargoLock.replace(
+    new RegExp(`name = "datex-core-js"\\nversion = "${cargoVersion}"`),
+    `name = "datex-core-js"\nversion = "${newVersion}"`,
+);
+await Deno.writeTextFile(cargoLockPath, updatedCargoLock);
 
 // update deno.json
 const updatedDenoJson = denoJsonText.replace(
