@@ -1,7 +1,7 @@
 import { assert } from "jsr:@std/assert/assert";
 import { Runtime } from "../../src/runtime/runtime.ts";
 import * as uuid from "jsr:@std/uuid";
-import {isNodeOrBun} from "../is-node.ts";
+import { isNodeOrBun } from "../is-node.ts";
 
 Deno.test("add and close interface", async () => {
     const runtime = new Runtime("@unyt");
@@ -16,7 +16,9 @@ Deno.test("add and close interface", async () => {
 Deno.test("connect client and server", async () => {
     // FIXME: temporarily disabled because Deno.serve is not yet supported for node.js/dnt
     if (isNodeOrBun) {
-        console.warn("Crypto tests are currently disabled in Node.js or Bun environments.");
+        console.warn(
+            "Crypto tests are currently disabled in Node.js or Bun environments.",
+        );
         return;
     }
     const PORT = 8082;

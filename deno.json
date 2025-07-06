@@ -30,6 +30,17 @@
     },
     "publish": {
         "exclude": [
+            ".github",
+            ".gitmodules",
+            ".rustfmt.toml",
+            ".vscode",
+            "Cargo.toml",
+            "Cargo.lock",
+            ".cargo",
+            "rust-toolchain.toml",
+            "scripts",
+            "test",
+            "rs-lib",
             "!src/datex-core/datex_core_js.wasm",
             "!src/datex-core/datex_core_js.internal.js"
         ]

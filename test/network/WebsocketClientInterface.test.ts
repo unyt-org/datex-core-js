@@ -3,7 +3,7 @@ import { createMockupServer } from "./WebsocketMockupServer.ts";
 import { Runtime } from "../../src/runtime/runtime.ts";
 import { sleep } from "../utils.ts";
 import * as uuid from "jsr:@std/uuid";
-import {isNodeOrBun} from "../is-node.ts";
+import { isNodeOrBun } from "../is-node.ts";
 
 Deno.test("invalid url construct", async () => {
     const runtime = new Runtime("@unyt");
@@ -32,7 +32,9 @@ Deno.test("websocket connect fail", async () => {
 Deno.test("websocket basic connect", async () => {
     // FIXME: temporarily disabled because Deno.serve is not yet supported for node.js/dnt
     if (isNodeOrBun) {
-        console.warn("Crypto tests are currently disabled in Node.js or Bun environments.");
+        console.warn(
+            "Crypto tests are currently disabled in Node.js or Bun environments.",
+        );
         return;
     }
     const port = 8484;
@@ -49,7 +51,9 @@ Deno.test("websocket basic connect", async () => {
 Deno.test("websocket block retrieval", async () => {
     // FIXME: temporarily disabled because Deno.serve is not yet supported for node.js/dnt
     if (isNodeOrBun) {
-        console.warn("Crypto tests are currently disabled in Node.js or Bun environments.");
+        console.warn(
+            "Crypto tests are currently disabled in Node.js or Bun environments.",
+        );
         return;
     }
     const port = 8484;

@@ -2,7 +2,7 @@
 
 [![Twitter badge][]][Twitter link] [![Discord badge][]][Discord link]
 
-<img align="right" src=".github/assets/datex-logo-light.svg" width="150px" alt="The DATEX logo">
+<img align="right" src="assets/datex-logo-light.svg" width="150px" alt="The DATEX logo">
 
 The DATEX Core Library for JavaScript (DATEX Core JS) is based on the
 [DATEX Core](https://github.com/unyt-org/datex-core) rust library and provides a
