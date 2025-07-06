@@ -1,9 +1,9 @@
 import * as imports from "./datex_core_js.internal.js";
 // for deno-to-node builds, fetch does not support streaming webassembly instantiation
 const isDntBuild = !!globalThis[Symbol.for("import-meta-ponyfill-commonjs")];
-const isBrowser = !globalThis.navigator.userAgent.startsWith("Deno") &&
-    !globalThis.navigator.userAgent.startsWith("Node.js") &&
-    !globalThis.navigator.userAgent.startsWith("Bun");
+const isBrowser = !globalThis.navigator?.userAgent.startsWith("Deno") &&
+    !globalThis.navigator?.userAgent.startsWith("Node.js") &&
+    !globalThis.navigator?.userAgent.startsWith("Bun");
 const wasm = (
     isBrowser // TODO: Deno should also do instantiateStreaming (globalThis.Deno && !isDntBuild)
         ? await WebAssembly.instantiateStreaming(
