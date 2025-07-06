@@ -51,20 +51,26 @@ if (!flags.inline) {
     const jsFile = dedent`
         import * as imports from "./${NAME}.internal.js";
         // for deno-to-node builds, fetch does not support streaming webassembly instantiation
-        let isDntBuild = !!globalThis[Symbol.for("import-meta-ponyfill-commonjs")];
-        const wasm = (isDntBuild
-            ? await WebAssembly.instantiate(
-                await Deno.readFile(new URL("${NAME}.wasm", import.meta.url)),
-                {
-                    "./${NAME}.internal.js": imports,
-                },
-            )
-            : await WebAssembly.instantiateStreaming(
-                fetch(new URL("${NAME}.wasm", import.meta.url)),
-                {
-                    "./${NAME}.internal.js": imports,
-                },
-            )).instance;
+        const isDntBuild = !!globalThis[Symbol.for("import-meta-ponyfill-commonjs")];
+        const isBrowser = !globalThis.navigator.userAgent.startsWith("Deno") &&
+            !globalThis.navigator.userAgent.startsWith("Node.js") &&
+            !globalThis.navigator.userAgent.startsWith("Bun");
+        const wasm = (
+            isBrowser // TODO: Deno should also do instantiateStreaming (globalThis.Deno && !isDntBuild)
+                ? await WebAssembly.instantiateStreaming(
+                    // dnt-shim-ignore
+                    fetch(new URL("${NAME}.wasm", import.meta.url)),
+                    {
+                        "./${NAME}.internal.js": imports,
+                    },
+                )
+                : await WebAssembly.instantiate(
+                    await Deno.readFile(new URL("${NAME}.wasm", import.meta.url)),
+                    {
+                        "./${NAME}.internal.js": imports,
+                    },
+                )
+        ).instance;
         export * from "./${NAME}.internal.js";
         import { __wbg_set_wasm } from "./${NAME}.internal.js";
         __wbg_set_wasm(wasm.exports);
