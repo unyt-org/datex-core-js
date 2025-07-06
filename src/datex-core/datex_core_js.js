@@ -12,7 +12,7 @@ const wasm = (isNodeOrBun
     : await WebAssembly.instantiateStreaming(
         fetch(new URL("datex_core_js.wasm", import.meta.url)),
         {
-           "./datex_core_js.internal.js": imports,
+            "./datex_core_js.internal.js": imports,
         },
     )).instance;
 export * from "./datex_core_js.internal.js";

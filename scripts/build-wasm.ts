@@ -63,7 +63,7 @@ if (!flags.inline) {
             : await WebAssembly.instantiateStreaming(
                 fetch(new URL("${NAME}.wasm", import.meta.url)),
                 {
-                   "./${NAME}.internal.js": imports,
+                    "./${NAME}.internal.js": imports,
                 },
             )).instance;
         export * from "./${NAME}.internal.js";
