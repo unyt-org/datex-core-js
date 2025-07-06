@@ -17,6 +17,9 @@ const cargoToml = await Deno.readTextFile(cargoTomlPath);
 const cargoLockPath = "./Cargo.lock";
 const cargoLock = await Deno.readTextFile(cargoLockPath);
 
+const runtimeTsPath = "./src/runtime/runtime.ts";
+const runtimeTs = await Deno.readTextFile(runtimeTsPath);
+
 const denoJsonPath = "./deno.json";
 const denoJsonText = await Deno.readTextFile(denoJsonPath);
 const denoJson = JSON.parse(denoJsonText);
@@ -79,6 +82,13 @@ const updatedDenoJson = denoJsonText.replace(
     `"version": "${newVersion}"`,
 );
 await Deno.writeTextFile(denoJsonPath, updatedDenoJson);
+
+// update runtime.ts
+const updatedRuntimeTs = runtimeTs.replace(
+    /const VERSION: string = "(\d+\.\d+\.\d+)";/,
+    `const VERSION: string = "${newVersion}";`,
+);
+await Deno.writeTextFile(runtimeTsPath, updatedRuntimeTs);
 
 // pass new version to the next step
 await Deno.writeTextFile(ghOutput, `NEW_VERSION=${newVersion}`, {

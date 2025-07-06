@@ -1,12 +1,8 @@
 import type { JSComHub, JSMemory, JSRuntime } from "../datex-core.ts";
 import { execute, execute_internal, init_runtime } from "../datex-core.ts";
-import { runtimeInterface } from "../utils/js-runtime-compat/runtime.ts";
 
-// get version from deno.json
-const VERSION: string = await runtimeInterface
-    .readTextFile(new URL("../../deno.json", import.meta.url))
-    .then(JSON.parse)
-    .then((data: { version: string }) => data.version);
+// auto-generated version - do not edit:
+const VERSION: string = "0.0.2";
 
 interface DebugFlags {
     allow_unsigned_blocks?: boolean;
