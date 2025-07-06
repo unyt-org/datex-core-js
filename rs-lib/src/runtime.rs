@@ -1,4 +1,4 @@
-use datex_core::datex_values::core_values::endpoint::Endpoint;
+use datex_core::values::core_values::endpoint::Endpoint;
 #[cfg(feature = "debug")]
 use datex_core::runtime::global_context::DebugFlags;
 use datex_core::runtime::global_context::GlobalContext;
@@ -169,7 +169,7 @@ impl JSRuntime {
         let mut block = DXBBlock {
             block_header: BlockHeader {
                 flags_and_timestamp: FlagsAndTimestamp::default()
-                    .with_is_end_of_scope(true)
+                    .with_is_end_of_context(true)
                     .with_is_end_of_section(true),
                 ..BlockHeader::default()
             },

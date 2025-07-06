@@ -39,8 +39,8 @@ await build({
         // steps to run after building and before running the tests
         Deno.copyFileSync("README.md", "npm/README.md");
         Deno.copyFileSync(
-            "src/datex-core/datex_core_js_bg.wasm",
-            "npm/esm/src/datex-core/datex_core_js_bg.wasm",
+            "src/datex-core/datex_core_js.wasm",
+            "npm/esm/src/datex-core/datex_core_js.wasm",
         );
 
         // currently required for version tests
