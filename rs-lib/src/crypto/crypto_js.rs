@@ -1,3 +1,4 @@
+use log::info;
 use datex_core::stdlib::{future::Future, pin::Pin};
 
 use datex_core::crypto::crypto::{CryptoError, CryptoTrait};
@@ -20,7 +21,7 @@ mod sealed {
 pub struct CryptoJS;
 impl CryptoJS {
     fn window() -> web_sys::Window {
-        web_sys::window().expect("no global window exists.")
+        js_sys::global().unchecked_into::<web_sys::Window>()
     }
     fn crypto() -> web_sys::Crypto {
         Self::window().crypto().expect("no global crypto exists.")

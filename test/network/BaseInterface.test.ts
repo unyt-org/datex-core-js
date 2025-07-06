@@ -9,6 +9,7 @@ import { sleep } from "../utils.ts";
 import { assertFalse } from "jsr:@std/assert/false";
 import { assertEquals } from "jsr:@std/assert/equals";
 import { assertThrows } from "jsr:@std/assert/throws";
+import {isNodeOrBun} from "../is-node.ts";
 
 Deno.test("with name", () => {
     const type = "base-interface-test";
@@ -145,8 +146,13 @@ Deno.test("test receive and send", async () => {
     );
 });
 
-// TODO
+// TODO:
 Deno.test("worker", async () => {
+    // FIXME: temporarily disabled because workers are not yet supported for node.js/dnt
+    if (isNodeOrBun) {
+        console.warn("Crypto tests are currently disabled in Node.js or Bun environments.");
+        return;
+    }
     const workerCode = `
         self.onmessage = (e) => {
             console.log("Worker received:", e.data);

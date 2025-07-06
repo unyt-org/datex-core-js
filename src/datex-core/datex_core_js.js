@@ -1,4 +1,5 @@
 import * as imports from "./datex_core_js.internal.js";
+// dnt-shim-ignore
 const isNodeOrBun = !globalThis.Deno &&
     (typeof globalThis.process !== "undefined") &&
     (typeof globalThis.process.versions.node !== "undefined");

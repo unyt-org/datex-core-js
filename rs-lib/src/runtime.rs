@@ -6,7 +6,7 @@ use datex_core::stdlib::rc::Rc;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
-
+use log::info;
 use crate::crypto::crypto_js::CryptoJS;
 use crate::js_utils::js_array;
 use crate::memory::JSMemory;
@@ -92,15 +92,19 @@ impl JSRuntime {
                 .await
                 .map_err(|e| JsValue::from_str(&format!("{e:?}")))?;
 
+            info!("#1");
+
             let encryption_key_pair = crypto
                 .new_encryption_key_pair()
                 .await
                 .map_err(|e| JsValue::from_str(&format!("{e:?}")))?;
+            info!("#2");
 
             let encrypted_message = crypto
                 .encrypt_rsa(vec![1, 2, 3], encryption_key_pair.0.clone())
                 .await
                 .map_err(|e| JsValue::from_str(&format!("{e:?}")))?;
+            info!("#3");
 
             let decrypted_message = crypto
                 .decrypt_rsa(
@@ -109,11 +113,13 @@ impl JSRuntime {
                 )
                 .await
                 .map_err(|e| JsValue::from_str(&format!("{e:?}")))?;
+            info!("#4");
 
             let signed_message = crypto
                 .sign_rsa(vec![1, 2, 3], sign_key_pair.1.clone())
                 .await
                 .map_err(|e| JsValue::from_str(&format!("{e:?}")))?;
+            info!("#5");
 
             let verified = crypto
                 .verify_rsa(
@@ -123,10 +129,12 @@ impl JSRuntime {
                 )
                 .await
                 .map_err(|e| JsValue::from_str(&format!("{e:?}")))?;
+            info!("#6");
 
             if !verified {
                 return Err(JsValue::from_str("Verification failed"));
             }
+            info!("#7");
 
             let js_array = js_array(&[
                 encryption_key_pair.0,

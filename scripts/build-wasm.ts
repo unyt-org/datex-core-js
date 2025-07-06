@@ -50,6 +50,7 @@ try {
 if (!flags.inline) {
     const jsFile = dedent`
         import * as imports from "./${NAME}.internal.js";
+        // dnt-shim-ignore
         const isNodeOrBun = !globalThis.Deno &&
             (typeof globalThis.process !== "undefined") &&
             (typeof globalThis.process.versions.node !== "undefined");
