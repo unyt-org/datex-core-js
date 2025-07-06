@@ -20,7 +20,7 @@ jobs:
           uses: actions/upload-artifact@v4
           with:
             name: build
-            path: ./
+            path: ./src/datex-core
             retention-days: 5
 
     publish-jsr:
@@ -31,10 +31,14 @@ jobs:
             contents: read
             id-token: write
         steps:
+            - uses: actions/checkout@v4
+              with:
+                submodules: "true"
             - name: Download a single artifact
               uses: actions/download-artifact@v4
               with:
                 name: build
+                path: ./src/datex-core
             # publish to JSR
             - name: Publish package
               run: npx jsr publish
@@ -46,10 +50,18 @@ jobs:
             contents: read
             id-token: write
         steps:
+            - uses: actions/checkout@v4
+              with:
+                submodules: "true"
             - name: Download a single artifact
               uses: actions/download-artifact@v4
               with:
                 name: build
+                path: ./src/datex-core
+            - name: Install Deno
+              uses: denoland/setup-deno@v2
+              with:
+                  deno-version: v2.x
 
             - name: Build for NPM
               run: deno task build-npm
