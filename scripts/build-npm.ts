@@ -38,14 +38,16 @@ await build({
     // steps to run after building and before running the tests
     postBuild() {
         // replace import.meta because dnt-shim-ignore does not work here
-        const datexCoreJSInternalPath = new URL("../npm/esm/src/datex-core/datex_core_js.js", import.meta.url);
+        const datexCoreJSInternalPath = new URL(
+            "../npm/esm/src/datex-core/datex_core_js.js",
+            import.meta.url,
+        );
         const fileContent = Deno.readTextFileSync(datexCoreJSInternalPath);
         const updatedContent = fileContent.replace(
             `globalThis[Symbol.for("import-meta-ponyfill-esmodule")](import.meta).url`,
             `import.meta.url`,
         );
         Deno.writeTextFileSync(datexCoreJSInternalPath, updatedContent);
-
 
         Deno.copyFileSync("README.md", "npm/README.md");
         Deno.copyFileSync(
