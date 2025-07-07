@@ -41,8 +41,7 @@ wasm-bindgen-futures = "0.4.50"
 js-sys = "=0.3.77"
 
 # webrtc
-futures = { version = "0.3", default-features = false } # = "0.11", 
-# matchbox_socket = { path = "/Users/jonas/Downloads/matchbox/matchbox_socket", optional = true, default-features = false }
+futures = { version = "0.3", default-features = false }           # = "0.11", 
 futures-timer = { version = "3", features = ["wasm-bindgen"] }
 uuid = { version = "1.15.1", features = ["js"], optional = true }
 futures-channel = "0.3.31"
