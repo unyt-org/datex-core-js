@@ -51,7 +51,7 @@ if (!flags.inline) {
     const jsFile = dedent`
         import * as imports from "./${NAME}.internal.js";
         // for deno-to-node builds, fetch does not support streaming webassembly instantiation
-        const isDntBuild = !!globalThis[Symbol.for("import-meta-ponyfill-commonjs")];
+        // FIXME const isDntBuild = !!globalThis[Symbol.for("import-meta-ponyfill-commonjs")];
         const isBrowser = !globalThis.navigator?.userAgent.startsWith("Deno") &&
             !globalThis.navigator?.userAgent.startsWith("Node.js") &&
             !globalThis.navigator?.userAgent.startsWith("Bun");
