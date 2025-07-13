@@ -2,15 +2,12 @@ use datex_core::values::core_values::endpoint::Endpoint;
 #[cfg(feature = "debug")]
 use datex_core::runtime::global_context::DebugFlags;
 use datex_core::runtime::global_context::GlobalContext;
-use datex_core::stdlib::rc::Rc;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 use log::info;
 use crate::crypto::crypto_js::CryptoJS;
 use crate::js_utils::js_array;
-use crate::memory::JSMemory;
-use crate::network::com_hub::JSComHub;
 use crate::utils::time::TimeJS;
 use datex_core::crypto::crypto::CryptoTrait;
 use datex_core::global::dxb_block::DXBBlock;
@@ -155,18 +152,8 @@ impl JSRuntime {
     }
 
     #[wasm_bindgen(getter)]
-    pub fn memory(&self) -> JSMemory {
-        JSMemory::new(Rc::clone(&self.runtime.memory))
-    }
-
-    #[wasm_bindgen(getter)]
     pub fn endpoint(&self) -> String {
-        self.runtime.endpoint.to_string()
-    }
-
-    #[wasm_bindgen(getter)]
-    pub fn com_hub(&self) -> JSComHub {
-        JSComHub::new(self.runtime.com_hub.clone())
+        self.runtime.endpoint().to_string()
     }
 
     pub fn _create_block(
