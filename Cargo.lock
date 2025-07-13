@@ -362,7 +362,6 @@ dependencies = [
  "futures-channel",
  "futures-timer",
  "js-sys",
- "lazy_static",
  "log",
  "serde",
  "serde-wasm-bindgen",
