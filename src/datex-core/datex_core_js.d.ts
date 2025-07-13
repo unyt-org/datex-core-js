@@ -60,7 +60,6 @@ export class JSComHub {
     free(): void;
     close_interface(interface_uuid: string): Promise<any>;
     start_update_loop(): void;
-    stop_update_loop(): Promise<void>;
     update(): Promise<void>;
     /**
      * Send a block to the given interface and socket
@@ -98,9 +97,7 @@ export class JSRuntime {
         receivers: string[],
     ): Uint8Array;
     readonly version: string;
-    readonly memory: JSMemory;
     readonly endpoint: string;
-    readonly com_hub: JSComHub;
 }
 export class SerialRegistry {
     private constructor();
