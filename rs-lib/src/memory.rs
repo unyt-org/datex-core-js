@@ -1,4 +1,4 @@
-use datex_core::stdlib::{cell::RefCell, rc::Rc};
+use datex_core::stdlib::cell::RefCell;
 
 use datex_core::runtime::memory::Memory;
 use datex_core::runtime::Runtime;

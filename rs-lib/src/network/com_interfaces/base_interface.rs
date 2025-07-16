@@ -12,14 +12,13 @@ use datex_core::{
     },
     utils::uuid::UUID,
 };
-use datex_core::network::com_hub::InterfacePriority;
 use datex_core::runtime::Runtime;
 use js_sys::Error;
 use wasm_bindgen::{prelude::wasm_bindgen, JsCast, JsValue};
 use wasm_bindgen_futures::JsFuture;
 use web_sys::js_sys::{Function, Promise, Uint8Array};
 
-use crate::{network::com_hub::JSComHub, wrap_error_for_js};
+use crate::wrap_error_for_js;
 use crate::runtime::JSRuntime;
 
 // define_registry!(BaseJSInterface);

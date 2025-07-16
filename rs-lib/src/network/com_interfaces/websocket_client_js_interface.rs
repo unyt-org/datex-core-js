@@ -228,7 +228,7 @@ impl WebSocketClientRegistry {
         &self,
         address: String,
     ) -> Result<String, JSWebSocketError> {
-        let com_hub = self.runtime.com_hub().clone();
+        let com_hub = self.runtime.com_hub();
         let address_clone = address.clone();
         let mut websocket_interface =
             WebSocketClientJSInterface::new(&address_clone)?;
