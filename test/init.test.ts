@@ -10,10 +10,13 @@ Deno.test("runtime version", async () => {
         new URL("../deno.json", import.meta.url),
     ).then(JSON.parse).then((data: { version: string }) => data.version);
 
-    // FIXME
-    // const actual_version = await Deno.readTextFile(
-    //     new URL("../rs-lib/datex-core/Cargo.toml", import.meta.url),
-    // ).then((data) => data.match(/version\s*=\s*"?([^"]*)"?$/m)?.[1]);
+    // extract current version from Cargo.lock
+    const actual_version = await Deno.readTextFile(
+        new URL("../Cargo.lock", import.meta.url),
+    ).then((data) => {
+        const versionMatch = data.match(/datex-core\s*=\s*"(\d+\.\d+\.\d+)"/);
+        return versionMatch ? versionMatch[1] : "unknown";
+    });
 
     const runtime = new Runtime("@unyt");
     assertEquals(runtime.js_version, actual_js_version);
