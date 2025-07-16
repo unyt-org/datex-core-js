@@ -180,7 +180,7 @@ define_registry!(SerialRegistry, SerialJSInterface);
 #[wasm_bindgen]
 impl SerialRegistry {
     pub async fn register(&self, baud_rate: u32) -> Result<String, JsError> {
-        let com_hub = self.com_hub.clone();
+        let com_hub = self.runtime.com_hub().clone();
         let mut serial_interface = SerialJSInterface::new(baud_rate)?;
         let uuid = serial_interface.get_uuid().clone();
         serial_interface

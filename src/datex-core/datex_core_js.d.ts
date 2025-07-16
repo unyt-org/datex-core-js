@@ -2,6 +2,8 @@
 // deno-lint-ignore-file
 // deno-fmt-ignore-file
 
+import {ComHub} from "../runtime/com-hub.ts";
+
 export function init_runtime(endpoint: string, debug_flags: any): JSRuntime;
 export function compile(datex_script: string): void;
 /**
@@ -44,7 +46,7 @@ type InterfaceProperties = {
 export class BaseJSInterface {
     free(): void;
     constructor(
-        com_hub: JSComHub,
+        com_hub: ComHub,
         name_or_properties: InterfaceProperties | string,
     );
     test_send_block(socket_uuid: string, data: Uint8Array): Promise<boolean>;

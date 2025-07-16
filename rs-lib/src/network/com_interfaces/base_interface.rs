@@ -12,19 +12,22 @@ use datex_core::{
     },
     utils::uuid::UUID,
 };
+use datex_core::network::com_hub::InterfacePriority;
+use datex_core::runtime::Runtime;
 use js_sys::Error;
 use wasm_bindgen::{prelude::wasm_bindgen, JsCast, JsValue};
 use wasm_bindgen_futures::JsFuture;
 use web_sys::js_sys::{Function, Promise, Uint8Array};
 
 use crate::{network::com_hub::JSComHub, wrap_error_for_js};
+use crate::runtime::JSRuntime;
 
 // define_registry!(BaseJSInterface);
 wrap_error_for_js!(JsBaseInterfaceError, datex_core::network::com_interfaces::default_com_interfaces::base_interface::BaseInterfaceError);
 
 #[wasm_bindgen]
 struct BaseJSInterface {
-    com_hub: JSComHub,
+    runtime: Runtime,
     interface: Rc<RefCell<BaseInterface>>,
 }
 
@@ -71,7 +74,7 @@ extern "C" {
 impl BaseJSInterface {
     #[wasm_bindgen(constructor)]
     pub fn new(
-        com_hub: JSComHub,
+        runtime: JSRuntime,
         name_or_properties: JSInterfacePropertiesOrName,
     ) -> BaseJSInterface {
         let mut interface = if name_or_properties.is_string() {
@@ -87,10 +90,11 @@ impl BaseJSInterface {
 
         interface.open().unwrap();
         let interface = Rc::new(RefCell::new(interface));
-        com_hub
+        runtime
+            .com_hub()
             .add_interface(interface.clone())
             .expect("Could not add base interface");
-        BaseJSInterface { com_hub, interface }
+        BaseJSInterface { runtime: runtime.runtime().clone(), interface }
     }
 
     #[wasm_bindgen(getter)]

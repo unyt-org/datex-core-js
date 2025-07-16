@@ -14,14 +14,18 @@ use datex_core::global::dxb_block::DXBBlock;
 use datex_core::global::protocol_structures::block_header::{
     BlockHeader, FlagsAndTimestamp,
 };
-use datex_core::runtime::Runtime;
+use datex_core::runtime::{Runtime, RuntimeInternal};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::future_to_promise;
 use web_sys::js_sys::Promise;
+use crate::memory::JSMemory;
+use crate::network::com_hub::JSComHub;
 
 #[wasm_bindgen]
 pub struct JSRuntime {
     runtime: Runtime,
+    com_hub: JSComHub,
+    memory: JSMemory
 }
 
 #[derive(Serialize, Deserialize, Default)]
@@ -42,10 +46,24 @@ impl From<JSDebugFlags> for DebugFlags {
     }
 }
 
+impl JSRuntime {
+    pub fn runtime(&self) -> &Runtime {
+        &self.runtime
+    }
+}
+
 /**
  * Internal impl of the JSRuntime, not exposed to JavaScript
  */
 impl JSRuntime {
+    
+    pub fn memory(&self) -> &JSMemory {
+        &self.memory
+    }
+    pub fn com_hub(&self) -> &JSComHub {
+        &self.com_hub
+    }
+    
     pub fn create(
         endpoint: impl Into<Endpoint>,
         debug_flags: Option<JSDebugFlags>,
@@ -71,7 +89,13 @@ impl JSRuntime {
     }
 
     pub fn new(runtime: Runtime) -> JSRuntime {
-        JSRuntime { runtime }
+        let com_hub = JSComHub::new(runtime.clone());
+        let memory = JSMemory::new(runtime.clone());
+        JSRuntime {
+            runtime,
+            com_hub,
+            memory
+        }
     }
 }
 
@@ -181,5 +205,13 @@ impl JSRuntime {
                 .unwrap(),
         );
         block.to_bytes().unwrap()
+    }
+
+    pub async fn start_update_loop(&self) {
+        self.runtime.start().await;
+    }
+
+    pub fn _stop_update_loop(&self) {
+        RuntimeInternal::start_update_loop(self.runtime.data.clone());
     }
 }

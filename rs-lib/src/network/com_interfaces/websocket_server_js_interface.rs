@@ -205,7 +205,7 @@ define_registry!(WebSocketServerRegistry, WebSocketServerJSInterface);
 #[wasm_bindgen]
 impl WebSocketServerRegistry {
     pub async fn register(&self) -> Result<String, JSWebSocketServerError> {
-        let com_hub = self.com_hub.clone();
+        let com_hub = self.runtime.com_hub().clone();
         let mut websocket_interface = WebSocketServerJSInterface::new();
         let uuid = websocket_interface.get_uuid().clone();
         websocket_interface.open().unwrap();
@@ -230,7 +230,7 @@ impl WebSocketServerRegistry {
         let interface_uuid =
             ComInterfaceUUID(UUID::from_string(interface_uuid));
         info!("add_socket start");
-        let com_hub = self.com_hub.clone();
+        let com_hub = self.runtime.com_hub().clone();
         info!("add_socket end");
 
         let interface = com_hub

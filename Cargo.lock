@@ -55,6 +55,28 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3d62b7694a562cdf5a74227903507c56ab2cc8bdd1f781ed5cb4cf9c9f810bfc"
 
 [[package]]
+name = "async-stream"
+version = "0.3.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0b5a71a6f37880a80d1d7f19efd781e4b5de42c88f0722cc13bcb6cc2cfe8476"
+dependencies = [
+ "async-stream-impl",
+ "futures-core",
+ "pin-project-lite",
+]
+
+[[package]]
+name = "async-stream-impl"
+version = "0.3.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c7c24de15d275a1ecfd47a380fb4d5ec9bfe0933f309ed5e705b775596a3574d"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.100",
+]
+
+[[package]]
 name = "async-trait"
 version = "0.1.88"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -304,9 +326,9 @@ dependencies = [
 [[package]]
 name = "datex-core"
 version = "0.0.5"
-source = "git+https://github.com/unyt-org/datex-core?branch=feat%2Fref#171c25cd4a74c6536cd33ad7c0350eca56870527"
 dependencies = [
  "ariadne",
+ "async-stream",
  "async-trait",
  "bigdecimal",
  "bigint",
@@ -317,9 +339,10 @@ dependencies = [
  "chumsky",
  "console_error_panic_hook",
  "console_log",
- "datex_macros",
+ "datex_macros 0.1.0",
  "default-args",
  "futures",
+ "futures-core",
  "futures-timer",
  "futures-util",
  "gloo-timers 0.3.0",
@@ -357,7 +380,7 @@ version = "0.0.5"
 dependencies = [
  "async-trait",
  "datex-core",
- "datex_macros",
+ "datex_macros 0.1.0 (git+https://github.com/unyt-org/datex-core?branch=feat%2Fref)",
  "futures",
  "futures-channel",
  "futures-timer",
@@ -371,6 +394,15 @@ dependencies = [
  "wasm-bindgen-futures",
  "wasm-bindgen-test",
  "web-sys",
+]
+
+[[package]]
+name = "datex_macros"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.100",
 ]
 
 [[package]]
