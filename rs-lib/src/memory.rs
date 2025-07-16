@@ -8,6 +8,7 @@ use web_sys::js_sys::Uint8Array;
 use crate::pointer::JSPointer;
 
 #[wasm_bindgen]
+#[derive(Clone)]
 pub struct JSMemory {
     runtime: Runtime
 }

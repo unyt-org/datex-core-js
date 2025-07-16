@@ -21,11 +21,11 @@ use web_sys::js_sys::Promise;
 use crate::memory::JSMemory;
 use crate::network::com_hub::JSComHub;
 
-#[wasm_bindgen]
+#[wasm_bindgen(getter_with_clone)]
 pub struct JSRuntime {
     runtime: Runtime,
-    com_hub: JSComHub,
-    memory: JSMemory
+    pub com_hub: JSComHub,
+    pub memory: JSMemory
 }
 
 #[derive(Serialize, Deserialize, Default)]
@@ -46,24 +46,15 @@ impl From<JSDebugFlags> for DebugFlags {
     }
 }
 
-impl JSRuntime {
-    pub fn runtime(&self) -> &Runtime {
-        &self.runtime
-    }
-}
-
 /**
  * Internal impl of the JSRuntime, not exposed to JavaScript
  */
 impl JSRuntime {
-    
-    pub fn memory(&self) -> &JSMemory {
-        &self.memory
+
+    pub fn runtime(&self) -> &Runtime {
+        &self.runtime
     }
-    pub fn com_hub(&self) -> &JSComHub {
-        &self.com_hub
-    }
-    
+
     pub fn create(
         endpoint: impl Into<Endpoint>,
         debug_flags: Option<JSDebugFlags>,
@@ -104,6 +95,7 @@ impl JSRuntime {
  */
 #[wasm_bindgen]
 impl JSRuntime {
+
     pub async fn crypto_test_tmp(&self) -> Promise {
         future_to_promise(async move {
             let crypto = CryptoJS {};
@@ -211,7 +203,7 @@ impl JSRuntime {
         self.runtime.start().await;
     }
 
-    pub fn _stop_update_loop(&self) {
-        RuntimeInternal::start_update_loop(self.runtime.data.clone());
+    pub async fn _stop_update_loop(&self) {
+        RuntimeInternal::stop_update_loop(self.runtime.data.clone()).await
     }
 }

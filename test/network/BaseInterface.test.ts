@@ -14,7 +14,7 @@ import { isNodeOrBun } from "../is-node.ts";
 Deno.test("with name", () => {
     const type = "base-interface-test";
     const runtime = new Runtime("@unyt");
-    const baseInterface = new BaseJSInterface(runtime.comHub, type);
+    const baseInterface = new BaseJSInterface(runtime._runtime, type);
     assertEquals(baseInterface.properties.interface_type, type);
 });
 
@@ -33,7 +33,7 @@ Deno.test("custom properties no reconnect", () => {
         reconnection_config: "NoReconnect",
         reconnect_attempts: undefined,
     };
-    const baseInterface = new BaseJSInterface(runtime.comHub, config);
+    const baseInterface = new BaseJSInterface(runtime._runtime, config);
     assertEquals(baseInterface.properties, config);
 });
 
@@ -57,13 +57,13 @@ Deno.test("custom properties with reconnect", () => {
         },
         reconnect_attempts: undefined,
     };
-    const baseInterface = new BaseJSInterface(runtime.comHub, config);
+    const baseInterface = new BaseJSInterface(runtime._runtime, config);
     assertEquals(baseInterface.properties, config);
 });
 
 Deno.test("add interface and sockets", async () => {
     const runtime = new Runtime("@unyt");
-    const baseInterface = new BaseJSInterface(runtime.comHub, "test");
+    const baseInterface = new BaseJSInterface(runtime._runtime, "test");
     assert(uuid.validate(baseInterface.uuid), "Invalid UUID");
 
     const socketA = baseInterface.register_socket("InOut");
@@ -84,7 +84,7 @@ Deno.test("add interface and sockets", async () => {
 Deno.test("test receive and send", async () => {
     const queue: [data: Uint8Array, socket: string][] = [];
     const runtime = new Runtime("@unyt");
-    const baseInterface = new BaseJSInterface(runtime.comHub, "test");
+    const baseInterface = new BaseJSInterface(runtime._runtime, "test");
 
     assertThrows(
         () => baseInterface.destroy_socket("invalid socket"),

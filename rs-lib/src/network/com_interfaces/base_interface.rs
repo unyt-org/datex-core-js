@@ -91,7 +91,7 @@ impl BaseJSInterface {
         interface.open().unwrap();
         let interface = Rc::new(RefCell::new(interface));
         runtime
-            .com_hub()
+            .com_hub
             .add_interface(interface.clone())
             .expect("Could not add base interface");
         BaseJSInterface { runtime: runtime.runtime().clone(), interface }

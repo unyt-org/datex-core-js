@@ -14,7 +14,7 @@ Deno.test("runtime version", async () => {
     const actual_version = await Deno.readTextFile(
         new URL("../Cargo.lock", import.meta.url),
     ).then((data) => {
-        const versionMatch = data.match(/datex-core\s*=\s*"(\d+\.\d+\.\d+)"/);
+        const versionMatch = data.match(/name = "datex-core"\nversion = "(.*)"/);
         return versionMatch ? versionMatch[1] : "unknown";
     });
 

@@ -24,7 +24,9 @@ use wasm_bindgen_futures::future_to_promise;
 use web_sys::js_sys::{self, Promise};
 
 #[wasm_bindgen]
+#[derive(Clone)]
 pub struct JSComHub {
+    // ignore for wasm bindgen
     runtime: Runtime,
 }
 
