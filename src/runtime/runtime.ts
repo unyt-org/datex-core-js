@@ -19,7 +19,7 @@ export class Runtime {
     constructor(endpoint: string = "@unyt", debug_flags?: DebugFlags) {
         this.#runtime = init_runtime(endpoint, debug_flags);
         this.#memory = this.#runtime.memory;
-        this.#comHub = this.#runtime.com_hub
+        this.#comHub = this.#runtime.com_hub;
     }
 
     /**
