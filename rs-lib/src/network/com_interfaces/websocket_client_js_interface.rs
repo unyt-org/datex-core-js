@@ -219,32 +219,3 @@ impl ComInterface for WebSocketClientJSInterface {
     delegate_com_interface_info!();
     set_opener!(open);
 }
-
-define_registry!(WebSocketClientRegistry, WebSocketClientJSInterface);
-
-#[wasm_bindgen]
-impl WebSocketClientRegistry {
-    pub async fn register(
-        &self,
-        address: String,
-    ) -> Result<String, JSWebSocketError> {
-        let com_hub = self.runtime.com_hub();
-        let address_clone = address.clone();
-        let mut websocket_interface =
-            WebSocketClientJSInterface::new(&address_clone)?;
-        websocket_interface
-            .open()
-            .await
-            .map_err(JSWebSocketError::from)?;
-        let interface_uuid = websocket_interface.get_uuid().clone();
-        let websocket_interface = Rc::new(RefCell::new(websocket_interface));
-
-        com_hub
-            .add_interface(
-                websocket_interface.clone(),
-                InterfacePriority::default(),
-            )
-            .map_err(|e| WebSocketError::Other(format!("{e:?}")))?;
-        Ok(interface_uuid.0.to_string())
-    }
-}

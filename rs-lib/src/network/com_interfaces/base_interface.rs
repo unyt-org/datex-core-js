@@ -1,5 +1,4 @@
 use std::{cell::RefCell, future::Future, pin::Pin, rc::Rc, str::FromStr};
-
 use datex_core::{
     network::com_interfaces::{
         com_interface::ComInterface,
@@ -12,12 +11,13 @@ use datex_core::{
     },
     utils::uuid::UUID,
 };
+use datex_core::network::com_interfaces::com_interface::{ComInterfaceError, ComInterfaceFactory};
 use datex_core::runtime::Runtime;
 use js_sys::Error;
+use serde::{Deserialize, Serialize};
 use wasm_bindgen::{prelude::wasm_bindgen, JsCast, JsValue};
 use wasm_bindgen_futures::JsFuture;
 use web_sys::js_sys::{Function, Promise, Uint8Array};
-
 use crate::wrap_error_for_js;
 use crate::runtime::JSRuntime;
 
@@ -25,7 +25,7 @@ use crate::runtime::JSRuntime;
 wrap_error_for_js!(JsBaseInterfaceError, datex_core::network::com_interfaces::default_com_interfaces::base_interface::BaseInterfaceError);
 
 #[wasm_bindgen]
-struct BaseJSInterface {
+pub struct BaseJSInterface {
     runtime: Runtime,
     interface: Rc<RefCell<BaseInterface>>,
 }
@@ -71,31 +71,6 @@ extern "C" {
 
 #[wasm_bindgen]
 impl BaseJSInterface {
-    #[wasm_bindgen(constructor)]
-    pub fn new(
-        runtime: JSRuntime,
-        name_or_properties: JSInterfacePropertiesOrName,
-    ) -> BaseJSInterface {
-        let mut interface = if name_or_properties.is_string() {
-            let name = name_or_properties.as_string().unwrap();
-            BaseInterface::new_with_name(&name)
-        } else {
-            let properties = name_or_properties;
-            let properties: InterfaceProperties =
-                serde_wasm_bindgen::from_value(properties.into())
-                    .expect("Failed to convert properties");
-            BaseInterface::new_with_properties(properties)
-        };
-
-        interface.open().unwrap();
-        let interface = Rc::new(RefCell::new(interface));
-        runtime
-            .com_hub
-            .add_interface(interface.clone())
-            .expect("Could not add base interface");
-        BaseJSInterface { runtime: runtime.runtime().clone(), interface }
-    }
-
     #[wasm_bindgen(getter)]
     pub fn properties(&self) -> JSInterfaceProperties {
         let properties = serde_wasm_bindgen::to_value(
@@ -193,5 +168,20 @@ impl BaseJSInterface {
             ComInterfaceSocketUUID(UUID::from_string(socket_uuid));
         self.interface.borrow_mut().receive(socket_uuid, data)?;
         Ok(())
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+struct BaseInterfaceSetupData(InterfaceProperties);
+
+impl ComInterfaceFactory<BaseInterfaceSetupData> for BaseJSInterface {
+    fn create(
+        setup_data: BaseInterfaceSetupData,
+    ) -> Result<BaseInterface, ComInterfaceError> {
+        Ok(BaseInterface::new_with_properties(setup_data.0))
+    }
+
+    fn get_default_properties() -> InterfaceProperties {
+        InterfaceProperties::default()
     }
 }

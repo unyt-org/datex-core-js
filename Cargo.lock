@@ -326,7 +326,6 @@ dependencies = [
 [[package]]
 name = "datex-core"
 version = "0.0.5"
-source = "git+https://github.com/unyt-org/datex-core?branch=feat%2Fref#dc737b4da1080bbcefaa24981de3d9f67974d38d"
 dependencies = [
  "ariadne",
  "async-stream",
@@ -340,7 +339,7 @@ dependencies = [
  "chumsky",
  "console_error_panic_hook",
  "console_log",
- "datex_macros",
+ "datex_macros 0.1.0",
  "default-args",
  "futures",
  "futures-core",
@@ -381,7 +380,7 @@ version = "0.0.5"
 dependencies = [
  "async-trait",
  "datex-core",
- "datex_macros",
+ "datex_macros 0.1.0 (git+https://github.com/unyt-org/datex-core?branch=feat%2Fref)",
  "futures",
  "futures-channel",
  "futures-timer",
@@ -395,6 +394,15 @@ dependencies = [
  "wasm-bindgen-futures",
  "wasm-bindgen-test",
  "web-sys",
+]
+
+[[package]]
+name = "datex_macros"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.104",
 ]
 
 [[package]]

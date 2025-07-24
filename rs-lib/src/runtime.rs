@@ -10,6 +10,7 @@ use crate::crypto::crypto_js::CryptoJS;
 use crate::js_utils::js_array;
 use crate::utils::time::TimeJS;
 use datex_core::crypto::crypto::CryptoTrait;
+use datex_core::decompiler::{decompile_value, DecompileOptions};
 use datex_core::global::dxb_block::DXBBlock;
 use datex_core::global::protocol_structures::block_header::{
     BlockHeader, FlagsAndTimestamp,
@@ -56,7 +57,7 @@ impl JSRuntime {
     }
 
     pub fn create(
-        endpoint: impl Into<Endpoint>,
+        endpoint: Endpoint,
         debug_flags: Option<JSDebugFlags>,
     ) -> JSRuntime {
         let runtime = Runtime::init(
@@ -76,8 +77,11 @@ impl JSRuntime {
         //     ],
         //     Pointer::from_id(Vec::new()),
         // );
-        JSRuntime::new(runtime)
+        let runtime = JSRuntime::new(runtime);
+        runtime.com_hub.register_default_interface_factories();
+        runtime
     }
+    
 
     pub fn new(runtime: Runtime) -> JSRuntime {
         let com_hub = JSComHub::new(runtime.clone());
@@ -204,6 +208,50 @@ impl JSRuntime {
     }
 
     pub async fn _stop_update_loop(&self) {
-        RuntimeInternal::stop_update_loop(self.runtime.data.clone()).await
+        RuntimeInternal::stop_update_loop(self.runtime.internal.clone()).await
+    }
+
+    pub async fn execute(
+        &self,
+        script: &str,
+        formatted: bool,
+    ) -> String {
+        let input = self.runtime.execute(script, &[], None).await.unwrap();
+        match input {
+            None => {
+                "".to_string()
+            }
+            Some(result) => {
+                decompile_value(
+                    &result,
+                    DecompileOptions {
+                        formatted,
+                        ..DecompileOptions::default()
+                    },
+                )
+            }
+        }
+    }
+
+    pub fn execute_sync(
+        &self,
+        script: &str,
+        formatted: bool,
+    ) -> String {
+        let input = self.runtime.execute_sync(script, &[], None).unwrap();
+        match input {
+            None => {
+                "".to_string()
+            }
+            Some(result) => {
+                decompile_value(
+                    &result,
+                    DecompileOptions {
+                        formatted,
+                        ..DecompileOptions::default()
+                    },
+                )
+            }
+        }
     }
 }

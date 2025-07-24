@@ -2,6 +2,8 @@
 #![feature(iter_from_coroutine)]
 // FIXME no-std
 
+extern crate core;
+
 use serde_wasm_bindgen::from_value;
 // use datex_cli_core::CLI;
 use datex_core::compiler;
@@ -11,6 +13,7 @@ use datex_core::decompiler::{decompile_body, DecompileOptions};
 use datex_core::runtime::execution::{
     execute_dxb_sync, ExecutionInput, ExecutionOptions,
 };
+use datex_core::values::core_values::endpoint::Endpoint;
 use wasm_bindgen::prelude::*;
 
 mod runtime;
@@ -43,6 +46,7 @@ extern "C" {
 pub fn init_runtime(endpoint: &str, debug_flags: JsValue) -> JSRuntime {
     let debug_flags: Option<JSDebugFlags> =
         from_value(debug_flags).unwrap_or_default();
+    let endpoint = Endpoint::new(endpoint);
     JSRuntime::create(endpoint, debug_flags)
 }
 

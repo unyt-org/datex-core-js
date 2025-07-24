@@ -97,6 +97,8 @@ export class JSRuntime {
     ): Uint8Array;
     start_update_loop(): Promise<void>;
     _stop_update_loop(): Promise<void>;
+    execute(script: string, formatted: boolean): Promise<string>;
+    execute_sync(script: string, formatted: boolean): string;
     com_hub: JSComHub;
     memory: JSMemory;
     readonly version: string;

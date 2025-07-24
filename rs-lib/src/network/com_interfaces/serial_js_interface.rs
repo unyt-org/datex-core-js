@@ -16,6 +16,7 @@ use datex_core::network::com_interfaces::com_interface::ComInterfaceState;
 
 use crate::{define_registry, wrap_error_for_js};
 use datex_core::network::com_hub::InterfacePriority;
+use datex_core::network::com_interfaces::default_com_interfaces::websocket::websocket_common::WebSocketClientInterfaceSetupData;
 use datex_core::task::spawn_with_panic_notify;
 use log::{debug, error};
 use wasm_bindgen::prelude::wasm_bindgen;
@@ -38,6 +39,7 @@ pub struct SerialJSInterface {
 wrap_error_for_js!(JsSerialError, datex_core::network::com_interfaces::default_com_interfaces::serial::serial_common::SerialError);
 
 use datex_macros::{com_interface, create_opener};
+use crate::network::com_interfaces::websocket_client_js_interface::WebSocketClientJSInterface;
 
 #[com_interface]
 impl SerialJSInterface {
@@ -173,27 +175,4 @@ impl ComInterface for SerialJSInterface {
     }
     delegate_com_interface_info!();
     set_opener!(open);
-}
-
-define_registry!(SerialRegistry, SerialJSInterface);
-
-#[wasm_bindgen]
-impl SerialRegistry {
-    pub async fn register(&self, baud_rate: u32) -> Result<String, JsError> {
-        let com_hub = self.runtime.com_hub();
-        let mut serial_interface = SerialJSInterface::new(baud_rate)?;
-        let uuid = serial_interface.get_uuid().clone();
-        serial_interface
-            .open()
-            .await
-            .map_err(|e| JsError::new(&format!("{e:?}")))?;
-
-        com_hub
-            .add_interface(
-                Rc::new(RefCell::new(serial_interface)),
-                InterfacePriority::default(),
-            )
-            .map_err(|e| JsError::new(&format!("{e:?}")))?;
-        Ok(uuid.0.to_string())
-    }
 }

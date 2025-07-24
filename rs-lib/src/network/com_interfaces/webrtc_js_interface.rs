@@ -451,6 +451,7 @@ define_registry!(WebRTCRegistry, WebRTCJSInterface);
 impl WebRTCRegistry {
     pub async fn register(&self, endpoint: &str) -> Result<String, JsError> {
         let com_hub = self.runtime.com_hub();
+        let endpoint = Endpoint::new(endpoint);
         let mut webrtc_interface = WebRTCJSInterface::new(endpoint);
         let uuid = webrtc_interface.get_uuid().clone();
         webrtc_interface

@@ -1,5 +1,4 @@
-import type { JSComHub, JSMemory, JSRuntime } from "../datex-core.ts";
-import { execute, execute_internal, init_runtime } from "../datex-core.ts";
+import {execute_internal, init_runtime, type JSComHub, type JSMemory, type JSRuntime} from "../datex-core.ts";
 
 // auto-generated version - do not edit:
 const VERSION: string = "0.0.5";
@@ -48,8 +47,12 @@ export class Runtime {
         return this.#runtime;
     }
 
-    public execute(datex_script: string, formatted: boolean = false): string {
-        return execute(datex_script, formatted);
+    public execute(datex_script: string, formatted: boolean = false): Promise<string> {
+        return this.#runtime.execute(datex_script, formatted);
+    }
+
+    public execute_sync(datex_script: string, formatted: boolean = false): string {
+        return this.#runtime.execute_sync(datex_script, formatted);
     }
 
     public _execute_internal(datex_script: string): boolean {
