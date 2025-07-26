@@ -12,7 +12,9 @@ use datex_core::network::com_interfaces::com_interface::{ComInterface, ComInterf
 use datex_core::network::com_interfaces::com_interface_socket::ComInterfaceSocketUUID;
 use datex_core::stdlib::{cell::RefCell, rc::Rc};
 use datex_core::{network::com_hub::ComHub, utils::uuid::UUID};
+use datex_core::runtime::execution::execute_dxb_sync;
 use datex_core::runtime::Runtime;
+use datex_core::values::serde::deserializer::from_value_container;
 use log::error;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::future_to_promise;
@@ -33,6 +35,10 @@ impl JSComHub {
             runtime
         }
     }
+
+    pub fn com_hub(&self) -> &ComHub {
+        self.runtime.com_hub()
+    }
 }
 
 /**
@@ -45,51 +51,52 @@ impl JSComHub {
             "base".to_string(),
             crate::network::com_interfaces::base_interface::BaseJSInterface::factory
         );
-        
+
         #[cfg(feature = "wasm_websocket_client")]
         self.com_hub().register_interface_factory(
             "websocket-client".to_string(),
             crate::network::com_interfaces::websocket_client_js_interface::WebSocketClientJSInterface::factory
         );
-        
+
         #[cfg(feature = "wasm_websocket_server")]
         self.com_hub().register_interface_factory(
             "websocket-server".to_string(),
             crate::network::com_interfaces::websocket_server_js_interface::WebSocketServerJSInterface::factory
         );
-        
+
         //wasm_serial
         #[cfg(feature = "wasm_serial")]
         self.com_hub().register_interface_factory(
             "serial".to_string(),
             crate::network::com_interfaces::serial_js_interface::SerialJSInterface::factory
         );
-        
+
         // TODO: wasm_webrtc
     }
-    
+
     pub fn create_interface(
         &self,
         interface_type: String,
-        properties: JsValue,
+        properties: String,
     ) -> Promise {
         let runtime = self.runtime.clone();
         future_to_promise(async move {
             let com_hub = runtime.com_hub();
-            let properties =
-                serde_wasm_bindgen::from_value(properties)?;
-            let interface = com_hub
-                .create_interface(&interface_type, properties, InterfacePriority::default())
-                .await
+            let properties = runtime.execute_sync(&properties, &[], None)
                 .map_err(|e| JsError::new(&format!("{e:?}")))?;
-            Ok(JsValue::from_str(&interface.borrow().get_uuid().0.to_string()))
+            if let Some(properties) = properties {
+                let interface = com_hub
+                    .create_interface(&interface_type, properties, InterfacePriority::default())
+                    .await
+                    .map_err(|e| JsError::new(&format!("{e:?}")))?;
+                Ok(JsValue::from_str(&interface.borrow().get_uuid().0.to_string()))
+            }
+            else {
+                Err(JsError::new("Failed to create interface: properties are empty").into())
+            }
         })
     }
-
-    fn com_hub(&self) -> &ComHub {
-        self.runtime.com_hub()
-    }
-
+    
     pub fn close_interface(&self, interface_uuid: String) -> Promise {
         let interface_uuid =
             ComInterfaceUUID(UUID::from_string(interface_uuid));
@@ -128,7 +135,7 @@ impl JSComHub {
             ComInterfaceUUID(UUID::from_string(interface_uuid));
         let socket_uuid =
             ComInterfaceSocketUUID(UUID::from_string(socket_uuid));
-        self.com_hub().get_interface_by_uuid(&interface_uuid)
+        self.com_hub().get_dyn_interface_by_uuid(&interface_uuid)
             .expect("Failed to find interface")
             .borrow_mut()
             .send_block(block, socket_uuid)

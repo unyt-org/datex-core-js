@@ -42,22 +42,27 @@ type InterfaceProperties = {
 };
 
 export class BaseJSInterface {
+    private constructor();
     free(): void;
-    constructor(
-        runtime: JSRuntime,
-        name_or_properties: InterfaceProperties | string,
-    );
-    test_send_block(socket_uuid: string, data: Uint8Array): Promise<boolean>;
-    on_send(func: Function): void;
-    register_socket(direction: string): string;
-    destroy_socket(socket_uuid: string): void;
-    receive(socket_uuid: string, data: Uint8Array): Promise<void>;
-    readonly properties: InterfaceProperties;
-    readonly uuid: string;
 }
 export class JSComHub {
     private constructor();
     free(): void;
+    base_interface_register_socket(uuid: string, direction: string): string;
+    base_interface_receive(
+        uuid: string,
+        socket_uuid: string,
+        data: Uint8Array,
+    ): void;
+    base_interface_destroy_socket(uuid: string, socket_uuid: string): void;
+    base_interface_on_send(uuid: string, func: Function): void;
+    base_interface_test_send_block(
+        uuid: string,
+        socket_uuid: string,
+        data: Uint8Array,
+    ): Promise<boolean>;
+    register_default_interface_factories(): void;
+    create_interface(interface_type: string, properties: string): Promise<any>;
     close_interface(interface_uuid: string): Promise<any>;
     update(): Promise<void>;
     /**
@@ -72,10 +77,6 @@ export class JSComHub {
         socket_uuid: string,
     ): Promise<boolean>;
     _drain_incoming_blocks(): Uint8Array[];
-    readonly websocket_server: WebSocketServerRegistry;
-    readonly websocket_client: WebSocketClientRegistry;
-    readonly serial: SerialRegistry;
-    readonly webrtc: WebRTCRegistry;
 }
 export class JSMemory {
     private constructor();
@@ -104,12 +105,6 @@ export class JSRuntime {
     readonly version: string;
     readonly endpoint: string;
 }
-export class SerialRegistry {
-    private constructor();
-    free(): void;
-    close(interface_uuid: string): Promise<any>;
-    register(baud_rate: number): Promise<string>;
-}
 export class WebRTCRegistry {
     private constructor();
     free(): void;
@@ -130,12 +125,6 @@ export class WebRTCRegistry {
         candidate: Uint8Array,
     ): Promise<void>;
     wait_for_connection(interface_uuid: string): Promise<void>;
-}
-export class WebSocketClientRegistry {
-    private constructor();
-    free(): void;
-    close(interface_uuid: string): Promise<any>;
-    register(address: string): Promise<string>;
 }
 export class WebSocketServerRegistry {
     private constructor();
