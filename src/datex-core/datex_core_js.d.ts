@@ -2,7 +2,7 @@
 // deno-lint-ignore-file
 // deno-fmt-ignore-file
 
-export function create_runtime(endpoint: string, debug_flags: any): JSRuntime;
+export function create_runtime(config: string, debug_flags: any): JSRuntime;
 export function compile(datex_script: string): void;
 /**
  * Executes a Datex script and returns the result as a string.
@@ -16,6 +16,10 @@ export function execute_internal(datex_script: string): boolean;
 
 type WebSocketServerInterfaceSetupData = {
     port: number;
+};
+
+type WebSocketClientInterfaceSetupData = {
+    address: string;
 };
 
 type BaseInterfaceSetupData = {
@@ -43,10 +47,6 @@ type BaseInterfaceSetupData = {
                 attempts: number;
             };
         };
-};
-
-type WebSocketClientInterfaceSetupData = {
-    address: string;
 };
 
 export class BaseJSInterface {

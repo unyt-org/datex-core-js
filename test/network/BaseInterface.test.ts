@@ -43,7 +43,7 @@ const config: BaseInterfaceSetupData = {
 // });
 
 Deno.test("custom properties with reconnect", async () => {
-    const runtime = new Runtime("@unyt");
+    const runtime = new Runtime({endpoint: "@unyt"});
 
 
     const baseInterface = await runtime.comHub.createInterface("base", config);
@@ -51,7 +51,7 @@ Deno.test("custom properties with reconnect", async () => {
 });
 
 Deno.test("add interface and sockets", async () => {
-    const runtime = new Runtime("@unyt");
+    const runtime = new Runtime({endpoint: "@unyt"});
     const baseInterface = await runtime.comHub.createInterface("base", config);
     assert(uuid.validate(baseInterface.uuid), "Invalid UUID");
     let impl = baseInterface.impl;
@@ -73,7 +73,7 @@ Deno.test("add interface and sockets", async () => {
 
 Deno.test("test receive and send", async () => {
     const queue: [data: Uint8Array, socket: string][] = [];
-    const runtime = new Runtime("@unyt");
+    const runtime = new Runtime({endpoint: "@unyt"});
     const baseInterface = await runtime.comHub.createInterface("base", config);
 
     assertThrows(

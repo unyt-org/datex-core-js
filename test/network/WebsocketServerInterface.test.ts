@@ -7,7 +7,7 @@ import "../../src/network/interface-impls/websocket-server-deno.ts";
 import {sleep} from "../utils.ts";
 
 Deno.test("add and close interface", async () => {
-    const runtime = new Runtime("@unyt");
+    const runtime = new Runtime({endpoint: "@unyt"});
     const serverInterface = await runtime.comHub.createInterface("websocket-server", {port: 80});
     assert(uuid.validate(serverInterface.uuid), "Invalid UUID");
     await serverInterface.close()
@@ -24,10 +24,10 @@ Deno.test("connect two runtimes", async () => {
 
 
     const PORT = 8082;
-    const runtimeA = new Runtime("@test_a");
+    const runtimeA = new Runtime({endpoint: "@test_a"});
     const serverInterface = await runtimeA.comHub.createInterface("websocket-server", { port: PORT });
 
-    const runtimeB = new Runtime("@test_b");
+    const runtimeB = new Runtime({endpoint: "@test_b"});
     const clientInterface = await runtimeB.comHub.createInterface("websocket-client", { address: `ws://localhost:${PORT}` });
 
     await serverInterface.close();
@@ -44,10 +44,10 @@ Deno.test("send data between two runtimes", async () => {
     }
 
     const PORT = 8082;
-    const runtimeA = await Runtime.create("@test_a", {allow_unsigned_blocks: true});
+    const runtimeA = await Runtime.create({endpoint: "@test_a"}, {allow_unsigned_blocks: true});
     const serverInterface = await runtimeA.comHub.createInterface("websocket-server", { port: PORT });
 
-    const runtimeB = await Runtime.create("@test_b", {allow_unsigned_blocks: true});
+    const runtimeB = await Runtime.create({endpoint: "@test_b"}, {allow_unsigned_blocks: true});
     const clientInterface = await runtimeB.comHub.createInterface("websocket-client", { address: `ws://localhost:${PORT}` });
 
     await sleep(1000);

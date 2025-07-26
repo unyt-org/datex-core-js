@@ -15,7 +15,8 @@ use datex_core::global::dxb_block::DXBBlock;
 use datex_core::global::protocol_structures::block_header::{
     BlockHeader, FlagsAndTimestamp,
 };
-use datex_core::runtime::{Runtime, RuntimeInternal};
+use datex_core::runtime::{Runtime, RuntimeConfig, RuntimeInternal};
+use datex_core::values::serde::deserializer::DatexDeserializer;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::future_to_promise;
 use web_sys::js_sys::Promise;
@@ -57,11 +58,13 @@ impl JSRuntime {
     }
 
     pub fn create(
-        endpoint: Endpoint,
+        config: &str,
         debug_flags: Option<JSDebugFlags>,
     ) -> JSRuntime {
+        let deserializer = DatexDeserializer::from_script(config).unwrap();
+        let config: RuntimeConfig = Deserialize::deserialize(deserializer).unwrap();
         let runtime = Runtime::init(
-            endpoint,
+            config,
             GlobalContext {
                 crypto: Arc::new(Mutex::new(CryptoJS)),
                 time: Arc::new(Mutex::new(TimeJS)),

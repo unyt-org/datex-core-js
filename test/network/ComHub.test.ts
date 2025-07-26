@@ -1,9 +1,9 @@
-import { Datex } from "../../src/mod.ts";
 import { sleep } from "../utils.ts";
+import {Runtime} from "../../src/runtime/runtime.ts";
 
 Deno.test("update loop", async () => {
-    await Datex.start();
+    const runtime = await Runtime.create({endpoint: "@unyt"});
     // TODO
     await sleep(1000);
-    await Datex._stop();
+    await runtime._stop();
 });
