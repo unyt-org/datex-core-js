@@ -87,6 +87,7 @@ impl WebSocketClientJSInterface {
                 .lock()
                 .unwrap()
                 .add_socket(Arc::new(Mutex::new(socket)));
+            info!("WebSocket connection opened successfully");
             spawn_with_panic_notify(async move {
                 sender
                     .send(Ok(()))
