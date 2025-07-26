@@ -81,7 +81,7 @@ impl JSRuntime {
         runtime.com_hub.register_default_interface_factories();
         runtime
     }
-    
+
 
     pub fn new(runtime: Runtime) -> JSRuntime {
         let com_hub = JSComHub::new(runtime.clone());
@@ -203,11 +203,11 @@ impl JSRuntime {
         block.to_bytes().unwrap()
     }
 
-    pub async fn start_update_loop(&self) {
+    pub async fn start(&self) {
         self.runtime.start().await;
     }
 
-    pub async fn _stop_update_loop(&self) {
+    pub async fn _stop(&self) {
         RuntimeInternal::stop_update_loop(self.runtime.internal.clone()).await
     }
 

@@ -1,4 +1,5 @@
-import {execute_internal, init_runtime, type JSComHub, type JSMemory, type JSRuntime} from "../datex-core.ts";
+import {create_runtime, execute_internal, type JSMemory, type JSRuntime} from "../datex-core.ts";
+import {ComHub} from "../network/com-hub.ts";
 
 // auto-generated version - do not edit:
 const VERSION: string = "0.0.5";
@@ -13,12 +14,29 @@ export class Runtime {
 
     readonly #runtime: JSRuntime;
     readonly #memory: JSMemory;
-    readonly #comHub: JSComHub;
+    readonly #comHub: ComHub;
 
     constructor(endpoint: string = "@unyt", debug_flags?: DebugFlags) {
-        this.#runtime = init_runtime(endpoint, debug_flags);
+        this.#runtime = create_runtime(endpoint, debug_flags);
         this.#memory = this.#runtime.memory;
-        this.#comHub = this.#runtime.com_hub;
+        this.#comHub = new ComHub(this.#runtime.com_hub);
+    }
+
+    public static async create(
+        endpoint: string = "@unyt",
+        debug_flags?: DebugFlags
+    ): Promise<Runtime> {
+        const runtime = new Runtime(endpoint, debug_flags);
+        await runtime.start();
+        return runtime;
+    }
+
+    public start(): Promise<void> {
+        return this.#runtime.start();
+    }
+
+    public _stop(): Promise<void> {
+        return this.#runtime._stop();
     }
 
     /**
@@ -36,7 +54,7 @@ export class Runtime {
         return this.#memory;
     }
 
-    get comHub(): JSComHub {
+    get comHub(): ComHub {
         return this.#comHub;
     }
 

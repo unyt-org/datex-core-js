@@ -2,18 +2,18 @@ import { assert } from "jsr:@std/assert/assert";
 import { Runtime } from "../../src/runtime/runtime.ts";
 import * as uuid from "jsr:@std/uuid";
 import { isNodeOrBun } from "../is-node.ts";
+import "../../src/network/interface-impls/websocket-client.ts";
+import "../../src/network/interface-impls/websocket-server-deno.ts";
+import {sleep} from "../utils.ts";
 
 Deno.test("add and close interface", async () => {
     const runtime = new Runtime("@unyt");
-    const websocketServerInterface = runtime.comHub.websocket_server;
-    const serverInterfaceUUID = await websocketServerInterface.register();
-    assert(uuid.validate(serverInterfaceUUID), "Invalid UUID");
-    await runtime.comHub.close_interface(
-        serverInterfaceUUID,
-    );
+    const serverInterface = await runtime.comHub.createInterface("websocket-server", {port: 80});
+    assert(uuid.validate(serverInterface.uuid), "Invalid UUID");
+    await serverInterface.close()
 });
 
-Deno.test("connect client and server", async () => {
+Deno.test("connect two runtimes", async () => {
     // FIXME: temporarily disabled because Deno.serve is not yet supported for node.js/dnt
     if (isNodeOrBun) {
         console.warn(
@@ -21,54 +21,43 @@ Deno.test("connect client and server", async () => {
         );
         return;
     }
+
+
     const PORT = 8082;
-    const runtime = new Runtime("@unyt");
-    const websocketServerInterface = runtime.comHub.websocket_server;
-    const serverInterfaceUUID = await websocketServerInterface.register();
-    assert(uuid.validate(serverInterfaceUUID), "Invalid UUID");
-    const sockets: WebSocket[] = [];
-    const server = Deno.serve({
-        port: PORT,
-    }, async (req) => {
-        if (req.headers.get("upgrade") != "websocket") {
-            return new Response(null, { status: 501 });
-        }
-        const { socket, response } = Deno.upgradeWebSocket(req);
-        sockets.push(socket);
-        assert(
-            await websocketServerInterface.add_socket(
-                serverInterfaceUUID,
-                socket,
-            ),
-            "Failed to add websocket to server interface",
+    const runtimeA = new Runtime("@test_a");
+    const serverInterface = await runtimeA.comHub.createInterface("websocket-server", { port: PORT });
+
+    const runtimeB = new Runtime("@test_b");
+    const clientInterface = await runtimeB.comHub.createInterface("websocket-client", { address: `ws://localhost:${PORT}` });
+
+    await serverInterface.close();
+    await clientInterface.close();
+})
+
+Deno.test("send data between two runtimes", async () => {
+    // FIXME: temporarily disabled because Deno.serve is not yet supported for node.js/dnt
+    if (isNodeOrBun) {
+        console.warn(
+            "Crypto tests are currently disabled in Node.js or Bun environments.",
         );
-        return response;
-    });
+        return;
+    }
 
-    // add client
-    const client1UUID = await runtime.comHub.websocket_client.register(
-        `ws://localhost:${PORT}`,
-    );
-    assert(uuid.validate(client1UUID), "Invalid UUID");
+    const PORT = 8082;
+    const runtimeA = await Runtime.create("@test_a", {allow_unsigned_blocks: true});
+    const serverInterface = await runtimeA.comHub.createInterface("websocket-server", { port: PORT });
 
-    // add client
-    const client2UUID = await runtime.comHub.websocket_client.register(
-        `ws://localhost:${PORT}`,
-    );
-    assert(uuid.validate(client2UUID), "Invalid UUID");
-    sockets.forEach((socket) => {
-        socket.send(new TextEncoder().encode("Hello to server"));
-    });
+    const runtimeB = await Runtime.create("@test_b", {allow_unsigned_blocks: true});
+    const clientInterface = await runtimeB.comHub.createInterface("websocket-client", { address: `ws://localhost:${PORT}` });
 
-    await new Promise<void>((resolve) =>
-        setTimeout(async () => {
-            assert(
-                await runtime.comHub.close_interface(
-                    serverInterfaceUUID,
-                ),
-            );
-            await server.shutdown();
-            resolve();
-        }, 500)
-    );
-});
+    await sleep(1000);
+
+    const res = await runtimeA.execute("@test_b :: 1 + 2");
+    assert(res === "3", "Expected result from remote execution to be 3");
+
+    await serverInterface.close();
+    await clientInterface.close();
+
+    await runtimeA._stop();
+    await runtimeB._stop();
+})

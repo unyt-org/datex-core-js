@@ -45,6 +45,16 @@ impl SingleSocketProvider for WebSocketClientJSInterface {
 }
 wrap_error_for_js!(JSWebSocketError, datex_core::network::com_interfaces::default_com_interfaces::websocket::websocket_common::WebSocketError);
 use datex_macros::{com_interface, create_opener};
+
+
+
+#[wasm_bindgen(typescript_custom_section)]
+const WEBSOCKET_CLIENT_INTERFACE_SETUP_DATA: &'static str = r#"
+type WebSocketClientInterfaceSetupData = {
+    address: string;
+};
+"#;
+
 #[com_interface]
 impl WebSocketClientJSInterface {
     pub fn new(

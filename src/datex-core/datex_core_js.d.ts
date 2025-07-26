@@ -2,7 +2,7 @@
 // deno-lint-ignore-file
 // deno-fmt-ignore-file
 
-export function init_runtime(endpoint: string, debug_flags: any): JSRuntime;
+export function create_runtime(endpoint: string, debug_flags: any): JSRuntime;
 export function compile(datex_script: string): void;
 /**
  * Executes a Datex script and returns the result as a string.
@@ -14,7 +14,11 @@ export function execute(datex_script: string, formatted: boolean): string;
  */
 export function execute_internal(datex_script: string): boolean;
 
-type InterfaceProperties = {
+type WebSocketServerInterfaceSetupData = {
+    port: number;
+};
+
+type BaseInterfaceSetupData = {
     name?: string;
     interface_type: string;
     channel: string;
@@ -41,6 +45,10 @@ type InterfaceProperties = {
         };
 };
 
+type WebSocketClientInterfaceSetupData = {
+    address: string;
+};
+
 export class BaseJSInterface {
     private constructor();
     free(): void;
@@ -48,6 +56,10 @@ export class BaseJSInterface {
 export class JSComHub {
     private constructor();
     free(): void;
+    websocket_server_interface_add_socket(
+        interface_uuid: string,
+        websocket: WebSocket,
+    ): string;
     base_interface_register_socket(uuid: string, direction: string): string;
     base_interface_receive(
         uuid: string,
@@ -96,8 +108,8 @@ export class JSRuntime {
         body: Uint8Array | null | undefined,
         receivers: string[],
     ): Uint8Array;
-    start_update_loop(): Promise<void>;
-    _stop_update_loop(): Promise<void>;
+    start(): Promise<void>;
+    _stop(): Promise<void>;
     execute(script: string, formatted: boolean): Promise<string>;
     execute_sync(script: string, formatted: boolean): string;
     com_hub: JSComHub;
@@ -130,6 +142,4 @@ export class WebSocketServerRegistry {
     private constructor();
     free(): void;
     close(interface_uuid: string): Promise<any>;
-    register(): Promise<string>;
-    add_socket(interface_uuid: string, websocket: WebSocket): any;
 }

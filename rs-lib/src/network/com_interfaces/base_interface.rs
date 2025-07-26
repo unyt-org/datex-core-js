@@ -11,7 +11,7 @@ use datex_core::{delegate_com_interface_info, network::com_interfaces::{
     socket_provider::MultipleSocketProvider,
 }, set_opener, set_sync_opener, utils::uuid::UUID};
 use datex_core::macros::{com_interface, create_opener};
-use datex_core::network::com_hub::ComHub;
+use datex_core::network::com_hub::{ComHub, ComHubError};
 use datex_core::network::com_interfaces::com_interface::{ComInterfaceError, ComInterfaceFactory, ComInterfaceInfo, ComInterfaceSockets, ComInterfaceUUID};
 use datex_core::network::com_interfaces::com_interface_socket::ComInterfaceSocket;
 use datex_core::network::com_interfaces::default_com_interfaces::base_interface::{BaseInterfaceSetupData, OnSendCallback};
@@ -24,10 +24,18 @@ use wasm_bindgen_futures::JsFuture;
 use web_sys::js_sys::{Function, Promise, Uint8Array};
 use crate::wrap_error_for_js;
 use datex_core::network::com_interfaces::com_interface::ComInterfaceState;
+use datex_core::network::com_interfaces::default_com_interfaces::websocket::websocket_common::WebSocketServerError;
 use crate::network::com_hub::JSComHub;
+use crate::network::com_interfaces::websocket_server_js_interface::JSWebSocketServerError;
 
 // define_registry!(BaseJSInterface);
 wrap_error_for_js!(JsBaseInterfaceError, datex_core::network::com_interfaces::default_com_interfaces::base_interface::BaseInterfaceError);
+
+impl From<ComHubError> for JsBaseInterfaceError {
+    fn from(err: ComHubError) -> Self {
+        BaseInterfaceError::ComHubError(err).into()
+    }
+}
 
 #[wasm_bindgen]
 pub struct BaseJSInterface {
@@ -37,8 +45,8 @@ pub struct BaseJSInterface {
 }
 
 #[wasm_bindgen(typescript_custom_section)]
-const INTERFACE_PROPERTIES: &'static str = r#"
-type InterfaceProperties = {
+const BASE_INTERFACE_SETUP_DATA: &'static str = r#"
+type BaseInterfaceSetupData = {
     name?: string;
     interface_type: string;
     channel: string;
@@ -222,26 +230,16 @@ impl ComInterfaceFactory<BaseInterfaceSetupData> for BaseJSInterface {
 
 #[wasm_bindgen]
 impl JSComHub {
-    fn get_base_interface_for_uuid(&self, uuid: String) -> Result<Rc<RefCell<BaseJSInterface>>, JsBaseInterfaceError> {
-        let base_interface = self
-            .com_hub()
-            .get_interface_by_uuid::<BaseJSInterface>(&ComInterfaceUUID::from_string(uuid));
-        if let Some(base_interface) = base_interface {
-            Ok(base_interface)
-        } else {
-            Err(JsBaseInterfaceError::from(BaseInterfaceError::InterfaceNotFound))
-        }
-    }
     pub fn base_interface_register_socket(&self, uuid: String, direction: String) -> Result<String, JsBaseInterfaceError> {
         let interface_direction = InterfaceDirection::from_str(&direction).map_err(|_| {
             BaseInterfaceError::InvalidInput("Invalid direction".to_string())
         })?;
-        let base_interface = self.get_base_interface_for_uuid(uuid)?;
+        let base_interface = self.get_interface_for_uuid::<BaseJSInterface>(uuid)?;
         Ok(base_interface.borrow_mut().register_new_socket(interface_direction).0.to_string())
     }
 
     pub fn base_interface_receive(&self, uuid: String, socket_uuid: String, data: Vec<u8>) -> Result<(), JsBaseInterfaceError> {
-        let base_interface = self.get_base_interface_for_uuid(uuid)?;
+        let base_interface = self.get_interface_for_uuid::<BaseJSInterface>(uuid)?;
         let socket_uuid = ComInterfaceSocketUUID::from_string(socket_uuid);
         Ok(base_interface
             .borrow_mut()
@@ -253,7 +251,7 @@ impl JSComHub {
         uuid: String,
         socket_uuid: String,
     ) -> Result<(), JsBaseInterfaceError> {
-        let base_interface = self.get_base_interface_for_uuid(uuid)?;
+        let base_interface = self.get_interface_for_uuid::<BaseJSInterface>(uuid)?;
         let socket_uuid =
             ComInterfaceSocketUUID::from_string(socket_uuid);
         if base_interface
@@ -272,7 +270,7 @@ impl JSComHub {
         uuid: String,
         func: Function
     ) -> Result<(), JsBaseInterfaceError> {
-        let base_interface = self.get_base_interface_for_uuid(uuid)?;
+        let base_interface = self.get_interface_for_uuid::<BaseJSInterface>(uuid)?;
         let callback = move | block: &[u8], uuid: ComInterfaceSocketUUID| -> Pin<Box<dyn Future<Output = bool>>> {
             let block = Uint8Array::from(block);
             let socket_uuid = JsValue::from(uuid.0.to_string());
@@ -299,7 +297,7 @@ impl JSComHub {
         socket_uuid: String,
         data: &[u8],
     ) -> Result<bool, JsBaseInterfaceError> {
-        let base_interface = self.get_base_interface_for_uuid(uuid)?;
+        let base_interface = self.get_interface_for_uuid::<BaseJSInterface>(uuid)?;
         Ok(
             base_interface
             .borrow_mut()

@@ -7,7 +7,7 @@ use super::com_interfaces::webrtc_js_interface::WebRTCRegistry;
 use super::com_interfaces::websocket_server_js_interface::WebSocketServerRegistry;
 
 use datex_core::global::dxb_block::IncomingSection;
-use datex_core::network::com_hub::InterfacePriority;
+use datex_core::network::com_hub::{ComHubError, InterfacePriority};
 use datex_core::network::com_interfaces::com_interface::{ComInterface, ComInterfaceFactory, ComInterfaceUUID};
 use datex_core::network::com_interfaces::com_interface_socket::ComInterfaceSocketUUID;
 use datex_core::stdlib::{cell::RefCell, rc::Rc};
@@ -38,6 +38,17 @@ impl JSComHub {
 
     pub fn com_hub(&self) -> &ComHub {
         self.runtime.com_hub()
+    }
+
+    pub fn get_interface_for_uuid<T: ComInterface>(&self, uuid: String) -> Result<Rc<RefCell<T>>, ComHubError> {
+        let base_interface = self
+            .com_hub()
+            .get_interface_by_uuid::<T>(&ComInterfaceUUID::from_string(uuid));
+        if let Some(base_interface) = base_interface {
+            Ok(base_interface)
+        } else {
+            Err(ComHubError::InterfaceDoesNotExist)
+        }
     }
 }
 
@@ -96,7 +107,7 @@ impl JSComHub {
             }
         })
     }
-    
+
     pub fn close_interface(&self, interface_uuid: String) -> Promise {
         let interface_uuid =
             ComInterfaceUUID(UUID::from_string(interface_uuid));

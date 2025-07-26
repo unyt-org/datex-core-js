@@ -1,15 +1,16 @@
 import { assert } from "jsr:@std/assert/assert";
 import { Runtime } from "../../src/runtime/runtime.ts";
 import * as uuid from "jsr:@std/uuid";
-import {
-    BaseJSInterface,
-    type InterfaceProperties,
-} from "../../src/datex-core.ts";
 import { sleep } from "../utils.ts";
 import { assertFalse } from "jsr:@std/assert/false";
 import { assertEquals } from "jsr:@std/assert/equals";
 import { assertThrows } from "jsr:@std/assert/throws";
-import { isNodeOrBun } from "../is-node.ts";const config: InterfaceProperties = {
+import { isNodeOrBun } from "../is-node.ts";
+import type {BaseInterfaceSetupData} from "../../src/datex-core/datex_core_js.d.ts";
+import "../../src/network/interface-impls/base.ts"
+
+
+const config: BaseInterfaceSetupData = {
     name: "base",
     interface_type: "base",
     channel: "test",
@@ -45,27 +46,26 @@ Deno.test("custom properties with reconnect", async () => {
     const runtime = new Runtime("@unyt");
 
 
-    const baseInterfaceUUID = await runtime.comHub.create_interface("base", JSON.stringify(config));
-    assert(uuid.validate(baseInterfaceUUID), "Invalid UUID");
+    const baseInterface = await runtime.comHub.createInterface("base", config);
+    assert(uuid.validate(baseInterface.uuid), "Invalid UUID");
 });
 
 Deno.test("add interface and sockets", async () => {
     const runtime = new Runtime("@unyt");
-    const baseInterfaceUUID = await runtime.comHub.create_interface("base", JSON.stringify(config));
-    assert(uuid.validate(baseInterfaceUUID), "Invalid UUID");
+    const baseInterface = await runtime.comHub.createInterface("base", config);
+    assert(uuid.validate(baseInterface.uuid), "Invalid UUID");
+    let impl = baseInterface.impl;
 
-    const socketA = runtime.comHub.base_interface_register_socket(baseInterfaceUUID, "InOut");
-    const socketB = runtime.comHub.base_interface_register_socket(baseInterfaceUUID, "InOut");
+    const socketA = baseInterface.impl.registerSocket("InOut");
+    const socketB = baseInterface.impl.registerSocket("InOut");
     assert(uuid.validate(socketA), "Invalid UUID");
     assert(uuid.validate(socketB), "Invalid UUID");
 
-    runtime.comHub.base_interface_receive(
-        baseInterfaceUUID,
+    baseInterface.impl.receive(
         socketA,
         new Uint8Array([0x01, 0x02, 0x03, 0x04]),
     );
-    runtime.comHub.base_interface_receive(
-        baseInterfaceUUID,
+    baseInterface.impl.receive(
         socketB,
         new Uint8Array([0x05, 0x06, 0x07, 0x08]),
     );
@@ -74,30 +74,28 @@ Deno.test("add interface and sockets", async () => {
 Deno.test("test receive and send", async () => {
     const queue: [data: Uint8Array, socket: string][] = [];
     const runtime = new Runtime("@unyt");
-    const baseInterfaceUUID = await runtime.comHub.create_interface("base", JSON.stringify(config));
+    const baseInterface = await runtime.comHub.createInterface("base", config);
 
     assertThrows(
-        () => runtime.comHub.base_interface_destroy_socket(baseInterfaceUUID, "invalid socket"),
+        () => baseInterface.impl.destroySocket("invalid socket"),
         "Destroying invalid socket should throw",
     );
 
-    assert(uuid.validate(baseInterfaceUUID), "Invalid UUID");
-    const socket = runtime.comHub.base_interface_register_socket(baseInterfaceUUID, "InOut");
+    assert(uuid.validate(baseInterface.uuid), "Invalid UUID");
+    const socket = baseInterface.impl.registerSocket("InOut");
     assert(uuid.validate(socket), "Invalid UUID");
 
     // If the callback is not set, the send block
     // should return false
     assertFalse(
-        await runtime.comHub.base_interface_test_send_block(
-            baseInterfaceUUID,
+        await baseInterface.impl.testSendBlock(
             socket,
             new Uint8Array([0]),
         ),
         "Callback not set should return false",
     );
 
-    runtime.comHub.base_interface_on_send(
-        baseInterfaceUUID,
+    baseInterface.impl.onSend(
         async (data: Uint8Array, receiver_socket_uuid: string) => {
             queue.push([data, receiver_socket_uuid]);
             await sleep(1);
@@ -108,8 +106,7 @@ Deno.test("test receive and send", async () => {
     // Invalid sockets should not trigger the on_send callback
     // and should return false
     assertFalse(
-        await runtime.comHub.base_interface_test_send_block(
-            baseInterfaceUUID,
+        await baseInterface.impl.testSendBlock(
             "invalid socket",
             new Uint8Array([0]),
         ),
@@ -118,8 +115,7 @@ Deno.test("test receive and send", async () => {
 
     const data = new Uint8Array([1, 2, 3, 4, 5, 6]);
     assert(
-        await runtime.comHub.base_interface_test_send_block(
-            baseInterfaceUUID,
+        await baseInterface.impl.testSendBlock(
             socket,
             data,
         ),
@@ -132,10 +128,10 @@ Deno.test("test receive and send", async () => {
         [[data, socket]],
     );
 
-    runtime.comHub.base_interface_destroy_socket(baseInterfaceUUID, socket);
+    baseInterface.impl.destroySocket(socket);
 
     assertThrows(
-        () => runtime.comHub.base_interface_destroy_socket(baseInterfaceUUID, socket),
+        () => baseInterface.impl.destroySocket(socket),
         "Destroying socket twice should throw",
     );
 });

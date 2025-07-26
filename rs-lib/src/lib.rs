@@ -43,7 +43,7 @@ extern "C" {
 
 // export compiler/runtime functions to JavaScript
 #[wasm_bindgen]
-pub fn init_runtime(endpoint: &str, debug_flags: JsValue) -> JSRuntime {
+pub fn create_runtime(endpoint: &str, debug_flags: JsValue) -> JSRuntime {
     let debug_flags: Option<JSDebugFlags> =
         from_value(debug_flags).unwrap_or_default();
     let endpoint = Endpoint::new(endpoint);
