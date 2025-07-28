@@ -81,11 +81,11 @@ export class ComHub {
         return new ComInterface(uuid, impl, this.#jsComHub);
     }
 
-    public _update() {
+    public _update(): Promise<void> {
         return this.#jsComHub.update();
     }
 
-    public _drain_incoming_blocks() {
+    public _drain_incoming_blocks(): Uint8Array<ArrayBufferLike>[] {
         return this.#jsComHub._drain_incoming_blocks();
     }
 }
