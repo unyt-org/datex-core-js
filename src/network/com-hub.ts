@@ -35,7 +35,7 @@ export class ComHub {
         setupData: T extends typeof ComInterfaceImpl<infer P> ? P : never,
     ): Promise<ComInterface<InstanceType<T>>>;
     async createInterface<
-        T extends ComInterfaceImpl<unknown>
+        T extends ComInterfaceImpl<unknown>,
     >(
         interfaceType: string,
         setupData: T extends ComInterfaceImpl<infer P> ? P : never,
