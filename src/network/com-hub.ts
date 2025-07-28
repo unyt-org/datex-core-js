@@ -1,12 +1,10 @@
 import type {
-    BaseInterfaceSetupData,
     JSComHub,
-    WebSocketClientInterfaceSetupData,
 } from "../datex-core/datex_core_js.d.ts";
-import { ComInterface, ComInterfaceImpl } from "./com-interface.ts";
-import { WebSocketClientInterfaceImpl } from "./interface-impls/websocket-client.ts";
+import { ComInterface, type ComInterfaceImpl } from "./com-interface.ts";
 
 declare global {
+    // deno-lint-ignore no-empty-interface
     interface GlobalInterfaceImpls {}
 }
 

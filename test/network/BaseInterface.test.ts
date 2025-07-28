@@ -52,7 +52,6 @@ Deno.test("add interface and sockets", async () => {
     const runtime = new Runtime({ endpoint: "@unyt" });
     const baseInterface = await runtime.comHub.createInterface("base", config);
     assert(uuid.validate(baseInterface.uuid), "Invalid UUID");
-    let impl = baseInterface.impl;
 
     const socketA = baseInterface.impl.registerSocket("InOut");
     const socketB = baseInterface.impl.registerSocket("InOut");
