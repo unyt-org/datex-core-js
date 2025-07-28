@@ -8,6 +8,7 @@ import { assertThrows } from "jsr:@std/assert/throws";
 import { isNodeOrBun } from "../is-node.ts";
 import type { BaseInterfaceSetupData } from "../../src/datex-core/datex_core_js.d.ts";
 import "../../src/network/interface-impls/base.ts";
+import {BaseInterfaceImpl} from "../../src/network/interface-impls/base.ts";
 
 const config: BaseInterfaceSetupData = {
     name: "base",
@@ -44,13 +45,13 @@ const config: BaseInterfaceSetupData = {
 Deno.test("custom properties with reconnect", async () => {
     const runtime = new Runtime({ endpoint: "@unyt" });
 
-    const baseInterface = await runtime.comHub.createInterface("base", config);
+    const baseInterface = await runtime.comHub.createInterface<BaseInterfaceImpl>("base", config);
     assert(uuid.validate(baseInterface.uuid), "Invalid UUID");
 });
 
 Deno.test("add interface and sockets", async () => {
     const runtime = new Runtime({ endpoint: "@unyt" });
-    const baseInterface = await runtime.comHub.createInterface("base", config);
+    const baseInterface = await runtime.comHub.createInterface<BaseInterfaceImpl>("base", config);
     assert(uuid.validate(baseInterface.uuid), "Invalid UUID");
 
     const socketA = baseInterface.impl.registerSocket("InOut");
@@ -71,7 +72,7 @@ Deno.test("add interface and sockets", async () => {
 Deno.test("test receive and send", async () => {
     const queue: [data: Uint8Array, socket: string][] = [];
     const runtime = new Runtime({ endpoint: "@unyt" });
-    const baseInterface = await runtime.comHub.createInterface("base", config);
+    const baseInterface = await runtime.comHub.createInterface<BaseInterfaceImpl>("base", config);
 
     assertThrows(
         () => baseInterface.impl.destroySocket("invalid socket"),

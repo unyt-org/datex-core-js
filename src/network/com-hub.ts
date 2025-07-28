@@ -1,19 +1,14 @@
 import type { JSComHub } from "../datex-core/datex_core_js.d.ts";
 import { ComInterface, type ComInterfaceImpl } from "./com-interface.ts";
 
-declare global {
-    // deno-lint-ignore no-empty-interface
-    interface GlobalInterfaceImpls {}
-}
-
 export class ComHub {
     static #interfaceImpls = new Map<
-        keyof GlobalInterfaceImpls,
+        string,
         typeof ComInterfaceImpl<unknown>
     >();
     static #interfaceImplsByClass = new Map<
         typeof ComInterfaceImpl<unknown>,
-        keyof GlobalInterfaceImpls
+        string
     >();
 
     readonly #jsComHub: JSComHub;
@@ -22,9 +17,9 @@ export class ComHub {
         this.#jsComHub = jsComHub;
     }
 
-    static registerInterfaceImpl<N extends keyof GlobalInterfaceImpls>(
+    static registerInterfaceImpl<N extends string>(
         interfaceType: N,
-        impl: GlobalInterfaceImpls[N] & typeof ComInterfaceImpl<unknown>,
+        impl: typeof ComInterfaceImpl<unknown>,
     ) {
         if (this.#interfaceImpls.has(interfaceType)) {
             throw new Error(
@@ -40,14 +35,13 @@ export class ComHub {
         setupData: T extends typeof ComInterfaceImpl<infer P> ? P : never,
     ): Promise<ComInterface<InstanceType<T>>>;
     async createInterface<
-        N extends keyof GlobalInterfaceImpls,
-        T = GlobalInterfaceImpls[N],
+        T extends ComInterfaceImpl<unknown>
     >(
-        interfaceType: N,
-        setupData: T extends typeof ComInterfaceImpl<infer P> ? P : never,
-    ): Promise<ComInterface<InstanceType<GlobalInterfaceImpls[N]>>>;
+        interfaceType: string,
+        setupData: T extends ComInterfaceImpl<infer P> ? P : never,
+    ): Promise<ComInterface<T>>;
     async createInterface(
-        interfaceType: keyof GlobalInterfaceImpls | typeof ComInterfaceImpl,
+        interfaceType: string | typeof ComInterfaceImpl,
         setupData: unknown,
     ): Promise<ComInterface<ComInterfaceImpl<unknown>>> {
         const type = typeof interfaceType === "string"

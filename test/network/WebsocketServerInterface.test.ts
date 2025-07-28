@@ -5,6 +5,8 @@ import { isNodeOrBun } from "../is-node.ts";
 import "../../src/network/interface-impls/websocket-client.ts";
 import "../../src/network/interface-impls/websocket-server-deno.ts";
 import { sleep } from "../utils.ts";
+import {WebSockerServerDenoInterfaceImpl} from "../../src/network/interface-impls/websocket-server-deno.ts";
+import {WebSocketClientInterfaceImpl} from "../../src/network/interface-impls/websocket-client.ts";
 
 Deno.test("add and close interface", async () => {
     const runtime = new Runtime({ endpoint: "@unyt" });
@@ -27,13 +29,13 @@ Deno.test("connect two runtimes", async () => {
 
     const PORT = 8082;
     const runtimeA = new Runtime({ endpoint: "@test_a" });
-    const serverInterface = await runtimeA.comHub.createInterface(
+    const serverInterface = await runtimeA.comHub.createInterface<WebSockerServerDenoInterfaceImpl>(
         "websocket-server",
         { port: PORT },
     );
 
     const runtimeB = new Runtime({ endpoint: "@test_b" });
-    const clientInterface = await runtimeB.comHub.createInterface(
+    const clientInterface = await runtimeB.comHub.createInterface<WebSocketClientInterfaceImpl>(
         "websocket-client",
         { address: `ws://localhost:${PORT}` },
     );
