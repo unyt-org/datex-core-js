@@ -1,6 +1,11 @@
-import {create_runtime, execute_internal, type JSMemory, type JSRuntime} from "../datex-core.ts";
-import {ComHub} from "../network/com-hub.ts";
-import {ComInterfaceImpl} from "../network/com-interface.ts";
+import {
+    create_runtime,
+    execute_internal,
+    type JSMemory,
+    type JSRuntime,
+} from "../datex-core.ts";
+import { ComHub } from "../network/com-hub.ts";
+import { ComInterfaceImpl } from "../network/com-interface.ts";
 
 // auto-generated version - do not edit:
 const VERSION: string = "0.0.5";
@@ -13,9 +18,10 @@ interface DebugFlags {
 export type RuntimeConfig = {
     endpoint?: string;
     interfaces?: {
-        [key in keyof GlobalInterfaceImpls]?: GlobalInterfaceImpls[key] extends typeof ComInterfaceImpl<infer P> ? [key, P] : never;
-    }[keyof GlobalInterfaceImpls][]
-}
+        [key in keyof GlobalInterfaceImpls]?: GlobalInterfaceImpls[key] extends
+            typeof ComInterfaceImpl<infer P> ? [key, P] : never;
+    }[keyof GlobalInterfaceImpls][];
+};
 
 export class Runtime {
     public readonly js_version = VERSION;
@@ -32,7 +38,7 @@ export class Runtime {
 
     public static async create(
         config: RuntimeConfig,
-        debug_flags?: DebugFlags
+        debug_flags?: DebugFlags,
     ): Promise<Runtime> {
         const runtime = new Runtime(config, debug_flags);
         await runtime.start();
@@ -73,11 +79,17 @@ export class Runtime {
         return this.#runtime;
     }
 
-    public execute(datex_script: string, formatted: boolean = false): Promise<string> {
+    public execute(
+        datex_script: string,
+        formatted: boolean = false,
+    ): Promise<string> {
         return this.#runtime.execute(datex_script, formatted);
     }
 
-    public execute_sync(datex_script: string, formatted: boolean = false): string {
+    public execute_sync(
+        datex_script: string,
+        formatted: boolean = false,
+    ): string {
         return this.#runtime.execute_sync(datex_script, formatted);
     }
 

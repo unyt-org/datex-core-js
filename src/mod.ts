@@ -9,4 +9,4 @@ import { Runtime } from "./runtime/runtime.ts";
 /**
  * The default instance of the Datex runtime.
  */
-export const Datex: Runtime = await Runtime.create({endpoint: "@unyt"});
+export const Datex: Runtime = await Runtime.create({ endpoint: "@unyt" });

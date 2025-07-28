@@ -7,25 +7,34 @@ import { isNodeOrBun } from "../is-node.ts";
 import "../../src/network/interface-impls/websocket-client.ts";
 
 Deno.test("invalid url construct", async () => {
-    const runtime = new Runtime({endpoint: "@unyt"});
+    const runtime = new Runtime({ endpoint: "@unyt" });
     await assertRejects(
-        async () => await runtime.comHub.createInterface("websocket-client", {address: 'invalid url'}),
+        async () =>
+            await runtime.comHub.createInterface("websocket-client", {
+                address: "invalid url",
+            }),
         "InvalidURL",
     );
 });
 
 Deno.test("invalid url scheme construct", async () => {
-    const runtime = new Runtime({endpoint: "@unyt"});
+    const runtime = new Runtime({ endpoint: "@unyt" });
     await assertRejects(
-        async () => await runtime.comHub.createInterface("websocket-client", {address: 'ftp://invalid'}),
+        async () =>
+            await runtime.comHub.createInterface("websocket-client", {
+                address: "ftp://invalid",
+            }),
         "InvalidURL",
     );
 });
 
 Deno.test("websocket connect fail", async () => {
-    const runtime = new Runtime({endpoint: "@unyt"});
+    const runtime = new Runtime({ endpoint: "@unyt" });
     await assertRejects(
-        async () => await runtime.comHub.createInterface("websocket-client", {address: 'ws://invalid'}),
+        async () =>
+            await runtime.comHub.createInterface("websocket-client", {
+                address: "ws://invalid",
+            }),
         "Failed to connect to WebSocket",
     );
 });
@@ -40,9 +49,12 @@ Deno.test("websocket basic connect", async () => {
     }
     const port = 8484;
     const mockupServer = createMockupServer(port);
-    const runtime = new Runtime({endpoint: "@unyt"});
+    const runtime = new Runtime({ endpoint: "@unyt" });
     await new Promise((resolve) => setTimeout(resolve, 1000));
-    const connection = await runtime.comHub.createInterface("websocket-client", {address: `ws://localhost:${port}/`});
+    const connection = await runtime.comHub.createInterface(
+        "websocket-client",
+        { address: `ws://localhost:${port}/` },
+    );
     await using _ = await mockupServer;
     assert(uuid.validate(connection.uuid), "Invalid UUID");
 });
@@ -58,8 +70,12 @@ Deno.test("websocket block retrieval", async () => {
     const port = 8485;
     const mockupServer = createMockupServer(port);
 
-    const runtime = new Runtime({endpoint: "@unyt"}, { allow_unsigned_blocks: true });
-    runtime.comHub.createInterface("websocket-client", {address: `ws://localhost:${port}/`})
+    const runtime = new Runtime({ endpoint: "@unyt" }, {
+        allow_unsigned_blocks: true,
+    });
+    runtime.comHub.createInterface("websocket-client", {
+        address: `ws://localhost:${port}/`,
+    })
         .then(() => console.info("Connected"))
         .catch((err) => console.error("Error:", err));
     await using server = await mockupServer;
