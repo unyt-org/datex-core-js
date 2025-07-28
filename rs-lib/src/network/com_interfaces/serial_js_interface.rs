@@ -6,7 +6,7 @@ use std::sync::Mutex;
 use std::time::Duration; // FIXME no-std
 
 use datex_core::{ delegate_com_interface_info, set_opener};
-use datex_core::network::com_interfaces::com_interface::{ComInterface, ComInterfaceError, ComInterfaceFactory, ComInterfaceInfo, ComInterfaceUUID};
+use datex_core::network::com_interfaces::com_interface::{ComInterface, ComInterfaceError, ComInterfaceFactory, ComInterfaceInfo};
 use datex_core::network::com_interfaces::com_interface_properties::InterfaceProperties;
 use datex_core::network::com_interfaces::com_interface_socket::ComInterfaceSocketUUID;
 use datex_core::network::com_interfaces::default_com_interfaces::serial::serial_common::{SerialError, SerialInterfaceSetupData};
@@ -14,13 +14,10 @@ use datex_core::stdlib::sync::Arc;
 
 use datex_core::network::com_interfaces::com_interface::ComInterfaceState;
 
-use crate::{define_registry, wrap_error_for_js};
-use datex_core::network::com_hub::InterfacePriority;
-use datex_core::network::com_interfaces::default_com_interfaces::websocket::websocket_common::WebSocketClientInterfaceSetupData;
+use crate::wrap_error_for_js;
 use datex_core::task::spawn_with_panic_notify;
 use log::{debug, error};
-use wasm_bindgen::prelude::wasm_bindgen;
-use wasm_bindgen::{JsCast, JsError, JsValue};
+use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::JsFuture;
 use web_sys::js_sys::Uint8Array;
 use web_sys::SerialPort;
@@ -39,7 +36,6 @@ pub struct SerialJSInterface {
 wrap_error_for_js!(JsSerialError, datex_core::network::com_interfaces::default_com_interfaces::serial::serial_common::SerialError);
 
 use datex_macros::{com_interface, create_opener};
-use crate::network::com_interfaces::websocket_client_js_interface::WebSocketClientJSInterface;
 
 #[com_interface]
 impl SerialJSInterface {

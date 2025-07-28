@@ -19,9 +19,8 @@ use datex_core::network::com_interfaces::socket_provider::MultipleSocketProvider
 use datex_core::stdlib::sync::Arc;
 
 use crate::{define_registry, wrap_error_for_js};
-use datex_core::network::com_hub::{ComHubError, InterfacePriority};
+use datex_core::network::com_hub::ComHubError;
 use datex_core::network::com_interfaces::com_interface::ComInterfaceState;
-use datex_core::utils::uuid::UUID;
 use log::{debug, error, info};
 use wasm_bindgen::prelude::wasm_bindgen;
 use wasm_bindgen::{prelude::Closure, JsCast};
@@ -49,7 +48,6 @@ impl From<ComHubError> for JSWebSocketServerError {
 
 use datex_macros::{com_interface, create_opener};
 use crate::network::com_hub::JSComHub;
-use crate::network::com_interfaces::base_interface::JsBaseInterfaceError;
 
 #[wasm_bindgen(typescript_custom_section)]
 const WEBSOCKET_SERVER_INTERFACE_SETUP_DATA: &'static str = r#"

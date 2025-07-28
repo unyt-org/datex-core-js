@@ -1,4 +1,4 @@
-use std::{cell::RefCell, future::Future, pin::Pin, rc::Rc, str::FromStr};
+use std::{future::Future, pin::Pin, str::FromStr};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use datex_core::{delegate_com_interface_info, network::com_interfaces::{
@@ -9,24 +9,20 @@ use datex_core::{delegate_com_interface_info, network::com_interfaces::{
         BaseInterfaceError,
     },
     socket_provider::MultipleSocketProvider,
-}, set_opener, set_sync_opener, utils::uuid::UUID};
+}, set_sync_opener, utils::uuid::UUID};
 use datex_core::macros::{com_interface, create_opener};
-use datex_core::network::com_hub::{ComHub, ComHubError};
-use datex_core::network::com_interfaces::com_interface::{ComInterfaceError, ComInterfaceFactory, ComInterfaceInfo, ComInterfaceSockets, ComInterfaceUUID};
+use datex_core::network::com_hub::ComHubError;
+use datex_core::network::com_interfaces::com_interface::{ComInterfaceError, ComInterfaceFactory, ComInterfaceInfo, ComInterfaceSockets};
 use datex_core::network::com_interfaces::com_interface_socket::ComInterfaceSocket;
 use datex_core::network::com_interfaces::default_com_interfaces::base_interface::{BaseInterfaceSetupData, OnSendCallback};
 use datex_core::values::core_values::endpoint::Endpoint;
-use js_sys::Error;
 use log::error;
-use serde::{Deserialize, Serialize};
-use wasm_bindgen::{prelude::wasm_bindgen, JsCast, JsValue};
+use wasm_bindgen::{prelude::wasm_bindgen, JsValue};
 use wasm_bindgen_futures::JsFuture;
 use web_sys::js_sys::{Function, Promise, Uint8Array};
 use crate::wrap_error_for_js;
 use datex_core::network::com_interfaces::com_interface::ComInterfaceState;
-use datex_core::network::com_interfaces::default_com_interfaces::websocket::websocket_common::WebSocketServerError;
 use crate::network::com_hub::JSComHub;
-use crate::network::com_interfaces::websocket_server_js_interface::JSWebSocketServerError;
 
 // define_registry!(BaseJSInterface);
 wrap_error_for_js!(JsBaseInterfaceError, datex_core::network::com_interfaces::default_com_interfaces::base_interface::BaseInterfaceError);

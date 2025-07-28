@@ -1,12 +1,10 @@
-use std::cell::RefCell;
 use std::future::Future;
 use std::pin::Pin;
-use std::rc::Rc;
 use std::sync::Mutex;
 use std::time::Duration; // FIXME no-std
 
 use datex_core::{delegate_com_interface_info, set_opener};
-use datex_core::network::com_interfaces::com_interface::{ComInterface, ComInterfaceError, ComInterfaceFactory, ComInterfaceInfo, ComInterfaceSockets, ComInterfaceUUID};
+use datex_core::network::com_interfaces::com_interface::{ComInterface, ComInterfaceError, ComInterfaceFactory, ComInterfaceInfo, ComInterfaceSockets};
 use datex_core::network::com_interfaces::com_interface_properties::{
     InterfaceDirection, InterfaceProperties,
 };
@@ -20,8 +18,7 @@ use datex_core::stdlib::sync::Arc;
 use datex_core::network::com_interfaces::com_interface::ComInterfaceState;
 use datex_core::network::com_interfaces::default_com_interfaces::websocket::websocket_common::parse_url;
 
-use crate::{define_registry, wrap_error_for_js};
-use datex_core::network::com_hub::InterfacePriority;
+use crate::wrap_error_for_js;
 use datex_core::task::spawn_with_panic_notify;
 use futures::channel::mpsc;
 use futures::{SinkExt, StreamExt};
@@ -29,7 +26,6 @@ use log::{error, info, warn};
 use url::Url;
 use wasm_bindgen::prelude::wasm_bindgen;
 use wasm_bindgen::{prelude::Closure, JsCast};
-use wasm_bindgen::{JsError, JsValue};
 use web_sys::{js_sys, ErrorEvent, MessageEvent};
 
 pub struct WebSocketClientJSInterface {

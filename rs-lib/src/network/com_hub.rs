@@ -1,10 +1,5 @@
-use std::any::Any;
 #[cfg(feature = "wasm_matchbox")]
 use super::com_interfaces::matchbox_js_interface::MatchboxClientRegistry;
-#[cfg(feature = "wasm_webrtc")]
-use super::com_interfaces::webrtc_js_interface::WebRTCRegistry;
-#[cfg(feature = "wasm_websocket_server")]
-use super::com_interfaces::websocket_server_js_interface::WebSocketServerRegistry;
 
 use datex_core::global::dxb_block::IncomingSection;
 use datex_core::network::com_hub::{ComHubError, InterfacePriority};
@@ -12,9 +7,7 @@ use datex_core::network::com_interfaces::com_interface::{ComInterface, ComInterf
 use datex_core::network::com_interfaces::com_interface_socket::ComInterfaceSocketUUID;
 use datex_core::stdlib::{cell::RefCell, rc::Rc};
 use datex_core::{network::com_hub::ComHub, utils::uuid::UUID};
-use datex_core::runtime::execution::execute_dxb_sync;
 use datex_core::runtime::Runtime;
-use datex_core::values::serde::deserializer::from_value_container;
 use log::error;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::future_to_promise;
