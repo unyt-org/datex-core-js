@@ -1,6 +1,4 @@
-import type {
-    JSComHub,
-} from "../datex-core/datex_core_js.d.ts";
+import type { JSComHub } from "../datex-core/datex_core_js.d.ts";
 import { ComInterface, type ComInterfaceImpl } from "./com-interface.ts";
 
 declare global {
