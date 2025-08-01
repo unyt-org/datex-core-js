@@ -5,7 +5,6 @@ import {
     type JSRuntime,
 } from "../datex-core.ts";
 import { ComHub } from "../network/com-hub.ts";
-import type { ComInterfaceImpl } from "../network/com-interface.ts";
 
 // auto-generated version - do not edit:
 const VERSION: string = "0.0.5";
@@ -17,7 +16,7 @@ interface DebugFlags {
 
 export type RuntimeConfig = {
     endpoint?: string;
-    interfaces?: {type: string, config: unknown}[];
+    interfaces?: { type: string; config: unknown }[];
 };
 
 export class Runtime {
