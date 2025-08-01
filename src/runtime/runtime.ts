@@ -17,6 +17,7 @@ interface DebugFlags {
 export type RuntimeConfig = {
     endpoint?: string;
     interfaces?: { type: string; config: unknown }[];
+    debug?: boolean;
 };
 
 export class Runtime {

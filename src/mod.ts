@@ -14,6 +14,7 @@ const defaultConfig = {
         type: "websocket-client",
         config: { address: "wss://example.unyt.land" },
     }],
+    debug: false, // set to true to show info/debug messages
 };
 
 /**
