@@ -115,11 +115,6 @@ impl WebSocketServerJSInterface {
             if let Ok(abuf) = e.data().dyn_into::<js_sys::ArrayBuffer>() {
                 let array = js_sys::Uint8Array::new(&abuf);
                 receive_queue.lock().unwrap().extend(array.to_vec());
-                info!(
-                    "message event, received: {:?} bytes ({:?})",
-                    array.to_vec().len(),
-                    receive_queue
-                );
             } else {
                 info!("message event, received Unknown: {:?}", e.data());
             }

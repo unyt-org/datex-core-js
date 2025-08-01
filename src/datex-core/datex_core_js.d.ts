@@ -72,6 +72,8 @@ export class JSComHub {
         socket_uuid: string,
     ): Promise<boolean>;
     _drain_incoming_blocks(): Uint8Array[];
+    get_metadata_string(): string;
+    get_trace_string(endpoint: string): Promise<string | undefined>;
     base_interface_register_socket(uuid: string, direction: string): string;
     base_interface_receive(
         uuid: string,

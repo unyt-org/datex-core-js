@@ -10,10 +10,24 @@ import { Runtime } from "./runtime/runtime.ts";
  * The default configuration for the Datex runtime.
  */
 const defaultConfig = {
-    interfaces: [{type: "websocket-client", config: {address: "wss://example.unyt.land"}}]
-}
+    interfaces: [{
+        type: "websocket-client",
+        config: { address: "wss://example.unyt.land" },
+    }],
+};
 
 /**
  * The default instance of the Datex runtime.
  */
-export const Datex: Runtime = await Runtime.create(defaultConfig);
+export const Datex: Runtime = await Runtime.create(defaultConfig, {
+    allow_unsigned_blocks: true,
+});
+
+try {
+    console.log(
+        "@example responded with:",
+        await Datex.execute("@example :: 'Hello, World!'"),
+    );
+} catch (error) {
+    console.error("Could not reach @example", error);
+}

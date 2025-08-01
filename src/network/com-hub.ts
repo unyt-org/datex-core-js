@@ -80,4 +80,25 @@ export class ComHub {
     public _drain_incoming_blocks(): Uint8Array<ArrayBufferLike>[] {
         return this.#jsComHub._drain_incoming_blocks();
     }
+
+    /**
+     * Prints the metadata of the ComHub. Only available in debug builds.
+     */
+    public printMetadata(): void {
+        const metadata = this.#jsComHub.get_metadata_string();
+        console.log(metadata);
+    }
+
+    /**
+     * Prints the trace for a specific endpoint. Only available in debug builds.
+     * @param endpoint The endpoint for which to print the trace.
+     */
+    public async printTrace(endpoint: string): Promise<void> {
+        const trace = await this.#jsComHub.get_trace_string(endpoint);
+        if (trace === undefined) {
+            console.warn(`No trace available for endpoint: ${endpoint}`);
+            return;
+        }
+        console.log(trace);
+    }
 }

@@ -12,6 +12,9 @@ use log::error;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::future_to_promise;
 use web_sys::js_sys::{self, Promise};
+use std::str::FromStr;
+use datex_core::values::core_values::endpoint::Endpoint;
+
 #[wasm_bindgen]
 #[derive(Clone)]
 pub struct JSComHub {
@@ -177,5 +180,24 @@ impl JSComHub {
                 entry
             })
             .collect::<Vec<_>>()
+    }
+
+    #[cfg(feature = "debug")]
+    pub fn get_metadata_string(&self) -> String {
+        let metadata = self.com_hub().get_metadata();
+        metadata.to_string()
+    }
+
+    #[cfg(feature = "debug")]
+    pub async fn get_trace_string(&self, endpoint: String) -> Option<String> {
+        let endpoint = Endpoint::from_str(&endpoint);
+        if let Ok(endpoint) = endpoint {
+            let trace = self.com_hub().record_trace(endpoint).await;
+            trace.map(|t| t.to_string())
+        }
+        else {
+            println!("Invalid endpoint: {}", endpoint.unwrap_err());
+            return None;
+        }        
     }
 }
