@@ -17,10 +17,7 @@ interface DebugFlags {
 
 export type RuntimeConfig = {
     endpoint?: string;
-    interfaces?: {
-        [key in keyof GlobalInterfaceImpls]?: GlobalInterfaceImpls[key] extends
-            typeof ComInterfaceImpl<infer P> ? [key, P] : never;
-    }[keyof GlobalInterfaceImpls][];
+    interfaces?: {type: string, config: unknown}[];
 };
 
 export class Runtime {
