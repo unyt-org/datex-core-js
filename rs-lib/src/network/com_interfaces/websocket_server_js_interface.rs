@@ -193,7 +193,11 @@ impl ComInterface for WebSocketServerJSInterface {
     }
 
     fn init_properties(&self) -> InterfaceProperties {
-        Self::get_default_properties()
+        InterfaceProperties {
+            // TODO: full address
+            name: Some(self.port.to_string()),
+            ..Self::get_default_properties()
+        }
     }
     fn handle_close<'a>(
         &'a mut self,

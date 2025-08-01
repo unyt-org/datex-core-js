@@ -57,7 +57,7 @@ impl WebSocketClientJSInterface {
         address: &str,
     ) -> Result<WebSocketClientJSInterface, WebSocketError> {
         let address =
-            parse_url(address).map_err(|_| WebSocketError::InvalidURL)?;
+            parse_url(address, true).map_err(|_| WebSocketError::InvalidURL)?;
         let ws = web_sys::WebSocket::new(address.as_ref())
             .map_err(|_| WebSocketError::InvalidURL)?;
         let interface = WebSocketClientJSInterface {
@@ -216,7 +216,10 @@ impl ComInterface for WebSocketClientJSInterface {
     }
 
     fn init_properties(&self) -> InterfaceProperties {
-        Self::get_default_properties()
+        InterfaceProperties {
+            name: Some(self.address.to_string()),
+            ..Self::get_default_properties()
+        }
     }
     fn handle_close<'a>(
         &'a mut self,
