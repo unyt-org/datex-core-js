@@ -4,18 +4,14 @@ macro_rules! define_registry {
         #[derive(Clone)]
         #[wasm_bindgen]
         pub struct $name {
-            com_hub: std::rc::Rc<
-                datex_core::network::com_hub::ComHub,
-            >,
+            runtime: datex_core::runtime::Runtime
         }
 
         impl $name {
             pub fn new(
-                com_hub: std::rc::Rc<
-                    datex_core::network::com_hub::ComHub,
-                >,
+                runtime: datex_core::runtime::Runtime,
             ) -> Self {
-                Self { com_hub }
+                Self { runtime }
             }
         }
 
@@ -28,9 +24,7 @@ macro_rules! define_registry {
             ) -> Rc<RefCell<$interface_type>> {
                 let interface_uuid =
                     ComInterfaceUUID(datex_core::utils::uuid::UUID::from_string(interface_uuid));
-                let com_hub = self.com_hub.clone();
-
-                let interface = com_hub.get_interface_by_uuid::<$interface_type>(&interface_uuid);
+                let interface = self.runtime.com_hub().get_interface_by_uuid::<$interface_type>(&interface_uuid);
                 let interface = interface.unwrap();
                 return interface.clone();
             }
@@ -38,9 +32,9 @@ macro_rules! define_registry {
                 let interface_uuid = datex_core::network::com_interfaces::com_interface::ComInterfaceUUID(
                     datex_core::utils::uuid::UUID::from_string(interface_uuid),
                 );
-                let com_hub = self.com_hub.clone();
+                let runtime = self.runtime.clone();
                 wasm_bindgen_futures::future_to_promise(async move {
-                    let com_hub = com_hub.clone();
+                    let com_hub = runtime.com_hub();
                     let has_interface = {
                         com_hub.has_interface(&interface_uuid)
                     };

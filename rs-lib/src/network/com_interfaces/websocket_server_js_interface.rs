@@ -19,9 +19,8 @@ use datex_core::network::com_interfaces::socket_provider::MultipleSocketProvider
 use datex_core::stdlib::sync::Arc;
 
 use crate::{define_registry, wrap_error_for_js};
-use datex_core::network::com_hub::InterfacePriority;
+use datex_core::network::com_hub::ComHubError;
 use datex_core::network::com_interfaces::com_interface::ComInterfaceState;
-use datex_core::utils::uuid::UUID;
 use log::{debug, error, info};
 use wasm_bindgen::prelude::wasm_bindgen;
 use wasm_bindgen::{prelude::Closure, JsCast};
@@ -31,6 +30,7 @@ use web_sys::{js_sys, ErrorEvent, MessageEvent};
 pub struct WebSocketServerJSInterface {
     sockets: HashMap<ComInterfaceSocketUUID, web_sys::WebSocket>,
     info: ComInterfaceInfo,
+    port: u16,
 }
 impl MultipleSocketProvider for WebSocketServerJSInterface {
     fn provide_sockets(&self) -> Arc<Mutex<ComInterfaceSockets>> {
@@ -40,19 +40,29 @@ impl MultipleSocketProvider for WebSocketServerJSInterface {
 
 wrap_error_for_js!(JSWebSocketServerError, datex_core::network::com_interfaces::default_com_interfaces::websocket::websocket_common::WebSocketServerError);
 
-impl Default for WebSocketServerJSInterface {
-    fn default() -> Self {
-        Self::new()
+impl From<ComHubError> for JSWebSocketServerError {
+    fn from(err: ComHubError) -> Self {
+        WebSocketServerError::ComHubError(err).into()
     }
 }
+
 use datex_macros::{com_interface, create_opener};
+use crate::network::com_hub::JSComHub;
+
+#[wasm_bindgen(typescript_custom_section)]
+const WEBSOCKET_SERVER_INTERFACE_SETUP_DATA: &'static str = r#"
+type WebSocketServerInterfaceSetupData = {
+    port: number;
+};
+"#;
 
 #[com_interface]
 impl WebSocketServerJSInterface {
-    pub fn new() -> WebSocketServerJSInterface {
+    pub fn new(setup_data: WebSocketServerInterfaceSetupData) -> WebSocketServerJSInterface {
         WebSocketServerJSInterface {
             info: ComInterfaceInfo::default(),
             sockets: HashMap::new(),
+            port: setup_data.port
         }
     }
 
@@ -105,11 +115,6 @@ impl WebSocketServerJSInterface {
             if let Ok(abuf) = e.data().dyn_into::<js_sys::ArrayBuffer>() {
                 let array = js_sys::Uint8Array::new(&abuf);
                 receive_queue.lock().unwrap().extend(array.to_vec());
-                info!(
-                    "message event, received: {:?} bytes ({:?})",
-                    array.to_vec().len(),
-                    receive_queue
-                );
             } else {
                 info!("message event, received Unknown: {:?}", e.data());
             }
@@ -144,7 +149,7 @@ impl ComInterfaceFactory<WebSocketServerInterfaceSetupData>
     fn create(
         setup_data: WebSocketServerInterfaceSetupData,
     ) -> Result<WebSocketServerJSInterface, ComInterfaceError> {
-        Ok(WebSocketServerJSInterface::new())
+        Ok(WebSocketServerJSInterface::new(setup_data))
     }
 
     fn get_default_properties() -> InterfaceProperties {
@@ -183,7 +188,11 @@ impl ComInterface for WebSocketServerJSInterface {
     }
 
     fn init_properties(&self) -> InterfaceProperties {
-        Self::get_default_properties()
+        InterfaceProperties {
+            // TODO: full address
+            name: Some(self.port.to_string()),
+            ..Self::get_default_properties()
+        }
     }
     fn handle_close<'a>(
         &'a mut self,
@@ -203,48 +212,15 @@ impl ComInterface for WebSocketServerJSInterface {
 define_registry!(WebSocketServerRegistry, WebSocketServerJSInterface);
 
 #[wasm_bindgen]
-impl WebSocketServerRegistry {
-    pub async fn register(&self) -> Result<String, JSWebSocketServerError> {
-        let com_hub = self.com_hub.clone();
-        let mut websocket_interface = WebSocketServerJSInterface::new();
-        let uuid = websocket_interface.get_uuid().clone();
-        websocket_interface.open().unwrap();
-        com_hub
-            .add_interface(
-                Rc::new(RefCell::new(websocket_interface)),
-                InterfacePriority::default(),
-            )
-            .map_err(|_| {
-                WebSocketServerError::WebSocketError(
-                    WebSocketError::ConnectionError,
-                )
-            })?;
-
-        Ok(uuid.0.to_string())
-    }
-    pub fn add_socket(
+impl JSComHub {
+    pub fn websocket_server_interface_add_socket(
         &self,
         interface_uuid: String,
         websocket: web_sys::WebSocket,
-    ) -> JsValue {
-        let interface_uuid =
-            ComInterfaceUUID(UUID::from_string(interface_uuid));
-        info!("add_socket start");
-        let com_hub = self.com_hub.clone();
-        info!("add_socket end");
+    ) -> Result<String, JSWebSocketServerError> {
 
-        let interface = com_hub
-            .get_interface_by_uuid::<WebSocketServerJSInterface>(
-                &interface_uuid,
-            );
+        let interface = self.get_interface_for_uuid::<WebSocketServerJSInterface>(interface_uuid)?;
 
-        if interface.is_some() {
-            let uuid =
-                interface.unwrap().borrow_mut().register_socket(websocket);
-            JsValue::from_str(&uuid.0.to_string())
-        } else {
-            error!("Failed to find WebSocket interface");
-            JsError::new("Failed to find WebSocket interface").into()
-        }
+        Ok(interface.borrow_mut().register_socket(websocket).to_string())
     }
 }

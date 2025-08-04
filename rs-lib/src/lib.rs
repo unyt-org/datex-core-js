@@ -2,6 +2,8 @@
 #![feature(iter_from_coroutine)]
 // FIXME no-std
 
+extern crate core;
+
 use serde_wasm_bindgen::from_value;
 // use datex_cli_core::CLI;
 use datex_core::compiler;
@@ -40,10 +42,10 @@ extern "C" {
 
 // export compiler/runtime functions to JavaScript
 #[wasm_bindgen]
-pub fn init_runtime(endpoint: &str, debug_flags: JsValue) -> JSRuntime {
+pub fn create_runtime(config: &str, debug_flags: JsValue) -> JSRuntime {
     let debug_flags: Option<JSDebugFlags> =
         from_value(debug_flags).unwrap_or_default();
-    JSRuntime::create(endpoint, debug_flags)
+    JSRuntime::create(config, debug_flags)
 }
 
 #[wasm_bindgen]

@@ -1,3 +1,0 @@
-[submodule "rs-lib/datex-core"]
-	path = rs-lib/datex-core
-	url = git@github.com:unyt-org/datex-core.git

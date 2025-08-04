@@ -1,4 +1,3 @@
-use log::info;
 use datex_core::stdlib::{future::Future, pin::Pin};
 
 use datex_core::crypto::crypto::{CryptoError, CryptoTrait};
@@ -124,7 +123,7 @@ impl CryptoTrait for CryptoJS {
         &self,
         data: Vec<u8>, // FIXME how to handle lifetime and let data pass as slice
         public_key: Vec<u8>,
-    ) -> Pin<Box<(dyn Future<Output = Result<Vec<u8>, CryptoError>> + 'static)>>
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<u8>, CryptoError>> + 'static>>
     {
         Box::pin(async move {
             let key = Self::import_crypto_key(
@@ -160,7 +159,7 @@ impl CryptoTrait for CryptoJS {
         &self,
         data: Vec<u8>,
         private_key: Vec<u8>,
-    ) -> Pin<Box<(dyn Future<Output = Result<Vec<u8>, CryptoError>> + 'static)>>
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<u8>, CryptoError>> + 'static>>
     {
         Box::pin(async move {
             let key = Self::import_crypto_key(

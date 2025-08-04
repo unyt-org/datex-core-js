@@ -16,7 +16,7 @@ define_registry!(MatchboxClientRegistry, MatchboxClientInterface);
 #[wasm_bindgen]
 impl MatchboxClientRegistry {
     pub async fn register(&self, address: String) -> Promise {
-        let com_hub = self.com_hub.clone();
+        let com_hub = self.runtime.com_hub().clone();
         let address_clone = address.clone();
         future_to_promise(async move {
             let mut webrtc_interface =

@@ -2,7 +2,7 @@
 // deno-lint-ignore-file
 // deno-fmt-ignore-file
 
-export function init_runtime(endpoint: string, debug_flags: any): JSRuntime;
+export function create_runtime(config: string, debug_flags: any): JSRuntime;
 export function compile(datex_script: string): void;
 /**
  * Executes a Datex script and returns the result as a string.
@@ -14,7 +14,15 @@ export function execute(datex_script: string, formatted: boolean): string;
  */
 export function execute_internal(datex_script: string): boolean;
 
-type InterfaceProperties = {
+type WebSocketServerInterfaceSetupData = {
+    port: number;
+};
+
+type WebSocketClientInterfaceSetupData = {
+    address: string;
+};
+
+type BaseInterfaceSetupData = {
     name?: string;
     interface_type: string;
     channel: string;
@@ -42,25 +50,32 @@ type InterfaceProperties = {
 };
 
 export class BaseJSInterface {
+    private constructor();
     free(): void;
-    constructor(
-        com_hub: JSComHub,
-        name_or_properties: InterfaceProperties | string,
-    );
-    test_send_block(socket_uuid: string, data: Uint8Array): Promise<boolean>;
-    on_send(func: Function): void;
-    register_socket(direction: string): string;
-    destroy_socket(socket_uuid: string): void;
-    receive(socket_uuid: string, data: Uint8Array): Promise<void>;
-    readonly properties: InterfaceProperties;
-    readonly uuid: string;
 }
 export class JSComHub {
     private constructor();
     free(): void;
+    websocket_server_interface_add_socket(
+        interface_uuid: string,
+        websocket: WebSocket,
+    ): string;
+    base_interface_register_socket(uuid: string, direction: string): string;
+    base_interface_receive(
+        uuid: string,
+        socket_uuid: string,
+        data: Uint8Array,
+    ): void;
+    base_interface_destroy_socket(uuid: string, socket_uuid: string): void;
+    base_interface_on_send(uuid: string, func: Function): void;
+    base_interface_test_send_block(
+        uuid: string,
+        socket_uuid: string,
+        data: Uint8Array,
+    ): Promise<boolean>;
+    register_default_interface_factories(): void;
+    create_interface(interface_type: string, properties: string): Promise<any>;
     close_interface(interface_uuid: string): Promise<any>;
-    start_update_loop(): void;
-    stop_update_loop(): Promise<void>;
     update(): Promise<void>;
     /**
      * Send a block to the given interface and socket
@@ -74,10 +89,8 @@ export class JSComHub {
         socket_uuid: string,
     ): Promise<boolean>;
     _drain_incoming_blocks(): Uint8Array[];
-    readonly websocket_server: WebSocketServerRegistry;
-    readonly websocket_client: WebSocketClientRegistry;
-    readonly serial: SerialRegistry;
-    readonly webrtc: WebRTCRegistry;
+    get_metadata_string(): string;
+    get_trace_string(endpoint: string): Promise<string | undefined>;
 }
 export class JSMemory {
     private constructor();
@@ -97,16 +110,14 @@ export class JSRuntime {
         body: Uint8Array | null | undefined,
         receivers: string[],
     ): Uint8Array;
+    start(): Promise<void>;
+    _stop(): Promise<void>;
+    execute(script: string, formatted: boolean): Promise<string>;
+    execute_sync(script: string, formatted: boolean): string;
+    com_hub: JSComHub;
+    memory: JSMemory;
     readonly version: string;
-    readonly memory: JSMemory;
     readonly endpoint: string;
-    readonly com_hub: JSComHub;
-}
-export class SerialRegistry {
-    private constructor();
-    free(): void;
-    close(interface_uuid: string): Promise<any>;
-    register(baud_rate: number): Promise<string>;
 }
 export class WebRTCRegistry {
     private constructor();
@@ -129,16 +140,8 @@ export class WebRTCRegistry {
     ): Promise<void>;
     wait_for_connection(interface_uuid: string): Promise<void>;
 }
-export class WebSocketClientRegistry {
-    private constructor();
-    free(): void;
-    close(interface_uuid: string): Promise<any>;
-    register(address: string): Promise<string>;
-}
 export class WebSocketServerRegistry {
     private constructor();
     free(): void;
     close(interface_uuid: string): Promise<any>;
-    register(): Promise<string>;
-    add_socket(interface_uuid: string, websocket: WebSocket): any;
 }

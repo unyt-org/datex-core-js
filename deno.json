@@ -20,13 +20,13 @@
     },
     "fmt": {
         "indentWidth": 4,
-        "exclude": ["./rs-lib/datex-core", "./npm"]
+        "exclude": ["./npm"]
     },
     "imports": {
         "@deno/dnt": "jsr:@deno/dnt@^0.42.1"
     },
     "test": {
-        "exclude": ["./rs-lib/datex-core", "./npm"]
+        "exclude": ["./npm"]
     },
     "publish": {
         "exclude": [
