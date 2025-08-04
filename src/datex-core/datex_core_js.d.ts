@@ -14,6 +14,10 @@ export function execute(datex_script: string, formatted: boolean): string;
  */
 export function execute_internal(datex_script: string): boolean;
 
+type WebSocketServerInterfaceSetupData = {
+    port: number;
+};
+
 type WebSocketClientInterfaceSetupData = {
     address: string;
 };
@@ -45,10 +49,6 @@ type BaseInterfaceSetupData = {
         };
 };
 
-type WebSocketServerInterfaceSetupData = {
-    port: number;
-};
-
 export class BaseJSInterface {
     private constructor();
     free(): void;
@@ -56,6 +56,23 @@ export class BaseJSInterface {
 export class JSComHub {
     private constructor();
     free(): void;
+    websocket_server_interface_add_socket(
+        interface_uuid: string,
+        websocket: WebSocket,
+    ): string;
+    base_interface_register_socket(uuid: string, direction: string): string;
+    base_interface_receive(
+        uuid: string,
+        socket_uuid: string,
+        data: Uint8Array,
+    ): void;
+    base_interface_destroy_socket(uuid: string, socket_uuid: string): void;
+    base_interface_on_send(uuid: string, func: Function): void;
+    base_interface_test_send_block(
+        uuid: string,
+        socket_uuid: string,
+        data: Uint8Array,
+    ): Promise<boolean>;
     register_default_interface_factories(): void;
     create_interface(interface_type: string, properties: string): Promise<any>;
     close_interface(interface_uuid: string): Promise<any>;
@@ -74,23 +91,6 @@ export class JSComHub {
     _drain_incoming_blocks(): Uint8Array[];
     get_metadata_string(): string;
     get_trace_string(endpoint: string): Promise<string | undefined>;
-    base_interface_register_socket(uuid: string, direction: string): string;
-    base_interface_receive(
-        uuid: string,
-        socket_uuid: string,
-        data: Uint8Array,
-    ): void;
-    base_interface_destroy_socket(uuid: string, socket_uuid: string): void;
-    base_interface_on_send(uuid: string, func: Function): void;
-    base_interface_test_send_block(
-        uuid: string,
-        socket_uuid: string,
-        data: Uint8Array,
-    ): Promise<boolean>;
-    websocket_server_interface_add_socket(
-        interface_uuid: string,
-        websocket: WebSocket,
-    ): string;
 }
 export class JSMemory {
     private constructor();

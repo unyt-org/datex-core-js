@@ -208,9 +208,9 @@ checksum = "d71b6127be86fdcfddb610f7182ac57211d4b18a3e9c82eb2d17662f2227ad6a"
 
 [[package]]
 name = "cc"
-version = "1.2.30"
+version = "1.2.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "deec109607ca693028562ed836a5f1c4b8bd77755c4e132fc5ce11b0b6211ae7"
+checksum = "c3a42d84bb6b69d3a8b3eaacf0d88f179e1929695e1ad012b6cf64d9caaa5fd2"
 dependencies = [
  "shlex",
 ]
@@ -326,6 +326,7 @@ dependencies = [
 [[package]]
 name = "datex-core"
 version = "0.0.5"
+source = "git+https://github.com/unyt-org/datex-core?branch=feat%2Fref#57e570b3352a6a432958fbd7f438150434c16cc0"
 dependencies = [
  "ariadne",
  "async-stream",
@@ -339,7 +340,7 @@ dependencies = [
  "chumsky",
  "console_error_panic_hook",
  "console_log",
- "datex_macros 0.1.0",
+ "datex_macros",
  "default-args",
  "futures",
  "futures-core",
@@ -380,7 +381,7 @@ version = "0.0.5"
 dependencies = [
  "async-trait",
  "datex-core",
- "datex_macros 0.1.0 (git+https://github.com/unyt-org/datex-core?branch=feat%2Fref)",
+ "datex_macros",
  "futures",
  "futures-channel",
  "futures-timer",
@@ -399,16 +400,7 @@ dependencies = [
 [[package]]
 name = "datex_macros"
 version = "0.1.0"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.104",
-]
-
-[[package]]
-name = "datex_macros"
-version = "0.1.0"
-source = "git+https://github.com/unyt-org/datex-core?branch=feat%2Fref#bff6e8348bc3c98716e90f77f340ba8b12ee9fac"
+source = "git+https://github.com/unyt-org/datex-core?branch=feat%2Fref#57e570b3352a6a432958fbd7f438150434c16cc0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -449,9 +441,9 @@ dependencies = [
 
 [[package]]
 name = "dyn-clone"
-version = "1.0.19"
+version = "1.0.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1c7a8fb8a9fbf66c1f703fe16184d10ca0ee9d23be5b4436400408ba54a95005"
+checksum = "d0881ea181b1df73ff77ffaaf9c7544ecc11e82fba9b5f27b262a3c73a332555"
 
 [[package]]
 name = "either"
@@ -1176,9 +1168,9 @@ dependencies = [
 
 [[package]]
 name = "quick-xml"
-version = "0.38.0"
+version = "0.38.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8927b0664f5c5a98265138b7e3f90aa19a6b21353182469ace36d4ac527b7b1b"
+checksum = "9845d9dccf565065824e69f9f235fafba1587031eda353c1f1561cd6a6be78f4"
 dependencies = [
  "memchr",
 ]
@@ -1367,9 +1359,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.141"
+version = "1.0.142"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "30b9eff21ebe718216c6ec64e1d9ac57087aad11efc64e32002bce4a0d4c03d3"
+checksum = "030fedb782600dcbd6f02d479bf0d817ac3bb40d644745b769d6a96bc3afc5a7"
 dependencies = [
  "itoa",
  "memchr",
@@ -2008,9 +2000,9 @@ dependencies = [
 
 [[package]]
 name = "zerovec"
-version = "0.11.2"
+version = "0.11.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4a05eb080e015ba39cc9e23bbe5e7fb04d5fb040350f99f34e338d5fdd294428"
+checksum = "bdbb9122ea75b11bf96e7492afb723e8a7fbe12c67417aa95e7e3d18144d37cd"
 dependencies = [
  "yoke",
  "zerofrom",
