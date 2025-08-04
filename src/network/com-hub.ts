@@ -85,7 +85,9 @@ export class ComHub {
      * Prints the metadata of the ComHub. Only available in debug builds.
      */
     public printMetadata(): void {
-        const metadata = this.#jsComHub.get_metadata_string();
+        // as any required because get_metadata_string only exists in debug builds
+        // deno-lint-ignore no-explicit-any
+        const metadata = (this.#jsComHub as any).get_metadata_string();
         console.log(metadata);
     }
 
@@ -94,7 +96,9 @@ export class ComHub {
      * @param endpoint The endpoint for which to print the trace.
      */
     public async printTrace(endpoint: string): Promise<void> {
-        const trace = await this.#jsComHub.get_trace_string(endpoint);
+        // as any required because get_trace_string only exists in debug builds
+        // deno-lint-ignore no-explicit-any
+        const trace = await (this.#jsComHub as any).get_trace_string(endpoint);
         if (trace === undefined) {
             console.warn(`No trace available for endpoint: ${endpoint}`);
             return;
