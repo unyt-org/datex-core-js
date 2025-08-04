@@ -1,12 +1,10 @@
-use std::cell::RefCell;
 use std::future::Future;
 use std::pin::Pin;
-use std::rc::Rc;
 use std::sync::Mutex;
 use std::time::Duration; // FIXME no-std
 
 use datex_core::{delegate_com_interface_info, set_opener};
-use datex_core::network::com_interfaces::com_interface::{ComInterface, ComInterfaceError, ComInterfaceFactory, ComInterfaceInfo, ComInterfaceSockets, ComInterfaceUUID};
+use datex_core::network::com_interfaces::com_interface::{ComInterface, ComInterfaceError, ComInterfaceFactory, ComInterfaceInfo, ComInterfaceSockets};
 use datex_core::network::com_interfaces::com_interface_properties::{
     InterfaceDirection, InterfaceProperties,
 };
@@ -20,8 +18,7 @@ use datex_core::stdlib::sync::Arc;
 use datex_core::network::com_interfaces::com_interface::ComInterfaceState;
 use datex_core::network::com_interfaces::default_com_interfaces::websocket::websocket_common::parse_url;
 
-use crate::{define_registry, wrap_error_for_js};
-use datex_core::network::com_hub::InterfacePriority;
+use crate::wrap_error_for_js;
 use datex_core::task::spawn_with_panic_notify;
 use futures::channel::mpsc;
 use futures::{SinkExt, StreamExt};
@@ -29,7 +26,6 @@ use log::{error, info, warn};
 use url::Url;
 use wasm_bindgen::prelude::wasm_bindgen;
 use wasm_bindgen::{prelude::Closure, JsCast};
-use wasm_bindgen::{JsError, JsValue};
 use web_sys::{js_sys, ErrorEvent, MessageEvent};
 
 pub struct WebSocketClientJSInterface {
@@ -45,13 +41,23 @@ impl SingleSocketProvider for WebSocketClientJSInterface {
 }
 wrap_error_for_js!(JSWebSocketError, datex_core::network::com_interfaces::default_com_interfaces::websocket::websocket_common::WebSocketError);
 use datex_macros::{com_interface, create_opener};
+
+
+
+#[wasm_bindgen(typescript_custom_section)]
+const WEBSOCKET_CLIENT_INTERFACE_SETUP_DATA: &'static str = r#"
+type WebSocketClientInterfaceSetupData = {
+    address: string;
+};
+"#;
+
 #[com_interface]
 impl WebSocketClientJSInterface {
     pub fn new(
         address: &str,
     ) -> Result<WebSocketClientJSInterface, WebSocketError> {
         let address =
-            parse_url(address).map_err(|_| WebSocketError::InvalidURL)?;
+            parse_url(address, true).map_err(|_| WebSocketError::InvalidURL)?;
         let ws = web_sys::WebSocket::new(address.as_ref())
             .map_err(|_| WebSocketError::InvalidURL)?;
         let interface = WebSocketClientJSInterface {
@@ -87,6 +93,7 @@ impl WebSocketClientJSInterface {
                 .lock()
                 .unwrap()
                 .add_socket(Arc::new(Mutex::new(socket)));
+            info!("WebSocket connection opened successfully");
             spawn_with_panic_notify(async move {
                 sender
                     .send(Ok(()))
@@ -136,11 +143,6 @@ impl WebSocketClientJSInterface {
             if let Ok(abuf) = e.data().dyn_into::<js_sys::ArrayBuffer>() {
                 let array = js_sys::Uint8Array::new(&abuf);
                 receive_queue.lock().unwrap().extend(array.to_vec());
-                info!(
-                    "message event, received: {:?} bytes ({:?})",
-                    array.to_vec().len(),
-                    receive_queue
-                );
             }
         })
     }
@@ -209,7 +211,10 @@ impl ComInterface for WebSocketClientJSInterface {
     }
 
     fn init_properties(&self) -> InterfaceProperties {
-        Self::get_default_properties()
+        InterfaceProperties {
+            name: Some(self.address.to_string()),
+            ..Self::get_default_properties()
+        }
     }
     fn handle_close<'a>(
         &'a mut self,
@@ -218,33 +223,4 @@ impl ComInterface for WebSocketClientJSInterface {
     }
     delegate_com_interface_info!();
     set_opener!(open);
-}
-
-define_registry!(WebSocketClientRegistry, WebSocketClientJSInterface);
-
-#[wasm_bindgen]
-impl WebSocketClientRegistry {
-    pub async fn register(
-        &self,
-        address: String,
-    ) -> Result<String, JSWebSocketError> {
-        let com_hub = self.com_hub.clone();
-        let address_clone = address.clone();
-        let mut websocket_interface =
-            WebSocketClientJSInterface::new(&address_clone)?;
-        websocket_interface
-            .open()
-            .await
-            .map_err(JSWebSocketError::from)?;
-        let interface_uuid = websocket_interface.get_uuid().clone();
-        let websocket_interface = Rc::new(RefCell::new(websocket_interface));
-
-        com_hub
-            .add_interface(
-                websocket_interface.clone(),
-                InterfacePriority::default(),
-            )
-            .map_err(|e| WebSocketError::Other(format!("{e:?}")))?;
-        Ok(interface_uuid.0.to_string())
-    }
 }

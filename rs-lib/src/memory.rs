@@ -1,21 +1,23 @@
-use datex_core::stdlib::{cell::RefCell, rc::Rc};
+use datex_core::stdlib::cell::RefCell;
 
 use datex_core::runtime::memory::Memory;
+use datex_core::runtime::Runtime;
 use wasm_bindgen::prelude::*;
 use web_sys::js_sys::Uint8Array;
 
 use crate::pointer::JSPointer;
 
 #[wasm_bindgen]
+#[derive(Clone)]
 pub struct JSMemory {
-    memory: Rc<RefCell<Memory>>,
+    runtime: Runtime
 }
 /**
  * Internal impl of the JSRuntime, not exposed to JavaScript
  */
 impl JSMemory {
-    pub fn new(memory: Rc<RefCell<Memory>>) -> JSMemory {
-        JSMemory { memory }
+    pub fn new(runtime: Runtime) -> JSMemory {
+        JSMemory { runtime }
     }
 }
 
@@ -28,18 +30,22 @@ impl JSMemory {
         &mut self,
         address: Uint8Array,
     ) -> Option<JSPointer> {
-        let mut binding = self.memory.borrow_mut();
-        let pointer = binding.get_pointer_by_id_vec(address.to_vec());
+        let mut memory = self.memory().borrow_mut();
+        let pointer = memory.get_pointer_by_id_vec(address.to_vec());
         match pointer {
             Some(p) => None, //Some(JSPointer::new(p)),
             None => None,
         }
     }
 
+    fn memory(&self) -> &RefCell<Memory> {
+        self.runtime.memory()
+    }
+
     pub fn get_pointer_ids(&self) -> Vec<Uint8Array> {
-        let binding = self.memory.borrow_mut();
+        let memory = self.memory().borrow_mut();
         let mut ids: Vec<Uint8Array> = Vec::new();
-        for id in binding.get_pointer_ids() {
+        for id in memory.get_pointer_ids() {
             ids.push(Uint8Array::from(&id[..]));
         }
         ids

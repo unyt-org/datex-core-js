@@ -2,29 +2,32 @@ use datex_core::values::core_values::endpoint::Endpoint;
 #[cfg(feature = "debug")]
 use datex_core::runtime::global_context::DebugFlags;
 use datex_core::runtime::global_context::GlobalContext;
-use datex_core::stdlib::rc::Rc;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 use log::info;
 use crate::crypto::crypto_js::CryptoJS;
 use crate::js_utils::js_array;
-use crate::memory::JSMemory;
-use crate::network::com_hub::JSComHub;
 use crate::utils::time::TimeJS;
 use datex_core::crypto::crypto::CryptoTrait;
+use datex_core::decompiler::{decompile_value, DecompileOptions};
 use datex_core::global::dxb_block::DXBBlock;
 use datex_core::global::protocol_structures::block_header::{
     BlockHeader, FlagsAndTimestamp,
 };
-use datex_core::runtime::Runtime;
+use datex_core::runtime::{Runtime, RuntimeConfig, RuntimeInternal};
+use datex_core::values::serde::deserializer::DatexDeserializer;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::future_to_promise;
 use web_sys::js_sys::Promise;
+use crate::memory::JSMemory;
+use crate::network::com_hub::JSComHub;
 
-#[wasm_bindgen]
+#[wasm_bindgen(getter_with_clone)]
 pub struct JSRuntime {
     runtime: Runtime,
+    pub com_hub: JSComHub,
+    pub memory: JSMemory
 }
 
 #[derive(Serialize, Deserialize, Default)]
@@ -49,12 +52,19 @@ impl From<JSDebugFlags> for DebugFlags {
  * Internal impl of the JSRuntime, not exposed to JavaScript
  */
 impl JSRuntime {
+
+    pub fn runtime(&self) -> &Runtime {
+        &self.runtime
+    }
+
     pub fn create(
-        endpoint: impl Into<Endpoint>,
+        config: &str,
         debug_flags: Option<JSDebugFlags>,
     ) -> JSRuntime {
+        let deserializer = DatexDeserializer::from_script(config).unwrap();
+        let config: RuntimeConfig = Deserialize::deserialize(deserializer).unwrap();
         let runtime = Runtime::init(
-            endpoint,
+            config,
             GlobalContext {
                 crypto: Arc::new(Mutex::new(CryptoJS)),
                 time: Arc::new(Mutex::new(TimeJS)),
@@ -70,11 +80,20 @@ impl JSRuntime {
         //     ],
         //     Pointer::from_id(Vec::new()),
         // );
-        JSRuntime::new(runtime)
+        let runtime = JSRuntime::new(runtime);
+        runtime.com_hub.register_default_interface_factories();
+        runtime
     }
 
+
     pub fn new(runtime: Runtime) -> JSRuntime {
-        JSRuntime { runtime }
+        let com_hub = JSComHub::new(runtime.clone());
+        let memory = JSMemory::new(runtime.clone());
+        JSRuntime {
+            runtime,
+            com_hub,
+            memory
+        }
     }
 }
 
@@ -83,6 +102,7 @@ impl JSRuntime {
  */
 #[wasm_bindgen]
 impl JSRuntime {
+
     pub async fn crypto_test_tmp(&self) -> Promise {
         future_to_promise(async move {
             let crypto = CryptoJS {};
@@ -155,18 +175,8 @@ impl JSRuntime {
     }
 
     #[wasm_bindgen(getter)]
-    pub fn memory(&self) -> JSMemory {
-        JSMemory::new(Rc::clone(&self.runtime.memory))
-    }
-
-    #[wasm_bindgen(getter)]
     pub fn endpoint(&self) -> String {
-        self.runtime.endpoint.to_string()
-    }
-
-    #[wasm_bindgen(getter)]
-    pub fn com_hub(&self) -> JSComHub {
-        JSComHub::new(self.runtime.com_hub.clone())
+        self.runtime.endpoint().to_string()
     }
 
     pub fn _create_block(
@@ -194,5 +204,57 @@ impl JSRuntime {
                 .unwrap(),
         );
         block.to_bytes().unwrap()
+    }
+
+    pub async fn start(&self) {
+        self.runtime.start().await;
+    }
+
+    pub async fn _stop(&self) {
+        RuntimeInternal::stop_update_loop(self.runtime.internal.clone()).await
+    }
+
+    pub async fn execute(
+        &self,
+        script: &str,
+        formatted: bool,
+    ) -> String {
+        let input = self.runtime.execute(script, &[], None).await.unwrap();
+        match input {
+            None => {
+                "".to_string()
+            }
+            Some(result) => {
+                decompile_value(
+                    &result,
+                    DecompileOptions {
+                        formatted,
+                        ..DecompileOptions::default()
+                    },
+                )
+            }
+        }
+    }
+
+    pub fn execute_sync(
+        &self,
+        script: &str,
+        formatted: bool,
+    ) -> String {
+        let input = self.runtime.execute_sync(script, &[], None).unwrap();
+        match input {
+            None => {
+                "".to_string()
+            }
+            Some(result) => {
+                decompile_value(
+                    &result,
+                    DecompileOptions {
+                        formatted,
+                        ..DecompileOptions::default()
+                    },
+                )
+            }
+        }
     }
 }

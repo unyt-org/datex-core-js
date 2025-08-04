@@ -57,10 +57,11 @@ await build({
 
         // currently required for version tests
         Deno.copyFileSync("deno.json", "npm/esm/deno.json");
-        Deno.mkdirSync("npm/esm/rs-lib/datex-core", { recursive: true });
-        Deno.copyFileSync(
-            "rs-lib/datex-core/Cargo.toml",
-            "npm/esm/rs-lib/datex-core/Cargo.toml",
-        );
+        // FIXME
+        // Deno.mkdirSync("npm/esm/rs-lib/datex-core", { recursive: true });
+        // Deno.copyFileSync(
+        //     "rs-lib/datex-core/Cargo.toml",
+        //     "npm/esm/rs-lib/datex-core/Cargo.toml",
+        // );
     },
 });

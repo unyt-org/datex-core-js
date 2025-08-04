@@ -1,39 +1,49 @@
 #[cfg(feature = "wasm_matchbox")]
 use super::com_interfaces::matchbox_js_interface::MatchboxClientRegistry;
-#[cfg(feature = "wasm_serial")]
-use super::com_interfaces::serial_js_interface::SerialRegistry;
-#[cfg(feature = "wasm_webrtc")]
-use super::com_interfaces::webrtc_js_interface::WebRTCRegistry;
-#[cfg(feature = "wasm_websocket_client")]
-use super::com_interfaces::websocket_client_js_interface::WebSocketClientRegistry;
-#[cfg(feature = "wasm_websocket_server")]
-use super::com_interfaces::websocket_server_js_interface::WebSocketServerRegistry;
 
 use datex_core::global::dxb_block::IncomingSection;
-use datex_core::network::com_hub::InterfacePriority;
-use datex_core::network::com_interfaces::com_interface::{
-    ComInterface, ComInterfaceUUID,
-};
+use datex_core::network::com_hub::{ComHubError, InterfacePriority};
+use datex_core::network::com_interfaces::com_interface::{ComInterface, ComInterfaceFactory, ComInterfaceUUID};
 use datex_core::network::com_interfaces::com_interface_socket::ComInterfaceSocketUUID;
 use datex_core::stdlib::{cell::RefCell, rc::Rc};
 use datex_core::{network::com_hub::ComHub, utils::uuid::UUID};
+use datex_core::runtime::Runtime;
 use log::error;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::future_to_promise;
 use web_sys::js_sys::{self, Promise};
+use std::str::FromStr;
+use datex_core::values::core_values::endpoint::Endpoint;
 
 #[wasm_bindgen]
+#[derive(Clone)]
 pub struct JSComHub {
-    com_hub: Rc<ComHub>,
+    // ignore for wasm bindgen
+    runtime: Runtime,
 }
 
 /**
  * Internal impl of the JSRuntime, not exposed to JavaScript
  */
 impl JSComHub {
-    pub fn new(com_hub: Rc<ComHub>) -> JSComHub {
+    pub fn new(runtime: Runtime) -> JSComHub {
         JSComHub {
-            com_hub: com_hub.clone(),
+            runtime
+        }
+    }
+
+    pub fn com_hub(&self) -> &ComHub {
+        self.runtime.com_hub()
+    }
+
+    pub fn get_interface_for_uuid<T: ComInterface>(&self, uuid: String) -> Result<Rc<RefCell<T>>, ComHubError> {
+        let base_interface = self
+            .com_hub()
+            .get_interface_by_uuid::<T>(&ComInterfaceUUID::from_string(uuid));
+        if let Some(base_interface) = base_interface {
+            Ok(base_interface)
+        } else {
+            Err(ComHubError::InterfaceDoesNotExist)
         }
     }
 }
@@ -43,49 +53,65 @@ impl JSComHub {
  */
 #[wasm_bindgen]
 impl JSComHub {
-    // pub(crate) async fn open_and_add_interface<T: ComInterface>(
-    //     &self,
-    //     interface: Rc<RefCell<T>>,
-    // ) {
-    //     interface.clone().borrow_mut().handle_open().await;
-    //     self.com_hub
-    //         .lock()
-    //         .unwrap()
-    //         .add_interface(interface)
-    //         .expect("Failed to add interface");
-    // }
+    pub fn register_default_interface_factories(&self) {
+        self.com_hub().register_interface_factory(
+            "base".to_string(),
+            crate::network::com_interfaces::base_interface::BaseJSInterface::factory
+        );
 
-    /// Add an interface to the ComHub. If the interface is not open,
-    /// it will not be opened by the ComHub.
-    /// This is useful for adding interfaces that are already open.
-    pub(crate) fn add_interface<T: ComInterface>(
-        &self,
-        interface: Rc<RefCell<T>>,
-    ) -> Result<(), JsValue> {
-        // TODO: set custom interface priority
-        self.com_hub
-            .add_interface(interface, InterfacePriority::default())
-            .map_err(|e| JsError::new(&format!("{e:?}")))?;
-        Ok(())
+        #[cfg(feature = "wasm_websocket_client")]
+        self.com_hub().register_interface_factory(
+            "websocket-client".to_string(),
+            crate::network::com_interfaces::websocket_client_js_interface::WebSocketClientJSInterface::factory
+        );
+
+        #[cfg(feature = "wasm_websocket_server")]
+        self.com_hub().register_interface_factory(
+            "websocket-server".to_string(),
+            crate::network::com_interfaces::websocket_server_js_interface::WebSocketServerJSInterface::factory
+        );
+
+        //wasm_serial
+        #[cfg(feature = "wasm_serial")]
+        self.com_hub().register_interface_factory(
+            "serial".to_string(),
+            crate::network::com_interfaces::serial_js_interface::SerialJSInterface::factory
+        );
+
+        // TODO: wasm_webrtc
     }
 
-    pub(crate) fn get_interface_by_uuid(
+    pub fn create_interface(
         &self,
-        interface_uuid: &ComInterfaceUUID,
-    ) -> Option<Rc<RefCell<dyn ComInterface>>> {
-        self.com_hub.get_dyn_interface_by_uuid(interface_uuid)
+        interface_type: String,
+        properties: String,
+    ) -> Promise {
+        let runtime = self.runtime.clone();
+        future_to_promise(async move {
+            let com_hub = runtime.com_hub();
+            let properties = runtime.execute_sync(&properties, &[], None)
+                .map_err(|e| JsError::new(&format!("{e:?}")))?;
+            if let Some(properties) = properties {
+                let interface = com_hub
+                    .create_interface(&interface_type, properties, InterfacePriority::default())
+                    .await
+                    .map_err(|e| JsError::new(&format!("{e:?}")))?;
+                Ok(JsValue::from_str(&interface.borrow().get_uuid().0.to_string()))
+            }
+            else {
+                Err(JsError::new("Failed to create interface: properties are empty").into())
+            }
+        })
     }
 
     pub fn close_interface(&self, interface_uuid: String) -> Promise {
         let interface_uuid =
             ComInterfaceUUID(UUID::from_string(interface_uuid));
-        let com_hub = self.com_hub.clone();
+        let runtime = self.runtime.clone();
         future_to_promise(async move {
-            let com_hub = com_hub.clone();
+            let com_hub = runtime.com_hub();
             let has_interface = { com_hub.has_interface(&interface_uuid) };
             if has_interface {
-                let com_hub = com_hub.clone();
-
                 com_hub
                     .remove_interface(interface_uuid.clone())
                     .await
@@ -98,46 +124,8 @@ impl JSComHub {
         })
     }
 
-    pub fn start_update_loop(&self) {
-        ComHub::start_update_loop(self.com_hub.clone());
-    }
-
-    pub async fn stop_update_loop(&self) {
-        ComHub::stop_update_loop(self.com_hub.as_ref()).await;
-    }
-
     pub async fn update(&self) {
-        self.com_hub.update_async().await;
-    }
-
-    #[cfg(feature = "wasm_websocket_server")]
-    #[wasm_bindgen(getter)]
-    pub fn websocket_server(&self) -> WebSocketServerRegistry {
-        WebSocketServerRegistry::new(self.com_hub.clone())
-    }
-
-    #[cfg(feature = "wasm_websocket_client")]
-    #[wasm_bindgen(getter)]
-    pub fn websocket_client(&self) -> WebSocketClientRegistry {
-        WebSocketClientRegistry::new(self.com_hub.clone())
-    }
-
-    #[cfg(feature = "wasm_serial")]
-    #[wasm_bindgen(getter)]
-    pub fn serial(&self) -> SerialRegistry {
-        SerialRegistry::new(self.com_hub.clone())
-    }
-
-    #[cfg(feature = "wasm_matchbox")]
-    #[wasm_bindgen(getter)]
-    pub fn matchbox(&self) -> MatchboxClientRegistry {
-        MatchboxClientRegistry::new(self.com_hub.clone())
-    }
-
-    #[cfg(feature = "wasm_webrtc")]
-    #[wasm_bindgen(getter)]
-    pub fn webrtc(&self) -> WebRTCRegistry {
-        WebRTCRegistry::new(self.com_hub.clone())
+        self.com_hub().update_async().await;
     }
 
     /// Send a block to the given interface and socket
@@ -154,7 +142,7 @@ impl JSComHub {
             ComInterfaceUUID(UUID::from_string(interface_uuid));
         let socket_uuid =
             ComInterfaceSocketUUID(UUID::from_string(socket_uuid));
-        self.get_interface_by_uuid(&interface_uuid)
+        self.com_hub().get_dyn_interface_by_uuid(&interface_uuid)
             .expect("Failed to find interface")
             .borrow_mut()
             .send_block(block, socket_uuid)
@@ -163,7 +151,7 @@ impl JSComHub {
 
     pub fn _drain_incoming_blocks(&self) -> Vec<js_sys::Uint8Array> {
         let mut sections = self
-            .com_hub
+            .com_hub()
             .block_handler
             .incoming_sections_queue
             .borrow_mut();
@@ -184,13 +172,32 @@ impl JSComHub {
 
         blocks
             .iter()
-            .map(|block| {
-                let bytes = block.to_bytes().unwrap();
+            .map(|(block, ..)| {
+                let bytes = block.clone().unwrap().to_bytes().unwrap();
                 let entry =
                     js_sys::Uint8Array::new_with_length(bytes.len() as u32);
                 entry.copy_from(&bytes);
                 entry
             })
             .collect::<Vec<_>>()
+    }
+
+    #[cfg(feature = "debug")]
+    pub fn get_metadata_string(&self) -> String {
+        let metadata = self.com_hub().get_metadata();
+        metadata.to_string()
+    }
+
+    #[cfg(feature = "debug")]
+    pub async fn get_trace_string(&self, endpoint: String) -> Option<String> {
+        let endpoint = Endpoint::from_str(&endpoint);
+        if let Ok(endpoint) = endpoint {
+            let trace = self.com_hub().record_trace(endpoint).await;
+            trace.map(|t| t.to_string())
+        }
+        else {
+            println!("Invalid endpoint: {}", endpoint.unwrap_err());
+            None
+        }        
     }
 }

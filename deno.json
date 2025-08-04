@@ -1,6 +1,6 @@
 {
     "name": "@unyt/datex",
-    "version": "0.0.4",
+    "version": "0.0.5",
     "license": "MIT",
     "exports": "./src/mod.ts",
     "compilerOptions": {
@@ -20,13 +20,13 @@
     },
     "fmt": {
         "indentWidth": 4,
-        "exclude": ["./rs-lib/datex-core", "./npm"]
+        "exclude": ["./npm"]
     },
     "imports": {
         "@deno/dnt": "jsr:@deno/dnt@^0.42.1"
     },
     "test": {
-        "exclude": ["./rs-lib/datex-core", "./npm"]
+        "exclude": ["./npm"]
     },
     "publish": {
         "exclude": [
