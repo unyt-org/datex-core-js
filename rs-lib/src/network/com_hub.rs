@@ -197,7 +197,7 @@ impl JSComHub {
         }
         else {
             println!("Invalid endpoint: {}", endpoint.unwrap_err());
-            return None;
+            None
         }        
     }
 }
