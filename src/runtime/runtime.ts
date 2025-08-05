@@ -7,7 +7,7 @@ import {
 import { ComHub } from "../network/com-hub.ts";
 
 // auto-generated version - do not edit:
-const VERSION: string = "0.0.5";
+const VERSION: string = "0.0.6";
 
 interface DebugFlags {
     allow_unsigned_blocks?: boolean;

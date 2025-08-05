@@ -32,9 +32,10 @@ can open `http://localhost:8042/test/browser.html` in your browser. A new Datex
 runtime instance is automatically created and can be accessed in the developer
 console via the global `Datex` variable.
 
-
 ## Creating a new release
 
 **Important steps before creating a release**:
- * Run `deno task release` to ensure that the generated d.ts files contain the types for the release build.
- * Set the `datex-core` crate to the correct version in the `Cargo.toml` file.
+
+- Run `deno task release` to ensure that the generated d.ts files contain the
+  types for the release build.
+- Set the `datex-core` crate to the correct version in the `Cargo.toml` file.

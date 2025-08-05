@@ -12,7 +12,7 @@ Deno.test("add and close interface", async () => {
     const runtime = new Runtime({ endpoint: "@unyt" });
     const serverInterface = await runtime.comHub.createInterface(
         "websocket-server",
-        { port: 80 },
+        { port: 1234 },
     );
     assert(uuid.validate(serverInterface.uuid), "Invalid UUID");
     await serverInterface.close();
