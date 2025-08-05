@@ -4,30 +4,8 @@ on:
     pull_request:
         types: [opened, synchronize]
 jobs:
-    test:
-        runs-on: ubuntu-latest
-        name: Test
-        steps:
-            - uses: actions/checkout@v4
-              with:
-                  submodules: "true"
-            - uses: denoland/setup-deno@v2
-              with:
-                  deno-version: v2.x
-
-            - name: Check formatting
-              run: deno fmt --check
-
-            - name: Lint
-              run: deno lint
-
-            - name: Run Tests
-              run: deno task test
-
-    # dry run for publish
     build:
-        name: Build for publishing dry run
-        needs: test
+        name: Build
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4
@@ -46,6 +24,33 @@ jobs:
                       ./src/datex-core/datex_core_js.internal.js
                       ./src/datex-core/datex_core_js.wasm
                   retention-days: 5
+
+    test:
+        runs-on: ubuntu-latest
+        name: Test
+        needs: build
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  submodules: "true"
+            - name: Download build artifacts
+              uses: actions/download-artifact@v4
+              with:
+                  name: build
+                  path: ./src/datex-core
+
+            - uses: denoland/setup-deno@v2
+              with:
+                  deno-version: v2.x
+
+            - name: Check formatting
+              run: deno fmt --check
+
+            - name: Lint
+              run: deno lint
+
+            - name: Run Tests
+              run: deno task test-no-build
 
     publish-jsr-dry-run:
         runs-on: ubuntu-latest
