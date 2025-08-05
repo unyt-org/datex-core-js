@@ -19,7 +19,9 @@ jobs:
               uses: actions/upload-artifact@v4
               with:
                   name: build
-                  path: ./src/datex-core
+                  path: |
+                    ./src/datex-core/datex_core_js.internal.js
+                    ./src/datex-core/datex_core_js.wasm
                   retention-days: 5
 
     publish-jsr:
