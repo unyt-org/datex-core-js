@@ -21,6 +21,7 @@ await build({
     },
     typeCheck: false, // TODO: enable, currently fails because of ts errors
     scriptModule: false,
+    test: false, // TODO: enable, currently fails, see https://github.com/denoland/dnt/issues/249
 
     package: {
         // package.json properties
@@ -39,7 +40,7 @@ await build({
     postBuild() {
         // replace import.meta because dnt-shim-ignore does not work here
         const datexCoreJSInternalPath = new URL(
-            "../npm/esm/src/datex-core/datex_core_js.js",
+            "../npm/esm/datex-core/datex_core_js.js",
             import.meta.url,
         );
         const fileContent = Deno.readTextFileSync(datexCoreJSInternalPath);
@@ -52,16 +53,10 @@ await build({
         Deno.copyFileSync("README.md", "npm/README.md");
         Deno.copyFileSync(
             "src/datex-core/datex_core_js.wasm",
-            "npm/esm/src/datex-core/datex_core_js.wasm",
+            "npm/esm/datex-core/datex_core_js.wasm",
         );
 
         // currently required for version tests
         Deno.copyFileSync("deno.json", "npm/esm/deno.json");
-        // FIXME
-        // Deno.mkdirSync("npm/esm/rs-lib/datex-core", { recursive: true });
-        // Deno.copyFileSync(
-        //     "rs-lib/datex-core/Cargo.toml",
-        //     "npm/esm/rs-lib/datex-core/Cargo.toml",
-        // );
     },
 });
