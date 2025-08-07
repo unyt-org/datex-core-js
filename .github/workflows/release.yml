@@ -54,10 +54,15 @@ jobs:
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+            - name: Set up GitHub Pages directory
+              run: |
+                  mkdir -p ./pages
+                  cp ./datex.js ./pages/datex.js
+
             - name: Upload build artifacts
               uses: actions/upload-pages-artifact@v3
               with:
-                  path: datex.js
+                  path: ./pages
                   retention-days: 3
     deploy:
         needs: release
