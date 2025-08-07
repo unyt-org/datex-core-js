@@ -39,16 +39,12 @@ jobs:
                   git tag "v${{ env.version }}"
                   git push origin "v${{ env.version }}"
 
-            - name: Generate Release Notes
-              uses: ncipollo/release-action@v1
+            - name: Create Draft Release
+              uses: softprops/action-gh-release@v2
               with:
-                  token: ${{ secrets.GITHUB_TOKEN }}
-                  tag: "v${{ env.version }}"
-                  generateReleaseNotes: true
-                  draft: true
-
-            - name: Upload datex.js bundle as artifact
-              uses: actions/upload-artifact@v4
-              with:
-                  name: datex.js (JavaScript Bundle)
-                  path: ./datex.js
+                draft: true
+                tag_name: "v${{ env.version }}"
+                files: ./datex.js
+                generate_release_notes: true
+              env:
+                GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
