@@ -23,6 +23,10 @@ jobs:
                   echo "Version found: $VERSION"
                   echo "version=$VERSION" >> $GITHUB_ENV
 
+            - name: Build
+              run: |
+                deno task release
+
             - name: Generate datex.js bundle
               run: |
                   deno task build-bundle
