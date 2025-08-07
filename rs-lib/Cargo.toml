@@ -1,7 +1,7 @@
 
 [package]
 name = "datex-core-js"
-version = "0.0.6"
+version = "0.0.7"
 authors = [
     "Benedikt Strehle <benedikt@unyt.org>",
     "Jonas Strehle <jonas@unyt.org>",
