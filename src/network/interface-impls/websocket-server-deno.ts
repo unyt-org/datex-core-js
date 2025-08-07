@@ -38,12 +38,6 @@ export class WebSockerServerDenoInterfaceImpl
     }
 }
 
-declare global {
-    interface GlobalInterfaceImpls {
-        "websocket-server": typeof WebSockerServerDenoInterfaceImpl;
-    }
-}
-
 ComHub.registerInterfaceImpl(
     "websocket-server",
     WebSockerServerDenoInterfaceImpl,

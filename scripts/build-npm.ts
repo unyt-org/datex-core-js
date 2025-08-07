@@ -8,7 +8,13 @@ const VERSION: string = await Deno.readTextFile(
 ).then(JSON.parse).then((data: { version: string }) => data.version);
 
 await build({
-    entryPoints: ["./src/mod.ts"],
+    entryPoints: [
+        "./src/mod.ts",
+        // interface impls are not all referenced from the entry point, must be included explicitly
+        "./src/network/interface-impls/websocket-client.ts",
+        "./src/network/interface-impls/websocket-server-deno.ts",
+        "./src/network/interface-impls/base.ts",
+    ],
     outDir: "./npm",
     shims: {
         deno: true,

@@ -46,10 +46,4 @@ export class BaseInterfaceImpl
     }
 }
 
-declare global {
-    interface GlobalInterfaceImpls {
-        "base": typeof BaseInterfaceImpl;
-    }
-}
-
 ComHub.registerInterfaceImpl("base", BaseInterfaceImpl);

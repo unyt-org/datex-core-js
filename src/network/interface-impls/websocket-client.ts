@@ -6,10 +6,4 @@ export class WebSocketClientInterfaceImpl
     extends ComInterfaceImpl<WebSocketClientInterfaceSetupData> {
 }
 
-declare global {
-    interface GlobalInterfaceImpls {
-        "websocket-client": typeof WebSocketClientInterfaceImpl;
-    }
-}
-
 ComHub.registerInterfaceImpl("websocket-client", WebSocketClientInterfaceImpl);
