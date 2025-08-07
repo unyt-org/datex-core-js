@@ -18,6 +18,10 @@ jobs:
                   echo "Version found: $VERSION"
                   echo "version=$VERSION" >> $GITHUB_ENV
 
+            - name: Generate datex.js bundle
+              run: |
+                  deno task build-bundle
+
             - name: Create Tag
               id: create_tag
               run: |
@@ -33,3 +37,9 @@ jobs:
                   tag: "v${{ env.version }}"
                   generateReleaseNotes: true
                   draft: true
+
+            - name: Upload datex.js bundle as artifact
+              uses: actions/upload-artifact@v3
+              with:
+                  name: datex.js (JavaScript Bundle)
+                  path: ./datex.js

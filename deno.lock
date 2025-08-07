@@ -1,5 +1,5 @@
 {
-  "version": "4",
+  "version": "5",
   "specifiers": {
     "jsr:@david/code-block-writer@^13.0.2": "13.0.3",
     "jsr:@david/path@0.2": "0.2.0",
@@ -13,6 +13,7 @@
     "jsr:@std/bytes@^1.0.6": "1.0.6",
     "jsr:@std/cli@*": "1.0.20",
     "jsr:@std/crypto@^1.0.5": "1.0.5",
+    "jsr:@std/encoding@*": "1.0.10",
     "jsr:@std/encoding@^1.0.6": "1.0.10",
     "jsr:@std/fmt@1": "1.0.8",
     "jsr:@std/fmt@^1.0.3": "1.0.8",
@@ -30,7 +31,8 @@
     "jsr:@std/tar@~0.1.4": "0.1.6",
     "jsr:@std/uuid@*": "1.0.9",
     "jsr:@ts-morph/bootstrap@0.25": "0.25.0",
-    "jsr:@ts-morph/common@0.25": "0.25.0"
+    "jsr:@ts-morph/common@0.25": "0.25.0",
+    "npm:@unyt/datex@0.0.6": "0.0.6"
   },
   "jsr": {
     "@david/code-block-writer@13.0.3": {
@@ -78,7 +80,7 @@
       "dependencies": [
         "jsr:@david/path",
         "jsr:@david/temp",
-        "jsr:@std/encoding",
+        "jsr:@std/encoding@^1.0.6",
         "jsr:@std/fmt@^1.0.4",
         "jsr:@std/fs@^1.0.10",
         "jsr:@std/tar"
@@ -160,6 +162,78 @@
       ]
     }
   },
+  "npm": {
+    "@deno/sham-weakref@0.1.0": {
+      "integrity": "sha512-H+IL+BIVhixiDPeDeK8i/Rpxofl8ltfSYoqplc+qEjOds5izd2h16/ygd6hxGWaiq935ud+zNYcFfR+E37lVzg=="
+    },
+    "@deno/shim-crypto@0.3.1": {
+      "integrity": "sha512-ed4pNnfur6UbASEgF34gVxR9p7Mc3qF+Ygbmjiil8ws5IhNFhPDFy5vE5hQAUA9JmVsSxXPcVLM5Rf8LOZqQ5Q=="
+    },
+    "@deno/shim-deno-test@0.5.0": {
+      "integrity": "sha512-4nMhecpGlPi0cSzT67L+Tm+GOJqvuk8gqHBziqcUQOarnuIax1z96/gJHCSIz2Z0zhxE6Rzwb3IZXPtFh51j+w=="
+    },
+    "@deno/shim-deno@0.18.2": {
+      "integrity": "sha512-oQ0CVmOio63wlhwQF75zA4ioolPvOwAoK0yuzcS5bDC1JUvH3y1GS8xPh8EOpcoDQRU4FTG8OQfxhpR+c6DrzA==",
+      "dependencies": [
+        "@deno/shim-deno-test",
+        "which"
+      ]
+    },
+    "@deno/shim-prompts@0.1.1": {
+      "integrity": "sha512-E3tqmVdIhrFvyxUTDUA0lta2VHsDBH6JX48XMpveBoTtO+Js2cwfrYId7QhCkA7+9DEc96Eof7nWLiKwxxYmFA=="
+    },
+    "@deno/shim-timers@0.1.0": {
+      "integrity": "sha512-XFRnB5Rtbkd5RiYHwhugNK9gvDgYXmFTUOT5dmhWCKG7WnOWZggbJMnH1NcyYS3QgHvmaTOaHCyNFNSv57j3Dg=="
+    },
+    "@unyt/datex@0.0.6": {
+      "integrity": "sha512-1R9UBahm73K80P+K+IvuJIuClXmtyWJvQ5us6iZ91ob5aBudBfQRgwYMXRlECXJcRlKKaAEtX+9gEK2myxV83w==",
+      "dependencies": [
+        "@deno/sham-weakref",
+        "@deno/shim-crypto",
+        "@deno/shim-deno",
+        "@deno/shim-prompts",
+        "@deno/shim-timers",
+        "undici",
+        "ws"
+      ]
+    },
+    "isexe@3.1.1": {
+      "integrity": "sha512-LpB/54B+/2J5hqQ7imZHfdU31OlgQqx7ZicVlkm9kzg9/w8GKLEcFfJl/t7DCEDueOyBAD6zCCwTO6Fzs0NoEQ=="
+    },
+    "undici@6.21.3": {
+      "integrity": "sha512-gBLkYIlEnSp8pFbT64yFgGE6UIB9tAkhukC23PmMDCe5Nd+cRqKxSjw5y54MK2AZMgZfJWMaNE4nYUHgi1XEOw=="
+    },
+    "which@4.0.0": {
+      "integrity": "sha512-GlaYyEb07DPxYCKhKzplCWBJtvxZcZMrL+4UkrTSJHHPyZU4mYYTv3qaOe77H7EODLSSopAUFAc6W8U4yqvscg==",
+      "dependencies": [
+        "isexe"
+      ],
+      "bin": true
+    },
+    "ws@8.18.3": {
+      "integrity": "sha512-PEIGCY5tSlUt50cqyMXfCzX+oOPqN0vuGqWzbcJ2xvnkzkq46oOpz7dQaTDBdfICb4N14+GARUDw2XV2N4tvzg==",
+      "optionalPeers": [
+        "bufferutil@^4.0.1",
+        "utf-8-validate@>=5.0.2"
+      ]
+    }
+  },
+  "redirects": {
+    "https://esm.sh/@deno/sham-weakref@~0.1.0?target=denonext": "https://esm.sh/@deno/sham-weakref@0.1.0?target=denonext",
+    "https://esm.sh/@deno/shim-crypto@~0.3.1?target=denonext": "https://esm.sh/@deno/shim-crypto@0.3.1?target=denonext",
+    "https://esm.sh/@deno/shim-deno-test@^0.5.0?target=denonext": "https://esm.sh/@deno/shim-deno-test@0.5.0?target=denonext",
+    "https://esm.sh/@deno/shim-deno@~0.18.0?target=denonext": "https://esm.sh/@deno/shim-deno@0.18.2?target=denonext",
+    "https://esm.sh/@deno/shim-prompts@~0.1.0?target=denonext": "https://esm.sh/@deno/shim-prompts@0.1.1?target=denonext",
+    "https://esm.sh/@deno/shim-timers@~0.1.0?target=denonext": "https://esm.sh/@deno/shim-timers@0.1.0?target=denonext",
+    "https://esm.sh/@unyt/datex": "https://esm.sh/@unyt/datex@0.0.6",
+    "https://esm.sh/bufferutil@^4.0.1?target=denonext": "https://esm.sh/bufferutil@4.0.9?target=denonext",
+    "https://esm.sh/isexe@^3.1.1?target=denonext": "https://esm.sh/isexe@3.1.1?target=denonext",
+    "https://esm.sh/node-gyp-build@^4.3.0?target=denonext": "https://esm.sh/node-gyp-build@4.8.4?target=denonext",
+    "https://esm.sh/undici@^6.0.0?target=denonext": "https://esm.sh/undici@6.21.3?target=denonext",
+    "https://esm.sh/utf-8-validate@%3E=5.0.2?target=denonext": "https://esm.sh/utf-8-validate@6.0.5?target=denonext",
+    "https://esm.sh/which@^4.0.0?target=denonext": "https://esm.sh/which@4.0.0?target=denonext",
+    "https://esm.sh/ws@^8.13.0?target=denonext": "https://esm.sh/ws@8.18.3?target=denonext"
+  },
   "remote": {
     "https://deno.land/std@0.224.0/collections/_utils.ts": "b2ec8ada31b5a72ebb1d99774b849b4c09fe4b3a38d07794bd010bd218a16e0b",
     "https://deno.land/std@0.224.0/collections/deep_merge.ts": "04f8d2a6cfa15c7580e788689bcb5e162512b9ccb18bab1241824b432a78551e",
@@ -167,7 +241,37 @@
     "https://deno.land/std@0.224.0/toml/_parser.ts": "187560eb4465977808b18c68299e1f5a6e4631c0a181d868c8f24722cf9146d1",
     "https://deno.land/std@0.224.0/toml/mod.ts": "a457ea7877a6d5e7f3d6985c43da4d2ecd7461038d5c4c7a0089737e90a7ee90",
     "https://deno.land/std@0.224.0/toml/parse.ts": "2f0729a8f62c7e508af8dfada0386a4bc2c0d664ef4d26090df03cf495dcb25a",
-    "https://deno.land/std@0.224.0/toml/stringify.ts": "8b9ba3c1bf8fa7d58d7b62ad62b3174dbbc51050d5cc302aa8e2834089c00d73"
+    "https://deno.land/std@0.224.0/toml/stringify.ts": "8b9ba3c1bf8fa7d58d7b62ad62b3174dbbc51050d5cc302aa8e2834089c00d73",
+    "https://esm.sh/@deno/sham-weakref@0.1.0/denonext/sham-weakref.mjs": "b62ec6d61cbd6bd3fbb864ab6e6d15fc2c3551187e454fed95a896b070703d9f",
+    "https://esm.sh/@deno/sham-weakref@0.1.0?target=denonext": "25ee4370400228db1127b839a9b2a3520ffb9f2bf629993c5f2a0a1ad2a3e7ba",
+    "https://esm.sh/@deno/shim-crypto@0.3.1/denonext/shim-crypto.mjs": "3588717b9573883801d8ea2023814bde38ba0f0e7338fb4ed8fabdf4eea2fd13",
+    "https://esm.sh/@deno/shim-crypto@0.3.1?target=denonext": "50f5e6aa6cbdfcbb7ebd87b2db2ab5c614fa3b3d1fe9b83c2291033aaff2ef21",
+    "https://esm.sh/@deno/shim-deno-test@0.5.0/denonext/shim-deno-test.mjs": "21298ee12e8add3e8efe527aa1dd2a4fd029eb1876f5a59107bbe62b3969e282",
+    "https://esm.sh/@deno/shim-deno-test@0.5.0?target=denonext": "503b73de1a14bd33782220e11fa2b33e9c87d574ac793e7addf1466c5436e66a",
+    "https://esm.sh/@deno/shim-deno@0.18.2/denonext/shim-deno.mjs": "5467ef66f8afe43352b5742b7c21ce84fc6bf7250b49a335e46b0bd37665e1aa",
+    "https://esm.sh/@deno/shim-deno@0.18.2?target=denonext": "ffa3ca347bb6b6530720158f307a2e31b16728fbb52e6432254a07d52fcbc404",
+    "https://esm.sh/@deno/shim-prompts@0.1.1/denonext/shim-prompts.mjs": "9fca575ba9a69f1a4a4ae92456e970a99cd1931c7d0eada9e6ac3cc49651befd",
+    "https://esm.sh/@deno/shim-prompts@0.1.1?target=denonext": "48898d713b4860135489b2e093e2892ce845e9a1ca59302344325994d2d7ef2f",
+    "https://esm.sh/@deno/shim-timers@0.1.0/denonext/shim-timers.mjs": "1fe363c1896ba854d6123f0063ed44dd1083917b9a21c0cbb94c2c47b75743b2",
+    "https://esm.sh/@deno/shim-timers@0.1.0?target=denonext": "1bbeb0dc475a7b0db57f6ab2db4116a57e60b60b871fa7c005b97f24fd37277f",
+    "https://esm.sh/@unyt/datex@0.0.6": "08bd400711a89690c1ebedb1dd99b42f1d614b28a1bc8c6b47890bd7879dc586",
+    "https://esm.sh/@unyt/datex@0.0.6/denonext/datex.mjs": "b28fd94ab20a4f6102699f6f43d4bf417631cebe20992cbe1473e5d133733ce0",
+    "https://esm.sh/bufferutil@4.0.9/denonext/bufferutil.mjs": "13dca4d5bb2c68cbe119f880fa3bd785b9a81a8e02e0834dae604b4b85295cd8",
+    "https://esm.sh/bufferutil@4.0.9?target=denonext": "e32574569ab438facfcc3f412c659b0719bbf05477136ca176938c9a3ac45125",
+    "https://esm.sh/isexe@3.1.1/denonext/isexe.mjs": "59b58a950d33368749f8b2f0df8377ded09f5f30c276f79239a2542029e77a43",
+    "https://esm.sh/isexe@3.1.1/denonext/posix.mjs": "f99f8d2aacd0b5424625cee480f36b47639cfbad44c64b7b21cbba18ad77a1b2",
+    "https://esm.sh/isexe@3.1.1/denonext/win32.mjs": "f52981ee6555549c246db8e9e6c0ee1e2947a35367c3bcec0ba31834387991c0",
+    "https://esm.sh/isexe@3.1.1?target=denonext": "b3c61e7e70b9d56865de461fbcdae702ebf93743143457079a15a60e30dfcf83",
+    "https://esm.sh/node-gyp-build@4.8.4/denonext/node-gyp-build.mjs": "9a86f2d044fc77bd60aaa3d697c2ba1b818da5fb1b9aaeedec59a40b8e908803",
+    "https://esm.sh/node-gyp-build@4.8.4?target=denonext": "261a6cedf1fdbf159798141ba1e2311ac1510682c5c8b55dacc8cf5fdee4aa06",
+    "https://esm.sh/undici@6.21.3/denonext/undici.mjs": "01ce892d765a2cfa15e5f5b1027e445f9b6158b0f422485fd7f4a6bbfe8da2a1",
+    "https://esm.sh/undici@6.21.3?target=denonext": "f1170d0bbdcf27b252e52e67cb5afb5d35d2c0ac717b51ce00cfc58c916f6109",
+    "https://esm.sh/utf-8-validate@6.0.5/denonext/utf-8-validate.mjs": "66b8ea532a0c745068f5b96ddb1bae332c3036703243541d2e89e66331974d98",
+    "https://esm.sh/utf-8-validate@6.0.5?target=denonext": "071bc33ba1a58297e23a34d69dd589fd06df04b0f373b382ff5da544a623f271",
+    "https://esm.sh/which@4.0.0/denonext/which.mjs": "9f47207c6dc9684fe3d852f2290c474577babaeabf60616652630c0b90421a53",
+    "https://esm.sh/which@4.0.0?target=denonext": "50b06c1a68e3ef88dc8e2c68c17b732a6d1917000d5d59637496da3b61549c8e",
+    "https://esm.sh/ws@8.18.3/denonext/ws.mjs": "063ab2c92e0908d060e4de414b74e941fbd1b3ccedfce35cc965703a8a3f86c1",
+    "https://esm.sh/ws@8.18.3?target=denonext": "a5ca9d7990fc419fd8b8d06d0855bb64688769e6bb887ba07d36c13172f882b5"
   },
   "workspace": {
     "dependencies": [

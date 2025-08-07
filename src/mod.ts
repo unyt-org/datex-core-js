@@ -6,9 +6,6 @@
 
 import { Runtime } from "./runtime/runtime.ts";
 
-// load default interfaces
-import "./network/interface-impls/websocket-client.ts";
-
 /**
  * The default configuration for the Datex runtime.
  */
