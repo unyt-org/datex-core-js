@@ -1,5 +1,9 @@
 import { encodeBase64 } from "jsr:@std/encoding/base64";
 
+// check if --inline-wasm argument is passed
+// if --inline-wasm is passed, the wasm file will be embedded into the bundle
+const inlineWASM = Deno.args.includes("--inline-wasm");
+
 const command = new Deno.Command(Deno.execPath(), {
     args: [
         "bundle",
@@ -22,6 +26,12 @@ if (code !== 0) {
     Deno.exit(code);
 } else {
     console.log("Script bundled successfully to datex.js");
+
+    if (!inlineWASM) {
+        console.log("Skipping WASM embedding, inline flag not set.");
+        Deno.exit(0);
+    }
+
     // replace await WebAssembly.instantiateStreaming(fetch(new URL("datex_core_js.wasm",import.meta.url)) with
     // WebAssembly.instantiate inline
     const wasmFile = new URL(

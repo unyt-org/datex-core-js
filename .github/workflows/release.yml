@@ -32,9 +32,19 @@ jobs:
               run: |
                   deno task release
 
-            - name: Generate datex.js bundle
+            - name: Generate datex.js bundle for pages (without inline WASM)
               run: |
-                  deno task build-bundle
+                deno task build-bundle
+
+            - name: Set up GitHub Pages directory with datex.js and WASM
+              run: |
+                mkdir -p ./pages
+                cp ./datex.js ./pages/datex.js
+                cp ./src/datex-core/datex_core_js.wasm ./pages/datex_core_js.wasm
+
+            - name: Generate datex.js bundle for release artifact (with inline WASM)
+              run: |
+                  deno task build-bundle --inline-wasm
 
             - name: Create Tag
               id: create_tag
@@ -53,11 +63,6 @@ jobs:
                   generate_release_notes: true
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-            - name: Set up GitHub Pages directory
-              run: |
-                  mkdir -p ./pages
-                  cp ./datex.js ./pages/datex.js
 
             - name: Upload build artifacts
               uses: actions/upload-pages-artifact@v3
