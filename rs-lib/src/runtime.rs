@@ -11,12 +11,14 @@ use crate::js_utils::js_array;
 use crate::utils::time::TimeJS;
 use datex_core::crypto::crypto::CryptoTrait;
 use datex_core::decompiler::{decompile_value, DecompileOptions};
+use datex_core::dif::DIFValue;
 use datex_core::global::dxb_block::DXBBlock;
 use datex_core::global::protocol_structures::block_header::{
     BlockHeader, FlagsAndTimestamp,
 };
 use datex_core::runtime::{Runtime, RuntimeConfig, RuntimeInternal};
 use datex_core::values::serde::deserializer::DatexDeserializer;
+use datex_core::values::value_container::ValueContainer;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::future_to_promise;
 use web_sys::js_sys::Promise;
@@ -214,12 +216,42 @@ impl JSRuntime {
         RuntimeInternal::stop_update_loop(self.runtime.internal.clone()).await
     }
 
-    pub async fn execute(
+    pub async fn execute_with_string_result(
         &self,
         script: &str,
         formatted: bool,
     ) -> String {
-        let input = self.runtime.execute(script, &[], None).await.unwrap();
+        let result = self.runtime.execute(script, &[], None).await.unwrap();
+        match result {
+            None => {
+                "".to_string()
+            }
+            Some(result) => {
+                decompile_value(
+                    &result,
+                    DecompileOptions {
+                        formatted,
+                        ..DecompileOptions::default()
+                    },
+                )
+            }
+        }
+    }
+
+    pub async fn execute(
+        &self,
+        script: &str,
+    ) -> JsValue {
+        let result = self.runtime.execute(script, &[], None).await.unwrap();
+        self.maybe_value_container_to_dif(result)
+    }
+
+    pub fn execute_sync_with_string_result(
+        &self,
+        script: &str,
+        formatted: bool,
+    ) -> String {
+        let input = self.runtime.execute_sync(script, &[], None).unwrap();
         match input {
             None => {
                 "".to_string()
@@ -239,21 +271,23 @@ impl JSRuntime {
     pub fn execute_sync(
         &self,
         script: &str,
-        formatted: bool,
-    ) -> String {
-        let input = self.runtime.execute_sync(script, &[], None).unwrap();
-        match input {
+    ) -> JsValue {
+        let result = self.runtime.execute_sync(script, &[], None).unwrap();
+        self.maybe_value_container_to_dif(result)
+    }
+
+    fn maybe_value_container_to_dif(
+        &self,
+        maybe_value_container: Option<ValueContainer>
+    ) -> JsValue {
+
+        match maybe_value_container {
             None => {
-                "".to_string()
+                JsValue::NULL
             }
-            Some(result) => {
-                decompile_value(
-                    &result,
-                    DecompileOptions {
-                        formatted,
-                        ..DecompileOptions::default()
-                    },
-                )
+            Some(value_container) => {
+                let dif_value = DIFValue::from(&value_container);
+                serde_wasm_bindgen::to_value(&dif_value).unwrap()
             }
         }
     }
