@@ -76,7 +76,7 @@ Deno.test("send data between two runtimes", async () => {
 
     await sleep(1000);
 
-    const res = await runtimeA.execute("@test_b :: 1 + 2");
+    const res = await runtimeA.execute_with_string_result("@test_b :: 1 + 2");
     assert(res === "3", "Expected result from remote execution to be 3");
 
     await serverInterface.close();
