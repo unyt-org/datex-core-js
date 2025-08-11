@@ -1,6 +1,5 @@
 import { Runtime } from "../../src/runtime/runtime.ts";
 import { assertEquals } from "jsr:@std/assert";
-import {unescapeLeadingUnderscores} from "npm:typescript@5.8.3";
 Deno.test("execute sync with string result", () => {
     const runtime = new Runtime({ endpoint: "@jonas" });
     const script = "1 + 2";
@@ -23,7 +22,6 @@ Deno.test("execute sync", () => {
     });
     console.log(result);
 });
-
 
 Deno.test("execute with string result", async () => {
     const runtime = new Runtime({ endpoint: "@jonas" });
