@@ -4,7 +4,7 @@ import { Endpoint } from "../../src/runtime/special-core-types.ts";
 Deno.test("execute sync with string result", () => {
     const runtime = new Runtime({ endpoint: "@jonas" });
     const script = "1 + 2";
-    const result = runtime.executeSyncWithStringResult(script, false);
+    const result = runtime.executeSyncWithStringResult(script);
     assertEquals(result, "3");
     console.log(result);
 });
@@ -19,7 +19,7 @@ Deno.test("execute sync dif value", () => {
         core_type: "integer",
         ptr_id: undefined,
         type: "integer",
-        value: 3,
+        value: "3",
     });
     console.log(result);
 });
@@ -29,6 +29,13 @@ Deno.test("execute sync number", () => {
     const result = runtime.executeSync<number>("1 + 2");
     assertEquals(result, 3);
 });
+
+// TODO: this currently does not work until types are supported in the DATEX runtime
+// Deno.test("execute sync bigint", () => {
+//     const runtime = new Runtime({ endpoint: "@jonas" });
+//     const result = runtime.executeSync<bigint>("const x: integer/u64 = 1234567812345678912; x");
+//     assertEquals(result, 1234567812345678912n);
+// });
 
 Deno.test("execute sync string", () => {
     const runtime = new Runtime({ endpoint: "@jonas" });
@@ -78,7 +85,7 @@ Deno.test("execute sync endpoint", () => {
 Deno.test("execute with string result", async () => {
     const runtime = new Runtime({ endpoint: "@jonas" });
     const script = "1 + 2";
-    const result = await runtime.executeWithStringResult(script, false);
+    const result = await runtime.executeWithStringResult(script);
     assertEquals(result, "3");
     console.log(result);
 });
@@ -86,7 +93,7 @@ Deno.test("execute with string result", async () => {
 Deno.test("execute remote with string result", async () => {
     const runtime = new Runtime({ endpoint: "@jonas" });
     const script = "1 + 2";
-    const result = await runtime.executeWithStringResult(script, false);
+    const result = await runtime.executeWithStringResult(script);
     assertEquals(result, "3");
     console.log(result);
 });
