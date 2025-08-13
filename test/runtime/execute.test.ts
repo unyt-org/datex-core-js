@@ -1,6 +1,6 @@
 import { Runtime } from "../../src/runtime/runtime.ts";
 import { assertEquals } from "jsr:@std/assert";
-import {Endpoint} from "../../src/runtime/special-core-types.ts";
+import { Endpoint } from "../../src/runtime/special-core-types.ts";
 Deno.test("execute sync with string result", () => {
     const runtime = new Runtime({ endpoint: "@jonas" });
     const script = "1 + 2";
@@ -23,7 +23,6 @@ Deno.test("execute sync dif value", () => {
     });
     console.log(result);
 });
-
 
 Deno.test("execute sync number", () => {
     const runtime = new Runtime({ endpoint: "@jonas" });
@@ -57,7 +56,9 @@ Deno.test("execute sync array", () => {
 
 Deno.test("execute sync object", () => {
     const runtime = new Runtime({ endpoint: "@jonas" });
-    const result = runtime.execute_sync<{ a: number; b: string }>("{ a: 1, b: 'test' }");
+    const result = runtime.execute_sync<{ a: number; b: string }>(
+        "{ a: 1, b: 'test' }",
+    );
     assertEquals(result, { a: 1, b: "test" });
 });
 
@@ -66,7 +67,6 @@ Deno.test("execute sync endpoint", () => {
     const result = runtime.execute_sync<Endpoint>("#endpoint");
     assertEquals(result, Endpoint.get("@jonas"));
 });
-
 
 Deno.test("execute with string result", async () => {
     const runtime = new Runtime({ endpoint: "@jonas" });
