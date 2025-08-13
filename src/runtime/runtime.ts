@@ -5,7 +5,7 @@ import {
     type JSRuntime,
 } from "../datex-core.ts";
 import { ComHub } from "../network/com-hub.ts";
-import { DIFValue, resolveDIFValue } from "./dif.ts";
+import {convertToDIFValues, DIFValue, resolveDIFValue} from "./dif.ts";
 
 // auto-generated version - do not edit:
 const VERSION: string = "0.0.6";
@@ -79,48 +79,62 @@ export class Runtime {
 
     public executeWithStringResult(
         datex_script: string,
+        values: unknown[]|null = [],
         formatted: boolean = false,
     ): Promise<string> {
         return this.#runtime.execute_with_string_result(
             datex_script,
+            convertToDIFValues(values),
             formatted,
         );
     }
 
     public executeSyncWithStringResult(
         datex_script: string,
+        values: unknown[]|null = [],
         formatted: boolean = false,
     ): string {
         return this.#runtime.execute_sync_with_string_result(
             datex_script,
+            convertToDIFValues(values),
             formatted,
         );
     }
 
     public executeDIF(
         datex_script: string,
+        values: unknown[]|null = [],
     ): Promise<DIFValue> {
-        return this.#runtime.execute(datex_script);
+        return this.#runtime.execute(
+            datex_script,
+            convertToDIFValues(values)
+        );
     }
 
     public executeSyncDIF(
         datex_script: string,
+        values: unknown[]|null = [],
     ): DIFValue {
-        return this.#runtime.execute_sync(datex_script);
+        return this.#runtime.execute_sync(
+            datex_script,
+            convertToDIFValues(values)
+        );
     }
 
     // TODO: add normal execute/execute_sync methods that return an actual js value converted from DIFValue
     public async execute<T = unknown>(
         datex_script: string,
+        values: unknown[] = [],
     ): Promise<T> {
-        const difValue = await this.executeDIF(datex_script);
+        const difValue = await this.executeDIF(datex_script, values,);
         return resolveDIFValue<T>(difValue);
     }
 
     public executeSync<T = unknown>(
         datex_script: string,
+        values: unknown[] = [],
     ): T {
-        const difValue = this.executeSyncDIF(datex_script);
+        const difValue = this.executeSyncDIF(datex_script, values);
         console.log("difValue", difValue);
         if (difValue === null) {
             return undefined as T;

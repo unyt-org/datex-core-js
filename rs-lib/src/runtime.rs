@@ -219,9 +219,14 @@ impl JSRuntime {
     pub async fn execute_with_string_result(
         &self,
         script: &str,
+        dif_values: Option<Vec<JsValue>>,
         formatted: bool,
     ) -> String {
-        let result = self.runtime.execute(script, &[], None).await.unwrap();
+        let result = self.runtime.execute(
+            script,
+            &Self::js_values_to_value_containers(dif_values),
+            None
+        ).await.unwrap();
         match result {
             None => {
                 "".to_string()
@@ -241,17 +246,27 @@ impl JSRuntime {
     pub async fn execute(
         &self,
         script: &str,
+        dif_values: Option<Vec<JsValue>>,
     ) -> JsValue {
-        let result = self.runtime.execute(script, &[], None).await.unwrap();
-        self.maybe_value_container_to_dif(result)
+        let result = self.runtime.execute(
+            script,
+            &Self::js_values_to_value_containers(dif_values),
+            None
+        ).await.unwrap();
+        Self::maybe_value_container_to_dif(result)
     }
 
     pub fn execute_sync_with_string_result(
         &self,
         script: &str,
+        dif_values: Option<Vec<JsValue>>,
         formatted: bool,
     ) -> String {
-        let input = self.runtime.execute_sync(script, &[], None).unwrap();
+        let input = self.runtime.execute_sync(
+            script,
+            &Self::js_values_to_value_containers(dif_values),
+            None
+        ).unwrap();
         match input {
             None => {
                 "".to_string()
@@ -271,13 +286,17 @@ impl JSRuntime {
     pub fn execute_sync(
         &self,
         script: &str,
+        dif_values: Option<Vec<JsValue>>,
     ) -> JsValue {
-        let result = self.runtime.execute_sync(script, &[], None).unwrap();
-        self.maybe_value_container_to_dif(result)
+        let result = self.runtime.execute_sync(
+            script,
+            &Self::js_values_to_value_containers(dif_values), 
+            None
+        ).unwrap();
+        Self::maybe_value_container_to_dif(result)
     }
 
     fn maybe_value_container_to_dif(
-        &self,
         maybe_value_container: Option<ValueContainer>
     ) -> JsValue {
 
@@ -290,5 +309,21 @@ impl JSRuntime {
                 serde_wasm_bindgen::to_value(&dif_value).unwrap()
             }
         }
+    }
+
+    fn js_values_to_value_containers(
+        js_values: Option<Vec<JsValue>>,
+    ) -> Vec<ValueContainer> {
+        js_values.map(|values| {
+            values
+                .into_iter()
+                .map(|v| {
+                    // convert JsValue to DIFValue
+                    let dif_value: DIFValue = serde_wasm_bindgen::from_value(v).unwrap();
+                    // convert DIFValue to ValueContainer
+                    ValueContainer::from(&dif_value)
+                })
+                .collect()
+        }).unwrap_or_default()
     }
 }
