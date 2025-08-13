@@ -122,6 +122,9 @@ export class Runtime {
     ): T {
         const difValue = this.executeSyncDIF(datex_script);
         console.log("difValue", difValue);
+        if (difValue === null) {
+            return undefined as T;
+        }
         return resolveDIFValue<T>(difValue);
     }
 
