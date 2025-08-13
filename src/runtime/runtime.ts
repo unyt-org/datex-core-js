@@ -1,11 +1,11 @@
 import {
     create_runtime,
     execute_internal,
+    JSRuntime,
     type JSMemory,
-    type JSRuntime,
 } from "../datex-core.ts";
 import { ComHub } from "../network/com-hub.ts";
-import { convertToDIFValues, type DIFValue, resolveDIFValue } from "./dif.ts";
+import {convertToDIFValue, convertToDIFValues, type DIFValue, resolveDIFValue} from "./dif.ts";
 
 // auto-generated version - do not edit:
 const VERSION: string = "0.0.6";
@@ -20,6 +20,13 @@ export type RuntimeConfig = {
     interfaces?: { type: string; config: unknown }[];
     debug?: boolean;
 };
+
+export type DecompileOptions = {
+    formatted?: boolean,
+    colorized?: boolean,
+    resolve_slots?: boolean,
+    json_compat?: boolean,
+}
 
 export class Runtime {
     public readonly js_version = VERSION;
@@ -80,24 +87,24 @@ export class Runtime {
     public executeWithStringResult(
         datexScript: string,
         values: unknown[] | null = [],
-        formatted: boolean = false,
+        decompileOptions: DecompileOptions | null = null,
     ): Promise<string> {
         return this.#runtime.execute_with_string_result(
             datexScript,
             convertToDIFValues(values),
-            formatted,
+            decompileOptions,
         );
     }
 
     public executeSyncWithStringResult(
         datexScript: string,
         values: unknown[] | null = [],
-        formatted: boolean = false,
+        decompileOptions: DecompileOptions | null = null,
     ): string {
         return this.#runtime.execute_sync_with_string_result(
             datexScript,
             convertToDIFValues(values),
-            formatted,
+            decompileOptions,
         );
     }
 
@@ -223,6 +230,13 @@ export class Runtime {
             return undefined as T;
         }
         return resolveDIFValue<T>(difValue);
+    }
+
+    public valueToString(
+        value: unknown,
+        decompileOptions: DecompileOptions | null = null,
+    ): string {
+        return JSRuntime.value_to_string(convertToDIFValue(value), decompileOptions);
     }
 
     /**
