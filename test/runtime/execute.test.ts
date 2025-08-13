@@ -54,6 +54,13 @@ Deno.test("execute sync array", () => {
     assertEquals(result, [1, 2, 3]);
 });
 
+Deno.test("execute sync none", () => {
+    const runtime = new Runtime({ endpoint: "@jonas" });
+    const result = runtime.executeSync<number[]>("42;");
+    assertEquals(result, undefined);
+});
+
+
 Deno.test("execute sync object", () => {
     const runtime = new Runtime({ endpoint: "@jonas" });
     const result = runtime.executeSync<{ a: number; b: string }>(
