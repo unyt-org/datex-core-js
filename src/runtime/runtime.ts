@@ -5,7 +5,7 @@ import {
     type JSRuntime,
 } from "../datex-core.ts";
 import { ComHub } from "../network/com-hub.ts";
-import {DIFValue, resolveDIFValue} from "./dif.ts";
+import { DIFValue, resolveDIFValue } from "./dif.ts";
 
 // auto-generated version - do not edit:
 const VERSION: string = "0.0.6";
