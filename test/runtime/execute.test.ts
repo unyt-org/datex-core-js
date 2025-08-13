@@ -67,7 +67,6 @@ Deno.test("execute sync none", () => {
     assertEquals(result, undefined);
 });
 
-
 Deno.test("execute sync object", () => {
     const runtime = new Runtime({ endpoint: "@jonas" });
     const result = runtime.executeSync<{ a: number; b: string }>(
