@@ -81,6 +81,25 @@ Deno.test("execute sync endpoint", () => {
     assertEquals(result, Endpoint.get("@jonas"));
 });
 
+Deno.test("execute sync pass number from JS", () => {
+    const runtime = new Runtime({ endpoint: "@jonas" });
+    const result = runtime.executeSync<number>("1 + ?", [41]);
+    assertEquals(result, 42);
+});
+
+Deno.test("execute sync pass multiple values from JS", () => {
+    const runtime = new Runtime({ endpoint: "@jonas" });
+    const result = runtime.executeSync<number[]>("[?, 2, ?]", [1, 3]);
+    assertEquals(result, [1, 2, 3]);
+});
+
+Deno.test("execute sync pass multiple values from JS with template syntax", () => {
+    const runtime = new Runtime({ endpoint: "@jonas" });
+    const result = runtime.executeSync<number[]>`[${1}, 2, ${3}]`;
+    assertEquals(result, [1, 2, 3]);
+})
+
+
 Deno.test("execute with string result", async () => {
     const runtime = new Runtime({ endpoint: "@jonas" });
     const script = "1 + 2";

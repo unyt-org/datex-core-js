@@ -94,7 +94,7 @@ export function resolveDIFValue<T extends unknown>(
             return BigInt(value.value as number) as T;
         } // decimal types are interpreted as JS numbers
         else if (decimalTypes.includes(value.type as DecimalType)) {
-            return (value.value as number) as T;
+            return (Number(value.value) as number) as T;
         } // TODO: wasm_bindgen returns undefined here, although it should be null. So we just return null for now.
         else if (value.type === "null") {
             return null as T;
