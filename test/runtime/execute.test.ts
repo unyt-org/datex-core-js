@@ -97,8 +97,7 @@ Deno.test("execute sync pass multiple values from JS with template syntax", () =
     const runtime = new Runtime({ endpoint: "@jonas" });
     const result = runtime.executeSync<number[]>`[${1}, 2, ${3}]`;
     assertEquals(result, [1, 2, 3]);
-})
-
+});
 
 Deno.test("execute with string result", async () => {
     const runtime = new Runtime({ endpoint: "@jonas" });

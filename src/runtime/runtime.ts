@@ -1,11 +1,16 @@
 import {
     create_runtime,
     execute_internal,
-    JSRuntime,
     type JSMemory,
+    JSRuntime,
 } from "../datex-core.ts";
 import { ComHub } from "../network/com-hub.ts";
-import {convertToDIFValue, convertToDIFValues, type DIFValue, resolveDIFValue} from "./dif.ts";
+import {
+    convertToDIFValue,
+    convertToDIFValues,
+    type DIFValue,
+    resolveDIFValue,
+} from "./dif.ts";
 
 // auto-generated version - do not edit:
 const VERSION: string = "0.0.6";
@@ -22,11 +27,11 @@ export type RuntimeConfig = {
 };
 
 export type DecompileOptions = {
-    formatted?: boolean,
-    colorized?: boolean,
-    resolve_slots?: boolean,
-    json_compat?: boolean,
-}
+    formatted?: boolean;
+    colorized?: boolean;
+    resolve_slots?: boolean;
+    json_compat?: boolean;
+};
 
 export class Runtime {
     public readonly js_version = VERSION;
@@ -141,7 +146,7 @@ export class Runtime {
     public execute<T = unknown>(
         datexScript: string,
         values?: unknown[],
-    ): Promise<T>
+    ): Promise<T>;
 
     /**
      * Asynchronously executes a Datex script and returns the result as a Promise.
@@ -192,7 +197,7 @@ export class Runtime {
     public executeSync<T = unknown>(
         datexScript: string,
         values?: unknown[],
-    ): T
+    ): T;
 
     /**
      * Executes a Datex script synchronously and returns the result as a generic type T.
@@ -236,7 +241,10 @@ export class Runtime {
         value: unknown,
         decompileOptions: DecompileOptions | null = null,
     ): string {
-        return JSRuntime.value_to_string(convertToDIFValue(value), decompileOptions);
+        return JSRuntime.value_to_string(
+            convertToDIFValue(value),
+            decompileOptions,
+        );
     }
 
     /**
@@ -253,13 +261,11 @@ export class Runtime {
         if (typeof datexScriptOrTemplateStrings === "string") {
             datexScript = datexScriptOrTemplateStrings;
             valuesArray = values[0] as unknown[] ?? [];
-        }
-        else if (Array.isArray(datexScriptOrTemplateStrings)) {
+        } else if (Array.isArray(datexScriptOrTemplateStrings)) {
             // if it's a TemplateStringsArray, join the strings and interpolate the values
             datexScript = datexScriptOrTemplateStrings.join("?");
             valuesArray = values;
-        }
-        else {
+        } else {
             throw new Error("Invalid argument type for executeSync");
         }
         return { datexScript, valuesArray };
