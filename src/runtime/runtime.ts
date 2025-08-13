@@ -5,7 +5,7 @@ import {
     type JSRuntime,
 } from "../datex-core.ts";
 import { ComHub } from "../network/com-hub.ts";
-import type { DIFValue } from "./dif.ts";
+import {DIFValue, resolveDIFValue} from "./dif.ts";
 
 // auto-generated version - do not edit:
 const VERSION: string = "0.0.6";
@@ -110,16 +110,19 @@ export class Runtime {
     }
 
     // TODO: add normal execute/execute_sync methods that return an actual js value converted from DIFValue
-    public execute<T = unknown>(
-        _datex_script: string,
+    public async execute<T = unknown>(
+        datex_script: string,
     ): Promise<T> {
-        throw new Error("not implemented yet");
+        const difValue = await this.execute_dif(datex_script);
+        return resolveDIFValue<T>(difValue);
     }
 
     public execute_sync<T = unknown>(
-        _datex_script: string,
+        datex_script: string,
     ): T {
-        throw new Error("not implemented yet");
+        const difValue = this.execute_sync_dif(datex_script);
+        console.log("difValue", difValue);
+        return resolveDIFValue<T>(difValue);
     }
 
     public _execute_internal(datex_script: string): boolean {
