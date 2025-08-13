@@ -115,15 +115,16 @@ export class JSRuntime {
     execute_with_string_result(
         script: string,
         dif_values: any[] | null | undefined,
-        formatted: boolean,
+        decompile_options: any,
     ): Promise<string>;
     execute(script: string, dif_values?: any[] | null): Promise<any>;
     execute_sync_with_string_result(
         script: string,
         dif_values: any[] | null | undefined,
-        formatted: boolean,
+        decompile_options: any,
     ): string;
     execute_sync(script: string, dif_values?: any[] | null): any;
+    static value_to_string(dif_value: any, decompile_options: any): string;
     com_hub: JSComHub;
     memory: JSMemory;
     readonly version: string;

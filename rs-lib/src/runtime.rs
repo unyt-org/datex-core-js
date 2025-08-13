@@ -19,6 +19,7 @@ use datex_core::global::protocol_structures::block_header::{
 use datex_core::runtime::{Runtime, RuntimeConfig, RuntimeInternal};
 use datex_core::values::serde::deserializer::DatexDeserializer;
 use datex_core::values::value_container::ValueContainer;
+use serde_wasm_bindgen::from_value;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::future_to_promise;
 use web_sys::js_sys::Promise;
@@ -48,6 +49,14 @@ impl From<JSDebugFlags> for DebugFlags {
                 .unwrap_or(false),
         }
     }
+}
+
+#[derive(Serialize, Deserialize, Default)]
+struct JSDecompileOptions {
+    pub formatted: Option<bool>,
+    pub colorized: Option<bool>,
+    pub resolve_slots: Option<bool>,
+    pub json_compat: Option<bool>,
 }
 
 /**
@@ -220,7 +229,7 @@ impl JSRuntime {
         &self,
         script: &str,
         dif_values: Option<Vec<JsValue>>,
-        formatted: bool,
+        decompile_options: JsValue,
     ) -> String {
         let result = self.runtime.execute(
             script,
@@ -234,10 +243,7 @@ impl JSRuntime {
             Some(result) => {
                 decompile_value(
                     &result,
-                    DecompileOptions {
-                        formatted,
-                        ..DecompileOptions::default()
-                    },
+                    Self::decompile_options_from_js_value(decompile_options)
                 )
             }
         }
@@ -260,7 +266,7 @@ impl JSRuntime {
         &self,
         script: &str,
         dif_values: Option<Vec<JsValue>>,
-        formatted: bool,
+        decompile_options: JsValue,
     ) -> String {
         let input = self.runtime.execute_sync(
             script,
@@ -274,10 +280,7 @@ impl JSRuntime {
             Some(result) => {
                 decompile_value(
                     &result,
-                    DecompileOptions {
-                        formatted,
-                        ..DecompileOptions::default()
-                    },
+                    Self::decompile_options_from_js_value(decompile_options)
                 )
             }
         }
@@ -290,10 +293,22 @@ impl JSRuntime {
     ) -> JsValue {
         let result = self.runtime.execute_sync(
             script,
-            &Self::js_values_to_value_containers(dif_values), 
+            &Self::js_values_to_value_containers(dif_values),
             None
         ).unwrap();
         Self::maybe_value_container_to_dif(result)
+    }
+
+    pub fn value_to_string(
+        dif_value: JsValue,
+        decompile_options: JsValue,
+    ) -> String {
+        let value_container: ValueContainer =
+            Self::js_value_to_value_container(dif_value);
+        decompile_value(
+            &value_container,
+            Self::decompile_options_from_js_value(decompile_options)
+        )
     }
 
     fn maybe_value_container_to_dif(
@@ -317,13 +332,36 @@ impl JSRuntime {
         js_values.map(|values| {
             values
                 .into_iter()
-                .map(|v| {
-                    // convert JsValue to DIFValue
-                    let dif_value: DIFValue = serde_wasm_bindgen::from_value(v).unwrap();
-                    // convert DIFValue to ValueContainer
-                    ValueContainer::from(&dif_value)
-                })
+                .map(|v| Self::js_value_to_value_container(v))
                 .collect()
         }).unwrap_or_default()
+    }
+
+    fn js_value_to_value_container(
+        js_value: JsValue,
+    ) -> ValueContainer {
+        // convert JsValue to DIFValue
+        let dif_value: DIFValue = serde_wasm_bindgen::from_value(js_value).unwrap();
+        // convert DIFValue to ValueContainer
+        ValueContainer::from(&dif_value)
+    }
+
+    fn decompile_options_from_js_value(
+        decompile_options: JsValue
+    ) -> DecompileOptions {
+        // if null, return default options
+        if decompile_options.is_null() {
+            DecompileOptions::default()
+        }
+        // if not null, try to deserialize
+        else {
+            let js_decompile_options: JSDecompileOptions = from_value(decompile_options).unwrap_or_default();
+            DecompileOptions {
+                formatted: js_decompile_options.formatted.unwrap_or(false),
+                colorized: js_decompile_options.colorized.unwrap_or(false),
+                resolve_slots: js_decompile_options.resolve_slots.unwrap_or(false),
+                json_compat: js_decompile_options.json_compat.unwrap_or(false),
+            }
+        }
     }
 }
