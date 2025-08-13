@@ -77,7 +77,7 @@ export class Runtime {
         return this.#runtime;
     }
 
-    public execute_with_string_result(
+    public executeWithStringResult(
         datex_script: string,
         formatted: boolean = false,
     ): Promise<string> {
@@ -87,7 +87,7 @@ export class Runtime {
         );
     }
 
-    public execute_sync_with_string_result(
+    public executeSyncWithStringResult(
         datex_script: string,
         formatted: boolean = false,
     ): string {
@@ -97,13 +97,13 @@ export class Runtime {
         );
     }
 
-    public execute_dif(
+    public executeDIF(
         datex_script: string,
     ): Promise<DIFValue> {
         return this.#runtime.execute(datex_script);
     }
 
-    public execute_sync_dif(
+    public executeSyncDIF(
         datex_script: string,
     ): DIFValue {
         return this.#runtime.execute_sync(datex_script);
@@ -113,14 +113,14 @@ export class Runtime {
     public async execute<T = unknown>(
         datex_script: string,
     ): Promise<T> {
-        const difValue = await this.execute_dif(datex_script);
+        const difValue = await this.executeDIF(datex_script);
         return resolveDIFValue<T>(difValue);
     }
 
-    public execute_sync<T = unknown>(
+    public executeSync<T = unknown>(
         datex_script: string,
     ): T {
-        const difValue = this.execute_sync_dif(datex_script);
+        const difValue = this.executeSyncDIF(datex_script);
         console.log("difValue", difValue);
         return resolveDIFValue<T>(difValue);
     }
