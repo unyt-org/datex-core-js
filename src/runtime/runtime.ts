@@ -5,7 +5,7 @@ import {
     type JSRuntime,
 } from "../datex-core.ts";
 import { ComHub } from "../network/com-hub.ts";
-import {convertToDIFValues, DIFValue, resolveDIFValue} from "./dif.ts";
+import { convertToDIFValues, type DIFValue, resolveDIFValue } from "./dif.ts";
 
 // auto-generated version - do not edit:
 const VERSION: string = "0.0.6";
@@ -79,7 +79,7 @@ export class Runtime {
 
     public executeWithStringResult(
         datex_script: string,
-        values: unknown[]|null = [],
+        values: unknown[] | null = [],
         formatted: boolean = false,
     ): Promise<string> {
         return this.#runtime.execute_with_string_result(
@@ -91,7 +91,7 @@ export class Runtime {
 
     public executeSyncWithStringResult(
         datex_script: string,
-        values: unknown[]|null = [],
+        values: unknown[] | null = [],
         formatted: boolean = false,
     ): string {
         return this.#runtime.execute_sync_with_string_result(
@@ -103,21 +103,21 @@ export class Runtime {
 
     public executeDIF(
         datex_script: string,
-        values: unknown[]|null = [],
+        values: unknown[] | null = [],
     ): Promise<DIFValue> {
         return this.#runtime.execute(
             datex_script,
-            convertToDIFValues(values)
+            convertToDIFValues(values),
         );
     }
 
     public executeSyncDIF(
         datex_script: string,
-        values: unknown[]|null = [],
+        values: unknown[] | null = [],
     ): DIFValue {
         return this.#runtime.execute_sync(
             datex_script,
-            convertToDIFValues(values)
+            convertToDIFValues(values),
         );
     }
 
@@ -126,7 +126,7 @@ export class Runtime {
         datex_script: string,
         values: unknown[] = [],
     ): Promise<T> {
-        const difValue = await this.executeDIF(datex_script, values,);
+        const difValue = await this.executeDIF(datex_script, values);
         return resolveDIFValue<T>(difValue);
     }
 

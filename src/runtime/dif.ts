@@ -10,7 +10,7 @@ export const smallIntegerTypes = [
     "u8",
     "u16",
     "u32",
-    "integer"
+    "integer",
 ] as const;
 
 /**
@@ -22,7 +22,7 @@ export const bigIntegerTypes = [
     "i128",
     "u32",
     "u64",
-    "u128"
+    "u128",
 ] as const;
 
 /**
@@ -32,7 +32,7 @@ export const bigIntegerTypes = [
 export const decimalTypes = [
     "f32",
     "f64",
-    "decimal"
+    "decimal",
 ] as const;
 
 export type SmallIntegerType = typeof smallIntegerTypes[number];
@@ -49,7 +49,7 @@ export type CoreType =
     | "tuple"
     | "endpoint"
     | IntegerType
-    | DecimalType
+    | DecimalType;
 
 // TODO: wasm_bindgen currently returns a Map here - could we also just use an object, or is a Map actually more efficient?
 export type DIFMap = Map<string, DIFValue>;
@@ -80,41 +80,33 @@ export function resolveDIFValue<T extends unknown>(
 ): T {
     // if the core_type is the same as the type, we can just return a core value
     const isCoreType = value.core_type === value.type;
-    const isPointer = !!value.ptr_id; // TODO: handle pointers
+    // const isPointer = !!value.ptr_id; // TODO: handle pointers
 
     if (isCoreType) {
         // boolean and text types values are just returned as is
         if (value.type === "boolean" || value.type == "text") {
             return value.value as T;
-        }
-        // small integers are interpreted as JS numbers
+        } // small integers are interpreted as JS numbers
         else if (smallIntegerTypes.includes(value.type as SmallIntegerType)) {
             return Number(value.value as number) as T;
-        }
-        // big integers are interpreted as JS BigInt
+        } // big integers are interpreted as JS BigInt
         else if (bigIntegerTypes.includes(value.type as BigIntegerType)) {
-            // big integers are interpreted as JS BigInt
             return BigInt(value.value as number) as T;
-        }
-        // decimal types are interpreted as JS numbers
+        } // decimal types are interpreted as JS numbers
         else if (decimalTypes.includes(value.type as DecimalType)) {
             return (value.value as number) as T;
-        }
-        // TODO: wasm_bindgen returns undefined here, although it should be null. So we just return null for now.
+        } // TODO: wasm_bindgen returns undefined here, although it should be null. So we just return null for now.
         else if (value.type === "null") {
             return null as T;
-        }
-        // endpoint types are resolved to Endpoint instances
+        } // endpoint types are resolved to Endpoint instances
         else if (value.type == "endpoint") {
             return Endpoint.get(value.value as string) as T;
-        }
-        // array types are resolved to arrays of DIFValues
+        } // array types are resolved to arrays of DIFValues
         else if (value.type === "array") {
             return (value.value as DIFArray).map((v) =>
                 resolveDIFValue(v)
             ) as T;
-        }
-        // object types are resolved to objects with string keys and DIFValues
+        } // object types are resolved to objects with string keys and DIFValues
         else if (value.type === "object") {
             const resolvedObj: { [key: string]: unknown } = {};
             for (const [key, val] of (value.value as DIFMap).entries()) {
@@ -163,8 +155,7 @@ export function convertToDIFValue<T extends unknown>(
             type: "integer",
             value: value.toString(), // convert bigint to string for DIFValue
         };
-    }
-    else if (typeof value === "string") {
+    } else if (typeof value === "string") {
         return {
             core_type: "text",
             type: "text",
@@ -202,7 +193,7 @@ export function convertToDIFValue<T extends unknown>(
  * @param values
  */
 export function convertToDIFValues<T extends unknown[]>(
-    values: T|null,
-): DIFValue[]|null {
+    values: T | null,
+): DIFValue[] | null {
     return values?.map((value) => convertToDIFValue(value)) || null;
 }
