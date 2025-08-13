@@ -78,71 +78,180 @@ export class Runtime {
     }
 
     public executeWithStringResult(
-        datex_script: string,
+        datexScript: string,
         values: unknown[] | null = [],
         formatted: boolean = false,
     ): Promise<string> {
         return this.#runtime.execute_with_string_result(
-            datex_script,
+            datexScript,
             convertToDIFValues(values),
             formatted,
         );
     }
 
     public executeSyncWithStringResult(
-        datex_script: string,
+        datexScript: string,
         values: unknown[] | null = [],
         formatted: boolean = false,
     ): string {
         return this.#runtime.execute_sync_with_string_result(
-            datex_script,
+            datexScript,
             convertToDIFValues(values),
             formatted,
         );
     }
 
     public executeDIF(
-        datex_script: string,
+        datexScript: string,
         values: unknown[] | null = [],
     ): Promise<DIFValue> {
         return this.#runtime.execute(
-            datex_script,
+            datexScript,
             convertToDIFValues(values),
         );
     }
 
     public executeSyncDIF(
-        datex_script: string,
+        datexScript: string,
         values: unknown[] | null = [],
     ): DIFValue {
         return this.#runtime.execute_sync(
-            datex_script,
+            datexScript,
             convertToDIFValues(values),
         );
     }
 
-    // TODO: add normal execute/execute_sync methods that return an actual js value converted from DIFValue
-    public async execute<T = unknown>(
-        datex_script: string,
-        values: unknown[] = [],
+    /**
+     * Asynchronously executes a Datex script and returns the result as a Promise.
+     * Injected values can be passed as an array in `values`.
+     * If the script returns no value, it will return `undefined`.
+     * Example usage:
+     * ```ts
+     * const result = await runtime.execute<number>("1 + ?", [41]);
+     * console.log(result); // 42
+     * ```
+     */
+    public execute<T = unknown>(
+        datexScript: string,
+        values?: unknown[],
+    ): Promise<T>
+
+    /**
+     * Asynchronously executes a Datex script and returns the result as a Promise.
+     * Injected values can be passed to the template string.
+     * Example usage:
+     * ```ts
+     * const result = await runtime.execute<number>`1 + ${41}`;
+     * console.log(result); // 42
+     * ```
+     */
+    public execute<T = unknown>(
+        templateStrings: TemplateStringsArray,
+        ...values: unknown[]
+    ): Promise<T>;
+
+    public execute<T = unknown>(
+        datexScriptOrTemplateStrings: string | TemplateStringsArray,
+        ...values: unknown[]
     ): Promise<T> {
-        const difValue = await this.executeDIF(datex_script, values);
-        return resolveDIFValue<T>(difValue);
+        const { datexScript, valuesArray } = this.#getScriptAndValues(
+            datexScriptOrTemplateStrings,
+            ...values,
+        );
+        return this.#executeInternal<T>(datexScript, valuesArray);
     }
 
-    public executeSync<T = unknown>(
-        datex_script: string,
-        values: unknown[] = [],
-    ): T {
-        const difValue = this.executeSyncDIF(datex_script, values);
-        console.log("difValue", difValue);
+    async #executeInternal<T = unknown>(
+        datexScript: string,
+        values: unknown[] | null = [],
+    ): Promise<T> {
+        const difValue = await this.executeDIF(datexScript, values);
         if (difValue === null) {
             return undefined as T;
         }
         return resolveDIFValue<T>(difValue);
     }
 
-    public _execute_internal(datex_script: string): boolean {
-        return execute_internal(datex_script);
+    /**
+     * Executes a Datex script synchronously and returns the result as a generic type T.
+     * Injected values can be passed as an array in `values`.
+     * If the script returns no value, it will return `undefined`.
+     * Example usage:
+     * ```ts
+     * const result = runtime.executeSync<number>("1 + ?", [41]);
+     * console.log(result); // 42
+     * ```
+     */
+    public executeSync<T = unknown>(
+        datexScript: string,
+        values?: unknown[],
+    ): T
+
+    /**
+     * Executes a Datex script synchronously and returns the result as a generic type T.
+     * Injected values can be passed to the template string.
+     * Example usage:
+     * ```ts
+     * const result = runtime.executeSync<number>`1 + ${41}`;
+     * console.log(result); // 42
+     * ```
+     */
+    public executeSync<T = unknown>(
+        templateStrings: TemplateStringsArray,
+        ...values: unknown[]
+    ): T;
+
+    public executeSync<T = unknown>(
+        datexScriptOrTemplateStrings: string | TemplateStringsArray,
+        ...values: unknown[]
+    ): T {
+        // determine datexScript and valuesArray based on the type of datexScriptOrTemplateStrings
+        const { datexScript, valuesArray } = this.#getScriptAndValues(
+            datexScriptOrTemplateStrings,
+            ...values,
+        );
+        return this.#executeSyncInternal<T>(datexScript, valuesArray);
+    }
+
+    #executeSyncInternal<T = unknown>(
+        datexScript: string,
+        values: unknown[] | null = [],
+    ): T {
+        const difValue = this.executeSyncDIF(datexScript, values);
+        console.debug("difValue", difValue);
+        if (difValue === null) {
+            return undefined as T;
+        }
+        return resolveDIFValue<T>(difValue);
+    }
+
+    /**
+     * Handles the function arguments to a normal function call or a template function call,
+     * always returning a normalized datexScript and valuesArray.
+     */
+    #getScriptAndValues(
+        datexScriptOrTemplateStrings: string | TemplateStringsArray,
+        ...values: unknown[]
+    ): { datexScript: string; valuesArray: unknown[] } {
+        //
+        let datexScript: string;
+        let valuesArray: unknown[];
+        if (typeof datexScriptOrTemplateStrings === "string") {
+            datexScript = datexScriptOrTemplateStrings;
+            valuesArray = values[0] as unknown[] ?? [];
+        }
+        else if (Array.isArray(datexScriptOrTemplateStrings)) {
+            // if it's a TemplateStringsArray, join the strings and interpolate the values
+            datexScript = datexScriptOrTemplateStrings.join("?");
+            valuesArray = values;
+        }
+        else {
+            throw new Error("Invalid argument type for executeSync");
+        }
+        return { datexScript, valuesArray };
+    }
+
+    public _execute_internal(datexScript: string): boolean {
+        return execute_internal(datexScript);
     }
 }
