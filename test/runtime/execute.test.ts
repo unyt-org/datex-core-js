@@ -30,12 +30,16 @@ Deno.test("execute sync number", () => {
     assertEquals(result, 3);
 });
 
-// TODO: this currently does not work until types are supported in the DATEX runtime
-// Deno.test("execute sync bigint", () => {
-//     const runtime = new Runtime({ endpoint: "@jonas" });
-//     const result = runtime.executeSync<bigint>("const x: integer/u64 = 1234567812345678912; x");
-//     assertEquals(result, 1234567812345678912n);
-// });
+Deno.test("execute sync bigint", () => {
+    const runtime = new Runtime({ endpoint: "@jonas" });
+    const result = runtime.executeSync<bigint>(
+        "const x = 123456781234567891234567812345678; x",
+    );
+    assertEquals(
+        result,
+        123456781234567891234567812345678n,
+    );
+});
 
 Deno.test("execute sync string", () => {
     const runtime = new Runtime({ endpoint: "@jonas" });
