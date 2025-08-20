@@ -4,12 +4,12 @@ import { Endpoint } from "./special-core-types.ts";
  * integer types that are interpreted as JS numbers per default
  */
 export const smallIntegerTypes = [
-    "i8",
-    "i16",
-    "i32",
-    "u8",
-    "u16",
-    "u32",
+    "integer/i8",
+    "integer/i16",
+    "integer/i32",
+    "integer/u8",
+    "integer/u16",
+    "integer/u32",
     "integer",
 ] as const;
 
@@ -17,12 +17,12 @@ export const smallIntegerTypes = [
  * integer types that are interpreted as JS BigInt per default
  */
 export const bigIntegerTypes = [
-    "i32",
-    "i64",
-    "i128",
-    "u32",
-    "u64",
-    "u128",
+    "integer/i32",
+    "integer/i64",
+    "integer/i128",
+    "integer/u32",
+    "integer/u64",
+    "integer/u128",
 ] as const;
 
 /**

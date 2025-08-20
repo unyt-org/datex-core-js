@@ -30,6 +30,21 @@ Deno.test("execute sync number", () => {
     assertEquals(result, 3);
 });
 
+// FIXME
+Deno.test("execute sync typed integer", () => {
+    const runtime = new Runtime({ endpoint: "@jonas" });
+    const result = runtime.executeSyncDIF(
+        "42u8",
+    );
+    assertEquals(result, {
+        core_type: "integer/u8",
+        ptr_id: undefined,
+        type: "integer/u8",
+        value: "42",
+    });
+});
+
+// FIXME
 Deno.test("execute sync bigint", () => {
     const runtime = new Runtime({ endpoint: "@jonas" });
     const result = runtime.executeSync<bigint>(
