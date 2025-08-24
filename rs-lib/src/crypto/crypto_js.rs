@@ -4,7 +4,7 @@ use datex_core::crypto::crypto::{CryptoError, CryptoTrait};
 use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{
-    js_sys::{ArrayBuffer, Object, Uint8Array},
+    js_sys::{Array, ArrayBuffer, Object, Reflect, Uint8Array},
     CryptoKey, CryptoKeyPair,
 };
 
@@ -115,6 +115,56 @@ impl CryptoJS {
             ("namedCurve", JsValue::from_str("P-384")),
         ]);
         Self::generate_crypto_key(&algorithm, true, &["sign", "verify"]).await
+    }
+    pub async fn hkdf(
+        &self, 
+        ikm: &[u8], 
+        salt: &[u8], 
+        info: &[u8], 
+        out_len: usize
+    ) -> Result<Vec<u8>, CryptoError> {
+        let subtle = CryptoJS::crypto_subtle();
+
+        let usages = Array::new();
+        usages.push(&JsValue::from_str("deriveBits"));
+        let ikm_buf = Uint8Array::from(ikm).buffer();
+
+        let key_js = JsFuture::from(
+            subtle
+            .import_key_with_object(
+                "raw",
+                &ikm_buf.into(),
+                &js_object(vec![("name", "HKDF")]),
+                false,
+                &usages
+            ).map_err(|_| CryptoError::KeyImportFailed)?,
+        ).await.map_err(|_| CryptoError::KeyImportFailed)?;
+        let base_key: CryptoKey = key_js.dyn_into()
+            .map_err(|_| CryptoError::KeyImportFailed)?;
+
+        let params = Object::new();
+        Reflect::set(&params, &"name".into(), &"HKDF".into())
+            .map_err(|_| CryptoError::KeyImportFailed)?;
+        Reflect::set(&params, &"hash".into(), &"SHA-256".into())
+            .map_err(|_| CryptoError::KeyImportFailed)?;
+        Reflect::set(&params, &"salt".into(), &Uint8Array::from(salt))
+            .map_err(|_| CryptoError::KeyImportFailed)?;
+        Reflect::set(&params, &"info".into(), &Uint8Array::from(info))
+            .map_err(|_| CryptoError::KeyImportFailed)?;
+
+        let bit_len: u32 = (out_len as u32) * 8;
+        let bits = JsFuture::from(
+            subtle
+            .derive_bits_with_object(&params.into(), &base_key, bit_len)
+            .map_err(|_| CryptoError::KeyImportFailed)?,
+        ).await
+        .map_err(|_| CryptoError::KeyImportFailed)?;
+
+        let okm = Uint8Array::new(&bits).to_vec();
+        if okm.len() != out_len {
+            return Err(CryptoError::KeyImportFailed);
+        }
+        Ok(okm)
     }
 }
 

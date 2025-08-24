@@ -156,6 +156,13 @@ impl JSRuntime {
             }
             info!("#7");
 
+
+            const INFO: &[u8] = b"ECIES|X25519|HKDF-SHA256|AES-256-GCM";
+            let ikm = vec![0u8; 32];
+            let salt = vec![0u8; 16];
+
+            let hash = crypto.hkdf(&ikm, &salt, &INFO, 32).await.unwrap();            
+
             let js_array = js_array(&[
                 encryption_key_pair.0,
                 encryption_key_pair.1,
@@ -164,6 +171,7 @@ impl JSRuntime {
                 encrypted_message,
                 decrypted_message,
                 signed_message,
+                hash,
             ]);
             Ok(js_array)
         })
