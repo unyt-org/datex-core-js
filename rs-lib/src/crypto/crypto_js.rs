@@ -17,6 +17,14 @@ mod sealed {
     impl CryptoKeyType for CryptoKeyPair {}
 }
 
+pub const KEY_LEN: usize = 32;
+pub const IV_LEN: usize = 12;
+pub const TAG_LEN: usize = 16;
+const INFO: &[u8] = b"ECIES|X25519|HKDF-SHA256|AES-256-GCM";
+pub const SALT_LEN: usize = 16;
+pub const SIG_LEN: usize = 64;
+
+
 pub struct CryptoJS;
 impl CryptoJS {
     fn window() -> web_sys::Window {
@@ -109,6 +117,7 @@ impl CryptoJS {
         Self::generate_crypto_key(&algorithm, true, &["encrypt", "decrypt"])
             .await
     }
+
     async fn new_sign_key_pair() -> Result<CryptoKeyPair, CryptoError> {
         let algorithm = js_object(vec![
             ("name", JsValue::from_str("ECDSA")),
@@ -116,13 +125,14 @@ impl CryptoJS {
         ]);
         Self::generate_crypto_key(&algorithm, true, &["sign", "verify"]).await
     }
+
     pub async fn hkdf(
         &self, 
         ikm: &[u8], 
         salt: &[u8], 
         info: &[u8], 
         out_len: usize
-    ) -> Result<Vec<u8>, CryptoError> {
+    ) -> Result<[u8; KEY_LEN], CryptoError> {
         let subtle = CryptoJS::crypto_subtle();
 
         let usages = Array::new();
@@ -154,18 +164,130 @@ impl CryptoJS {
 
         let bit_len: u32 = (out_len as u32) * 8;
         let bits = JsFuture::from(
-            subtle
-            .derive_bits_with_object(&params.into(), &base_key, bit_len)
+            subtle.derive_bits_with_object(&params.into(), &base_key, bit_len)
             .map_err(|_| CryptoError::KeyImportFailed)?,
         ).await
         .map_err(|_| CryptoError::KeyImportFailed)?;
 
-        let okm = Uint8Array::new(&bits).to_vec();
+        let okm: [u8; KEY_LEN] = Uint8Array::new(&bits).to_vec().try_into().unwrap();
         if okm.len() != out_len {
             return Err(CryptoError::KeyImportFailed);
         }
         Ok(okm)
     }
+
+    pub async fn aes_gcm_encrypt(
+        hash: &[u8],
+        iv: &[u8],
+        plaintext: &[u8],
+    ) -> Result<Vec<u8>, CryptoError> {
+        let subtle = CryptoJS::crypto_subtle();
+
+        let usages = Array::new();
+        usages.push(&JsValue::from_str("encrypt"));
+        usages.push(&JsValue::from_str("decrypt"));
+
+        let ikm_buf = Uint8Array::from(hash).buffer();
+
+        let key_js = JsFuture::from(
+            subtle
+            .import_key_with_object(
+                "raw",
+                &ikm_buf.into(),
+                &js_object(vec![("name", "AES-GCM")]),
+                false,
+                &usages
+            ).map_err(|_| CryptoError::KeyImportFailed)?,
+        ).await.map_err(|_| CryptoError::KeyImportFailed)?;
+        let base_key: CryptoKey = key_js.dyn_into()
+            .map_err(|_| CryptoError::KeyImportFailed)?;
+
+        let params = Object::new();
+        Reflect::set(
+            &params, 
+            &JsValue::from_str("name"), 
+            &JsValue::from_str("AES-GCM"),
+        ).map_err(|_| CryptoError::KeyImportFailed)?;
+        Reflect::set(
+            &params, 
+            &JsValue::from_str("iv"), 
+            &Uint8Array::from(iv),
+        ).map_err(|_| CryptoError::KeyImportFailed)?;
+
+        let pt = Uint8Array::from(plaintext);
+
+        let ct = JsFuture::from(
+            subtle.encrypt_with_object_and_buffer_source(
+                &params,
+                &base_key,
+                &pt,
+            ).map_err(|_| CryptoError::KeyImportFailed)?)
+            .await
+            .map_err(|_| CryptoError::KeyImportFailed)?;
+
+        let ct_buf: ArrayBuffer = ct.dyn_into()
+            .map_err(|_| CryptoError::KeyImportFailed)?;
+        let ct_bytes = Uint8Array::new(&ct_buf).to_vec();
+
+        Ok(ct_bytes)
+    }
+
+    pub async fn aes_gcm_decrypt(
+        hash: &[u8],
+        iv: &[u8],
+        ciphertext: &[u8],
+    ) -> Result<Vec<u8>, CryptoError> {
+        let subtle = CryptoJS::crypto_subtle();
+
+        let usages = Array::new();
+        usages.push(&JsValue::from_str("encrypt"));
+        usages.push(&JsValue::from_str("decrypt"));
+
+        let ikm_buf = Uint8Array::from(hash).buffer();
+
+        let key_js = JsFuture::from(
+            subtle
+            .import_key_with_object(
+                "raw",
+                &ikm_buf.into(),
+                &js_object(vec![("name", "AES-GCM")]),
+                false,
+                &usages
+            ).map_err(|_| CryptoError::KeyImportFailed)?,
+        ).await.map_err(|_| CryptoError::KeyImportFailed)?;
+        let base_key: CryptoKey = key_js.dyn_into()
+            .map_err(|_| CryptoError::KeyImportFailed)?;
+
+        let params = Object::new();
+        Reflect::set(
+            &params, 
+            &JsValue::from_str("name"), 
+            &JsValue::from_str("AES-GCM"),
+        ).map_err(|_| CryptoError::KeyImportFailed)?;
+        Reflect::set(
+            &params, 
+            &JsValue::from_str("iv"), 
+            &Uint8Array::from(iv),
+        ).map_err(|_| CryptoError::KeyImportFailed)?;
+
+        let ct = Uint8Array::from(ciphertext);
+
+        let pt = JsFuture::from(
+            subtle.encrypt_with_object_and_buffer_source(
+                &params,
+                &base_key,
+                &ct,
+            ).map_err(|_| CryptoError::KeyImportFailed)?)
+            .await
+            .map_err(|_| CryptoError::KeyImportFailed)?;
+
+        let pt_buf: ArrayBuffer = pt.dyn_into()
+            .map_err(|_| CryptoError::KeyImportFailed)?;
+        let pt_bytes = Uint8Array::new(&pt_buf).to_vec();
+
+        Ok(pt_bytes)
+    }
+
 }
 
 impl CryptoTrait for CryptoJS {
