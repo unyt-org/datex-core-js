@@ -273,7 +273,7 @@ impl CryptoJS {
         let ct = Uint8Array::from(ciphertext);
 
         let pt = JsFuture::from(
-            subtle.encrypt_with_object_and_buffer_source(
+            subtle.decrypt_with_object_and_buffer_source(
                 &params,
                 &base_key,
                 &ct,
