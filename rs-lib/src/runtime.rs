@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 use log::info;
-use crate::crypto::crypto_js::CryptoJS;
+use crate::crypto::crypto_js::{CryptoJS, IV_LEN, TAG_LEN};
 use crate::js_utils::js_array;
 use crate::utils::time::TimeJS;
 use datex_core::crypto::crypto::CryptoTrait;
@@ -157,11 +157,25 @@ impl JSRuntime {
             info!("#7");
 
 
+            // Test hkdf
             const INFO: &[u8] = b"ECIES|X25519|HKDF-SHA256|AES-256-GCM";
             let ikm = vec![0u8; 32];
             let salt = vec![0u8; 16];
-
             let hash = crypto.hkdf(&ikm, &salt, &INFO, 32).await.unwrap();            
+
+            // Test aes-gcm
+            let msg: Vec<u8> = b"Some message".to_vec();
+            let iv: [u8; IV_LEN] = [0u8; IV_LEN];
+            let ciphered = CryptoJS::aes_gcm_encrypt(
+                &hash,
+                &iv,
+                &msg,
+            ).await.unwrap();
+            let deciphered = CryptoJS::aes_gcm_decrypt(
+                &hash,
+                &iv,
+                &ciphered
+            ).await.unwrap();
 
             let js_array = js_array(&[
                 encryption_key_pair.0,
@@ -171,7 +185,9 @@ impl JSRuntime {
                 encrypted_message,
                 decrypted_message,
                 signed_message,
-                hash,
+                hash.to_vec(),
+                ciphered,
+                deciphered,
             ]);
             Ok(js_array)
         })
