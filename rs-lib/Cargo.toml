@@ -56,6 +56,7 @@ tsify = "0.5.5"
 version = "0.3.79"
 features = [
     "Window",
+    "AesGcmParams",
     "BinaryType",
     "Blob",
     "ErrorEvent",
