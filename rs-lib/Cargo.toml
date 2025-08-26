@@ -51,6 +51,7 @@ futures-channel = "0.3.31"
 version = "0.3.77"
 features = [
     "Window",
+    "AesGcmParams",
     "BinaryType",
     "Blob",
     "ErrorEvent",
