@@ -185,10 +185,10 @@ impl JSRuntime {
 
 
             // Test hkdf
-            const INFO: &[u8] = b"ECIES|X25519|HKDF-SHA256|AES-256-GCM";
+            let aad: &[u8] = b"ECIES|X25519|HKDF-SHA256|AES-256-GCM";
             let ikm = vec![0u8; 32];
             let salt = vec![0u8; 16];
-            let hash = crypto.hkdf(&ikm, &salt, &INFO, 32).await.unwrap();            
+            let hash = crypto.hkdf(&ikm, &salt, &aad, 32).await.unwrap();
 
             // Test aes-gcm
             let msg: Vec<u8> = b"Some message".to_vec();
@@ -197,11 +197,13 @@ impl JSRuntime {
                 &hash,
                 &iv,
                 &msg,
+                &aad,
             ).await.unwrap();
             let deciphered = CryptoJS::aes_gcm_decrypt(
                 &hash,
                 &iv,
-                &ciphered
+                &ciphered,
+                &aad,
             ).await.unwrap();
 
             let js_array = js_array(&[
