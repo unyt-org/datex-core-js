@@ -221,7 +221,7 @@ impl CryptoJS {
         Reflect::set(
             &params, 
             &JsValue::from_str("tagLength"), 
-            &JsValue::from((TAG_LEN as u32) * 8),
+            &JsValue::from((TAG_LEN as u32) * 8u32),
         ).map_err(|_| CryptoError::KeyImportFailed)?;
 
         let pt = Uint8Array::from(plaintext);
@@ -288,7 +288,7 @@ impl CryptoJS {
         Reflect::set(
             &params, 
             &JsValue::from_str("tagLength"), 
-            &JsValue::from((TAG_LEN as u32) * 8),
+            &JsValue::from((TAG_LEN as u32) * 8u32),
         ).map_err(|_| CryptoError::KeyImportFailed)?;
 
         let ct = Uint8Array::from(ciphertext);
