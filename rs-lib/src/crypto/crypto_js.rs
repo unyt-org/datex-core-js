@@ -20,7 +20,6 @@ mod sealed {
 pub const KEY_LEN: usize = 32;
 pub const IV_LEN: usize = 12;
 pub const TAG_LEN: usize = 16;
-const INFO: &[u8] = b"ECIES|X25519|HKDF-SHA256|AES-256-GCM";
 pub const SALT_LEN: usize = 16;
 pub const SIG_LEN: usize = 64;
 
@@ -180,6 +179,7 @@ impl CryptoJS {
         hash: &[u8],
         iv: &[u8],
         plaintext: &[u8],
+        aad: &[u8],
     ) -> Result<Vec<u8>, CryptoError> {
         let subtle = CryptoJS::crypto_subtle();
 
@@ -212,6 +212,16 @@ impl CryptoJS {
             &params, 
             &JsValue::from_str("iv"), 
             &Uint8Array::from(iv),
+        ).map_err(|_| CryptoError::KeyImportFailed)?;
+        Reflect::set(
+            &params, 
+            &JsValue::from_str("additionalData"), 
+            &Uint8Array::from(aad),
+        ).map_err(|_| CryptoError::KeyImportFailed)?;
+        Reflect::set(
+            &params, 
+            &JsValue::from_str("tagLength"), 
+            &JsValue::from((TAG_LEN as u32) * 8),
         ).map_err(|_| CryptoError::KeyImportFailed)?;
 
         let pt = Uint8Array::from(plaintext);
@@ -236,6 +246,7 @@ impl CryptoJS {
         hash: &[u8],
         iv: &[u8],
         ciphertext: &[u8],
+        aad: &[u8],
     ) -> Result<Vec<u8>, CryptoError> {
         let subtle = CryptoJS::crypto_subtle();
 
@@ -268,6 +279,16 @@ impl CryptoJS {
             &params, 
             &JsValue::from_str("iv"), 
             &Uint8Array::from(iv),
+        ).map_err(|_| CryptoError::KeyImportFailed)?;
+        Reflect::set(
+            &params, 
+            &JsValue::from_str("additionalData"), 
+            &Uint8Array::from(aad),
+        ).map_err(|_| CryptoError::KeyImportFailed)?;
+        Reflect::set(
+            &params, 
+            &JsValue::from_str("tagLength"), 
+            &JsValue::from((TAG_LEN as u32) * 8),
         ).map_err(|_| CryptoError::KeyImportFailed)?;
 
         let ct = Uint8Array::from(ciphertext);
