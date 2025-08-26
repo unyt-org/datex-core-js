@@ -5,7 +5,7 @@ use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{
     js_sys::{Array, ArrayBuffer, Object, Reflect, Uint8Array},
-    CryptoKey, CryptoKeyPair,
+    CryptoKey, CryptoKeyPair, AesGcmParams,
 };
 
 use crate::js_utils::{js_array, js_object, AsByteSlice, TryAsByteSlice};
@@ -19,7 +19,8 @@ mod sealed {
 
 pub const KEY_LEN: usize = 32;
 pub const IV_LEN: usize = 12;
-pub const TAG_LEN: usize = 16;
+pub const TAG_LEN: u8 = 16;
+pub const TAG_LEN_BITS: u32 = 128;
 pub const SALT_LEN: usize = 16;
 pub const SIG_LEN: usize = 64;
 
@@ -202,33 +203,15 @@ impl CryptoJS {
         let base_key: CryptoKey = key_js.dyn_into()
             .map_err(|_| CryptoError::KeyImportFailed)?;
 
-        let params = Object::new();
-        Reflect::set(
-            &params, 
-            &JsValue::from_str("name"), 
-            &JsValue::from_str("AES-GCM"),
-        ).map_err(|_| CryptoError::KeyImportFailed)?;
-        Reflect::set(
-            &params, 
-            &JsValue::from_str("iv"), 
-            &Uint8Array::from(iv),
-        ).map_err(|_| CryptoError::KeyImportFailed)?;
-        Reflect::set(
-            &params, 
-            &JsValue::from_str("additionalData"), 
-            &Uint8Array::from(aad),
-        ).map_err(|_| CryptoError::KeyImportFailed)?;
-        Reflect::set(
-            &params, 
-            &JsValue::from_str("tagLength"), 
-            &JsValue::from((TAG_LEN as u32) * 8u32),
-        ).map_err(|_| CryptoError::KeyImportFailed)?;
+        let mut params = AesGcmParams::new(&"AES-GCM", &Uint8Array::from(iv));
+        let _ = params.set_additional_data(&Uint8Array::from(aad));
+        let _ = params.set_tag_length(128u8);
 
         let pt = Uint8Array::from(plaintext);
 
         let ct = JsFuture::from(
             subtle.encrypt_with_object_and_buffer_source(
-                &params,
+                &params.into(),
                 &base_key,
                 &pt,
             ).map_err(|_| CryptoError::KeyImportFailed)?)
@@ -269,33 +252,15 @@ impl CryptoJS {
         let base_key: CryptoKey = key_js.dyn_into()
             .map_err(|_| CryptoError::KeyImportFailed)?;
 
-        let params = Object::new();
-        Reflect::set(
-            &params, 
-            &JsValue::from_str("name"), 
-            &JsValue::from_str("AES-GCM"),
-        ).map_err(|_| CryptoError::KeyImportFailed)?;
-        Reflect::set(
-            &params, 
-            &JsValue::from_str("iv"), 
-            &Uint8Array::from(iv),
-        ).map_err(|_| CryptoError::KeyImportFailed)?;
-        Reflect::set(
-            &params, 
-            &JsValue::from_str("additionalData"), 
-            &Uint8Array::from(aad),
-        ).map_err(|_| CryptoError::KeyImportFailed)?;
-        Reflect::set(
-            &params, 
-            &JsValue::from_str("tagLength"), 
-            &JsValue::from((TAG_LEN as u32) * 8u32),
-        ).map_err(|_| CryptoError::KeyImportFailed)?;
+        let mut params = AesGcmParams::new(&"AES-GCM", &Uint8Array::from(iv));
+        let _ = params.set_additional_data(&Uint8Array::from(aad));
+        let _ = params.set_tag_length(128u8);
 
         let ct = Uint8Array::from(ciphertext);
 
         let pt = JsFuture::from(
             subtle.decrypt_with_object_and_buffer_source(
-                &params,
+                &params.into(),
                 &base_key,
                 &ct,
             ).map_err(|_| CryptoError::KeyImportFailed)?)
