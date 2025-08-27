@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 use log::info;
-use crate::crypto::crypto_js::{CryptoJS, IV_LEN, TAG_LEN};
+use crate::crypto::crypto_js::{CryptoJS, IV_LEN};
 use crate::utils::time::TimeJS;
 use datex_core::crypto::crypto::CryptoTrait;
 use datex_core::decompiler::{DecompileOptions, decompile_value};
@@ -184,29 +184,34 @@ impl JSRuntime {
             }
 
 
+
+            // Test ed25519 and x25519
+            let (sig_pub, sig_pri) = CryptoJS::gen_ed25519().await.unwrap();
+            let (enc_pub, enc_pri) = CryptoJS::gen_x25519().await.unwrap();
+
             // Test hkdf
-            let aad: &[u8] = b"ECIES|X25519|HKDF-SHA256|AES-256-GCM";
+            let aad: &[u8] = enc_pub.as_slice();
             let ikm = vec![0u8; 32];
             let salt = vec![0u8; 16];
             let hash = crypto.hkdf(&ikm, &salt, &aad, 32).await.unwrap();
 
-            // Test aes-gcm
+            // Test aes-gcm entailing hkdf
             let msg: Vec<u8> = b"Some message".to_vec();
             let iv: [u8; IV_LEN] = [0u8; IV_LEN];
+
             let ciphered = CryptoJS::aes_gcm_encrypt(
                 &hash,
                 &iv,
                 &msg,
                 &aad,
             ).await.unwrap();
+
             let deciphered = CryptoJS::aes_gcm_decrypt(
                 &hash,
                 &iv,
                 &ciphered,
                 &aad,
             ).await.unwrap();
-            let (sig_pub, sig_pri) = CryptoJS::gen_ed25519().await.unwrap();
-            let (enc_pub, enc_pri) = CryptoJS::gen_x25519().await.unwrap();
 
             let js_array = js_array(&[
                 encryption_key_pair.0,
