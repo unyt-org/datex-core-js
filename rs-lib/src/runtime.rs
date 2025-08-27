@@ -185,17 +185,19 @@ impl JSRuntime {
 
 
 
-            // Test ed25519 and x25519
+            // ed25519 and x25519 generation
             let (sig_pub, sig_pri) = CryptoJS::gen_ed25519().await.unwrap();
             let (enc_pub, enc_pri) = CryptoJS::gen_x25519().await.unwrap();
 
-            // Test hkdf
+            let sig = crypto.sig_ed25519(&enc_pub, &sig_pri).await.unwrap();
+
+            // hkdf
             let aad: &[u8] = enc_pub.as_slice();
             let ikm = vec![0u8; 32];
             let salt = vec![0u8; 16];
             let hash = crypto.hkdf(&ikm, &salt, &aad, 32).await.unwrap();
 
-            // Test aes-gcm entailing hkdf
+            // aes-gcm entailing hkdf
             let msg: Vec<u8> = b"Some message".to_vec();
             let iv: [u8; IV_LEN] = [0u8; IV_LEN];
 
@@ -228,6 +230,7 @@ impl JSRuntime {
                 enc_pri,
                 sig_pub,
                 sig_pri,
+                sig,
             ]);
             Ok(js_array)
         })
