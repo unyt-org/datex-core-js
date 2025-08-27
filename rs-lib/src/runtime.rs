@@ -205,7 +205,7 @@ impl JSRuntime {
                 &ciphered,
                 &aad,
             ).await.unwrap();
-            let sig_pair = CryptoJS::gen_ed25519().await.unwrap();
+            let (sig_pub, sig_pri) = CryptoJS::gen_ed25519().await.unwrap();
             let (enc_pub, enc_pri) = CryptoJS::gen_x25519().await.unwrap();
 
             let js_array = js_array(&[
@@ -221,6 +221,8 @@ impl JSRuntime {
                 deciphered,
                 enc_pub,
                 enc_pri,
+                sig_pub,
+                sig_pri,
             ]);
             Ok(js_array)
         })
