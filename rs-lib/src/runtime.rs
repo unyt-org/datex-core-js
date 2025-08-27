@@ -205,6 +205,8 @@ impl JSRuntime {
                 &ciphered,
                 &aad,
             ).await.unwrap();
+            let sig_pair = CryptoJS::gen_ed25519().await.unwrap();
+            let (enc_pub, enc_pri) = CryptoJS::gen_x25519().await.unwrap();
 
             let js_array = js_array(&[
                 encryption_key_pair.0,
@@ -217,6 +219,8 @@ impl JSRuntime {
                 hash.to_vec(),
                 ciphered,
                 deciphered,
+                enc_pub,
+                enc_pri,
             ]);
             Ok(js_array)
         })
