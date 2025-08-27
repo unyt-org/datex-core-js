@@ -315,6 +315,44 @@ impl CryptoJS {
 
         Ok((pub_key, pri_key))
     }
+
+    pub async fn sig_ed25519(
+        &self,
+        data: &Vec<u8>,
+        pri_key: &Vec<u8>,
+    ) -> Result<Vec<u8>, CryptoError> {
+            let key = Self::import_crypto_key(
+                &pri_key,
+                "pkcs8",
+                &js_object(vec![
+                    ("name", JsValue::from_str("Ed25519")),
+                ]),
+                &["sign"],
+            )
+            .await?;
+
+            let sig_prom = Self::crypto_subtle()
+                .sign_with_object_and_u8_array(
+                    &js_object(vec![
+                        ("name", JsValue::from_str("Ed25519")),
+                    ]),
+                    &key,
+                    &data,
+                )
+                .map_err(|_| CryptoError::SigningError)?;
+
+            let result: ArrayBuffer = JsFuture::from(sig_prom)
+                .await
+                .map_err(|_| CryptoError::SigningError)?
+                .try_into()
+                .map_err(|_: std::convert::Infallible| {
+                    CryptoError::SigningError
+                })?;
+
+            let sig: Vec<u8> = result.as_u8_slice();
+
+            Ok(sig)
+    }
 }
 
 impl CryptoTrait for CryptoJS {
