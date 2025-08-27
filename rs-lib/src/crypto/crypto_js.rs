@@ -298,7 +298,6 @@ impl CryptoJS {
 
         let algorithm = js_object(vec![
             ("name", JsValue::from_str("X25519")),
-            ("", JsValue::from_str("X25519")),
         ]);
 
         let key_pair: CryptoKeyPair = 
