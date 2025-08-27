@@ -274,12 +274,24 @@ impl CryptoJS {
         Ok(pt_bytes)
     }
 
-    pub async fn gen_ed25519() -> Result<CryptoKeyPair, CryptoError> {
+    pub async fn gen_ed25519() -> Result<(Vec<u8>, Vec<u8>), CryptoError> {
 
         let algorithm = js_object(vec![
             ("name", JsValue::from_str("Ed25519")),
         ]);
-        Self::generate_crypto_key(&algorithm, true, &["sign", "verify"]).await
+        let key_pair: CryptoKeyPair = 
+            Self::generate_crypto_key(&algorithm, true, &["sign", "verify"])
+            .await
+            .map_err(|_| CryptoError::KeyGeneratorFailed)?;
+
+        let pub_key =
+            Self::export_crypto_key(&key_pair.get_public_key(), "spki")
+            .await?;
+        let pri_key =
+            Self::export_crypto_key(&key_pair.get_private_key(), "pkcs8")
+            .await?;
+
+        Ok((pub_key, pri_key))
     }
 
     pub async fn gen_x25519() -> Result<(Vec<u8>, Vec<u8>), CryptoError> {
@@ -288,17 +300,21 @@ impl CryptoJS {
             ("name", JsValue::from_str("X25519")),
             ("", JsValue::from_str("X25519")),
         ]);
-        let key: CryptoKeyPair = Self::generate_crypto_key(&algorithm, true, &["deriveKey", "deriveBits"])
+
+        let key_pair: CryptoKeyPair = 
+            Self::generate_crypto_key(&algorithm, true, &["deriveKey", "deriveBits"])
             .await
             .map_err(|_| CryptoError::KeyGeneratorFailed)?;
 
 
-        let public_key =
-            Self::export_crypto_key(&key.get_public_key(), "spki").await?;
-        let private_key =
-            Self::export_crypto_key(&key.get_private_key(), "pkcs8")
-                .await?;
-        Ok((public_key, private_key))
+        let pub_key =
+            Self::export_crypto_key(&key_pair.get_public_key(), "spki")
+            .await?;
+        let pri_key =
+            Self::export_crypto_key(&key_pair.get_private_key(), "pkcs8")
+            .await?;
+
+        Ok((pub_key, pri_key))
     }
 }
 
