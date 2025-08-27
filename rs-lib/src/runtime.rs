@@ -187,14 +187,21 @@ impl JSRuntime {
 
             // ed25519 and x25519 generation
             let (sig_pub, sig_pri) = CryptoJS::gen_ed25519().await.unwrap();
-            let (enc_pub, enc_pri) = CryptoJS::gen_x25519().await.unwrap();
+            let (ser_pub, ser_pri) = CryptoJS::gen_x25519().await.unwrap();
+            let (cli_pub, cli_pri) = CryptoJS::gen_x25519().await.unwrap();
 
-            let sig = crypto.sig_ed25519(&sig_pri, &enc_pub).await.unwrap();
-            let ver = crypto.ver_ed25519(&sig_pub, &sig, &enc_pub).await.unwrap();
+            // Signature
+            let sig = crypto.sig_ed25519(&sig_pri, &ser_pub).await.unwrap();
+            let ver = crypto.ver_ed25519(&sig_pub, &sig, &ser_pub).await.unwrap();
             assert!(ver);
 
+            // Derivation
+            let cli_sec = CryptoJS::derive_x25519(&cli_pri, &ser_pub, 256u32).await.unwrap();
+            let ser_sec = CryptoJS::derive_x25519(&ser_pri, &cli_pub, 256u32).await.unwrap();
+            assert_eq!(cli_sec, ser_sec);
+
             // hkdf
-            let aad: &[u8] = enc_pub.as_slice();
+            let aad: &[u8] = ser_pub.as_slice();
             let ikm = vec![0u8; 32];
             let salt = vec![0u8; 16];
             let hash = crypto.hkdf(&ikm, &salt, &aad, 32).await.unwrap();
@@ -228,11 +235,12 @@ impl JSRuntime {
                 hash.to_vec(),
                 ciphered,
                 deciphered,
-                enc_pub,
-                enc_pri,
+                ser_pub,
+                ser_pri,
                 sig_pub,
                 sig_pri,
-                sig,
+                cli_sec,
+                ser_sec,
             ]);
             Ok(js_array)
         })

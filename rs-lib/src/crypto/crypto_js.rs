@@ -126,6 +126,7 @@ impl CryptoJS {
         Self::generate_crypto_key(&algorithm, true, &["sign", "verify"]).await
     }
 
+    // hkdf
     pub async fn hkdf(
         &self, 
         ikm: &[u8], 
@@ -176,6 +177,7 @@ impl CryptoJS {
         Ok(okm)
     }
 
+    // aes gcm 
     pub async fn aes_gcm_encrypt(
         hash: &[u8],
         iv: &[u8],
@@ -274,6 +276,7 @@ impl CryptoJS {
         Ok(pt_bytes)
     }
 
+    // Signature and Verification
     pub async fn gen_ed25519() -> Result<(Vec<u8>, Vec<u8>), CryptoError> {
 
         let algorithm = js_object(vec![
@@ -294,64 +297,42 @@ impl CryptoJS {
         Ok((pub_key, pri_key))
     }
 
-    pub async fn gen_x25519() -> Result<(Vec<u8>, Vec<u8>), CryptoError> {
-
-        let algorithm = js_object(vec![
-            ("name", JsValue::from_str("X25519")),
-        ]);
-
-        let key_pair: CryptoKeyPair = 
-            Self::generate_crypto_key(&algorithm, true, &["deriveKey", "deriveBits"])
-            .await
-            .map_err(|_| CryptoError::KeyGeneratorFailed)?;
-
-
-        let pub_key =
-            Self::export_crypto_key(&key_pair.get_public_key(), "spki")
-            .await?;
-        let pri_key =
-            Self::export_crypto_key(&key_pair.get_private_key(), "pkcs8")
-            .await?;
-
-        Ok((pub_key, pri_key))
-    }
-
     pub async fn sig_ed25519(
         &self,
         pri_key: &Vec<u8>,
         data: &Vec<u8>,
     ) -> Result<Vec<u8>, CryptoError> {
-            let key = Self::import_crypto_key(
-                &pri_key,
-                "pkcs8",
+        let key = Self::import_crypto_key(
+            &pri_key,
+            "pkcs8",
+            &js_object(vec![
+                ("name", JsValue::from_str("Ed25519")),
+            ]),
+            &["sign"],
+        )
+        .await?;
+
+        let sig_prom = Self::crypto_subtle()
+            .sign_with_object_and_u8_array(
                 &js_object(vec![
                     ("name", JsValue::from_str("Ed25519")),
                 ]),
-                &["sign"],
+                &key,
+                &data,
             )
-            .await?;
+            .map_err(|_| CryptoError::SigningError)?;
 
-            let sig_prom = Self::crypto_subtle()
-                .sign_with_object_and_u8_array(
-                    &js_object(vec![
-                        ("name", JsValue::from_str("Ed25519")),
-                    ]),
-                    &key,
-                    &data,
-                )
-                .map_err(|_| CryptoError::SigningError)?;
+        let result: ArrayBuffer = JsFuture::from(sig_prom)
+            .await
+            .map_err(|_| CryptoError::SigningError)?
+            .try_into()
+            .map_err(|_: std::convert::Infallible| {
+                CryptoError::SigningError
+            })?;
 
-            let result: ArrayBuffer = JsFuture::from(sig_prom)
-                .await
-                .map_err(|_| CryptoError::SigningError)?
-                .try_into()
-                .map_err(|_: std::convert::Infallible| {
-                    CryptoError::SigningError
-                })?;
+        let sig: Vec<u8> = result.as_u8_slice();
 
-            let sig: Vec<u8> = result.as_u8_slice();
-
-            Ok(sig)
+        Ok(sig)
     }
 
     pub async fn ver_ed25519(
@@ -387,6 +368,96 @@ impl CryptoJS {
             .as_bool()
             .ok_or(CryptoError::VerificationError)?;
 
+        Ok(result)
+    }
+
+    // x25519 key gen
+    pub async fn gen_x25519() -> Result<(Vec<u8>, Vec<u8>), CryptoError> {
+
+        let algorithm = js_object(vec![
+            ("name", JsValue::from_str("X25519")),
+        ]);
+
+        let key_pair: CryptoKeyPair = 
+            Self::generate_crypto_key(&algorithm, true, &["deriveKey", "deriveBits"])
+            .await
+            .map_err(|_| CryptoError::KeyGeneratorFailed)?;
+
+
+        let pub_key =
+            Self::export_crypto_key(&key_pair.get_public_key(), "spki")
+            .await?;
+        let pri_key =
+            Self::export_crypto_key(&key_pair.get_private_key(), "pkcs8")
+            .await?;
+
+        Ok((pub_key, pri_key))
+    }
+
+    pub async fn derive_x25519(
+        pri_key_bytes: &[u8], 
+        pub_key_bytes: &[u8], 
+        length: u32
+    ) -> Result<Vec<u8>, CryptoError> {
+        let subtle = CryptoJS::crypto_subtle();
+        
+        // Private Key
+        let pri_key_algorithm = js_object(vec![
+            ("name", JsValue::from_str("X25519")),
+        ]);
+        
+        let pri_key_promise = subtle.import_key_with_object(
+            "pkcs8",
+            &Uint8Array::from(pri_key_bytes).buffer(),
+            &pri_key_algorithm,
+            false, // not extractable
+            &Array::of2(
+                &JsValue::from_str("deriveKey"), 
+                &JsValue::from_str("deriveBits")
+            ),
+        ).map_err(|_| CryptoError::KeyImportFailed)?;
+        
+        let pri_key: CryptoKey = JsFuture::from(pri_key_promise)
+            .await
+            .map_err(|_| CryptoError::KeyImportFailed)?
+            .dyn_into()
+            .map_err(|_| CryptoError::KeyImportFailed)?;
+        
+        // Public Key
+        let pub_key_promise = subtle.import_key_with_object(
+            "spki",
+            &Uint8Array::from(pub_key_bytes).buffer(),
+            &pri_key_algorithm, // same algorithm object
+            false, // not extractable
+            &Array::new(), // no usage for public key
+        ).map_err(|_| CryptoError::KeyImportFailed)?;
+        
+        let pub_key: CryptoKey = JsFuture::from(pub_key_promise)
+            .await
+            .map_err(|_| CryptoError::KeyImportFailed)?
+            .dyn_into()
+            .map_err(|_| CryptoError::KeyImportFailed)?;
+
+        let derive_algorithm = js_object(vec![
+            ("name", JsValue::from_str("X25519")),
+            ("public", pub_key.into()),
+        ]);
+        
+        // Derive bits
+        let derive_promise = subtle.derive_bits_with_object(
+            &derive_algorithm,
+            &pri_key,
+            length,
+        ).map_err(|_| CryptoError::KeyImportFailed)?;
+        
+        let derived_buffer = JsFuture::from(derive_promise)
+            .await
+            .map_err(|_| CryptoError::KeyImportFailed)?;
+        
+        let uint8_array = Uint8Array::new(&derived_buffer);
+        let mut result = vec![0u8; uint8_array.length() as usize];
+        uint8_array.copy_to(&mut result);
+        
         Ok(result)
     }
 }
