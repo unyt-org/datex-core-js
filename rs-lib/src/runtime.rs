@@ -189,7 +189,9 @@ impl JSRuntime {
             let (sig_pub, sig_pri) = CryptoJS::gen_ed25519().await.unwrap();
             let (enc_pub, enc_pri) = CryptoJS::gen_x25519().await.unwrap();
 
-            let sig = crypto.sig_ed25519(&enc_pub, &sig_pri).await.unwrap();
+            let sig = crypto.sig_ed25519(&sig_pri, &enc_pub).await.unwrap();
+            let ver = crypto.ver_ed25519(&sig_pub, &sig, &enc_pub).await.unwrap();
+            assert!(ver);
 
             // hkdf
             let aad: &[u8] = enc_pub.as_slice();
