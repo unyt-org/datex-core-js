@@ -318,8 +318,8 @@ impl CryptoJS {
 
     pub async fn sig_ed25519(
         &self,
-        data: &Vec<u8>,
         pri_key: &Vec<u8>,
+        data: &Vec<u8>,
     ) -> Result<Vec<u8>, CryptoError> {
             let key = Self::import_crypto_key(
                 &pri_key,
@@ -352,6 +352,42 @@ impl CryptoJS {
             let sig: Vec<u8> = result.as_u8_slice();
 
             Ok(sig)
+    }
+
+    pub async fn ver_ed25519(
+        &self,
+        pub_key: &Vec<u8>,
+        sig: &Vec<u8>,
+        data: &Vec<u8>,
+    ) -> Result<bool, CryptoError> {
+        let key = Self::import_crypto_key(
+            &pub_key,
+            "spki",
+            &js_object(vec![
+                ("name", JsValue::from_str("Ed25519")),
+            ]),
+            &["verify"],
+        )
+        .await?;
+
+        let verified_promise = Self::crypto_subtle()
+            .verify_with_object_and_u8_array_and_u8_array(
+                &js_object(vec![
+                    ("name", JsValue::from_str("Ed25519")),
+                ]),
+                &key,
+                &sig,
+                &data,
+            )
+            .map_err(|_| CryptoError::VerificationError)?;
+
+        let result: bool = JsFuture::from(verified_promise)
+            .await
+            .map_err(|_| CryptoError::VerificationError)?
+            .as_bool()
+            .ok_or(CryptoError::VerificationError)?;
+
+        Ok(result)
     }
 }
 
