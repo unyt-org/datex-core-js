@@ -166,13 +166,13 @@ impl CryptoJS {
         let bit_len: u32 = (out_len as u32) * 8;
         let bits = JsFuture::from(
             subtle.derive_bits_with_object(&params.into(), &base_key, bit_len)
-            .map_err(|_| CryptoError::KeyImportFailed)?,
+            .map_err(|_| CryptoError::KeyGeneratorFailed)?,
         ).await
-        .map_err(|_| CryptoError::KeyImportFailed)?;
+        .map_err(|_| CryptoError::KeyGeneratorFailed)?;
 
         let okm: [u8; KEY_LEN] = Uint8Array::new(&bits).to_vec().try_into().unwrap();
         if okm.len() != out_len {
-            return Err(CryptoError::KeyImportFailed);
+            return Err(CryptoError::KeyExportFailed);
         }
         Ok(okm)
     }
@@ -216,12 +216,12 @@ impl CryptoJS {
                 &params.into(),
                 &base_key,
                 &pt,
-            ).map_err(|_| CryptoError::KeyImportFailed)?)
+            ).map_err(|_| CryptoError::EncryptionError)?)
             .await
-            .map_err(|_| CryptoError::KeyImportFailed)?;
+            .map_err(|_| CryptoError::EncryptionError)?;
 
         let ct_buf: ArrayBuffer = ct.dyn_into()
-            .map_err(|_| CryptoError::KeyImportFailed)?;
+            .map_err(|_| CryptoError::EncryptionError)?;
         let ct_bytes = Uint8Array::new(&ct_buf).to_vec();
 
         Ok(ct_bytes)
@@ -265,12 +265,12 @@ impl CryptoJS {
                 &params.into(),
                 &base_key,
                 &ct,
-            ).map_err(|_| CryptoError::KeyImportFailed)?)
+            ).map_err(|_| CryptoError::DecryptionError)?)
             .await
-            .map_err(|_| CryptoError::KeyImportFailed)?;
+            .map_err(|_| CryptoError::DecryptionError)?;
 
         let pt_buf: ArrayBuffer = pt.dyn_into()
-            .map_err(|_| CryptoError::KeyImportFailed)?;
+            .map_err(|_| CryptoError::DecryptionError)?;
         let pt_bytes = Uint8Array::new(&pt_buf).to_vec();
 
         Ok(pt_bytes)
@@ -448,11 +448,11 @@ impl CryptoJS {
             &derive_algorithm,
             &pri_key,
             length,
-        ).map_err(|_| CryptoError::KeyImportFailed)?;
+        ).map_err(|_| CryptoError::KeyGeneratorFailed)?;
         
         let derived_buffer = JsFuture::from(derive_promise)
             .await
-            .map_err(|_| CryptoError::KeyImportFailed)?;
+            .map_err(|_| CryptoError::KeyExportFailed)?;
         
         let uint8_array = Uint8Array::new(&derived_buffer);
         let mut result = vec![0u8; uint8_array.length() as usize];
