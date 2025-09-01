@@ -193,6 +193,8 @@ impl JSRuntime {
             // Signature
             let sig = CryptoJS::sig_ed25519(&sig_pri, &ser_pub).await.unwrap();
             let ver = CryptoJS::ver_ed25519(&sig_pub, &sig, &ser_pub).await.unwrap();
+            
+            assert_eq!(sig.len(), 64);
             assert!(ver);
 
             // Derivation
