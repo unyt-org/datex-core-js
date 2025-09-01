@@ -121,147 +121,153 @@ impl CryptoJS {
     }
 
     // hkdf
-    pub async fn hkdf(
+    pub fn hkdf<'a>(
         &self, 
-        ikm: &[u8], 
-        salt: &[u8], 
-        info: &[u8], 
-        out_len: usize
-    ) -> Result<[u8; KEY_LEN], CryptoError> {
-        let subtle = CryptoJS::crypto_subtle();
+        ikm: &'a [u8], 
+        salt: &'a [u8], 
+        info: &'a [u8], 
+    ) -> Pin<Box<dyn Future<Output = Result<[u8; 32], CryptoError>> + 'a>> {
+        Box::pin(async move {
+            let subtle = CryptoJS::crypto_subtle();
 
-        let usages = Array::new();
-        usages.push(&JsValue::from_str("deriveBits"));
-        let ikm_buf = Uint8Array::from(ikm).buffer();
+            let usages = Array::new();
+            usages.push(&JsValue::from_str("deriveBits"));
+            let ikm_buf = Uint8Array::from(ikm).buffer();
 
-        let key_js = JsFuture::from(
-            subtle
-            .import_key_with_object(
-                "raw",
-                &ikm_buf.into(),
-                &js_object(vec![("name", "HKDF")]),
-                false,
-                &usages
-            ).map_err(|_| CryptoError::KeyImportFailed)?,
-        ).await.map_err(|_| CryptoError::KeyImportFailed)?;
-        let base_key: CryptoKey = key_js.dyn_into()
-            .map_err(|_| CryptoError::KeyImportFailed)?;
+            let key_js = JsFuture::from(
+                subtle
+                .import_key_with_object(
+                    "raw",
+                    &ikm_buf.into(),
+                    &js_object(vec![("name", "HKDF")]),
+                    false,
+                    &usages
+                ).map_err(|_| CryptoError::KeyImportFailed)?,
+            ).await.map_err(|_| CryptoError::KeyImportFailed)?;
+            let base_key: CryptoKey = key_js.dyn_into()
+                .map_err(|_| CryptoError::KeyImportFailed)?;
 
-        let params = Object::new();
-        Reflect::set(&params, &"name".into(), &"HKDF".into())
-            .map_err(|_| CryptoError::KeyImportFailed)?;
-        Reflect::set(&params, &"hash".into(), &"SHA-256".into())
-            .map_err(|_| CryptoError::KeyImportFailed)?;
-        Reflect::set(&params, &"salt".into(), &Uint8Array::from(salt))
-            .map_err(|_| CryptoError::KeyImportFailed)?;
-        Reflect::set(&params, &"info".into(), &Uint8Array::from(info))
-            .map_err(|_| CryptoError::KeyImportFailed)?;
+            let params = Object::new();
+            Reflect::set(&params, &"name".into(), &"HKDF".into())
+                .map_err(|_| CryptoError::KeyImportFailed)?;
+            Reflect::set(&params, &"hash".into(), &"SHA-256".into())
+                .map_err(|_| CryptoError::KeyImportFailed)?;
+            Reflect::set(&params, &"salt".into(), &Uint8Array::from(salt))
+                .map_err(|_| CryptoError::KeyImportFailed)?;
+            Reflect::set(&params, &"info".into(), &Uint8Array::from(info))
+                .map_err(|_| CryptoError::KeyImportFailed)?;
 
-        let bit_len: u32 = (out_len as u32) * 8;
-        let bits = JsFuture::from(
-            subtle.derive_bits_with_object(&params.into(), &base_key, bit_len)
-            .map_err(|_| CryptoError::KeyGeneratorFailed)?,
-        ).await
-        .map_err(|_| CryptoError::KeyGeneratorFailed)?;
+            let bit_len: u32 = (32 as u32) * 8;
+            let bits = JsFuture::from(
+                subtle.derive_bits_with_object(&params.into(), &base_key, bit_len)
+                .map_err(|_| CryptoError::KeyGeneratorFailed)?,
+            ).await
+            .map_err(|_| CryptoError::KeyGeneratorFailed)?;
 
-        let okm: [u8; KEY_LEN] = Uint8Array::new(&bits).to_vec().try_into().unwrap();
-        if okm.len() != out_len {
-            return Err(CryptoError::KeyExportFailed);
-        }
-        Ok(okm)
+            let okm: [u8; KEY_LEN] = Uint8Array::new(&bits).to_vec().try_into().unwrap();
+            if okm.len() != 32 {
+                return Err(CryptoError::KeyExportFailed);
+            }
+            Ok(okm)
+        })
     }
 
     // aes ctr
-    pub async fn aes_ctr_encrypt(
-        hash: &[u8],
-        iv: &[u8],
-        plaintext: &[u8],
-    ) -> Result<Vec<u8>, CryptoError> {
-        let subtle = CryptoJS::crypto_subtle();
+    pub fn aes_ctr_encrypt<'a>(
+        hash: &'a[u8],
+        iv: &'a [u8],
+        plaintext: &'a [u8],
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<u8>, CryptoError>> + 'a>> {
+        Box::pin(async move {
 
-        let usages = Array::new();
-        usages.push(&JsValue::from_str("encrypt"));
-        usages.push(&JsValue::from_str("decrypt"));
+            let subtle = CryptoJS::crypto_subtle();
 
-        let ikm_buf = Uint8Array::from(hash).buffer();
+            let usages = Array::new();
+            usages.push(&JsValue::from_str("encrypt"));
+            usages.push(&JsValue::from_str("decrypt"));
 
-        let key_js = JsFuture::from(
-            subtle
-            .import_key_with_object(
-                "raw",
-                &ikm_buf.into(),
-                &js_object(vec![("name", "AES-CTR")]),
-                false,
-                &usages
-            ).map_err(|_| CryptoError::KeyImportFailed)?,
-        ).await.map_err(|_| CryptoError::KeyImportFailed)?;
-        let base_key: CryptoKey = key_js.dyn_into()
-            .map_err(|_| CryptoError::KeyImportFailed)?;
+            let ikm_buf = Uint8Array::from(hash).buffer();
 
-        let mut params = AesCtrParams::new(&"AES-CTR", &Uint8Array::from(iv), 64u8);
+            let key_js = JsFuture::from(
+                subtle
+                .import_key_with_object(
+                    "raw",
+                    &ikm_buf.into(),
+                    &js_object(vec![("name", "AES-CTR")]),
+                    false,
+                    &usages
+                ).map_err(|_| CryptoError::KeyImportFailed)?,
+            ).await.map_err(|_| CryptoError::KeyImportFailed)?;
+            let base_key: CryptoKey = key_js.dyn_into()
+                .map_err(|_| CryptoError::KeyImportFailed)?;
 
-        let pt = Uint8Array::from(plaintext);
+            let mut params = AesCtrParams::new(&"AES-CTR", &Uint8Array::from(iv), 64u8);
 
-        let ct = JsFuture::from(
-            subtle.encrypt_with_object_and_buffer_source(
-                &params.into(),
-                &base_key,
-                &pt,
-            ).map_err(|_| CryptoError::EncryptionError)?)
-            .await
-            .map_err(|_| CryptoError::EncryptionError)?;
+            let pt = Uint8Array::from(plaintext);
 
-        let ct_buf: ArrayBuffer = ct.dyn_into()
-            .map_err(|_| CryptoError::EncryptionError)?;
-        let ct_bytes = Uint8Array::new(&ct_buf).to_vec();
+            let ct = JsFuture::from(
+                subtle.encrypt_with_object_and_buffer_source(
+                    &params.into(),
+                    &base_key,
+                    &pt,
+                ).map_err(|_| CryptoError::EncryptionError)?)
+                .await
+                .map_err(|_| CryptoError::EncryptionError)?;
 
-        Ok(ct_bytes)
+            let ct_buf: ArrayBuffer = ct.dyn_into()
+                .map_err(|_| CryptoError::EncryptionError)?;
+            let ct_bytes = Uint8Array::new(&ct_buf).to_vec();
+
+            Ok(ct_bytes)
+        })
     }
 
-    pub async fn aes_ctr_decrypt(
-        hash: &[u8],
-        iv: &[u8],
-        ciphertext: &[u8],
-    ) -> Result<Vec<u8>, CryptoError> {
-        let subtle = CryptoJS::crypto_subtle();
+    pub fn aes_ctr_decrypt<'a>(
+        hash: &'a [u8],
+        iv: &'a [u8],
+        ciphertext: &'a [u8],
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<u8>, CryptoError>> + 'a>> {
+        Box::pin(async move {
+            let subtle = CryptoJS::crypto_subtle();
 
-        let usages = Array::new();
-        usages.push(&JsValue::from_str("encrypt"));
-        usages.push(&JsValue::from_str("decrypt"));
+            let usages = Array::new();
+            usages.push(&JsValue::from_str("encrypt"));
+            usages.push(&JsValue::from_str("decrypt"));
 
-        let ikm_buf = Uint8Array::from(hash).buffer();
+            let ikm_buf = Uint8Array::from(hash).buffer();
 
-        let key_js = JsFuture::from(
-            subtle
-            .import_key_with_object(
-                "raw",
-                &ikm_buf.into(),
-                &js_object(vec![("name", "AES-CTR")]),
-                false,
-                &usages
-            ).map_err(|_| CryptoError::KeyImportFailed)?,
-        ).await.map_err(|_| CryptoError::KeyImportFailed)?;
-        let base_key: CryptoKey = key_js.dyn_into()
-            .map_err(|_| CryptoError::KeyImportFailed)?;
+            let key_js = JsFuture::from(
+                subtle
+                .import_key_with_object(
+                    "raw",
+                    &ikm_buf.into(),
+                    &js_object(vec![("name", "AES-CTR")]),
+                    false,
+                    &usages
+                ).map_err(|_| CryptoError::KeyImportFailed)?,
+            ).await.map_err(|_| CryptoError::KeyImportFailed)?;
+            let base_key: CryptoKey = key_js.dyn_into()
+                .map_err(|_| CryptoError::KeyImportFailed)?;
 
-        let mut params = AesCtrParams::new(&"AES-CTR", &Uint8Array::from(iv), 64u8);
+            let mut params = AesCtrParams::new(&"AES-CTR", &Uint8Array::from(iv), 64u8);
 
-        let ct = Uint8Array::from(ciphertext);
+            let ct = Uint8Array::from(ciphertext);
 
-        let pt = JsFuture::from(
-            subtle.decrypt_with_object_and_buffer_source(
-                &params.into(),
-                &base_key,
-                &ct,
-            ).map_err(|_| CryptoError::DecryptionError)?)
-            .await
-            .map_err(|_| CryptoError::DecryptionError)?;
+            let pt = JsFuture::from(
+                subtle.decrypt_with_object_and_buffer_source(
+                    &params.into(),
+                    &base_key,
+                    &ct,
+                ).map_err(|_| CryptoError::DecryptionError)?)
+                .await
+                .map_err(|_| CryptoError::DecryptionError)?;
 
-        let pt_buf: ArrayBuffer = pt.dyn_into()
-            .map_err(|_| CryptoError::DecryptionError)?;
-        let pt_bytes = Uint8Array::new(&pt_buf).to_vec();
+            let pt_buf: ArrayBuffer = pt.dyn_into()
+                .map_err(|_| CryptoError::DecryptionError)?;
+            let pt_bytes = Uint8Array::new(&pt_buf).to_vec();
 
-        Ok(pt_bytes)
+            Ok(pt_bytes)
+        })
     }
 
 
@@ -365,98 +371,103 @@ impl CryptoJS {
     }
 
     // Signature and Verification
-    pub async fn gen_ed25519() -> Result<(Vec<u8>, Vec<u8>), CryptoError> {
+    pub fn gen_ed25519(
+    ) -> Pin<Box<dyn Future<Output = Result<(Vec<u8>, Vec<u8>), CryptoError>> + 'static>> {
+        Box::pin(async move {
 
-        let algorithm = js_object(vec![
-            ("name", JsValue::from_str("Ed25519")),
-        ]);
-        let key_pair: CryptoKeyPair = 
-            Self::generate_crypto_key(&algorithm, true, &["sign", "verify"])
-            .await
-            .map_err(|_| CryptoError::KeyGeneratorFailed)?;
+            let algorithm = js_object(vec![
+                ("name", JsValue::from_str("Ed25519")),
+            ]);
+            let key_pair: CryptoKeyPair = 
+                Self::generate_crypto_key(&algorithm, true, &["sign", "verify"])
+                .await
+                .map_err(|_| CryptoError::KeyGeneratorFailed)?;
 
-        let pub_key =
-            Self::export_crypto_key(&key_pair.get_public_key(), "spki")
-            .await?;
-        let pri_key =
-            Self::export_crypto_key(&key_pair.get_private_key(), "pkcs8")
-            .await?;
+            let pub_key =
+                Self::export_crypto_key(&key_pair.get_public_key(), "spki")
+                .await?;
+            let pri_key =
+                Self::export_crypto_key(&key_pair.get_private_key(), "pkcs8")
+                .await?;
 
-        Ok((pub_key, pri_key))
+            Ok((pub_key, pri_key))
+        })
     }
 
-    pub async fn sig_ed25519(
-        &self,
-        pri_key: &Vec<u8>,
-        data: &Vec<u8>,
-    ) -> Result<Vec<u8>, CryptoError> {
-        let key = Self::import_crypto_key(
-            &pri_key,
-            "pkcs8",
-            &js_object(vec![
-                ("name", JsValue::from_str("Ed25519")),
-            ]),
-            &["sign"],
-        )
-        .await?;
-
-        let sig_prom = Self::crypto_subtle()
-            .sign_with_object_and_u8_array(
+    pub fn sig_ed25519<'a>(
+        pri_key: &'a [u8],
+        data: &'a [u8],
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<u8>, CryptoError>> + 'a>> {
+        Box::pin(async move {
+            let key = Self::import_crypto_key(
+                &pri_key,
+                "pkcs8",
                 &js_object(vec![
                     ("name", JsValue::from_str("Ed25519")),
                 ]),
-                &key,
-                &data,
+                &["sign"],
             )
-            .map_err(|_| CryptoError::SigningError)?;
+            .await?;
 
-        let result: ArrayBuffer = JsFuture::from(sig_prom)
-            .await
-            .map_err(|_| CryptoError::SigningError)?
-            .try_into()
-            .map_err(|_: std::convert::Infallible| {
-                CryptoError::SigningError
-            })?;
+            let sig_prom = Self::crypto_subtle()
+                .sign_with_object_and_u8_array(
+                    &js_object(vec![
+                        ("name", JsValue::from_str("Ed25519")),
+                    ]),
+                    &key,
+                    &data,
+                )
+                .map_err(|_| CryptoError::SigningError)?;
 
-        let sig: Vec<u8> = result.as_u8_slice();
+            let result: ArrayBuffer = JsFuture::from(sig_prom)
+                .await
+                .map_err(|_| CryptoError::SigningError)?
+                .try_into()
+                .map_err(|_: std::convert::Infallible| {
+                    CryptoError::SigningError
+                })?;
 
-        Ok(sig)
+            let sig: Vec<u8> = result.as_u8_slice();
+
+            Ok(sig)
+        })
     }
 
-    pub async fn ver_ed25519(
-        &self,
-        pub_key: &Vec<u8>,
-        sig: &Vec<u8>,
-        data: &Vec<u8>,
-    ) -> Result<bool, CryptoError> {
-        let key = Self::import_crypto_key(
-            &pub_key,
-            "spki",
-            &js_object(vec![
-                ("name", JsValue::from_str("Ed25519")),
-            ]),
-            &["verify"],
-        )
-        .await?;
-
-        let verified_promise = Self::crypto_subtle()
-            .verify_with_object_and_u8_array_and_u8_array(
+    pub fn ver_ed25519<'a>(
+        pub_key: &'a [u8],
+        sig: &'a [u8],
+        data: &'a [u8],
+    ) -> Pin<Box<dyn Future<Output = Result<bool, CryptoError>> + 'a>> {
+        Box::pin(async move {
+            let key = Self::import_crypto_key(
+                &pub_key,
+                "spki",
                 &js_object(vec![
                     ("name", JsValue::from_str("Ed25519")),
                 ]),
-                &key,
-                &sig,
-                &data,
+                &["verify"],
             )
-            .map_err(|_| CryptoError::VerificationError)?;
+            .await?;
 
-        let result: bool = JsFuture::from(verified_promise)
-            .await
-            .map_err(|_| CryptoError::VerificationError)?
-            .as_bool()
-            .ok_or(CryptoError::VerificationError)?;
+            let verified_promise = Self::crypto_subtle()
+                .verify_with_object_and_u8_array_and_u8_array(
+                    &js_object(vec![
+                        ("name", JsValue::from_str("Ed25519")),
+                    ]),
+                    &key,
+                    &sig,
+                    &data,
+                )
+                .map_err(|_| CryptoError::VerificationError)?;
 
-        Ok(result)
+            let result: bool = JsFuture::from(verified_promise)
+                .await
+                .map_err(|_| CryptoError::VerificationError)?
+                .as_bool()
+                .ok_or(CryptoError::VerificationError)?;
+
+            Ok(result)
+        })
     }
 
     // x25519 key gen

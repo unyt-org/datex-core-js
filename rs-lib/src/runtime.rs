@@ -191,8 +191,8 @@ impl JSRuntime {
             let (cli_pub, cli_pri) = CryptoJS::gen_x25519().await.unwrap();
 
             // Signature
-            let sig = crypto.sig_ed25519(&sig_pri, &ser_pub).await.unwrap();
-            let ver = crypto.ver_ed25519(&sig_pub, &sig, &ser_pub).await.unwrap();
+            let sig = CryptoJS::sig_ed25519(&sig_pri, &ser_pub).await.unwrap();
+            let ver = CryptoJS::ver_ed25519(&sig_pub, &sig, &ser_pub).await.unwrap();
             assert!(ver);
 
             // Derivation
@@ -204,7 +204,7 @@ impl JSRuntime {
             let aad: &[u8] = ser_pub.as_slice();
             let ikm = vec![0u8; 32];
             let salt = vec![0u8; 16];
-            let hash = crypto.hkdf(&ikm, &salt, &aad, 32).await.unwrap();
+            let hash = crypto.hkdf(&ikm, &salt, &aad).await.unwrap();
 
             // aes entailing hkdf
             let msg: Vec<u8> = b"Some message".to_vec();
