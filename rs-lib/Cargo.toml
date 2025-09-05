@@ -45,6 +45,9 @@ futures = { version = "0.3", default-features = false }           # = "0.11",
 futures-timer = { version = "3", features = ["wasm-bindgen"] }
 uuid = { version = "1.15.1", features = ["js"], optional = true }
 futures-channel = "0.3.31"
+specta-typescript = "0.0.9"
+specta = "1.0.5"
+tsify = "0.5.5"
 
 # webrtc
 # tokio = { version = "1.43.0", default-features = false, features = [] }
@@ -99,7 +102,7 @@ default = [
     "wasm_serial",
     "wasm_webrtc",
 ]
-debug = ["datex-core/debug"]
+debug = ["datex-core/debug", "datex-core/wasm_runtime"]
 wasm_websocket_server = [] # only required for a backend js runtime
 wasm_websocket_client = [] # full support
 wasm_serial = [] # only required for frontend js runtime
