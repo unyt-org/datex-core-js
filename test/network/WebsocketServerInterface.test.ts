@@ -33,7 +33,7 @@ Deno.test("connect two runtimes", async () => {
         WebSockerServerDenoInterfaceImpl
     >(
         "websocket-server",
-        { port: PORT },
+        { port: PORT, secure: false },
     );
 
     const runtimeB = new Runtime({ endpoint: "@test_b" });

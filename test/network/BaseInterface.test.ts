@@ -15,13 +15,14 @@ const config: BaseInterfaceSetupData = {
     interface_type: "base",
     channel: "test",
     direction: "InOut",
-    round_trip_time: 1000,
+    round_trip_time: 5,
     max_bandwidth: 1,
     continuous_connection: true,
     allow_redirects: true,
     is_secure_channel: true,
     reconnection_config: "NoReconnect",
-    reconnect_attempts: undefined,
+    reconnect_attempts: null,
+    close_timestamp: null,
 };
 // Deno.test("custom properties no reconnect", () => {
 //     const runtime = new Runtime("@unyt");

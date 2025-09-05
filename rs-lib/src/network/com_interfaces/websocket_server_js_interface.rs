@@ -23,9 +23,9 @@ use datex_core::network::com_hub::ComHubError;
 use datex_core::network::com_interfaces::com_interface::ComInterfaceState;
 use log::{debug, error, info};
 use wasm_bindgen::prelude::wasm_bindgen;
-use wasm_bindgen::{prelude::Closure, JsCast};
+use wasm_bindgen::{JsCast, prelude::Closure};
 use wasm_bindgen::{JsError, JsValue};
-use web_sys::{js_sys, ErrorEvent, MessageEvent};
+use web_sys::{ErrorEvent, MessageEvent, js_sys};
 
 pub struct WebSocketServerJSInterface {
     sockets: HashMap<ComInterfaceSocketUUID, web_sys::WebSocket>,
@@ -46,23 +46,18 @@ impl From<ComHubError> for JSWebSocketServerError {
     }
 }
 
-use datex_macros::{com_interface, create_opener};
 use crate::network::com_hub::JSComHub;
-
-#[wasm_bindgen(typescript_custom_section)]
-const WEBSOCKET_SERVER_INTERFACE_SETUP_DATA: &'static str = r#"
-type WebSocketServerInterfaceSetupData = {
-    port: number;
-};
-"#;
+use datex_macros::{com_interface, create_opener};
 
 #[com_interface]
 impl WebSocketServerJSInterface {
-    pub fn new(setup_data: WebSocketServerInterfaceSetupData) -> WebSocketServerJSInterface {
+    pub fn new(
+        setup_data: WebSocketServerInterfaceSetupData,
+    ) -> WebSocketServerJSInterface {
         WebSocketServerJSInterface {
             info: ComInterfaceInfo::default(),
             sockets: HashMap::new(),
-            port: setup_data.port
+            port: setup_data.port,
         }
     }
 
@@ -218,9 +213,14 @@ impl JSComHub {
         interface_uuid: String,
         websocket: web_sys::WebSocket,
     ) -> Result<String, JSWebSocketServerError> {
+        let interface = self
+            .get_interface_for_uuid::<WebSocketServerJSInterface>(
+                interface_uuid,
+            )?;
 
-        let interface = self.get_interface_for_uuid::<WebSocketServerJSInterface>(interface_uuid)?;
-
-        Ok(interface.borrow_mut().register_socket(websocket).to_string())
+        Ok(interface
+            .borrow_mut()
+            .register_socket(websocket)
+            .to_string())
     }
 }
