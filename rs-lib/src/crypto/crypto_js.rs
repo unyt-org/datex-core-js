@@ -370,6 +370,155 @@ impl CryptoJS {
         Ok(pt_bytes)
     }
 
+    pub async fn wrap_aes_key(
+        kek_bytes: &[u8],           // Key Encryption Key (AES-128, 192, or 256)
+        key_to_wrap_bytes: &[u8],   // The AES-CTR key to wrap
+    ) -> Result<Vec<u8>, CryptoError> {
+
+        let window = web_sys::window().unwrap();
+        let crypto = window.crypto().unwrap();
+        let subtle = crypto.subtle();
+
+        // Import the Key Encryption Key (KEK)
+        let kek_algorithm = js_object(vec![
+            ("name", JsValue::from_str("AES-KW")),
+        ]);
+
+        let kek_promise = subtle.import_key_with_object(
+            "raw",
+            &js_sys::Uint8Array::from(kek_bytes).buffer(),
+            &kek_algorithm,
+            false, // not extractable
+            &Array::of2(
+                &JsValue::from_str("wrapKey"),
+                &JsValue::from_str("unwrapKey")
+            ),
+        );
+
+        let kek: CryptoKey = JsFuture::from(kek_promise.unwrap())
+            .await
+            .map_err(|_| CryptoError::KeyImportFailed)?
+            .dyn_into()
+            .map_err(|_| CryptoError::KeyImportFailed)?;
+
+        // Import the key to be wrapped (AES-CTR key)
+        let key_algorithm = js_object(vec![
+            ("name", JsValue::from_str("AES-CTR")),
+        ]);
+
+        let key_promise = subtle.import_key_with_object(
+            "raw",
+            &Uint8Array::from(key_to_wrap_bytes).buffer(),
+            &key_algorithm,
+            true, // must be extractable to wrap it
+            &Array::of2(
+                &JsValue::from_str("encrypt"),
+                &JsValue::from_str("decrypt")
+            ),
+        );
+    let key_to_wrap: CryptoKey = JsFuture::from(key_promise.unwrap())
+            .await
+            .map_err(|_| CryptoError::KeyImportFailed)?
+            .dyn_into()
+            .map_err(|_| CryptoError::KeyImportFailed)?;
+
+        // Wrap the key
+        let wrap_promise = subtle.wrap_key_with_str(
+            "raw",              // format to wrap in
+            &key_to_wrap,       // key to wrap
+            &kek,               // wrapping key
+            "AES-KW",           // wrapping algorithm
+        );
+
+        let wrapped_buffer = JsFuture::from(wrap_promise.unwrap())
+            .await
+            .map_err(|_| CryptoError::KeyImportFailed)?;
+
+        let uint8_array = Uint8Array::new(&wrapped_buffer);
+        let mut result = vec![0u8; uint8_array.length() as usize];
+        uint8_array.copy_to(&mut result);
+
+        Ok(result)
+    }
+
+pub async fn unwrap_aes_key(
+    kek_bytes: &[u8],       // Key Encryption Key (same as used for wrapping)
+    wrapped_key: &[u8],     // The wrapped key data
+) -> Result<Vec<u8>, CryptoError> {
+
+    let window = web_sys::window().unwrap();
+    let crypto = window.crypto().unwrap();
+    let subtle = crypto.subtle();
+
+    // Import the Key Encryption Key (KEK)
+    let kek_algorithm = js_object(vec![
+        ("name", JsValue::from_str("AES-KW")),
+    ]);
+
+    let kek_promise = subtle.import_key_with_object(
+        "raw",
+        &Uint8Array::from(kek_bytes).buffer(),
+        &kek_algorithm,
+        false, // not extractable
+        &js_sys::Array::of2(
+            &JsValue::from_str("wrapKey"),
+            &JsValue::from_str("unwrapKey")
+        ),
+    );
+
+    let kek: CryptoKey = JsFuture::from(kek_promise
+        .map_err(|_| CryptoError::KeyImportFailed)?)
+        .await
+        .map_err(|_| CryptoError::KeyImportFailed)?
+        .dyn_into()
+        .map_err(|_| CryptoError::KeyImportFailed)?;
+
+    // Unwrap the key
+    let unwrapped_algorithm = js_object(vec![
+        ("name", JsValue::from_str("AES-CTR")),
+    ]);
+
+    // Convert wrapped_key to Uint8Array
+    let wrapped_key_array = Uint8Array::from(wrapped_key);
+
+    let unwrap_promise = subtle.unwrap_key_with_js_u8_array_and_str_and_object(
+        "raw",                      // format the wrapped key is in
+        &wrapped_key_array,         // wrapped key as Uint8Array
+        &kek,                       // unwrapping key
+        "AES-KW",                   // unwrapping algorithm
+        &unwrapped_algorithm,       // algorithm of the unwrapped key
+        true,                       // extractable (so we can export it)
+        &js_sys::Array::of2(
+            &JsValue::from_str("encrypt"),
+            &JsValue::from_str("decrypt")
+        ),
+    );
+
+    let unwrapped_key: CryptoKey = JsFuture::from(
+        unwrap_promise
+        .map_err(|_| CryptoError::KeyExportFailed)?
+        )
+        .await
+        .map_err(|_| CryptoError::KeyExportFailed)?
+        .dyn_into()
+        .map_err(|_| CryptoError::KeyExportFailed)?;
+
+    // Export the unwrapped key as raw bytes
+    let export_promise = subtle
+        .export_key("raw", &unwrapped_key)
+        .map_err(|_| CryptoError::KeyExportFailed)?;
+
+    let exported_buffer = JsFuture::from(export_promise)
+        .await
+        .map_err(|_| CryptoError::KeyExportFailed)?;
+
+    let uint8_array = Uint8Array::new(&exported_buffer);
+    let mut result = vec![0u8; uint8_array.length() as usize];
+    uint8_array.copy_to(&mut result);
+
+    Ok(result)
+}
+
     // Signature and Verification
     pub fn gen_ed25519(
     ) -> Pin<Box<dyn Future<Output = Result<(Vec<u8>, Vec<u8>), CryptoError>> + 'static>> {
