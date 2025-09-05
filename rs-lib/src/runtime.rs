@@ -247,6 +247,12 @@ impl JSRuntime {
             assert_eq!(msg, deciphered);
             assert_ne!(msg, ciphered);
 
+            let wrapped = CryptoJS::wrap_aes_key(&hash, &hash).await.unwrap();
+            let unwrapped = CryptoJS::unwrap_aes_key(&hash, &wrapped).await.unwrap();
+
+            assert_eq!(hash.to_vec(), unwrapped);
+            assert_ne!(wrapped, unwrapped);
+
             let js_array = js_array(&[
                 encryption_key_pair.0,
                 encryption_key_pair.1,
@@ -264,6 +270,7 @@ impl JSRuntime {
                 sig_pri,
                 cli_sec,
                 ser_sec,
+                wrapped,
             ]);
             Ok(js_array)
         })
