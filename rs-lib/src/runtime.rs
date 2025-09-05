@@ -261,7 +261,6 @@ impl JSRuntime {
                 encrypted_message,
                 decrypted_message,
                 signed_message,
-                hash.to_vec(),
                 ciphered,
                 deciphered,
                 ser_pub,
@@ -270,7 +269,9 @@ impl JSRuntime {
                 sig_pri,
                 cli_sec,
                 ser_sec,
+                hash.to_vec(),
                 wrapped,
+                unwrapped,
             ]);
             Ok(js_array)
         })
