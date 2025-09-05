@@ -12,11 +12,11 @@ use datex_core::network::com_interfaces::com_interface::{
 };
 use datex_core::network::com_interfaces::com_interface_properties::InterfaceProperties;
 use datex_core::network::com_interfaces::com_interface_socket::ComInterfaceSocketUUID;
-use datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common_new::data_channels::{DataChannel, DataChannels};
-use datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common_new::structures::{RTCIceCandidateInitDX, RTCIceServer, RTCSdpTypeDX, RTCSessionDescriptionDX};
-use datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common_new::utils::WebRTCError;
-use datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common_new::webrtc_commons::WebRTCCommon;
-use datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common_new::webrtc_trait::{WebRTCTrait, WebRTCTraitInternal};
+use datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common::data_channels::{DataChannel, DataChannels};
+use datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common::structures::{RTCIceCandidateInitDX, RTCIceServer, RTCSdpTypeDX, RTCSessionDescriptionDX};
+use datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common::utils::WebRTCError;
+use datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common::webrtc_commons::WebRTCCommon;
+use datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common::webrtc_trait::{WebRTCTrait, WebRTCTraitInternal};
 use datex_core::network::com_interfaces::socket_provider::SingleSocketProvider;
 use datex_core::stdlib::sync::Arc;
 use datex_core::task::spawn_local;
@@ -31,7 +31,7 @@ use crate::js_utils::TryAsByteSlice;
 use datex_core::network::com_hub::InterfacePriority;
 use datex_macros::{com_interface, create_opener};
 use log::{error, info};
-use wasm_bindgen::prelude::{wasm_bindgen, Closure};
+use wasm_bindgen::prelude::{Closure, wasm_bindgen};
 use wasm_bindgen::{JsCast, JsError, JsValue};
 use web_sys::{
     MessageEvent, RtcConfiguration, RtcDataChannel, RtcDataChannelEvent,
