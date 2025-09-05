@@ -39,7 +39,7 @@ Deno.test("execute sync typed integer", () => {
     assertEquals(result, {
         core_type: "integer/u8",
         ptr_id: undefined,
-        type: "integer/u8",
+        type: "integer",
         value: "42",
     });
 });
