@@ -370,7 +370,7 @@ impl CryptoJS {
         Ok(pt_bytes)
     }
 
-    pub async fn wrap_key(
+    pub async fn key_upwrap(
         // Key Encryption Key (AES-128, 192, or 256)
         kek_bytes: &[u8],
         // The AES-CTR key to wrap
@@ -440,7 +440,7 @@ impl CryptoJS {
         Ok(result)
     }
 
-pub async fn unwrap_key(
+pub async fn key_unwrap(
     kek_bytes: &[u8],       // Key Encryption Key (same as used for wrapping)
     wrapped_key: &[u8],     // The wrapped key data
 ) -> Result<Vec<u8>, CryptoError> {
