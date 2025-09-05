@@ -8,10 +8,10 @@ use serde_wasm_bindgen::from_value;
 // use datex_cli_core::CLI;
 use datex_core::compiler;
 
-use datex_core::compiler::{compile_script, compile_template, CompileOptions};
-use datex_core::decompiler::{decompile_body, DecompileOptions};
+use datex_core::compiler::{CompileOptions, compile_script, compile_template};
+use datex_core::decompiler::{DecompileOptions, decompile_body};
 use datex_core::runtime::execution::{
-    execute_dxb_sync, ExecutionInput, ExecutionOptions,
+    ExecutionInput, ExecutionOptions, execute_dxb_sync,
 };
 use wasm_bindgen::prelude::*;
 
@@ -72,12 +72,12 @@ pub fn execute(datex_script: &str, formatted: bool) -> String {
         let (result_dxb, _) =
             compile_template("?", &[result], CompileOptions::default())
                 .unwrap();
-        
+
         decompile_body(
             &result_dxb,
             DecompileOptions {
                 colorized: formatted,
-                formatted,
+                formatting: Default::default(),
                 json_compat: true,
                 ..DecompileOptions::default()
             },
