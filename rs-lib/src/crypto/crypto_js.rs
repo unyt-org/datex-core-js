@@ -371,13 +371,12 @@ impl CryptoJS {
     }
 
     pub async fn wrap_aes_key(
-        kek_bytes: &[u8],           // Key Encryption Key (AES-128, 192, or 256)
-        key_to_wrap_bytes: &[u8],   // The AES-CTR key to wrap
+        // Key Encryption Key (AES-128, 192, or 256)
+        kek_bytes: &[u8],
+        // The AES-CTR key to wrap
+        key_to_wrap_bytes: &[u8],   
     ) -> Result<Vec<u8>, CryptoError> {
-
-        let window = web_sys::window().unwrap();
-        let crypto = window.crypto().unwrap();
-        let subtle = crypto.subtle();
+        let subtle = CryptoJS::crypto_subtle();
 
         // Import the Key Encryption Key (KEK)
         let kek_algorithm = js_object(vec![
@@ -386,7 +385,7 @@ impl CryptoJS {
 
         let kek_promise = subtle.import_key_with_object(
             "raw",
-            &js_sys::Uint8Array::from(kek_bytes).buffer(),
+            &Uint8Array::from(kek_bytes).buffer(),
             &kek_algorithm,
             false, // not extractable
             &Array::of2(
@@ -445,10 +444,7 @@ pub async fn unwrap_aes_key(
     kek_bytes: &[u8],       // Key Encryption Key (same as used for wrapping)
     wrapped_key: &[u8],     // The wrapped key data
 ) -> Result<Vec<u8>, CryptoError> {
-
-    let window = web_sys::window().unwrap();
-    let crypto = window.crypto().unwrap();
-    let subtle = crypto.subtle();
+    let subtle = CryptoJS::crypto_subtle();
 
     // Import the Key Encryption Key (KEK)
     let kek_algorithm = js_object(vec![
@@ -460,7 +456,7 @@ pub async fn unwrap_aes_key(
         &Uint8Array::from(kek_bytes).buffer(),
         &kek_algorithm,
         false, // not extractable
-        &js_sys::Array::of2(
+        &Array::of2(
             &JsValue::from_str("wrapKey"),
             &JsValue::from_str("unwrapKey")
         ),
@@ -487,8 +483,8 @@ pub async fn unwrap_aes_key(
         &kek,                       // unwrapping key
         "AES-KW",                   // unwrapping algorithm
         &unwrapped_algorithm,       // algorithm of the unwrapped key
-        true,                       // extractable (so we can export it)
-        &js_sys::Array::of2(
+        true,                       // extractable
+        &Array::of2(
             &JsValue::from_str("encrypt"),
             &JsValue::from_str("decrypt")
         ),
