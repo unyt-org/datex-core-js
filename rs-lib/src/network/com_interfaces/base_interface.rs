@@ -40,51 +40,11 @@ pub struct BaseJSInterface {
     properties: InterfaceProperties,
 }
 
-#[wasm_bindgen(typescript_custom_section)]
-const BASE_INTERFACE_SETUP_DATA: &'static str = r#"
-type BaseInterfaceSetupData = {
-    name?: string;
-    interface_type: string;
-    channel: string;
-    direction: "In" | "Out" | "InOut";
-    round_trip_time: number;
-    max_bandwidth: number;
-    continuous_connection: boolean;
-    allow_redirects: boolean;
-    is_secure_channel: boolean;
-    reconnect_attempts?: number;
-    reconnection_config: 
-        "NoReconnect" | 
-        "InstantReconnect" | 
-        {
-            ReconnectWithTimeout: {
-                timeout: number;
-            }
-        } | 
-        {
-            ReconnectWithTimeoutAndAttempts: {
-                timeout: number;
-                attempts: number;
-            }
-        };
-};
-"#;
-
-#[wasm_bindgen]
-extern "C" {
-    #[wasm_bindgen(typescript_type = "InterfaceProperties | string")]
-    pub type JSInterfacePropertiesOrName;
-
-    #[wasm_bindgen(typescript_type = "InterfaceProperties")]
-    pub type JSInterfaceProperties;
-}
-
 impl Default for BaseJSInterface {
     fn default() -> Self {
         Self::new_with_name("unknown")
     }
 }
-
 
 #[com_interface]
 impl BaseJSInterface {
@@ -166,15 +126,18 @@ impl BaseJSInterface {
         receiver_socket_uuid: ComInterfaceSocketUUID,
         data: Vec<u8>,
     ) -> Result<(), BaseInterfaceError> {
-        match self.get_socket_with_uuid(receiver_socket_uuid) { Some(socket) => {
-            let socket = socket.lock().unwrap();
-            let receive_queue = socket.get_receive_queue();
-            receive_queue.lock().unwrap().extend(data);
-            Ok(())
-        } _ => {
-            error!("Socket not found");
-            Err(BaseInterfaceError::SocketNotFound)
-        }}
+        match self.get_socket_with_uuid(receiver_socket_uuid) {
+            Some(socket) => {
+                let socket = socket.lock().unwrap();
+                let receive_queue = socket.get_receive_queue();
+                receive_queue.lock().unwrap().extend(data);
+                Ok(())
+            }
+            _ => {
+                error!("Socket not found");
+                Err(BaseInterfaceError::SocketNotFound)
+            }
+        }
     }
 }
 
@@ -226,20 +189,36 @@ impl ComInterfaceFactory<BaseInterfaceSetupData> for BaseJSInterface {
 
 #[wasm_bindgen]
 impl JSComHub {
-    pub fn base_interface_register_socket(&self, uuid: String, direction: String) -> Result<String, JsBaseInterfaceError> {
-        let interface_direction = InterfaceDirection::from_str(&direction).map_err(|_| {
-            BaseInterfaceError::InvalidInput("Invalid direction".to_string())
-        })?;
-        let base_interface = self.get_interface_for_uuid::<BaseJSInterface>(uuid)?;
-        Ok(base_interface.borrow_mut().register_new_socket(interface_direction).0.to_string())
-    }
-
-    pub fn base_interface_receive(&self, uuid: String, socket_uuid: String, data: Vec<u8>) -> Result<(), JsBaseInterfaceError> {
-        let base_interface = self.get_interface_for_uuid::<BaseJSInterface>(uuid)?;
-        let socket_uuid = ComInterfaceSocketUUID::from_string(socket_uuid);
+    pub fn base_interface_register_socket(
+        &self,
+        uuid: String,
+        direction: String,
+    ) -> Result<String, JsBaseInterfaceError> {
+        let interface_direction = InterfaceDirection::from_str(&direction)
+            .map_err(|_| {
+                BaseInterfaceError::InvalidInput(
+                    "Invalid direction".to_string(),
+                )
+            })?;
+        let base_interface =
+            self.get_interface_for_uuid::<BaseJSInterface>(uuid)?;
         Ok(base_interface
             .borrow_mut()
-            .receive(socket_uuid, data)?)
+            .register_new_socket(interface_direction)
+            .0
+            .to_string())
+    }
+
+    pub fn base_interface_receive(
+        &self,
+        uuid: String,
+        socket_uuid: String,
+        data: Vec<u8>,
+    ) -> Result<(), JsBaseInterfaceError> {
+        let base_interface =
+            self.get_interface_for_uuid::<BaseJSInterface>(uuid)?;
+        let socket_uuid = ComInterfaceSocketUUID::from_string(socket_uuid);
+        Ok(base_interface.borrow_mut().receive(socket_uuid, data)?)
     }
 
     pub fn base_interface_destroy_socket(
@@ -247,9 +226,9 @@ impl JSComHub {
         uuid: String,
         socket_uuid: String,
     ) -> Result<(), JsBaseInterfaceError> {
-        let base_interface = self.get_interface_for_uuid::<BaseJSInterface>(uuid)?;
-        let socket_uuid =
-            ComInterfaceSocketUUID::from_string(socket_uuid);
+        let base_interface =
+            self.get_interface_for_uuid::<BaseJSInterface>(uuid)?;
+        let socket_uuid = ComInterfaceSocketUUID::from_string(socket_uuid);
         if base_interface
             .borrow()
             .has_socket_with_uuid(socket_uuid.clone())
@@ -264,10 +243,13 @@ impl JSComHub {
     pub fn base_interface_on_send(
         &mut self,
         uuid: String,
-        func: Function
+        func: Function,
     ) -> Result<(), JsBaseInterfaceError> {
-        let base_interface = self.get_interface_for_uuid::<BaseJSInterface>(uuid)?;
-        let callback = move | block: &[u8], uuid: ComInterfaceSocketUUID| -> Pin<Box<dyn Future<Output = bool>>> {
+        let base_interface =
+            self.get_interface_for_uuid::<BaseJSInterface>(uuid)?;
+        let callback = move |block: &[u8],
+                             uuid: ComInterfaceSocketUUID|
+              -> Pin<Box<dyn Future<Output = bool>>> {
             let block = Uint8Array::from(block);
             let socket_uuid = JsValue::from(uuid.0.to_string());
             let result = func
@@ -293,15 +275,24 @@ impl JSComHub {
         socket_uuid: String,
         data: &[u8],
     ) -> Result<bool, JsBaseInterfaceError> {
-        let base_interface = self.get_interface_for_uuid::<BaseJSInterface>(uuid)?;
-        Ok(
-            base_interface
+        let base_interface =
+            self.get_interface_for_uuid::<BaseJSInterface>(uuid)?;
+        Ok(base_interface
             .borrow_mut()
             .send_block(
                 data,
                 ComInterfaceSocketUUID(UUID::from_string(socket_uuid)),
             )
-            .await
-        )
+            .await)
     }
+}
+
+mod tests {
+    // use std::any::Any;
+
+    // use datex_core::network::com_interfaces::default_com_interfaces::base_interface::InterfaceDirection;
+    // use specta::{*, ts::*};
+
+    // #[test]
+    // fn it_works() {}
 }
