@@ -228,7 +228,7 @@ impl JSRuntime {
         script: &str,
         dif_values: Option<Vec<JsValue>>,
         decompile_options: JsValue,
-    ) -> String {
+    ) -> Result<String, JsValue> {
         let result = self
             .runtime
             .execute(
@@ -237,13 +237,13 @@ impl JSRuntime {
                 None,
             )
             .await
-            .unwrap();
+            .map_err(|e| JsError::new(&format!("{e:?}")))?;
         match result {
-            None => "".to_string(),
-            Some(result) => decompile_value(
+            None => Ok("".to_string()),
+            Some(result) => Ok(decompile_value(
                 &result,
                 Self::decompile_options_from_js_value(decompile_options),
-            ),
+            )),
         }
     }
 
@@ -251,7 +251,7 @@ impl JSRuntime {
         &self,
         script: &str,
         dif_values: Option<Vec<JsValue>>,
-    ) -> JsValue {
+    ) -> Result<JsValue, JsValue> {
         let result = self
             .runtime
             .execute(
@@ -260,8 +260,8 @@ impl JSRuntime {
                 None,
             )
             .await
-            .unwrap();
-        Self::maybe_value_container_to_dif(result)
+            .map_err(|e| JsError::new(&format!("{e:?}")))?;
+        Ok(Self::maybe_value_container_to_dif(result))
     }
 
     pub fn execute_sync_with_string_result(
@@ -269,7 +269,7 @@ impl JSRuntime {
         script: &str,
         dif_values: Option<Vec<JsValue>>,
         decompile_options: JsValue,
-    ) -> String {
+    ) -> Result<String, JsValue> {
         let input = self
             .runtime
             .execute_sync(
@@ -277,13 +277,13 @@ impl JSRuntime {
                 &Self::js_values_to_value_containers(dif_values),
                 None,
             )
-            .unwrap();
+            .map_err(|e| JsError::new(&format!("{e:?}")))?;
         match input {
-            None => "".to_string(),
-            Some(result) => decompile_value(
+            None => Ok("".to_string()),
+            Some(result) => Ok(decompile_value(
                 &result,
                 Self::decompile_options_from_js_value(decompile_options),
-            ),
+            )),
         }
     }
 
@@ -291,7 +291,7 @@ impl JSRuntime {
         &self,
         script: &str,
         dif_values: Option<Vec<JsValue>>,
-    ) -> JsValue {
+    ) -> Result<JsValue, JsValue> {
         let result = self
             .runtime
             .execute_sync(
@@ -299,8 +299,8 @@ impl JSRuntime {
                 &Self::js_values_to_value_containers(dif_values),
                 None,
             )
-            .unwrap();
-        Self::maybe_value_container_to_dif(result)
+            .map_err(|e| JsError::new(&format!("{e:?}")))?;
+        Ok(Self::maybe_value_container_to_dif(result))
     }
 
     pub fn value_to_string(
