@@ -1,5 +1,5 @@
 use crate::crypto::crypto_js::CryptoJS;
-use crate::js_utils::js_array;
+use crate::js_utils::{js_array, js_error};
 use crate::memory::JSMemory;
 use crate::network::com_hub::JSComHub;
 use crate::utils::time::TimeJS;
@@ -10,6 +10,7 @@ use datex_core::global::dxb_block::DXBBlock;
 use datex_core::global::protocol_structures::block_header::{
     BlockHeader, FlagsAndTimestamp,
 };
+use datex_core::runtime::execution_context::ScriptExecutionError;
 #[cfg(feature = "debug")]
 use datex_core::runtime::global_context::DebugFlags;
 use datex_core::runtime::global_context::GlobalContext;
@@ -228,7 +229,7 @@ impl JSRuntime {
         script: &str,
         dif_values: Option<Vec<JsValue>>,
         decompile_options: JsValue,
-    ) -> Result<String, JsValue> {
+    ) -> Result<String, JsError> {
         let result = self
             .runtime
             .execute(
@@ -237,7 +238,7 @@ impl JSRuntime {
                 None,
             )
             .await
-            .map_err(|e| JsError::new(&format!("{e:?}")))?;
+            .map_err(js_error)?;
         match result {
             None => Ok("".to_string()),
             Some(result) => Ok(decompile_value(
@@ -260,7 +261,7 @@ impl JSRuntime {
                 None,
             )
             .await
-            .map_err(|e| JsError::new(&format!("{e:?}")))?;
+            .map_err(js_error)?;
         Ok(Self::maybe_value_container_to_dif(result))
     }
 
@@ -277,7 +278,7 @@ impl JSRuntime {
                 &Self::js_values_to_value_containers(dif_values),
                 None,
             )
-            .map_err(|e| JsError::new(&format!("{e:?}")))?;
+            .map_err(js_error)?;
         match input {
             None => Ok("".to_string()),
             Some(result) => Ok(decompile_value(
@@ -299,7 +300,7 @@ impl JSRuntime {
                 &Self::js_values_to_value_containers(dif_values),
                 None,
             )
-            .map_err(|e| JsError::new(&format!("{e:?}")))?;
+            .map_err(js_error)?;
         Ok(Self::maybe_value_container_to_dif(result))
     }
 
