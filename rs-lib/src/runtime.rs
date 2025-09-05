@@ -247,8 +247,8 @@ impl JSRuntime {
             assert_eq!(msg, deciphered);
             assert_ne!(msg, ciphered);
 
-            let wrapped = CryptoJS::wrap_key(&hash, &hash).await.unwrap();
-            let unwrapped = CryptoJS::unwrap_key(&hash, &wrapped).await.unwrap();
+            let wrapped = CryptoJS::key_upwrap(&hash, &hash).await.unwrap();
+            let unwrapped = CryptoJS::key_unwrap(&hash, &wrapped).await.unwrap();
 
             assert_eq!(hash.to_vec(), unwrapped);
             assert_ne!(wrapped, unwrapped);
