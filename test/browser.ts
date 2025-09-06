@@ -1,20 +1,35 @@
 import { Datex } from "../src/mod.ts";
+import { WebRTCInterfaceImpl } from "../src/network/interface-impls/webrtc.ts";
 
 // @ts-ignore global variable for debugging
 globalThis.Datex = Datex;
 
-document.getElementById("serial")!.addEventListener("click", async () => {
-    const serial = await Datex.comHub.serial.register(19200);
-    console.log(serial);
-});
+// document.getElementById("serial")!.addEventListener("click", async () => {
+//     const serial = await Datex.comHub.serial.register(19200);
+//     console.log(serial);
+// });
 
 document.getElementById("webrtc")!.addEventListener("click", async () => {
-    const webrtc = Datex.comHub.webrtc;
-    const interface_a = await webrtc.register("@jonas");
-    const interface_b = await webrtc.register("@ben");
+    // const webrtc = Datex.comHub.webrtc;
+    const interface_a = await Datex.comHub.createInterface(
+        WebRTCInterfaceImpl,
+        {
+            peer_endpoint: "@jonas",
+            ice_servers: null,
+        },
+    );
 
-    webrtc.set_on_ice_candidate(interface_a, (candidate: Uint8Array) => {
-        webrtc.add_ice_candidate(interface_b, candidate)
+    const interface_b = await Datex.comHub.createInterface(
+        WebRTCInterfaceImpl,
+        {
+            peer_endpoint: "@ben",
+            ice_servers: null,
+        },
+    );
+    console.log("Interface A:", interface_a);
+    interface_a.impl.setOnIceCandidate((candidate: Uint8Array) => {
+        console.log("Interface A ICE candidate:", candidate);
+        interface_b.impl.addIceCandidate(candidate)
             .then(() => console.log("ICE candidate added to interface B"))
             .catch((e) =>
                 console.error(
@@ -24,8 +39,8 @@ document.getElementById("webrtc")!.addEventListener("click", async () => {
             );
     });
 
-    webrtc.set_on_ice_candidate(interface_b, (candidate: Uint8Array) => {
-        webrtc.add_ice_candidate(interface_a, candidate)
+    interface_b.impl.setOnIceCandidate((candidate: Uint8Array) => {
+        interface_a.impl.addIceCandidate(candidate)
             .then(() => console.log("ICE candidate added to interface A"))
             .catch((e) =>
                 console.error(
@@ -34,24 +49,25 @@ document.getElementById("webrtc")!.addEventListener("click", async () => {
                 )
             );
     });
+    const offer = await interface_a.impl.createOffer();
+    console.log("Offer from A:", offer);
 
-    const offer = await webrtc.create_offer(interface_a);
-    console.log("Offer:", offer);
+    const answer = await interface_b.impl.createAnswer(offer);
+    console.log("Answer from B:", answer);
+    await interface_a.impl.setAnswer(answer);
 
-    const answer = await webrtc.create_answer(interface_b, offer);
-    console.log("Answer:", answer);
-    await webrtc.set_answer(interface_a, answer);
+    await interface_a.impl.waitForConnection();
+    console.log("Interface A connected");
+    await interface_b.impl.waitForConnection();
+    console.log("Interface B connected");
 
-    await webrtc.wait_for_connection(interface_a);
-    await webrtc.wait_for_connection(interface_b);
-
-    const success = await Datex.comHub.send_block(
+    const success = await Datex.comHub.sendBlock(
         new Uint8Array([1, 2, 3, 4]),
-        interface_a,
+        interface_a.uuid,
         "",
-    ) && await Datex.comHub.send_block(
+    ) && await Datex.comHub.sendBlock(
         new Uint8Array([1, 2, 3, 4]),
-        interface_b,
+        interface_b.uuid,
         "",
     );
 
