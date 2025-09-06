@@ -120,7 +120,7 @@ export interface WebRTCInterfaceSetupData {
 }
 
 export interface SerialInterfaceSetupData {
-    port_name: string;
+    port_name: string | null;
     baud_rate: number;
 }
 
