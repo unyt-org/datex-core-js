@@ -9,7 +9,7 @@ use async_trait::async_trait;
 use datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common::media_tracks::{MediaKind, MediaTrack, MediaTracks};
 use datex_core::values::core_values::endpoint::Endpoint;
 use datex_core::network::com_interfaces::com_interface::{
-    ComInterface, ComInterfaceError, ComInterfaceFactory, ComInterfaceInfo, ComInterfaceSockets, ComInterfaceUUID
+    ComInterface, ComInterfaceError, ComInterfaceFactory, ComInterfaceInfo, ComInterfaceSockets
 };
 use datex_core::network::com_interfaces::com_interface_properties::InterfaceProperties;
 use datex_core::network::com_interfaces::com_interface_socket::ComInterfaceSocketUUID;
@@ -29,12 +29,12 @@ use wasm_bindgen_futures::JsFuture;
 
 use crate::js_utils::TryAsByteSlice;
 use crate::network::com_hub::JSComHub;
-use crate::{define_registry, wrap_error_for_js};
-use datex_core::network::com_hub::{ComHubError, InterfacePriority};
+use crate::wrap_error_for_js;
+use datex_core::network::com_hub::ComHubError;
 use datex_macros::{com_interface, create_opener};
 use log::{error, info};
 use wasm_bindgen::prelude::{Closure, wasm_bindgen};
-use wasm_bindgen::{JsCast, JsError, JsValue};
+use wasm_bindgen::{JsCast, JsValue};
 use web_sys::{
     MediaStream, MessageEvent, RtcConfiguration, RtcDataChannel,
     RtcDataChannelEvent, RtcIceCandidateInit, RtcIceServer, RtcPeerConnection,

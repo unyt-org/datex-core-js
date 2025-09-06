@@ -2,7 +2,6 @@
 use super::com_interfaces::matchbox_js_interface::MatchboxClientRegistry;
 
 use datex_core::global::dxb_block::IncomingSection;
-use datex_core::logger::init_logger;
 use datex_core::network::com_hub::{ComHubError, InterfacePriority};
 use datex_core::network::com_interfaces::com_interface::{
     ComInterface, ComInterfaceFactory, ComInterfaceUUID,
@@ -12,7 +11,7 @@ use datex_core::runtime::Runtime;
 use datex_core::stdlib::{cell::RefCell, rc::Rc};
 use datex_core::values::core_values::endpoint::Endpoint;
 use datex_core::{network::com_hub::ComHub, utils::uuid::UUID};
-use log::{error, info};
+use log::error;
 use std::str::FromStr;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::future_to_promise;

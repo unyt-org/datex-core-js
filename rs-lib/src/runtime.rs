@@ -10,7 +10,6 @@ use datex_core::global::dxb_block::DXBBlock;
 use datex_core::global::protocol_structures::block_header::{
     BlockHeader, FlagsAndTimestamp,
 };
-use datex_core::runtime::execution_context::ScriptExecutionError;
 #[cfg(feature = "debug")]
 use datex_core::runtime::global_context::DebugFlags;
 use datex_core::runtime::global_context::GlobalContext;
@@ -335,7 +334,7 @@ impl JSRuntime {
             .map(|values| {
                 values
                     .into_iter()
-                    .map(|v| Self::js_value_to_value_container(v))
+                    .map(Self::js_value_to_value_container)
                     .collect()
             })
             .unwrap_or_default()
