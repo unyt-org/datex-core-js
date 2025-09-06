@@ -86,8 +86,6 @@ export interface InterfaceProperties {
 
 export type InterfaceDirection = "In" | "Out" | "InOut";
 
-export type BaseInterfaceSetupData = InterfaceProperties;
-
 export interface WebSocketServerInterfaceSetupData {
     port: number;
     /**
@@ -100,12 +98,25 @@ export interface WebSocketClientInterfaceSetupData {
     address: string;
 }
 
+export type BaseInterfaceSetupData = InterfaceProperties;
+
 export interface TCPServerInterfaceSetupData {
     port: number;
 }
 
 export interface TCPClientInterfaceSetupData {
     address: string;
+}
+
+export interface RTCIceServer {
+    urls: string[];
+    username: string | null;
+    credential: string | null;
+}
+
+export interface WebRTCInterfaceSetupData {
+    peer_endpoint: string;
+    ice_servers: RTCIceServer[] | null;
 }
 
 export interface SerialInterfaceSetupData {
@@ -120,6 +131,24 @@ export class BaseJSInterface {
 export class JSComHub {
     private constructor();
     free(): void;
+    webrtc_interface_add_ice_candidate(
+        interface_uuid: string,
+        candidate: Uint8Array,
+    ): Promise<void>;
+    webrtc_interface_wait_for_connection(interface_uuid: string): Promise<void>;
+    webrtc_interface_set_on_ice_candidate(
+        interface_uuid: string,
+        on_ice_candidate: Function,
+    ): void;
+    webrtc_interface_create_offer(interface_uuid: string): Promise<Uint8Array>;
+    webrtc_interface_create_answer(
+        interface_uuid: string,
+        offer: Uint8Array,
+    ): Promise<Uint8Array>;
+    webrtc_interface_set_answer(
+        interface_uuid: string,
+        answer: Uint8Array,
+    ): Promise<void>;
     update(): Promise<void>;
     close_interface(interface_uuid: string): Promise<any>;
     get_metadata_string(): string;
@@ -192,27 +221,6 @@ export class JSRuntime {
     com_hub: JSComHub;
     memory: JSMemory;
     readonly version: string;
-}
-export class WebRTCRegistry {
-    private constructor();
-    free(): void;
-    add_ice_candidate(
-        interface_uuid: string,
-        candidate: Uint8Array,
-    ): Promise<void>;
-    set_answer(interface_uuid: string, answer: Uint8Array): Promise<void>;
-    set_on_ice_candidate(
-        interface_uuid: string,
-        on_ice_candidate: Function,
-    ): void;
-    create_answer(
-        interface_uuid: string,
-        offer: Uint8Array,
-    ): Promise<Uint8Array>;
-    register(endpoint: string): Promise<string>;
-    wait_for_connection(interface_uuid: string): Promise<void>;
-    close(interface_uuid: string): Promise<any>;
-    create_offer(interface_uuid: string): Promise<Uint8Array>;
 }
 export class WebSocketServerRegistry {
     private constructor();
