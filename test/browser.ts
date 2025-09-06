@@ -1,16 +1,19 @@
 import { Datex } from "../src/mod.ts";
+import { SerialInterfaceImpl } from "../src/network/interface-impls/serial.ts";
 import { WebRTCInterfaceImpl } from "../src/network/interface-impls/webrtc.ts";
 
 // @ts-ignore global variable for debugging
 globalThis.Datex = Datex;
 
-// document.getElementById("serial")!.addEventListener("click", async () => {
-//     const serial = await Datex.comHub.serial.register(19200);
-//     console.log(serial);
-// });
+document.getElementById("serial")!.addEventListener("click", async () => {
+    const serial = await Datex.comHub.createInterface(
+        SerialInterfaceImpl,
+        { baud_rate: 19200, port_name: null },
+    );
+    console.log(serial);
+});
 
 document.getElementById("webrtc")!.addEventListener("click", async () => {
-    // const webrtc = Datex.comHub.webrtc;
     const interface_a = await Datex.comHub.createInterface(
         WebRTCInterfaceImpl,
         {
