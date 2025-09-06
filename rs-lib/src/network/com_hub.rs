@@ -82,7 +82,12 @@ impl JSComHub {
             crate::network::com_interfaces::serial_js_interface::SerialJSInterface::factory
         );
 
-        // TODO: wasm_webrtc
+        //wasm_webrtc
+        #[cfg(feature = "wasm_webrtc")]
+        self.com_hub().register_interface_factory(
+            "webrtc".to_string(),
+            crate::network::com_interfaces::webrtc_js_interface::WebRTCJSInterface::factory
+        );
     }
 
     pub fn create_interface(
