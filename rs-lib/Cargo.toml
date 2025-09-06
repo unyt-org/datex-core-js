@@ -90,6 +90,7 @@ features = [
     "RtcDataChannelEvent",
     "RtcConfiguration",
     "RtcIceServer",
+    "MediaStream",
 ]
 
 [dev-dependencies]
