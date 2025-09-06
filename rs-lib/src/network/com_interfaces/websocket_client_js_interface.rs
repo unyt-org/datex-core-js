@@ -24,7 +24,6 @@ use futures::channel::mpsc;
 use futures::{SinkExt, StreamExt};
 use log::{error, info, warn};
 use url::Url;
-use wasm_bindgen::prelude::wasm_bindgen;
 use wasm_bindgen::{JsCast, prelude::Closure};
 use web_sys::{ErrorEvent, MessageEvent, js_sys};
 

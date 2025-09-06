@@ -30,7 +30,7 @@ impl JSMemory {
         &mut self,
         address: Uint8Array,
     ) -> Option<JSPointer> {
-        let mut memory = self.memory().borrow_mut();
+        let memory = self.memory().borrow_mut();
         None
         // let pointer = memory.get_pointer_by_id_vec(address.to_vec());
         // match pointer {
