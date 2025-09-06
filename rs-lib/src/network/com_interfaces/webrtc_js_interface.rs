@@ -6,6 +6,7 @@ use std::sync::Mutex;
 use std::time::Duration; // FIXME no-std
 
 use async_trait::async_trait;
+use datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common::media_tracks::{MediaKind, MediaTrack, MediaTracks};
 use datex_core::values::core_values::endpoint::Endpoint;
 use datex_core::network::com_interfaces::com_interface::{
     ComInterface, ComInterfaceError, ComInterfaceFactory, ComInterfaceInfo, ComInterfaceSockets, ComInterfaceUUID
@@ -35,8 +36,8 @@ use log::{error, info};
 use wasm_bindgen::prelude::{Closure, wasm_bindgen};
 use wasm_bindgen::{JsCast, JsError, JsValue};
 use web_sys::{
-    MessageEvent, RtcConfiguration, RtcDataChannel, RtcDataChannelEvent,
-    RtcIceCandidateInit, RtcIceServer, RtcPeerConnection,
+    MediaStream, MessageEvent, RtcConfiguration, RtcDataChannel,
+    RtcDataChannelEvent, RtcIceCandidateInit, RtcIceServer, RtcPeerConnection,
     RtcPeerConnectionIceEvent, RtcSdpType, RtcSessionDescriptionInit,
     RtcSignalingState,
 };
@@ -54,19 +55,25 @@ pub struct WebRTCJSInterface {
     commons: Arc<Mutex<WebRTCCommon>>,
     peer_connection: Rc<Option<RtcPeerConnection>>,
     data_channels: Rc<RefCell<DataChannels<RtcDataChannel>>>,
+    local_media_tracks: Rc<RefCell<MediaTracks<MediaStream>>>,
+    remote_media_tracks: Rc<RefCell<MediaTracks<MediaStream>>>,
 }
 impl SingleSocketProvider for WebRTCJSInterface {
     fn provide_sockets(&self) -> Arc<Mutex<ComInterfaceSockets>> {
         self.get_sockets()
     }
 }
-impl WebRTCTrait<RtcDataChannel> for WebRTCJSInterface {
+impl WebRTCTrait<RtcDataChannel, MediaStream, MediaStream>
+    for WebRTCJSInterface
+{
     fn new(peer_endpoint: impl Into<Endpoint>) -> Self {
         WebRTCJSInterface {
             info: ComInterfaceInfo::default(),
             commons: Arc::new(Mutex::new(WebRTCCommon::new(peer_endpoint))),
             peer_connection: Rc::new(None),
             data_channels: Rc::new(RefCell::new(DataChannels::default())),
+            local_media_tracks: Rc::new(RefCell::new(MediaTracks::default())),
+            remote_media_tracks: Rc::new(RefCell::new(MediaTracks::default())),
         }
     }
     fn new_with_ice_servers(
@@ -80,7 +87,34 @@ impl WebRTCTrait<RtcDataChannel> for WebRTCJSInterface {
 }
 
 #[async_trait(?Send)]
-impl WebRTCTraitInternal<RtcDataChannel> for WebRTCJSInterface {
+impl WebRTCTraitInternal<RtcDataChannel, MediaStream, MediaStream>
+    for WebRTCJSInterface
+{
+    fn provide_remote_media_tracks(
+        &self,
+    ) -> Rc<RefCell<MediaTracks<MediaStream>>> {
+        self.remote_media_tracks.clone()
+    }
+    fn provide_local_media_tracks(
+        &self,
+    ) -> Rc<RefCell<MediaTracks<MediaStream>>> {
+        self.local_media_tracks.clone()
+    }
+
+    async fn handle_create_media_channel(
+        &self,
+        id: String,
+        kind: MediaKind,
+    ) -> Result<MediaTrack<MediaStream>, WebRTCError> {
+        todo!("Implement media channel creation")
+    }
+
+    async fn handle_setup_media_channel(
+        channel: Rc<RefCell<MediaTrack<MediaStream>>>,
+    ) -> Result<(), WebRTCError> {
+        todo!("Implement media channel setup")
+    }
+
     fn provide_data_channels(
         &self,
     ) -> Rc<RefCell<DataChannels<RtcDataChannel>>> {
@@ -89,7 +123,6 @@ impl WebRTCTraitInternal<RtcDataChannel> for WebRTCJSInterface {
     fn provide_info(&self) -> &ComInterfaceInfo {
         &self.info
     }
-
     async fn handle_create_data_channel(
         &self,
     ) -> Result<DataChannel<RtcDataChannel>, WebRTCError> {
