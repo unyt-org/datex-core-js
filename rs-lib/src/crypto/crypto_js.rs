@@ -130,8 +130,7 @@ impl CryptoJS {
         Box::pin(async move {
             let subtle = CryptoJS::crypto_subtle();
 
-            let usages = Array::new();
-            usages.push(&JsValue::from_str("deriveBits"));
+            let usages = Array::of1(&JsValue::from_str("deriveBits"));
             let ikm_buf = Uint8Array::from(ikm).buffer();
 
             let key_js = JsFuture::from(
@@ -182,9 +181,10 @@ impl CryptoJS {
 
             let subtle = CryptoJS::crypto_subtle();
 
-            let usages = Array::new();
-            usages.push(&JsValue::from_str("encrypt"));
-            usages.push(&JsValue::from_str("decrypt"));
+            let usages = Array::of2(
+                &JsValue::from_str("encrypt"),
+                &JsValue::from_str("decrypt"),
+            );
 
             let ikm_buf = Uint8Array::from(hash).buffer();
 
@@ -230,9 +230,10 @@ impl CryptoJS {
         Box::pin(async move {
             let subtle = CryptoJS::crypto_subtle();
 
-            let usages = Array::new();
-            usages.push(&JsValue::from_str("encrypt"));
-            usages.push(&JsValue::from_str("decrypt"));
+            let usages = Array::of2(
+                &JsValue::from_str("encrypt"),
+                &JsValue::from_str("decrypt"),
+            );
 
             let ikm_buf = Uint8Array::from(hash).buffer();
 
@@ -280,9 +281,10 @@ impl CryptoJS {
     ) -> Result<Vec<u8>, CryptoError> {
         let subtle = CryptoJS::crypto_subtle();
 
-        let usages = Array::new();
-        usages.push(&JsValue::from_str("encrypt"));
-        usages.push(&JsValue::from_str("decrypt"));
+        let usages = Array::of2(
+            &JsValue::from_str("encrypt"),
+            &JsValue::from_str("decrypt"),
+        );
 
         let ikm_buf = Uint8Array::from(hash).buffer();
 
@@ -329,9 +331,10 @@ impl CryptoJS {
     ) -> Result<Vec<u8>, CryptoError> {
         let subtle = CryptoJS::crypto_subtle();
 
-        let usages = Array::new();
-        usages.push(&JsValue::from_str("encrypt"));
-        usages.push(&JsValue::from_str("decrypt"));
+        let usages = Array::of2(
+            &JsValue::from_str("encrypt"),
+            &JsValue::from_str("decrypt"),
+        );
 
         let ikm_buf = Uint8Array::from(hash).buffer();
 
@@ -415,7 +418,8 @@ impl CryptoJS {
                 &JsValue::from_str("decrypt")
             ),
         );
-    let key_to_wrap: CryptoKey = JsFuture::from(key_promise.unwrap())
+
+        let key_to_wrap: CryptoKey = JsFuture::from(key_promise.unwrap())
             .await
             .map_err(|_| CryptoError::KeyImportFailed)?
             .dyn_into()
