@@ -370,3 +370,21 @@ impl JSRuntime {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_execute_sync() {
+        let config = r#"{"endpoint": "@jonas"}"#;
+        let deserializer = DatexDeserializer::from_script(config).unwrap();
+        let val: ValueContainer =
+            Deserialize::deserialize(deserializer).unwrap();
+        println!("{}", config);
+
+        let deserializer = DatexDeserializer::from_script(config).unwrap();
+        let val: RuntimeConfig =
+            Deserialize::deserialize(deserializer).unwrap();
+    }
+}
