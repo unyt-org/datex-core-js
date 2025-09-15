@@ -17,8 +17,6 @@ mod sealed {
     impl CryptoKeyType for CryptoKeyPair {}
 }
 
-pub const KEY_LEN: usize = 32;
-
 pub struct CryptoJS;
 impl CryptoJS {
     fn window() -> web_sys::Window {
@@ -163,7 +161,7 @@ impl CryptoJS {
             ).await
             .map_err(|_| CryptoError::KeyGeneratorFailed)?;
 
-            let okm: [u8; KEY_LEN] = Uint8Array::new(&bits).to_vec().try_into().unwrap();
+            let okm: [u8; 32] = Uint8Array::new(&bits).to_vec().try_into().unwrap();
             if okm.len() != 32 {
                 return Err(CryptoError::KeyExportFailed);
             }
