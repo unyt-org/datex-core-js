@@ -517,105 +517,7 @@ pub async fn key_unwrap(
     Ok(result)
 }
 
-    // Signature and Verification
-    pub fn gen_ed25519(
-    ) -> Pin<Box<dyn Future<Output = Result<(Vec<u8>, Vec<u8>), CryptoError>> + 'static>> {
-        Box::pin(async move {
 
-            let algorithm = js_object(vec![
-                ("name", JsValue::from_str("Ed25519")),
-            ]);
-            let key_pair: CryptoKeyPair = 
-                Self::generate_crypto_key(&algorithm, true, &["sign", "verify"])
-                .await
-                .map_err(|_| CryptoError::KeyGeneratorFailed)?;
-
-            let pub_key =
-                Self::export_crypto_key(&key_pair.get_public_key(), "spki")
-                .await?;
-            let pri_key =
-                Self::export_crypto_key(&key_pair.get_private_key(), "pkcs8")
-                .await?;
-
-            Ok((pub_key, pri_key))
-        })
-    }
-
-    pub fn sig_ed25519<'a>(
-        pri_key: &'a [u8],
-        data: &'a [u8],
-    ) -> Pin<Box<dyn Future<Output = Result<Vec<u8>, CryptoError>> + 'a>> {
-        Box::pin(async move {
-            let key = Self::import_crypto_key(
-                &pri_key,
-                "pkcs8",
-                &js_object(vec![
-                    ("name", JsValue::from_str("Ed25519")),
-                ]),
-                &["sign"],
-            )
-            .await?;
-
-            let sig_prom = Self::crypto_subtle()
-                .sign_with_object_and_u8_array(
-                    &js_object(vec![
-                        ("name", JsValue::from_str("Ed25519")),
-                    ]),
-                    &key,
-                    &data,
-                )
-                .map_err(|_| CryptoError::SigningError)?;
-
-            let result: ArrayBuffer = JsFuture::from(sig_prom)
-                .await
-                .map_err(|_| CryptoError::SigningError)?
-                .try_into()
-                .map_err(|_: std::convert::Infallible| {
-                    CryptoError::SigningError
-                })?;
-
-            let sig: Vec<u8> = result.as_u8_slice();
-
-            Ok(sig)
-        })
-    }
-
-    pub fn ver_ed25519<'a>(
-        pub_key: &'a [u8],
-        sig: &'a [u8],
-        data: &'a [u8],
-    ) -> Pin<Box<dyn Future<Output = Result<bool, CryptoError>> + 'a>> {
-        Box::pin(async move {
-            let key = Self::import_crypto_key(
-                &pub_key,
-                "spki",
-                &js_object(vec![
-                    ("name", JsValue::from_str("Ed25519")),
-                ]),
-                &["verify"],
-            )
-            .await?;
-
-            let verified_promise = Self::crypto_subtle()
-                .verify_with_object_and_u8_array_and_u8_array(
-                    &js_object(vec![
-                        ("name", JsValue::from_str("Ed25519")),
-                    ]),
-                    &key,
-                    &sig,
-                    &data,
-                )
-                .map_err(|_| CryptoError::VerificationError)?;
-
-            let result: bool = JsFuture::from(verified_promise)
-                .await
-                .map_err(|_| CryptoError::VerificationError)?
-                .as_bool()
-                .ok_or(CryptoError::VerificationError)?;
-
-            Ok(result)
-        })
-    }
 
     // x25519 key gen
     pub async fn gen_x25519() -> Result<(Vec<u8>, Vec<u8>), CryptoError> {
@@ -916,6 +818,109 @@ impl CryptoTrait for CryptoJS {
                 Self::export_crypto_key(&key.get_private_key(), "pkcs8")
                     .await?;
             Ok((public_key, private_key))
+        })
+    }
+
+    // Signature and Verification
+    fn gen_ed25519(
+        &self,
+    ) -> Pin<Box<dyn Future<Output = Result<(Vec<u8>, Vec<u8>), CryptoError>> + 'static>> {
+        Box::pin(async move {
+
+            let algorithm = js_object(vec![
+                ("name", JsValue::from_str("Ed25519")),
+            ]);
+            let key_pair: CryptoKeyPair = 
+                Self::generate_crypto_key(&algorithm, true, &["sign", "verify"])
+                .await
+                .map_err(|_| CryptoError::KeyGeneratorFailed)?;
+
+            let pub_key =
+                Self::export_crypto_key(&key_pair.get_public_key(), "spki")
+                .await?;
+            let pri_key =
+                Self::export_crypto_key(&key_pair.get_private_key(), "pkcs8")
+                .await?;
+
+            Ok((pub_key, pri_key))
+        })
+    }
+
+    fn sig_ed25519<'a>(
+        &self,
+        pri_key: &'a Vec<u8>,
+        data: &'a Vec<u8>,
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<u8>, CryptoError>> + 'a>> {
+        Box::pin(async move {
+            let key = Self::import_crypto_key(
+                &pri_key,
+                "pkcs8",
+                &js_object(vec![
+                    ("name", JsValue::from_str("Ed25519")),
+                ]),
+                &["sign"],
+            )
+            .await?;
+
+            let sig_prom = Self::crypto_subtle()
+                .sign_with_object_and_u8_array(
+                    &js_object(vec![
+                        ("name", JsValue::from_str("Ed25519")),
+                    ]),
+                    &key,
+                    &data,
+                )
+                .map_err(|_| CryptoError::SigningError)?;
+
+            let result: ArrayBuffer = JsFuture::from(sig_prom)
+                .await
+                .map_err(|_| CryptoError::SigningError)?
+                .try_into()
+                .map_err(|_: std::convert::Infallible| {
+                    CryptoError::SigningError
+                })?;
+
+            let sig: Vec<u8> = result.as_u8_slice();
+
+            Ok(sig)
+        })
+    }
+
+    fn ver_ed25519<'a>(
+        &self,
+        pub_key: &'a Vec<u8>,
+        sig: &'a Vec<u8>,
+        data: &'a Vec<u8>,
+    ) -> Pin<Box<dyn Future<Output = Result<bool, CryptoError>> + 'a>> {
+        Box::pin(async move {
+            let key = Self::import_crypto_key(
+                &pub_key,
+                "spki",
+                &js_object(vec![
+                    ("name", JsValue::from_str("Ed25519")),
+                ]),
+                &["verify"],
+            )
+            .await?;
+
+            let verified_promise = Self::crypto_subtle()
+                .verify_with_object_and_u8_array_and_u8_array(
+                    &js_object(vec![
+                        ("name", JsValue::from_str("Ed25519")),
+                    ]),
+                    &key,
+                    &sig,
+                    &data,
+                )
+                .map_err(|_| CryptoError::VerificationError)?;
+
+            let result: bool = JsFuture::from(verified_promise)
+                .await
+                .map_err(|_| CryptoError::VerificationError)?
+                .as_bool()
+                .ok_or(CryptoError::VerificationError)?;
+
+            Ok(result)
         })
     }
 }

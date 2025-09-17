@@ -186,13 +186,13 @@ impl JSRuntime {
 
 
             // ed25519 and x25519 generation
-            let (sig_pub, sig_pri) = CryptoJS::gen_ed25519().await.unwrap();
+            let (sig_pub, sig_pri) = crypto.gen_ed25519().await.unwrap();
             let (ser_pub, ser_pri) = CryptoJS::gen_x25519().await.unwrap();
             let (cli_pub, cli_pri) = CryptoJS::gen_x25519().await.unwrap();
 
             // Signature
-            let sig = CryptoJS::sig_ed25519(&sig_pri, &ser_pub).await.unwrap();
-            let ver = CryptoJS::ver_ed25519(&sig_pub, &sig, &ser_pub).await.unwrap();
+            let sig = crypto.sig_ed25519(&sig_pri, &ser_pub).await.unwrap();
+            let ver = crypto.ver_ed25519(&sig_pub, &sig.clone().try_into().unwrap(), &ser_pub).await.unwrap();
             
             assert_eq!(sig.len(), 64);
             assert!(ver);
