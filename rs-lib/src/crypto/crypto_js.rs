@@ -298,99 +298,10 @@ impl CryptoJS {
 
         Ok(pt_bytes)
     }
-
-
-    // x25519 key gen
-    pub async fn gen_x25519() -> Result<(Vec<u8>, Vec<u8>), CryptoError> {
-
-        let algorithm = js_object(vec![
-            ("name", JsValue::from_str("X25519")),
-        ]);
-
-        let key_pair: CryptoKeyPair = 
-            Self::generate_crypto_key(&algorithm, true, &["deriveKey", "deriveBits"])
-            .await
-            .map_err(|_| CryptoError::KeyGeneratorFailed)?;
-
-
-        let pub_key =
-            Self::export_crypto_key(&key_pair.get_public_key(), "spki")
-            .await?;
-        let pri_key =
-            Self::export_crypto_key(&key_pair.get_private_key(), "pkcs8")
-            .await?;
-
-        Ok((pub_key, pri_key))
-    }
-
-    pub async fn derive_x25519(
-        pri_key_bytes: &[u8], 
-        pub_key_bytes: &[u8], 
-        length: u32
-    ) -> Result<Vec<u8>, CryptoError> {
-        let subtle = CryptoJS::crypto_subtle();
-        
-        // Private Key
-        let pri_key_algorithm = js_object(vec![
-            ("name", JsValue::from_str("X25519")),
-        ]);
-        
-        let pri_key_promise = subtle.import_key_with_object(
-            "pkcs8",
-            &Uint8Array::from(pri_key_bytes).buffer(),
-            &pri_key_algorithm,
-            false, // not extractable
-            &Array::of2(
-                &JsValue::from_str("deriveKey"), 
-                &JsValue::from_str("deriveBits")
-            ),
-        ).map_err(|_| CryptoError::KeyImportFailed)?;
-        
-        let pri_key: CryptoKey = JsFuture::from(pri_key_promise)
-            .await
-            .map_err(|_| CryptoError::KeyImportFailed)?
-            .dyn_into()
-            .map_err(|_| CryptoError::KeyImportFailed)?;
-        
-        // Public Key
-        let pub_key_promise = subtle.import_key_with_object(
-            "spki",
-            &Uint8Array::from(pub_key_bytes).buffer(),
-            &pri_key_algorithm, // same algorithm object
-            false, // not extractable
-            &Array::new(), // no usage for public key
-        ).map_err(|_| CryptoError::KeyImportFailed)?;
-        
-        let pub_key: CryptoKey = JsFuture::from(pub_key_promise)
-            .await
-            .map_err(|_| CryptoError::KeyImportFailed)?
-            .dyn_into()
-            .map_err(|_| CryptoError::KeyImportFailed)?;
-
-        let derive_algorithm = js_object(vec![
-            ("name", JsValue::from_str("X25519")),
-            ("public", pub_key.into()),
-        ]);
-        
-        // Derive bits
-        let derive_promise = subtle.derive_bits_with_object(
-            &derive_algorithm,
-            &pri_key,
-            length,
-        ).map_err(|_| CryptoError::KeyGeneratorFailed)?;
-        
-        let derived_buffer = JsFuture::from(derive_promise)
-            .await
-            .map_err(|_| CryptoError::KeyExportFailed)?;
-        
-        let uint8_array = Uint8Array::new(&derived_buffer);
-        let mut result = vec![0u8; uint8_array.length() as usize];
-        uint8_array.copy_to(&mut result);
-        
-        Ok(result)
-    }
 }
 
+
+   
 impl CryptoTrait for CryptoJS {
     fn create_uuid(&self) -> String {
         Self::crypto().random_uuid()
@@ -715,6 +626,105 @@ impl CryptoTrait for CryptoJS {
                 .map_err(|_| CryptoError::KeyExportFailed)?;
             uint8_array.copy_to(&mut result);
 
+            Ok(result)
+        })
+    }
+     // x25519 key gen
+    fn gen_x25519(&self) -> Pin<Box<dyn Future<Output = Result<([u8; 44], [u8; 48]), CryptoError>>>> {
+        Box::pin(async move {
+
+            let algorithm = js_object(vec![
+                ("name", JsValue::from_str("X25519")),
+            ]);
+
+            let key_pair: CryptoKeyPair = 
+                Self::generate_crypto_key(&algorithm, true, &["deriveKey", "deriveBits"])
+                .await
+                .map_err(|_| CryptoError::KeyGeneratorFailed)?;
+
+
+            let pub_key: [u8; 44] =
+                Self::export_crypto_key(&key_pair.get_public_key(), "spki")
+                .await
+                .map_err(|_| CryptoError::KeyGeneratorFailed)?
+                .try_into()
+                .map_err(|_| CryptoError::KeyGeneratorFailed)?;
+            let pri_key: [u8; 48] =
+                Self::export_crypto_key(&key_pair.get_private_key(), "pkcs8")
+                .await
+                .map_err(|_| CryptoError::KeyGeneratorFailed)?
+                .try_into()
+                .map_err(|_| CryptoError::KeyGeneratorFailed)?;
+
+            Ok((pub_key, pri_key))
+        })
+    }
+
+    fn derive_x25519<'a>(
+        &'a self,
+        my_raw: &'a [u8; 48],
+        peer_pub: &'a [u8; 44],
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<u8>, CryptoError>> + 'a>> {
+        Box::pin(async move {
+            let subtle = Self::crypto_subtle();
+            
+            // Private Key
+            let pri_key_algorithm = js_object(vec![
+                ("name", JsValue::from_str("X25519")),
+            ]);
+            
+            let pri_key_promise = subtle.import_key_with_object(
+                "pkcs8",
+                &Uint8Array::from(my_raw.as_slice()).buffer(),
+                &pri_key_algorithm,
+                false, // not extractable
+                &Array::of2(
+                    &JsValue::from_str("deriveKey"), 
+                    &JsValue::from_str("deriveBits")
+                ),
+            ).map_err(|_| CryptoError::KeyImportFailed)?;
+            
+            let pri_key: CryptoKey = JsFuture::from(pri_key_promise)
+                .await
+                .map_err(|_| CryptoError::KeyImportFailed)?
+                .dyn_into()
+                .map_err(|_| CryptoError::KeyImportFailed)?;
+            
+            // Public Key
+            let pub_key_promise = subtle.import_key_with_object(
+                "spki",
+                &Uint8Array::from(peer_pub.as_slice()).buffer(),
+                &pri_key_algorithm, // same algorithm object
+                false, // not extractable
+                &Array::new(), // no usage for public key
+            ).map_err(|_| CryptoError::KeyImportFailed)?;
+            
+            let pub_key: CryptoKey = JsFuture::from(pub_key_promise)
+                .await
+                .map_err(|_| CryptoError::KeyImportFailed)?
+                .dyn_into()
+                .map_err(|_| CryptoError::KeyImportFailed)?;
+
+            let derive_algorithm = js_object(vec![
+                ("name", JsValue::from_str("X25519")),
+                ("public", pub_key.into()),
+            ]);
+            
+            // Derive bits
+            let derive_promise = subtle.derive_bits_with_object(
+                &derive_algorithm,
+                &pri_key,
+                256u32,
+            ).map_err(|_| CryptoError::KeyGeneratorFailed)?;
+            
+            let derived_buffer = JsFuture::from(derive_promise)
+                .await
+                .map_err(|_| CryptoError::KeyExportFailed)?;
+            
+            let uint8_array = Uint8Array::new(&derived_buffer);
+            let mut result = vec![0u8; uint8_array.length() as usize];
+            uint8_array.copy_to(&mut result);
+            
             Ok(result)
         })
     }
