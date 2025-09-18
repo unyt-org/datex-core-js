@@ -169,56 +169,6 @@ impl CryptoJS {
         })
     }
 
-    // aes ctr
-    pub fn aes_ctr_encrypt<'a>(
-        hash: &'a[u8],
-        iv: &'a [u8],
-        plaintext: &'a [u8],
-    ) -> Pin<Box<dyn Future<Output = Result<Vec<u8>, CryptoError>> + 'a>> {
-        Box::pin(async move {
-
-            let subtle = CryptoJS::crypto_subtle();
-
-            let usages = Array::of2(
-                &JsValue::from_str("encrypt"),
-                &JsValue::from_str("decrypt"),
-            );
-
-            let ikm_buf = Uint8Array::from(hash).buffer();
-
-            let key_js = JsFuture::from(
-                subtle
-                .import_key_with_object(
-                    "raw",
-                    &ikm_buf.into(),
-                    &js_object(vec![("name", "AES-CTR")]),
-                    false,
-                    &usages
-                ).map_err(|_| CryptoError::KeyImportFailed)?,
-            ).await.map_err(|_| CryptoError::KeyImportFailed)?;
-            let base_key: CryptoKey = key_js.dyn_into()
-                .map_err(|_| CryptoError::KeyImportFailed)?;
-
-            let mut params = AesCtrParams::new(&"AES-CTR", &Uint8Array::from(iv), 64u8);
-
-            let pt = Uint8Array::from(plaintext);
-
-            let ct = JsFuture::from(
-                subtle.encrypt_with_object_and_buffer_source(
-                    &params.into(),
-                    &base_key,
-                    &pt,
-                ).map_err(|_| CryptoError::EncryptionError)?)
-                .await
-                .map_err(|_| CryptoError::EncryptionError)?;
-
-            let ct_buf: ArrayBuffer = ct.dyn_into()
-                .map_err(|_| CryptoError::EncryptionError)?;
-            let ct_bytes = Uint8Array::new(&ct_buf).to_vec();
-
-            Ok(ct_bytes)
-        })
-    }
 
     pub fn aes_ctr_decrypt<'a>(
         hash: &'a [u8],
@@ -812,6 +762,58 @@ impl CryptoTrait for CryptoJS {
                 .ok_or(CryptoError::VerificationError)?;
 
             Ok(result)
+        })
+    }
+
+    // aes ctr
+    fn aes_ctr_encrypt<'a>(
+        &'a self,
+        hash: &'a[u8; 32],
+        iv: &'a [u8; 16],
+        plaintext: &'a [u8],
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<u8>, CryptoError>> + 'a>> {
+        Box::pin(async move {
+
+            let subtle = CryptoJS::crypto_subtle();
+
+            let usages = Array::of2(
+                &JsValue::from_str("encrypt"),
+                &JsValue::from_str("decrypt"),
+            );
+
+            let ikm_buf = Uint8Array::from(hash.as_slice()).buffer();
+
+            let key_js = JsFuture::from(
+                subtle
+                .import_key_with_object(
+                    "raw",
+                    &ikm_buf.into(),
+                    &js_object(vec![("name", "AES-CTR")]),
+                    false,
+                    &usages
+                ).map_err(|_| CryptoError::KeyImportFailed)?,
+            ).await.map_err(|_| CryptoError::KeyImportFailed)?;
+            let base_key: CryptoKey = key_js.dyn_into()
+                .map_err(|_| CryptoError::KeyImportFailed)?;
+
+            let mut params = AesCtrParams::new(&"AES-CTR", &Uint8Array::from(iv.as_slice()), 64u8);
+
+            let pt = Uint8Array::from(plaintext);
+
+            let ct = JsFuture::from(
+                subtle.encrypt_with_object_and_buffer_source(
+                    &params.into(),
+                    &base_key,
+                    &pt,
+                ).map_err(|_| CryptoError::EncryptionError)?)
+                .await
+                .map_err(|_| CryptoError::EncryptionError)?;
+
+            let ct_buf: ArrayBuffer = ct.dyn_into()
+                .map_err(|_| CryptoError::EncryptionError)?;
+            let ct_bytes = Uint8Array::new(&ct_buf).to_vec();
+
+            Ok(ct_bytes)
         })
     }
 }
