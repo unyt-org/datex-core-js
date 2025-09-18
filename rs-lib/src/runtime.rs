@@ -144,33 +144,45 @@ impl JSRuntime {
 
             // ed25519 and x25519 generation
             let (sig_pub, sig_pri) = crypto.gen_ed25519().await.unwrap();
+            assert_eq!(sig_pub.len(), 44_usize);
+            assert_eq!(sig_pri.len(), 48_usize);
+
             let (ser_pub, ser_pri) = crypto.gen_x25519().await.unwrap();
             let (cli_pub, cli_pri) = crypto.gen_x25519().await.unwrap();
+            assert_eq!(ser_pub.len(), 44_usize);
+            assert_eq!(ser_pri.len(), 48_usize);
 
             // Signature
-            let sig = crypto.sig_ed25519(&sig_pri, &ser_pub.to_vec()).await.unwrap();
-            let ver = crypto.ver_ed25519(&sig_pub, &sig.clone().try_into().unwrap(), &ser_pub.to_vec()).await.unwrap();
+            let sig = crypto.sig_ed25519(&sig_pri, &ser_pub.to_vec())
+                .await
+                .unwrap();
+
+            let ver = crypto.ver_ed25519(
+                &sig_pub,
+                &sig.clone().try_into().unwrap(), 
+                &ser_pub.to_vec())
+                .await.unwrap();
             
             assert_eq!(sig.len(), 64);
             assert!(ver);
 
             // Derivation
-            let cli_sec = crypto.derive_x25519(&cli_pri, &ser_pub).await.unwrap();
-            let ser_sec = crypto.derive_x25519(&ser_pri, &cli_pub).await.unwrap();
+            let cli_sec = crypto.derive_x25519(&cli_pri, &ser_pub)
+                .await
+                .unwrap();
+            let ser_sec = crypto.derive_x25519(&ser_pri, &cli_pub)
+                .await
+                .unwrap();
+
             assert_eq!(cli_sec, ser_sec);
             assert_eq!(cli_sec.len(), 32_usize);
 
-            // hkdf
-            let aad: &[u8] = ser_pub.as_slice();
-            let ikm = vec![0u8; 32];
-            let salt = vec![0u8; 16];
             let hash: [u8; 32] = crypto.random_bytes(32)
                 .try_into()
                 .unwrap();
 
             // aes entailing hkdf
             let msg: Vec<u8> = b"Some message".to_vec();
-            let iv: [u8; 12] = [0u8; 12];
             let ctr_iv: [u8; 16] = [0u8; 16];
 
             // ctr
