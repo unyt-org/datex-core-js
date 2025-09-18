@@ -142,25 +142,6 @@ impl JSRuntime {
         future_to_promise(async move {
             let crypto = CryptoJS {};
 
-            let encryption_key_pair = crypto
-                .new_encryption_key_pair()
-                .await
-                .map_err(|e| JsValue::from_str(&format!("{e:?}")))?;
-
-            let encrypted_message = crypto
-                .encrypt_rsa(vec![1, 2, 3], encryption_key_pair.0.clone())
-                .await
-                .map_err(|e| JsValue::from_str(&format!("{e:?}")))?;
-
-            let decrypted_message = crypto
-                .decrypt_rsa(
-                    encrypted_message.clone(),
-                    encryption_key_pair.1.clone(),
-                )
-                .await
-                .map_err(|e| JsValue::from_str(&format!("{e:?}")))?;
-
-
             // ed25519 and x25519 generation
             let (sig_pub, sig_pri) = crypto.gen_ed25519().await.unwrap();
             let (ser_pub, ser_pri) = CryptoJS::gen_x25519().await.unwrap();
@@ -230,10 +211,6 @@ impl JSRuntime {
             assert_ne!(wrapped, unwrapped);
 
             let js_array = js_array(&[
-                encryption_key_pair.0,
-                encryption_key_pair.1,
-                encrypted_message,
-                decrypted_message,
                 ciphered,
                 deciphered,
                 ser_pub,

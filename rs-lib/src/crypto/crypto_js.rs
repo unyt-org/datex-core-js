@@ -96,28 +96,6 @@ impl CryptoJS {
         Ok(key_or_pair)
     }
 
-    async fn new_encryption_key_pair() -> Result<CryptoKeyPair, CryptoError> {
-        let algorithm = js_object(vec![
-            ("name", JsValue::from_str("RSA-OAEP")),
-            ("modulusLength", JsValue::from_f64(4096.0)),
-            (
-                "publicExponent",
-                JsValue::from(Uint8Array::from(&[1, 0, 1][..])),
-            ),
-            ("hash", JsValue::from_str("SHA-256")),
-        ]);
-        Self::generate_crypto_key(&algorithm, true, &["encrypt", "decrypt"])
-            .await
-    }
-
-    async fn new_sign_key_pair() -> Result<CryptoKeyPair, CryptoError> {
-        let algorithm = js_object(vec![
-            ("name", JsValue::from_str("ECDSA")),
-            ("namedCurve", JsValue::from_str("P-384")),
-        ]);
-        Self::generate_crypto_key(&algorithm, true, &["sign", "verify"]).await
-    }
-
     // hkdf
     pub fn hkdf<'a>(
         &self, 
@@ -561,80 +539,6 @@ pub async fn key_unwrap(
 }
 
 impl CryptoTrait for CryptoJS {
-    fn encrypt_rsa(
-        &self,
-        data: Vec<u8>, // FIXME how to handle lifetime and let data pass as slice
-        public_key: Vec<u8>,
-    ) -> Pin<Box<dyn Future<Output = Result<Vec<u8>, CryptoError>> + 'static>>
-    {
-        Box::pin(async move {
-            let key = Self::import_crypto_key(
-                &public_key,
-                "spki",
-                &js_object(vec![
-                    ("name", JsValue::from_str("RSA-OAEP")),
-                    ("hash", JsValue::from_str("SHA-256")),
-                ]),
-                &["encrypt"],
-            )
-            .await?;
-
-            let encryption_promise = Self::crypto_subtle()
-                .encrypt_with_str_and_u8_array("RSA-OAEP", &key, &data)
-                .map_err(|_| CryptoError::EncryptionError)?;
-
-            let result: ArrayBuffer = JsFuture::from(encryption_promise)
-                .await
-                .map_err(|_| CryptoError::EncryptionError)?
-                .try_into()
-                .map_err(|_: std::convert::Infallible| {
-                    CryptoError::EncryptionError
-                })?;
-
-            let message: Vec<u8> = result.as_u8_slice();
-
-            Ok(message)
-        })
-    }
-
-    fn decrypt_rsa(
-        &self,
-        data: Vec<u8>,
-        private_key: Vec<u8>,
-    ) -> Pin<Box<dyn Future<Output = Result<Vec<u8>, CryptoError>> + 'static>>
-    {
-        Box::pin(async move {
-            let key = Self::import_crypto_key(
-                &private_key,
-                "pkcs8",
-                &js_object(vec![
-                    ("name", JsValue::from_str("RSA-OAEP")),
-                    ("hash", JsValue::from_str("SHA-256")),
-                ]),
-                &["decrypt"],
-            )
-            .await?;
-
-            let decryption_promise = Self::crypto_subtle()
-                .decrypt_with_str_and_u8_array("RSA-OAEP", &key, &data)
-                .map_err(|_| CryptoError::DecryptionError)?;
-
-            let result: JsValue = JsFuture::from(decryption_promise)
-                .await
-                .map_err(|_| CryptoError::DecryptionError)?
-                .try_into()
-                .map_err(|_: std::convert::Infallible| {
-                    CryptoError::DecryptionError
-                })?;
-
-            let message: Vec<u8> = result
-                .try_as_u8_slice()
-                .map_err(|_| CryptoError::DecryptionError)?;
-
-            Ok(message)
-        })
-    }
-
     fn create_uuid(&self) -> String {
         Self::crypto().random_uuid()
     }
@@ -645,21 +549,6 @@ impl CryptoTrait for CryptoJS {
             .get_random_values_with_u8_array(buffer)
             .unwrap();
         buffer.to_vec()
-    }
-
-    fn new_encryption_key_pair<'a>(
-        &self,
-    ) -> Pin<Box<dyn Future<Output = Result<(Vec<u8>, Vec<u8>), CryptoError>>>>
-    {
-        Box::pin(async move {
-            let key = Self::new_encryption_key_pair().await?;
-            let public_key =
-                Self::export_crypto_key(&key.get_public_key(), "spki").await?;
-            let private_key =
-                Self::export_crypto_key(&key.get_private_key(), "pkcs8")
-                    .await?;
-            Ok((public_key, private_key))
-        })
     }
 
     // Signature and Verification
