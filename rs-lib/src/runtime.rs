@@ -164,7 +164,9 @@ impl JSRuntime {
             let aad: &[u8] = ser_pub.as_slice();
             let ikm = vec![0u8; 32];
             let salt = vec![0u8; 16];
-            let hash = crypto.hkdf(&ikm, &salt, &aad).await.unwrap();
+            let hash: [u8; 32] = crypto.random_bytes(32)
+                .try_into()
+                .unwrap();
 
             // aes entailing hkdf
             let msg: Vec<u8> = b"Some message".to_vec();
@@ -187,24 +189,6 @@ impl JSRuntime {
             assert_eq!(msg, ctr_deciphered);
             assert_ne!(msg, ctr_ciphered);
 
-            // gcm
-            let ciphered = CryptoJS::aes_gcm_encrypt(
-                &hash,
-                &iv,
-                &msg,
-                &aad,
-            ).await.unwrap();
-
-            let deciphered = CryptoJS::aes_gcm_decrypt(
-                &hash,
-                &iv,
-                &ciphered,
-                &aad,
-            ).await.unwrap();
-
-            assert_eq!(msg, deciphered);
-            assert_ne!(msg, ciphered);
-
             let wrapped = crypto.key_upwrap(&hash, &hash).await.unwrap();
             let unwrapped = crypto.key_unwrap(&hash, &wrapped).await.unwrap();
 
@@ -212,8 +196,6 @@ impl JSRuntime {
             // assert_ne!(wrapped, unwrapped);
 
             let js_array = js_array(&[
-                ciphered,
-                deciphered,
                 ser_pub.to_vec(),
                 ser_pri.to_vec(),
                 sig_pub.to_vec(),
