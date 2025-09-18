@@ -190,13 +190,13 @@ impl JSRuntime {
             let ctr_iv: [u8; 16] = [0u8; 16];
 
             // ctr
-            let ctr_ciphered = CryptoJS::aes_ctr_encrypt(
+            let ctr_ciphered = crypto.aes_ctr_encrypt(
                 &hash,
                 &ctr_iv,
                 &msg,
             ).await.unwrap();
 
-            let ctr_deciphered = CryptoJS::aes_ctr_decrypt(
+            let ctr_deciphered = crypto.aes_ctr_encrypt(
                 &hash,
                 &ctr_iv,
                 &ctr_ciphered,
