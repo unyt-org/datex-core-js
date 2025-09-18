@@ -685,100 +685,6 @@ impl CryptoTrait for CryptoJS {
         })
     }
 
-    fn sign_rsa(
-        &self,
-        data: Vec<u8>,
-        private_key: Vec<u8>,
-    ) -> Pin<Box<dyn Future<Output = Result<Vec<u8>, CryptoError>>>> {
-        Box::pin(async move {
-            let key = Self::import_crypto_key(
-                &private_key,
-                "pkcs8",
-                &js_object(vec![
-                    ("name", JsValue::from_str("ECDSA")),
-                    ("namedCurve", JsValue::from_str("P-384")),
-                ]),
-                &["sign"],
-            )
-            .await?;
-
-            let signature_promise = Self::crypto_subtle()
-                .sign_with_object_and_u8_array(
-                    &js_object(vec![
-                        ("name", JsValue::from_str("ECDSA")),
-                        (
-                            "hash",
-                            JsValue::from(js_object(vec![(
-                                "name",
-                                JsValue::from_str("SHA-384"),
-                            )])),
-                        ),
-                    ]),
-                    &key,
-                    &data,
-                )
-                .map_err(|_| CryptoError::SigningError)?;
-
-            let result: ArrayBuffer = JsFuture::from(signature_promise)
-                .await
-                .map_err(|_| CryptoError::SigningError)?
-                .try_into()
-                .map_err(|_: std::convert::Infallible| {
-                    CryptoError::SigningError
-                })?;
-
-            let signature: Vec<u8> = result.as_u8_slice();
-
-            Ok(signature)
-        })
-    }
-
-    fn verify_rsa(
-        &self,
-        data: Vec<u8>,
-        signature: Vec<u8>,
-        public_key: Vec<u8>,
-    ) -> Pin<Box<dyn Future<Output = Result<bool, CryptoError>>>> {
-        Box::pin(async move {
-            let key = Self::import_crypto_key(
-                &public_key,
-                "spki",
-                &js_object(vec![
-                    ("name", JsValue::from_str("ECDSA")),
-                    ("namedCurve", JsValue::from_str("P-384")),
-                ]),
-                &["verify"],
-            )
-            .await?;
-
-            let verified_promise = Self::crypto_subtle()
-                .verify_with_object_and_u8_array_and_u8_array(
-                    &js_object(vec![
-                        ("name", JsValue::from_str("ECDSA")),
-                        (
-                            "hash",
-                            JsValue::from(js_object(vec![(
-                                "name",
-                                JsValue::from_str("SHA-384"),
-                            )])),
-                        ),
-                    ]),
-                    &key,
-                    &signature,
-                    &data,
-                )
-                .map_err(|_| CryptoError::VerificationError)?;
-
-            let result: bool = JsFuture::from(verified_promise)
-                .await
-                .map_err(|_| CryptoError::VerificationError)?
-                .as_bool()
-                .ok_or(CryptoError::VerificationError)?;
-
-            Ok(result)
-        })
-    }
-
     fn create_uuid(&self) -> String {
         Self::crypto().random_uuid()
     }
@@ -797,21 +703,6 @@ impl CryptoTrait for CryptoJS {
     {
         Box::pin(async move {
             let key = Self::new_encryption_key_pair().await?;
-            let public_key =
-                Self::export_crypto_key(&key.get_public_key(), "spki").await?;
-            let private_key =
-                Self::export_crypto_key(&key.get_private_key(), "pkcs8")
-                    .await?;
-            Ok((public_key, private_key))
-        })
-    }
-
-    fn new_sign_key_pair(
-        &self,
-    ) -> Pin<Box<dyn Future<Output = Result<(Vec<u8>, Vec<u8>), CryptoError>>>>
-    {
-        Box::pin(async move {
-            let key = Self::new_sign_key_pair().await?;
             let public_key =
                 Self::export_crypto_key(&key.get_public_key(), "spki").await?;
             let private_key =
