@@ -144,20 +144,21 @@ impl JSRuntime {
 
             // ed25519 and x25519 generation
             let (sig_pub, sig_pri) = crypto.gen_ed25519().await.unwrap();
-            let (ser_pub, ser_pri) = CryptoJS::gen_x25519().await.unwrap();
-            let (cli_pub, cli_pri) = CryptoJS::gen_x25519().await.unwrap();
+            let (ser_pub, ser_pri) = crypto.gen_x25519().await.unwrap();
+            let (cli_pub, cli_pri) = crypto.gen_x25519().await.unwrap();
 
             // Signature
-            let sig = crypto.sig_ed25519(&sig_pri, &ser_pub).await.unwrap();
-            let ver = crypto.ver_ed25519(&sig_pub, &sig.clone().try_into().unwrap(), &ser_pub).await.unwrap();
+            let sig = crypto.sig_ed25519(&sig_pri, &ser_pub.to_vec()).await.unwrap();
+            let ver = crypto.ver_ed25519(&sig_pub, &sig.clone().try_into().unwrap(), &ser_pub.to_vec()).await.unwrap();
             
             assert_eq!(sig.len(), 64);
             assert!(ver);
 
             // Derivation
-            let cli_sec = CryptoJS::derive_x25519(&cli_pri, &ser_pub, 256u32).await.unwrap();
-            let ser_sec = CryptoJS::derive_x25519(&ser_pri, &cli_pub, 256u32).await.unwrap();
+            let cli_sec = crypto.derive_x25519(&cli_pri, &ser_pub).await.unwrap();
+            let ser_sec = crypto.derive_x25519(&ser_pri, &cli_pub).await.unwrap();
             assert_eq!(cli_sec, ser_sec);
+            assert_eq!(cli_sec.len(), 32_usize);
 
             // hkdf
             let aad: &[u8] = ser_pub.as_slice();
@@ -213,12 +214,12 @@ impl JSRuntime {
             let js_array = js_array(&[
                 ciphered,
                 deciphered,
-                ser_pub,
-                ser_pri,
-                sig_pub,
-                sig_pri,
-                cli_sec,
-                ser_sec,
+                ser_pub.to_vec(),
+                ser_pri.to_vec(),
+                sig_pub.to_vec(),
+                sig_pri.to_vec(),
+                cli_sec.to_vec(),
+                ser_sec.to_vec(),
                 hash.to_vec(),
                 wrapped.to_vec(),
                 unwrapped.to_vec(),
