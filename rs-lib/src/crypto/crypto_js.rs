@@ -223,7 +223,7 @@ impl CryptoTrait for CryptoJS {
     ) -> Pin<Box<dyn Future<Output = Result<Vec<u8>, CryptoError>> + 'a>> {
         Box::pin(async move {
 
-            let subtle = CryptoJS::crypto_subtle();
+            let subtle = Self::crypto_subtle();
 
             let usages = Array::of2(
                 &JsValue::from_str("encrypt"),
@@ -274,7 +274,7 @@ impl CryptoTrait for CryptoJS {
         key_to_wrap_bytes: &'a [u8; 32],   
     ) -> Pin<Box<dyn Future<Output = Result<[u8; 40], CryptoError>> + 'a>> {
         Box::pin(async move {
-            let subtle = CryptoJS::crypto_subtle();
+            let subtle = Self::crypto_subtle();
 
             // Import the Key Encryption Key (KEK)
             let kek_algorithm = js_object(vec![
