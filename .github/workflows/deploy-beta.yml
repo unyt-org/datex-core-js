@@ -70,6 +70,10 @@ jobs:
               with:
                   path: ./pages
                   retention-days: 3
+
+            - name: Store commit-hash in pages directory
+              run: |
+                  echo "$(git rev-parse HEAD)" > ./pages/commit-hash
     deploy:
         needs: release-beta
         name: Deploy JS to GitHub Pages
