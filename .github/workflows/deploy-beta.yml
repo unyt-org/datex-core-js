@@ -65,15 +65,15 @@ jobs:
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+            - name: Store commit-hash in pages directory
+              run: |
+                  echo "$(git rev-parse HEAD)" > ./pages/commit-hash.txt
+
             - name: Upload build artifacts
               uses: actions/upload-pages-artifact@v3
               with:
                   path: ./pages
                   retention-days: 3
-
-            - name: Store commit-hash in pages directory
-              run: |
-                  echo "$(git rev-parse HEAD)" > ./pages/commit-hash
     deploy:
         needs: release-beta
         name: Deploy JS to GitHub Pages
