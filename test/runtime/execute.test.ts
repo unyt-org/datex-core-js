@@ -16,7 +16,6 @@ Deno.test("execute sync dif value", () => {
     // For now, all DIF values are returned in the same format to reduce complexity.
     const result = runtime.executeSyncDIF(script);
     assertEquals(result, {
-        core_type: "integer",
         ptr_id: undefined,
         type: "integer",
         value: "3",
@@ -37,9 +36,8 @@ Deno.test("execute sync typed integer", () => {
         "42u8",
     );
     assertEquals(result, {
-        core_type: "integer/u8",
         ptr_id: undefined,
-        type: "integer",
+        type: "integer/u8",
         value: "42",
     });
 });

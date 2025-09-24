@@ -62,10 +62,11 @@ export type DIFCoreValue =
     | DIFMap
     | DIFArray;
 
+export type DIFType = any
+
 export type DIFValue = {
-    core_type: CoreType;
     ptr_id?: string;
-    type: CoreType; // TODO: this will not be a CoreType in the future, but a more complex type
+    type: DIFType;
     value: DIFCoreValue;
 };
 
@@ -79,7 +80,7 @@ export function resolveDIFValue<T extends unknown>(
     value: DIFValue,
 ): T {
     // if the core_type is the same as the type, we can just return a core value
-    const isCoreType = value.core_type === value.type;
+    const isCoreType = value.type === value.type;
     // const isPointer = !!value.ptr_id; // TODO: handle pointers
 
     if (isCoreType) {
@@ -133,43 +134,36 @@ export function convertToDIFValue<T extends unknown>(
     // TODO: handle custom types
     if (value === null) {
         return {
-            core_type: "null",
             type: "null",
             value: null,
         };
     } else if (typeof value === "boolean") {
         return {
-            core_type: "boolean",
             type: "boolean",
             value,
         };
     } else if (typeof value === "number") {
         return {
-            core_type: "f64",
             type: "f64",
             value,
         };
     } else if (typeof value === "bigint") {
         return {
-            core_type: "integer", // todo: use typed bigint instead of integer default type
-            type: "integer",
+            type: "integer", // todo: use typed bigint instead of integer default type
             value: value.toString(), // convert bigint to string for DIFValue
         };
     } else if (typeof value === "string") {
         return {
-            core_type: "text",
             type: "text",
             value,
         };
     } else if (value instanceof Endpoint) {
         return {
-            core_type: "endpoint",
             type: "endpoint",
             value: value.toString(),
         };
     } else if (Array.isArray(value)) {
         return {
-            core_type: "array",
             type: "array",
             value: value.map((v) => convertToDIFValue(v)),
         };
@@ -179,7 +173,6 @@ export function convertToDIFValue<T extends unknown>(
             map.set(key, convertToDIFValue(val));
         }
         return {
-            core_type: "object",
             type: "object",
             value: map,
         };
