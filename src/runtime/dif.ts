@@ -1,74 +1,94 @@
 import { Endpoint } from "./special-core-types.ts";
 
-/**
- * integer types that are interpreted as JS numbers per default
- */
-export const smallIntegerTypes = [
-    "integer/i8",
-    "integer/i16",
-    "integer/i32",
-    "integer/u8",
-    "integer/u16",
-    "integer/u32",
-    "integer",
-] as const;
+const CoreTypeAddress = {
+    // TODO:
+    integer: "640000",
+    integer_big: "64000C",
+    decimal: "64000A",
+    decimal_f64: "64000B",
+    null: "640001",
+    boolean: "640002",
+    text: "640003",
+    array: "640004",
+    struct: "640005",
+    list: "640006",
+    map: "640007",
+    endpoint: "640008",
+} as const;
+type CoreTypeAddress = typeof CoreTypeAddress[keyof typeof CoreTypeAddress];
 
-/**
- * integer types that are interpreted as JS BigInt per default
- */
-export const bigIntegerTypes = [
-    "integer/i32",
-    "integer/i64",
-    "integer/i128",
-    "integer/u32",
-    "integer/u64",
-    "integer/u128",
-] as const;
+const CoreTypeAddressRanges = {
+    small_unsigned_integers: [0x640001, 0x640010],
+    big_unsigned_integers: [0x640001, 0x640011],
+    small_signed_integers: [0x640011, 0x640020],
+    big_signed_integers: [0x640020, 0x640030],
+    decimals: [0x64000B, 0x64000F], // Decimal and TypedDecimal
+} as const;
 
-/**
- * decimal types that are interpreted as JS numbers per default
- * note: there is currently no special handling for bigdecimal values in JS
- */
-export const decimalTypes = [
-    "f32",
-    "f64",
-    "decimal",
-] as const;
+/** 3, 5, or 26 byte hex string */
+type DIFPointerAddress = string;
+type DIFValue = {
+    type: DIFTypeContainer
+    value: DIFCoreValue;
+}
 
-export type SmallIntegerType = typeof smallIntegerTypes[number];
-export type BigIntegerType = typeof bigIntegerTypes[number];
-export type IntegerType = SmallIntegerType | BigIntegerType;
-export type DecimalType = typeof decimalTypes[number];
+const DIFTypeKinds = {
+    Structural: 0,
+    Reference: 1,
+    Intersection: 2,
+    Union: 3,
+    Unit: 4,
+    Function: 5,
+} as const;
+type DIFTypeKind = typeof DIFTypeKinds[keyof typeof DIFTypeKinds];
 
-export type CoreType =
-    | "text"
-    | "boolean"
-    | "null"
-    | "array"
-    | "object"
-    | "tuple"
-    | "endpoint"
-    | IntegerType
-    | DecimalType;
+const DIFReferenceMutability = {
+    Mutable: 0,
+    Immutable: 1,
+    Final: 2,
+} as const;
+type DIFReferenceMutability = typeof DIFReferenceMutability[keyof typeof DIFReferenceMutability];
+
+type DIFTypeDefinition<Kind extends DIFTypeKind = DIFTypeKind> =
+    Kind extends typeof DIFTypeKinds.Structural
+        ? DIFValue
+    : Kind extends typeof DIFTypeKinds.Reference
+        ? DIFPointerAddress
+    : Kind extends typeof DIFTypeKinds.Intersection
+        ? Array<DIFTypeContainer>
+    : Kind extends typeof DIFTypeKinds.Union
+        ? Array<DIFTypeContainer>
+    : Kind extends typeof DIFTypeKinds.Unit
+        ? null
+    : Kind extends typeof DIFTypeKinds.Function
+        ? unknown // TODO
+    : never;
+
+type DIFType<Kind extends DIFTypeKind = DIFTypeKind> = {
+    name?: string,
+    kind: Kind,
+    def: DIFTypeDefinition<Kind>,
+    mut?: DIFReferenceMutability,
+}
+
+type DIFValueContainer = DIFValue|DIFPointerAddress;
+type DIFTypeContainer = DIFType|DIFPointerAddress
+
 
 // TODO: wasm_bindgen currently returns a Map here - could we also just use an object, or is a Map actually more efficient?
-export type DIFMap = Map<string, DIFValue>;
-export type DIFArray = DIFValue[];
+export type DIFObject = Map<string, DIFValueContainer>;
+export type DIFArray = DIFValueContainer[];
+export type DIFMap = [DIFValueContainer,DIFValueContainer][];
+
 export type DIFCoreValue =
     | string
     | number
     | boolean
     | null
+    | DIFObject
     | DIFMap
     | DIFArray;
 
-export type DIFType = any
-
-export type DIFValue = {
-    ptr_id?: string;
-    type: DIFType;
-    value: DIFCoreValue;
-};
 
 /**
  * Resolves a DIFValue to its corresponding JS value.
@@ -78,50 +98,104 @@ export type DIFValue = {
  */
 export function resolveDIFValue<T extends unknown>(
     value: DIFValue,
-): T {
+): T|Promise<T> {
     // if the core_type is the same as the type, we can just return a core value
     const isCoreType = value.type === value.type;
     // const isPointer = !!value.ptr_id; // TODO: handle pointers
 
     if (isCoreType) {
         // boolean and text types values are just returned as is
-        if (value.type === "boolean" || value.type == "text") {
+        if (value.type === CoreTypeAddress.boolean || value.type == CoreTypeAddress.text) {
             return value.value as T;
         } // small integers are interpreted as JS numbers
-        else if (smallIntegerTypes.includes(value.type as SmallIntegerType)) {
+        else if (
+            typeof value.type === "string" && (
+                value.type == CoreTypeAddress.integer ||
+                isPointerAddressInRange(value.type, CoreTypeAddressRanges.small_signed_integers) ||
+                isPointerAddressInRange(value.type, CoreTypeAddressRanges.small_unsigned_integers)
+            )
+        ) {
             return Number(value.value as number) as T;
         } // big integers are interpreted as JS BigInt
-        else if (bigIntegerTypes.includes(value.type as BigIntegerType)) {
+        else if (
+            typeof value.type === "string" && (
+                isPointerAddressInRange(value.type, CoreTypeAddressRanges.big_signed_integers) ||
+                isPointerAddressInRange(value.type, CoreTypeAddressRanges.big_unsigned_integers)
+            )
+        ) {
             return BigInt(value.value as number) as T;
         } // decimal types are interpreted as JS numbers
-        else if (decimalTypes.includes(value.type as DecimalType)) {
+        else if (
+            typeof value.type === "string" && isPointerAddressInRange(value.type, CoreTypeAddressRanges.decimals)
+        ) {
             return (Number(value.value) as number) as T;
         } // TODO: wasm_bindgen returns undefined here, although it should be null. So we just return null for now.
-        else if (value.type === "null") {
+        else if (value.type === CoreTypeAddress.null) {
             return null as T;
         } // endpoint types are resolved to Endpoint instances
-        else if (value.type == "endpoint") {
+        else if (value.type === CoreTypeAddress.endpoint) {
             return Endpoint.get(value.value as string) as T;
         } // array types are resolved to arrays of DIFValues
-        else if (value.type === "array") {
-            return (value.value as DIFArray).map((v) =>
-                resolveDIFValue(v)
-            ) as T;
-        } // object types are resolved to objects with string keys and DIFValues
-        else if (value.type === "object") {
-            const resolvedObj: { [key: string]: unknown } = {};
-            for (const [key, val] of (value.value as DIFMap).entries()) {
-                resolvedObj[key] = resolveDIFValue(val);
-            }
-            return resolvedObj as T;
+        else if (value.type === CoreTypeAddress.array) {
+            return promiseAllOrSync((value.value as DIFArray).map((v) =>
+                resolveDIFValueContainer(v)
+            )) as T|Promise<T>;
         }
-        // TODO: handle tuple (map to custom class?)
-        // TODO: handle bigint/bigdecimal and other variants, map to bigint/number
+        else if (value.type === CoreTypeAddress.list) {
+            return promiseAllOrSync((value.value as DIFArray).map((v) =>
+                resolveDIFValueContainer(v)
+            )) as T|Promise<T>;
+        } // object types are resolved to objects with string keys and DIFValues
+        else if (value.type === CoreTypeAddress.struct) {
+            const resolvedObj: { [key: string]: unknown } = {};
+            for (const [key, val] of (value.value as DIFObject).entries()) {
+                resolvedObj[key] = resolveDIFValueContainer(val);
+            }
+            return promiseFromObjectOrSync(resolvedObj) as T|Promise<T>;
+        }
     } else {
         throw new Error("custom types not supported yet");
     }
 
     return undefined as T;
+}
+
+function promiseAllOrSync<T>(values: (T|Promise<T>)[]): Promise<T[]>|T[] {
+    if (values.some((v) => v instanceof Promise)) {
+        return Promise.all(values);
+    } else {
+        return values as T[];
+    }
+}
+
+function promiseFromObjectOrSync<T>(values: {[key: string]: T|Promise<T>}): Promise<{[key: string]: T}>|{[key: string]: T} {
+    const valueArray = Object.values(values);
+    if (valueArray.some((v) => v instanceof Promise)) {
+        return Promise.all(valueArray).then((resolvedValues) => {
+            const resolvedObj: {[key: string]: T} = {};
+            let i = 0;
+            for (const key of Object.keys(values)) {
+                resolvedObj[key] = resolvedValues[i++];
+            }
+            return resolvedObj;
+        });
+    } else {
+        return values as {[key: string]: T};
+    }
+}
+
+
+
+export function resolveDIFValueContainer<T extends unknown>(
+    value: DIFValueContainer,
+): T|Promise<T> {
+    if (typeof value !== "string") {
+        return resolveDIFValue(value);
+    }
+    else {
+        // todo resolve pointer id
+        return undefined as T;
+    }
 }
 
 /**
@@ -134,37 +208,37 @@ export function convertToDIFValue<T extends unknown>(
     // TODO: handle custom types
     if (value === null) {
         return {
-            type: "null",
+            type: CoreTypeAddress.null,
             value: null,
         };
     } else if (typeof value === "boolean") {
         return {
-            type: "boolean",
+            type: CoreTypeAddress.boolean,
             value,
         };
     } else if (typeof value === "number") {
         return {
-            type: "f64",
+            type: CoreTypeAddress.decimal_f64,
             value,
         };
     } else if (typeof value === "bigint") {
         return {
-            type: "integer", // todo: use typed bigint instead of integer default type
+            type: CoreTypeAddress.integer_big,
             value: value.toString(), // convert bigint to string for DIFValue
         };
     } else if (typeof value === "string") {
         return {
-            type: "text",
+            type: CoreTypeAddress.text,
             value,
         };
     } else if (value instanceof Endpoint) {
         return {
-            type: "endpoint",
+            type: CoreTypeAddress.endpoint,
             value: value.toString(),
         };
     } else if (Array.isArray(value)) {
         return {
-            type: "array",
+            type: CoreTypeAddress.array,
             value: value.map((v) => convertToDIFValue(v)),
         };
     } else if (typeof value === "object") {
@@ -173,7 +247,7 @@ export function convertToDIFValue<T extends unknown>(
             map.set(key, convertToDIFValue(val));
         }
         return {
-            type: "object",
+            type: CoreTypeAddress.struct,
             value: map,
         };
     }
@@ -189,4 +263,12 @@ export function convertToDIFValues<T extends unknown[]>(
     values: T | null,
 ): DIFValue[] | null {
     return values?.map((value) => convertToDIFValue(value)) || null;
+}
+
+/**
+ * Returns true if the given address is within the specified address range.
+ */
+function isPointerAddressInRange(address: DIFPointerAddress, range: readonly [number, number]): boolean {
+    const addressNum = parseInt(address, 16);
+    return addressNum >= range[0] && addressNum < range[1];
 }

@@ -13,15 +13,7 @@ export function execute(datex_script: string, formatted: boolean): string;
  * Does not return the result of the script, but only indicates success or failure.
  */
 export function execute_internal(datex_script: string): boolean;
-export interface WebRTCInterfaceSetupData {
-    peer_endpoint: string;
-    ice_servers: RTCIceServer[] | null;
-}
-
-export interface SerialInterfaceSetupData {
-    port_name: string | null;
-    baud_rate: number;
-}
+export type BaseInterfaceSetupData = InterfaceProperties;
 
 export interface RTCIceServer {
     urls: string[];
@@ -37,16 +29,14 @@ export interface TCPClientInterfaceSetupData {
     address: string;
 }
 
-export interface WebSocketServerInterfaceSetupData {
-    port: number;
-    /**
-     * if true, the server will use wss (secure WebSocket). Defaults to true.
-     */
-    secure: boolean | null;
+export interface WebRTCInterfaceSetupData {
+    peer_endpoint: string;
+    ice_servers: RTCIceServer[] | null;
 }
 
-export interface WebSocketClientInterfaceSetupData {
-    address: string;
+export interface SerialInterfaceSetupData {
+    port_name: string | null;
+    baud_rate: number;
 }
 
 export type ReconnectionConfig = "NoReconnect" | "InstantReconnect" | {
@@ -122,7 +112,17 @@ export interface InterfaceProperties {
 
 export type InterfaceDirection = "In" | "Out" | "InOut";
 
-export type BaseInterfaceSetupData = InterfaceProperties;
+export interface WebSocketServerInterfaceSetupData {
+    port: number;
+    /**
+     * if true, the server will use wss (secure WebSocket). Defaults to true.
+     */
+    secure: boolean | null;
+}
+
+export interface WebSocketClientInterfaceSetupData {
+    address: string;
+}
 
 export class BaseJSInterface {
     private constructor();
@@ -131,28 +131,23 @@ export class BaseJSInterface {
 export class JSComHub {
     private constructor();
     free(): void;
+    base_interface_register_socket(uuid: string, direction: string): string;
+    base_interface_receive(
+        uuid: string,
+        socket_uuid: string,
+        data: Uint8Array,
+    ): void;
+    base_interface_destroy_socket(uuid: string, socket_uuid: string): void;
+    base_interface_on_send(uuid: string, func: Function): void;
+    base_interface_test_send_block(
+        uuid: string,
+        socket_uuid: string,
+        data: Uint8Array,
+    ): Promise<boolean>;
     websocket_server_interface_add_socket(
         interface_uuid: string,
         websocket: WebSocket,
     ): string;
-    webrtc_interface_create_offer(interface_uuid: string): Promise<Uint8Array>;
-    webrtc_interface_create_answer(
-        interface_uuid: string,
-        offer: Uint8Array,
-    ): Promise<Uint8Array>;
-    webrtc_interface_set_answer(
-        interface_uuid: string,
-        answer: Uint8Array,
-    ): Promise<void>;
-    webrtc_interface_set_on_ice_candidate(
-        interface_uuid: string,
-        on_ice_candidate: Function,
-    ): void;
-    webrtc_interface_add_ice_candidate(
-        interface_uuid: string,
-        candidate: Uint8Array,
-    ): Promise<void>;
-    webrtc_interface_wait_for_connection(interface_uuid: string): Promise<void>;
     register_default_interface_factories(): void;
     create_interface(interface_type: string, properties: string): Promise<any>;
     close_interface(interface_uuid: string): Promise<any>;
@@ -171,19 +166,24 @@ export class JSComHub {
     _drain_incoming_blocks(): Uint8Array[];
     get_metadata_string(): string;
     get_trace_string(endpoint: string): Promise<string | undefined>;
-    base_interface_register_socket(uuid: string, direction: string): string;
-    base_interface_receive(
-        uuid: string,
-        socket_uuid: string,
-        data: Uint8Array,
+    webrtc_interface_create_offer(interface_uuid: string): Promise<Uint8Array>;
+    webrtc_interface_create_answer(
+        interface_uuid: string,
+        offer: Uint8Array,
+    ): Promise<Uint8Array>;
+    webrtc_interface_set_answer(
+        interface_uuid: string,
+        answer: Uint8Array,
+    ): Promise<void>;
+    webrtc_interface_set_on_ice_candidate(
+        interface_uuid: string,
+        on_ice_candidate: Function,
     ): void;
-    base_interface_destroy_socket(uuid: string, socket_uuid: string): void;
-    base_interface_on_send(uuid: string, func: Function): void;
-    base_interface_test_send_block(
-        uuid: string,
-        socket_uuid: string,
-        data: Uint8Array,
-    ): Promise<boolean>;
+    webrtc_interface_add_ice_candidate(
+        interface_uuid: string,
+        candidate: Uint8Array,
+    ): Promise<void>;
+    webrtc_interface_wait_for_connection(interface_uuid: string): Promise<void>;
 }
 export class JSMemory {
     private constructor();
