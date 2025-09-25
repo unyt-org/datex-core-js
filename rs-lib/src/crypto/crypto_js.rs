@@ -225,9 +225,9 @@ impl CryptoTrait for CryptoJS {
 
             let subtle = Self::crypto_subtle();
 
-            let usages = Array::of2(
+            let usages = Array::of1(
                 &JsValue::from_str("encrypt"),
-                &JsValue::from_str("decrypt"),
+                // &JsValue::from_str("decrypt"),
             );
 
             let ikm_buf = Uint8Array::from(hash.as_slice()).buffer();
@@ -263,6 +263,56 @@ impl CryptoTrait for CryptoJS {
             let ct_bytes = Uint8Array::new(&ct_buf).to_vec();
 
             Ok(ct_bytes)
+        })
+    }
+
+    fn aes_ctr_decrypt<'a>(
+        &'a self,
+        hash: &'a [u8; 32],
+        iv: &'a [u8; 16],
+        ciphertext: &'a [u8],
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<u8>, CryptoError>> + 'a>> {
+        Box::pin(async move {
+            let subtle = CryptoJS::crypto_subtle();
+
+            let usages = Array::of1(
+                // &JsValue::from_str("encrypt"),
+                &JsValue::from_str("decrypt"),
+            );
+
+            let ikm_buf = Uint8Array::from(hash.as_slice()).buffer();
+
+            let key_js = JsFuture::from(
+                subtle
+                .import_key_with_object(
+                    "raw",
+                    &ikm_buf.into(),
+                    &js_object(vec![("name", "AES-CTR")]),
+                    false,
+                    &usages
+                ).map_err(|_| CryptoError::KeyImportFailed)?,
+            ).await.map_err(|_| CryptoError::KeyImportFailed)?;
+            let base_key: CryptoKey = key_js.dyn_into()
+                .map_err(|_| CryptoError::KeyImportFailed)?;
+
+            let mut params = AesCtrParams::new(&"AES-CTR", &Uint8Array::from(iv.as_slice()), 64u8);
+
+            let ct = Uint8Array::from(ciphertext);
+
+            let pt = JsFuture::from(
+                subtle.decrypt_with_object_and_buffer_source(
+                    &params.into(),
+                    &base_key,
+                    &ct,
+                ).map_err(|_| CryptoError::DecryptionError)?)
+                .await
+                .map_err(|_| CryptoError::DecryptionError)?;
+
+            let pt_buf: ArrayBuffer = pt.dyn_into()
+                .map_err(|_| CryptoError::DecryptionError)?;
+            let pt_bytes = Uint8Array::new(&pt_buf).to_vec();
+
+            Ok(pt_bytes)
         })
     }
 
