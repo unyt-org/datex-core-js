@@ -192,7 +192,7 @@ impl JSRuntime {
                 &msg,
             ).await.unwrap();
 
-            let ctr_deciphered = crypto.aes_ctr_encrypt(
+            let ctr_deciphered = crypto.aes_ctr_decrypt(
                 &hash,
                 &ctr_iv,
                 &ctr_ciphered,
