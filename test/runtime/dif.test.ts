@@ -1,7 +1,7 @@
 import { Runtime } from "../../src/runtime/runtime.ts";
 import { assertEquals } from "jsr:@std/assert";
 import { assertThrows } from "jsr:@std/assert/throws";
-import { ReferenceMutability } from "../../src/dif/definitions.ts";
+import { DIFUpdate, ReferenceMutability } from "../../src/dif/definitions.ts";
 
 const runtime = new Runtime({ endpoint: "@jonas" });
 
@@ -12,12 +12,27 @@ Deno.test("pointer create", () => {
         ReferenceMutability.Mutable,
     );
     assertEquals(typeof ref, "string");
+
+    let observed: DIFUpdate | null = null;
     const observerId = runtime.dif.observePointer(ref, (value) => {
         console.log("Observed pointer value:", value);
-        runtime.dif.unobservePointer(ref, observerId);
+        try {
+            console.log("Unobserving pointer...", ref, observerId);
+            console.log(runtime.executeSync("1 + 2"));
+            // runtime.dif.observePointer(ref, () => {});
+            observed = value;
+        } catch (e) {
+            console.error("Failed to unobserve pointer:", e);
+        }
     });
 
     runtime.dif.updateDIF(ref, {
+        value: "Hello, Datex!",
+        kind: "Replace",
+    });
+
+    // if not equal, unobservePointer potentially failed
+    assertEquals(observed, {
         value: "Hello, Datex!",
         kind: "Replace",
     });

@@ -440,11 +440,10 @@ impl JSRuntime {
     ) -> Result<u32, JsError> {
         let address = Self::js_value_to_pointer_address(address)?;
         let cb = callback.clone();
-        let observer: ReferenceObserver =
-            Box::new(move |update: &DIFUpdate| {
-                let dif_value = serde_wasm_bindgen::to_value(update).unwrap();
-                let _ = cb.call1(&JsValue::NULL, &dif_value);
-            });
+        let observer = move |update: &DIFUpdate| {
+            let dif_value = serde_wasm_bindgen::to_value(update).unwrap();
+            let _ = cb.call1(&JsValue::NULL, &dif_value);
+        };
         DIFInterface::observe_pointer(self, address.into(), observer)
             .map_err(|e| js_error(e))
     }
@@ -577,7 +576,7 @@ impl JSRuntime {
 
 impl DIFInterface for JSRuntime {
     fn update(
-        &mut self,
+        &self,
         address: PointerAddress,
         update: DIFUpdate,
     ) -> Result<(), DIFUpdateError> {
@@ -599,7 +598,7 @@ impl DIFInterface for JSRuntime {
     }
 
     fn apply(
-        &mut self,
+        &self,
         callee: DIFValueContainer,
         value: DIFValueContainer,
     ) -> Result<DIFValueContainer, DIFApplyError> {
@@ -627,10 +626,10 @@ impl DIFInterface for JSRuntime {
             .create_pointer_sync(value, allowed_type, mutability)
     }
 
-    fn observe_pointer(
+    fn observe_pointer<F: Fn(&DIFUpdate) + 'static>(
         &self,
         address: PointerAddress,
-        observer: datex_core::references::observers::ReferenceObserver,
+        observer: F,
     ) -> Result<u32, DIFObserveError> {
         self.runtime.observe_pointer(address, observer)
     }
