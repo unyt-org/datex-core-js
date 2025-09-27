@@ -5,21 +5,29 @@ use crate::network::com_hub::JSComHub;
 use crate::utils::time::TimeJS;
 use datex_core::crypto::crypto::CryptoTrait;
 use datex_core::decompiler::{DecompileOptions, decompile_value};
-use datex_core::dif::DIFValue;
+use datex_core::dif::DIFUpdate;
+use datex_core::dif::interface::{
+    DIFApplyError, DIFCreatePointerError, DIFInterface, DIFObserveError,
+    DIFUpdateError,
+};
+use datex_core::dif::value::DIFValueContainer;
 use datex_core::global::dxb_block::DXBBlock;
 use datex_core::global::protocol_structures::block_header::{
     BlockHeader, FlagsAndTimestamp,
 };
+use datex_core::runtime::execution::ExecutionError;
 #[cfg(feature = "debug")]
 use datex_core::runtime::global_context::DebugFlags;
 use datex_core::runtime::global_context::GlobalContext;
 use datex_core::runtime::{Runtime, RuntimeConfig, RuntimeInternal};
 use datex_core::values::core_values::endpoint::Endpoint;
+use datex_core::values::pointer::PointerAddress;
 use datex_core::values::serde::deserializer::DatexDeserializer;
 use datex_core::values::value_container::ValueContainer;
 use log::info;
 use serde::{Deserialize, Serialize};
 use serde_wasm_bindgen::from_value;
+use std::fmt::Display;
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 use wasm_bindgen::prelude::*;
@@ -57,6 +65,18 @@ struct JSDecompileOptions {
     pub colorized: Option<bool>,
     pub resolve_slots: Option<bool>,
     pub json_compat: Option<bool>,
+}
+
+#[derive(Debug, PartialEq)]
+enum ConversionError {
+    InvalidValue,
+}
+impl Display for ConversionError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ConversionError::InvalidValue => write!(f, "Invalid value"),
+        }
+    }
 }
 
 /**
@@ -229,13 +249,12 @@ impl JSRuntime {
         dif_values: Option<Vec<JsValue>>,
         decompile_options: JsValue,
     ) -> Result<String, JsError> {
+        let val = &self
+            .js_values_to_value_containers(dif_values)
+            .map_err(js_error)?;
         let result = self
             .runtime
-            .execute(
-                script,
-                &Self::js_values_to_value_containers(dif_values),
-                None,
-            )
+            .execute(script, val, None)
             .await
             .map_err(js_error)?;
         match result {
@@ -256,12 +275,14 @@ impl JSRuntime {
             .runtime
             .execute(
                 script,
-                &Self::js_values_to_value_containers(dif_values),
+                &self
+                    .js_values_to_value_containers(dif_values)
+                    .map_err(js_error)?,
                 None,
             )
             .await
             .map_err(js_error)?;
-        Ok(Self::maybe_value_container_to_dif(result))
+        Ok(self.maybe_value_container_to_dif(result))
     }
 
     pub fn execute_sync_with_string_result(
@@ -274,7 +295,9 @@ impl JSRuntime {
             .runtime
             .execute_sync(
                 script,
-                &Self::js_values_to_value_containers(dif_values),
+                &self
+                    .js_values_to_value_containers(dif_values)
+                    .map_err(js_error)?,
                 None,
             )
             .map_err(js_error)?;
@@ -296,56 +319,73 @@ impl JSRuntime {
             .runtime
             .execute_sync(
                 script,
-                &Self::js_values_to_value_containers(dif_values),
+                &self
+                    .js_values_to_value_containers(dif_values)
+                    .map_err(js_error)?,
                 None,
             )
             .map_err(js_error)?;
-        Ok(Self::maybe_value_container_to_dif(result))
+        Ok(self.maybe_value_container_to_dif(result))
     }
 
     pub fn value_to_string(
+        &self,
         dif_value: JsValue,
         decompile_options: JsValue,
-    ) -> String {
-        let value_container: ValueContainer =
-            Self::js_value_to_value_container(dif_value);
-        decompile_value(
+    ) -> Result<String, JsError> {
+        let value_container = self
+            .js_value_to_value_container(dif_value)
+            .map_err(js_error)?;
+        Ok(decompile_value(
             &value_container,
             Self::decompile_options_from_js_value(decompile_options),
-        )
+        ))
     }
 
     fn maybe_value_container_to_dif(
+        &self,
         maybe_value_container: Option<ValueContainer>,
     ) -> JsValue {
         match maybe_value_container {
             None => JsValue::NULL,
             Some(value_container) => {
-                let dif_value = DIFValue::from(&value_container);
-                serde_wasm_bindgen::to_value(&dif_value).unwrap()
+                let dif_value_container =
+                    DIFValueContainer::try_from(&value_container)
+                        .expect("Conversion to DIFValue failed");
+                serde_wasm_bindgen::to_value(&dif_value_container).unwrap()
             }
         }
     }
 
     fn js_values_to_value_containers(
+        &self,
         js_values: Option<Vec<JsValue>>,
-    ) -> Vec<ValueContainer> {
+    ) -> Result<Vec<ValueContainer>, ConversionError> {
         js_values
-            .map(|values| {
-                values
-                    .into_iter()
-                    .map(Self::js_value_to_value_container)
-                    .collect()
-            })
             .unwrap_or_default()
+            .into_iter()
+            .map(|js_value| self.js_value_to_value_container(js_value))
+            .collect()
     }
 
-    fn js_value_to_value_container(js_value: JsValue) -> ValueContainer {
+    /// Convert a JsValue (DIFValue) to a ValueContainer
+    /// Returns Err(()) if the conversion fails (invalid json or ref not found)
+    fn js_value_to_value_container(
+        &self,
+        js_value: JsValue,
+    ) -> Result<ValueContainer, ConversionError> {
         // convert JsValue to DIFValue
-        let dif_value: DIFValue =
+        let dif_value: DIFValueContainer =
             serde_wasm_bindgen::from_value(js_value).unwrap();
         // convert DIFValue to ValueContainer
-        ValueContainer::from(&dif_value)
+        if let Some(value_container) =
+            self.runtime.as_value_container(&dif_value)
+        {
+            Ok(value_container)
+        } else {
+            // ref not found
+            Err(ConversionError::InvalidValue)
+        }
     }
 
     fn decompile_options_from_js_value(
@@ -368,6 +408,46 @@ impl JSRuntime {
                 json_compat: js_decompile_options.json_compat.unwrap_or(false),
             }
         }
+    }
+}
+impl DIFInterface for JSRuntime {
+    fn update(
+        &mut self,
+        address: PointerAddress,
+        update: DIFUpdate,
+    ) -> Result<(), DIFUpdateError> {
+        todo!()
+    }
+
+    fn apply(
+        &mut self,
+        callee: DIFValueContainer,
+        value: DIFValueContainer,
+    ) -> Result<DIFApplyError, ExecutionError> {
+        todo!()
+    }
+
+    fn create_pointer(
+        &self,
+        value: DIFValueContainer,
+    ) -> Result<PointerAddress, DIFCreatePointerError> {
+        todo!()
+    }
+
+    fn observe_pointer(
+        &self,
+        address: PointerAddress,
+        observer: datex_core::references::observers::ReferenceObserver,
+    ) -> Result<u32, DIFObserveError> {
+        todo!()
+    }
+
+    fn unobserve_pointer(
+        &self,
+        address: PointerAddress,
+        observer_id: u32,
+    ) -> Result<(), DIFObserveError> {
+        todo!()
     }
 }
 
