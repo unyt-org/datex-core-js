@@ -1,4 +1,4 @@
-import { JSRuntime } from "../datex-core.ts";
+import type { JSRuntime } from "../datex-core.ts";
 import { Endpoint } from "../runtime/special-core-types.ts";
 import {
     CoreTypeAddress,
@@ -7,22 +7,40 @@ import {
     type DIFContainer,
     type DIFObject,
     type DIFPointerAddress,
-    type DIFType,
     type DIFTypeContainer,
     type DIFUpdate,
     type DIFValue,
     type DIFValueContainer,
     type ReferenceMutability,
 } from "./definitions.ts";
+import { PointerCache } from "./pointer-cache.ts";
 
 export class DIFHandler {
+    /** The JSRuntime interface for the underlying Datex Core runtime */
     #runtime: JSRuntime;
+    /** The pointer cache for storing and reusing object instances on the JS side */
+    #pointerCache: PointerCache;
+
+    /**
+     * Creates a new DIFHandler instance.
+     * @param runtime - The JSRuntime instance for executing Datex scripts.
+     * @param pointerCache - The PointerCache instance for managing object pointers. If not provided, a new PointerCache will be created.
+     */
     constructor(
         runtime: JSRuntime,
+        pointerCache: PointerCache = new PointerCache(),
     ) {
         this.#runtime = runtime;
+        this.#pointerCache = pointerCache;
     }
 
+    /**
+     * Executes a Datex script asynchronously and returns a Promise that resolves to a DIFContainer.
+     * @param datexScript - The Datex script source code to execute.
+     * @param values - An optional array of values to inject into the script.
+     * @returns A Promise that resolves to the execution result as a DIFContainer.
+     * @throws If an error occurs during execution.
+     */
     public executeDIF(
         datexScript: string,
         values: unknown[] | null = [],
@@ -33,6 +51,13 @@ export class DIFHandler {
         );
     }
 
+    /**
+     * Executes a Datex script synchronously and returns the result as a DIFContainer.
+     * @param datexScript - The Datex script source code to execute.
+     * @param values - An optional array of values to inject into the script.
+     * @returns The execution result as a DIFContainer.
+     * @throws If an error occurs during execution.
+     */
     public executeSyncDIF(
         datexScript: string,
         values: unknown[] | null = [],
@@ -43,12 +68,18 @@ export class DIFHandler {
         );
     }
 
+    /**
+     * Creates a new pointer for the specified value.
+     * @param value - The DIFValue value to create a pointer for.
+     * @param allowedType - The allowed type for the pointer.
+     * @param mutability - The mutability of the pointer.
+     * @returns A Promise that resolves to the created pointer address.
+     */
     public createPointer(
-        value: unknown,
+        difValue: DIFValue,
         allowedType: DIFTypeContainer | null = null,
         mutability: ReferenceMutability,
     ): Promise<string> {
-        const difValue = this.convertToDIFValue(value);
         return this.#runtime.create_pointer(
             difValue,
             allowedType,
@@ -56,12 +87,20 @@ export class DIFHandler {
         );
     }
 
+    /**
+     * Creates a new pointer for the specified value synchronously.
+     * This method can only be used if the difValue only contains pointer addresses that are already loaded in memory -
+     * otherwise, use the asynchronous `createPointer` method instead.
+     * @param value - The DIFValue value to create a pointer for.
+     * @param allowedType - The allowed type for the pointer.
+     * @param mutability - The mutability of the pointer.
+     * @returns The created pointer address.
+     */
     public createPointerSync(
-        value: unknown,
+        difValue: DIFValue,
         allowedType: DIFTypeContainer | null = null,
         mutability: ReferenceMutability,
     ): string {
-        const difValue = this.convertToDIFValue(value);
         return this.#runtime.create_pointer_sync(
             difValue,
             allowedType,
@@ -69,6 +108,13 @@ export class DIFHandler {
         );
     }
 
+    /**
+     * Creates a new pointer that points to an existing address.
+     * @param address - The address to create a reference pointer for.
+     * @param allowedType - The allowed type for the pointer.
+     * @param mutability - The mutability of the pointer.
+     * @returns A Promise that resolves to the created pointer address.
+     */
     public createRefPointer(
         address: string,
         allowedType: DIFTypeContainer | null = null,
@@ -80,6 +126,16 @@ export class DIFHandler {
             mutability,
         );
     }
+
+    /**
+     * Creates a new pointer that points to an existing address synchronously.
+     * This method can only be used if the pointer for the address is already loaded in memory -
+     * otherwise, use the asynchronous `createRefPointer` method instead.
+     * @param address - The address to create a reference pointer for.
+     * @param allowedType - The allowed type for the pointer.
+     * @param mutability - The mutability of the pointer.
+     * @returns A Promise that resolves to the created pointer address.
+     */
     public createRefPointerSync(
         address: string,
         allowedType: DIFTypeContainer | null = null,
@@ -92,10 +148,22 @@ export class DIFHandler {
         );
     }
 
+    /**
+     * Updates the DIF value at the specified address.
+     * @param address - The address of the DIF value to update.
+     * @param dif - The DIFUpdate object containing the update information.
+     */
     public updateDIF(address: string, dif: DIFUpdate) {
         this.#runtime.update(address, dif);
     }
 
+    /**
+     * Registers an observer callback for changes to the DIF value at the specified address.
+     * The callback will be invoked whenever the value at the address is updated.
+     * @param address - The address of the DIF value to observe.
+     * @param callback - The callback function to invoke on updates.
+     * @returns An observer ID that can be used to unregister the observer.
+     */
     public observePointer(
         address: string,
         callback: (value: DIFUpdate) => void,
@@ -103,6 +171,11 @@ export class DIFHandler {
         return this.#runtime.observe_pointer(address, callback);
     }
 
+    /**
+     * Unregisters an observer for the specified address using the observer ID.
+     * @param address - The address of the DIF value being observed.
+     * @param observerId - The observer ID returned by the observePointer method.
+     */
     public unobservePointer(address: string, observerId: number) {
         this.#runtime.unobserve_pointer(address, observerId);
     }
@@ -120,21 +193,22 @@ export class DIFHandler {
             return value.value as T;
         }
 
-        // boolean and text types values are just returned as is
+        // null, boolean and text types values are just returned as is
         if (
             value.type === CoreTypeAddress.boolean ||
-            value.type == CoreTypeAddress.text
+            value.type == CoreTypeAddress.text ||
+            value.type === CoreTypeAddress.null
         ) {
             return value.value as T;
         } // small integers are interpreted as JS numbers
         else if (
             typeof value.type === "string" && (
                 value.type == CoreTypeAddress.integer ||
-                isPointerAddressInRange(
+                this.isPointerAddressInRange(
                     value.type,
                     CoreTypeAddressRanges.small_signed_integers,
                 ) ||
-                isPointerAddressInRange(
+                this.isPointerAddressInRange(
                     value.type,
                     CoreTypeAddressRanges.small_unsigned_integers,
                 )
@@ -144,11 +218,11 @@ export class DIFHandler {
         } // big integers are interpreted as JS BigInt
         else if (
             typeof value.type === "string" && (
-                isPointerAddressInRange(
+                this.isPointerAddressInRange(
                     value.type,
                     CoreTypeAddressRanges.big_signed_integers,
                 ) ||
-                isPointerAddressInRange(
+                this.isPointerAddressInRange(
                     value.type,
                     CoreTypeAddressRanges.big_unsigned_integers,
                 )
@@ -158,12 +232,12 @@ export class DIFHandler {
         } // decimal types are interpreted as JS numbers
         else if (
             typeof value.type === "string" &&
-            isPointerAddressInRange(value.type, CoreTypeAddressRanges.decimals)
+            this.isPointerAddressInRange(
+                value.type,
+                CoreTypeAddressRanges.decimals,
+            )
         ) {
             return (Number(value.value) as number) as T;
-        } // TODO: wasm_bindgen returns undefined here, although it should be null. So we just return null for now.
-        else if (value.type === CoreTypeAddress.null) {
-            return null as T;
         } // endpoint types are resolved to Endpoint instances
         else if (value.type === CoreTypeAddress.endpoint) {
             return Endpoint.get(value.value as string) as T;
@@ -183,7 +257,7 @@ export class DIFHandler {
         } // object types are resolved to objects with string keys and DIFValues
         else if (value.type === CoreTypeAddress.struct) {
             const resolvedObj: { [key: string]: unknown } = {};
-            for (const [key, val] of (value.value as DIFObject).entries()) {
+            for (const [key, val] of Object.entries(value.value as DIFObject)) {
                 resolvedObj[key] = this.resolveDIFValueContainer(val);
             }
             return this.promiseFromObjectOrSync(resolvedObj) as T | Promise<T>;
@@ -193,6 +267,10 @@ export class DIFHandler {
         }
     }
 
+    /**
+     * Converts an array of Promises or resolved values to either a Promise of an array of resolved values,
+     * or an array of resolved values if all values are already resolved.
+     */
     promiseAllOrSync<T>(values: (T | Promise<T>)[]): Promise<T[]> | T[] {
         if (values.some((v) => v instanceof Promise)) {
             return Promise.all(values);
@@ -201,6 +279,10 @@ export class DIFHandler {
         }
     }
 
+    /**
+     * Converts an object with values that may be Promises to either a Promise of an object with resolved values,
+     * or an object with resolved values if all values are already resolved.
+     */
     public promiseFromObjectOrSync<T>(
         values: { [key: string]: T | Promise<T> },
     ): Promise<{ [key: string]: T }> | { [key: string]: T } {
@@ -219,6 +301,13 @@ export class DIFHandler {
         }
     }
 
+    /**
+     * Resolves a DIFValueContainer (either a DIFValue or a pointer address) to its corresponding JS value.
+     * If the container contains pointers that are not yet loaded in memory, it returns a Promise that resolves to the value.
+     * Otherwise, it returns the resolved value directly.
+     * @param value - The DIFValueContainer to resolve.
+     * @returns The resolved value as type T, or a Promise that resolves to type T.
+     */
     public resolveDIFValueContainer<T extends unknown>(
         value: DIFValueContainer,
     ): T | Promise<T> {
@@ -228,6 +317,15 @@ export class DIFHandler {
             return this.resolvePointerAddress(value);
         }
     }
+
+    /**
+     * Synchronous version of resolveDIFValueContainer.
+     * This method can only be used if the value only contains pointer addresses that are already loaded in memory -
+     * otherwise, use the asynchronous `resolveDIFValueContainer` method instead.
+     * @param value - The DIFValueContainer to resolve.
+     * @returns The resolved value as type T.
+     * @throws If the resolution would require asynchronous operations.
+     */
     public resolveDIFValueContainerSync<T extends unknown>(
         value: DIFValueContainer,
     ): T {
@@ -240,6 +338,13 @@ export class DIFHandler {
         return result as T;
     }
 
+    /**
+     * Resolves a pointer address to its corresponding JS value.
+     * If the pointer address is not yet loaded in memory, it returns a Promise that resolves to the value.
+     * Otherwise, it returns the resolved value directly.
+     * @param address - The pointer address to resolve.
+     * @returns The resolved value as type T, or a Promise that resolves to type T.
+     */
     public resolvePointerAddress<T extends unknown>(
         address: string,
     ): Promise<T> | T {
@@ -295,9 +400,9 @@ export class DIFHandler {
                 value: value.map((v) => this.convertToDIFValue(v)),
             };
         } else if (typeof value === "object") {
-            const map = new Map<string, DIFValue>();
+            const map: Record<string, DIFValue> = {};
             for (const [key, val] of Object.entries(value)) {
-                map.set(key, this.convertToDIFValue(val));
+                map[key] = this.convertToDIFValue(val);
             }
             return {
                 type: CoreTypeAddress.struct,
@@ -317,15 +422,15 @@ export class DIFHandler {
     ): DIFValue[] | null {
         return values?.map((value) => this.convertToDIFValue(value)) || null;
     }
-}
 
-/**
- * Returns true if the given address is within the specified address range.
- */
-function isPointerAddressInRange(
-    address: DIFPointerAddress,
-    range: readonly [number, number],
-): boolean {
-    const addressNum = parseInt(address, 16);
-    return addressNum >= range[0] && addressNum < range[1];
+    /**
+     * Returns true if the given address is within the specified address range.
+     */
+    protected isPointerAddressInRange(
+        address: DIFPointerAddress,
+        range: readonly [number, number],
+    ): boolean {
+        const addressNum = parseInt(address, 16);
+        return addressNum >= range[0] && addressNum < range[1];
+    }
 }
