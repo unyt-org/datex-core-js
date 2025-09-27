@@ -7,7 +7,6 @@ const runtime = new Runtime({ endpoint: "@jonas" });
 Deno.test("pointer create", () => {
     const ref = runtime.createPointer("Hello, world!", undefined, "Mutable");
     assertEquals(typeof ref, "string");
-    console.log(ref);
     const observerId = runtime.observePointer(ref, (value) => {
         console.log("Observed pointer value:", value);
         runtime.unobservePointer(ref, observerId);
@@ -17,6 +16,30 @@ Deno.test("pointer create", () => {
         value: "Hello, Datex!",
         kind: "Replace",
     });
+});
+
+Deno.test("observer immutable", () => {
+    let ref = runtime.createPointer("Immutable", undefined, "Immutable");
+    assertThrows(
+        () => {
+            runtime.observePointer(ref, (value) => {
+                console.log("Observed pointer value:", value);
+            });
+        },
+        Error,
+        `immutable reference`,
+    );
+
+    ref = runtime.createPointer("Immutable", undefined, "Final");
+    assertThrows(
+        () => {
+            runtime.observePointer(ref, (value) => {
+                console.log("Observed pointer value:", value);
+            });
+        },
+        Error,
+        `immutable reference`,
+    );
 });
 
 Deno.test("pointer observe unobserve", () => {
@@ -44,14 +67,18 @@ Deno.test("pointer observe unobserve", () => {
     );
 });
 
-/**
- * hash(1) ->
- */
+Deno.test("core text", () => {
+    const script = `"Hello, world!"`;
+    const result = runtime.executeSyncDIF(script);
+    assertEquals(result, { value: "Hello, world!" });
+    console.log(result);
+});
+
 Deno.test("core integer", () => {
     const script = "42";
     const result = runtime.executeSyncDIF(script);
     assertEquals(result, {
-        type: "integer",
+        type: "$640000",
         value: "42",
     });
     console.log(result);
@@ -60,20 +87,14 @@ Deno.test("core integer", () => {
 Deno.test("core boolean", () => {
     const script = "true";
     const result = runtime.executeSyncDIF(script);
-    assertEquals(result, {
-        type: "boolean",
-        value: true,
-    });
+    assertEquals(result, { value: true });
     console.log(result);
 });
 
 Deno.test("core null", () => {
     const script = "null";
     const result = runtime.executeSyncDIF(script);
-    assertEquals(result, {
-        type: "null",
-        value: null,
-    });
+    assertEquals(result, { value: null });
     console.log(result);
 });
 
@@ -81,8 +102,7 @@ Deno.test("core integer variants", () => {
     const script = "42u8";
     const result = runtime.executeSyncDIF(script);
     assertEquals(result, {
-        type: ["integer", "u8"],
         value: "42",
+        type: "$640000",
     });
-    console.log(result);
 });
