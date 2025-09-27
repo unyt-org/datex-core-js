@@ -28,12 +28,13 @@ use datex_core::values::pointer::PointerAddress;
 use datex_core::values::serde::deserializer::DatexDeserializer;
 use datex_core::values::value_container::ValueContainer;
 use js_sys::Function;
-use log::info;
+use log::{info, warn};
 use serde::{Deserialize, Serialize};
 use serde_wasm_bindgen::from_value;
 use std::fmt::Display;
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
+use tsify::JsValueSerdeExt;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::future_to_promise;
 use web_sys::console::info;
@@ -357,7 +358,11 @@ impl JSRuntime {
                 let dif_value_container =
                     DIFValueContainer::try_from(&value_container)
                         .expect("Conversion to DIFValue failed");
-                serde_wasm_bindgen::to_value(&dif_value_container).unwrap()
+                dif_value_container
+                    .serialize(
+                        &serde_wasm_bindgen::Serializer::json_compatible(),
+                    )
+                    .unwrap()
             }
         }
     }

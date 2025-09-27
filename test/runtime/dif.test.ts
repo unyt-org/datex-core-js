@@ -87,7 +87,6 @@ Deno.test("core boolean", () => {
 Deno.test("core null", () => {
     const script = "null";
     const result = runtime.executeSyncDIF(script);
-    console.log(result); // FIXME
     assertEquals(result, { value: null });
 });
 
