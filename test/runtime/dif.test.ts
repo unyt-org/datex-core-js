@@ -1,37 +1,50 @@
 import { Runtime } from "../../src/runtime/runtime.ts";
 import { assertEquals } from "jsr:@std/assert";
 import { assertThrows } from "jsr:@std/assert/throws";
+import { ReferenceMutability } from "../../src/dif/definitions.ts";
 
 const runtime = new Runtime({ endpoint: "@jonas" });
 
 Deno.test("pointer create", () => {
-    const ref = runtime.createPointer("Hello, world!", undefined, "Mutable");
+    const ref = runtime.dif.createPointerSync(
+        "Hello, world!",
+        undefined,
+        ReferenceMutability.Mutable,
+    );
     assertEquals(typeof ref, "string");
-    const observerId = runtime.observePointer(ref, (value) => {
+    const observerId = runtime.dif.observePointer(ref, (value) => {
         console.log("Observed pointer value:", value);
-        runtime.unobservePointer(ref, observerId);
+        runtime.dif.unobservePointer(ref, observerId);
     });
 
-    runtime.updateDIF(ref, {
+    runtime.dif.updateDIF(ref, {
         value: "Hello, Datex!",
         kind: "Replace",
     });
 });
 
 Deno.test("observer immutable", () => {
-    let ref = runtime.createPointer("Immutable", undefined, "Immutable");
+    let ref = runtime.dif.createPointerSync(
+        "Immutable",
+        undefined,
+        ReferenceMutability.Immutable,
+    );
     assertThrows(
         () => {
-            runtime.observePointer(ref, (_) => {});
+            runtime.dif.observePointer(ref, (_) => {});
         },
         Error,
         `immutable reference`,
     );
 
-    ref = runtime.createPointer("Immutable", undefined, "Final");
+    ref = runtime.dif.createPointerSync(
+        "Immutable",
+        undefined,
+        ReferenceMutability.Final,
+    );
     assertThrows(
         () => {
-            runtime.observePointer(ref, (_) => {});
+            runtime.dif.observePointer(ref, (_) => {});
         },
         Error,
         `immutable reference`,
@@ -39,24 +52,28 @@ Deno.test("observer immutable", () => {
 });
 
 Deno.test("pointer observe unobserve", () => {
-    const ref = runtime.createPointer("42", undefined, "Mutable");
+    const ref = runtime.dif.createPointerSync(
+        "42",
+        undefined,
+        ReferenceMutability.Mutable,
+    );
     assertThrows(
         () => {
-            runtime.unobservePointer(ref, 42);
+            runtime.dif.unobservePointer(ref, 42);
         },
         Error,
         `not found`,
     );
 
-    const observerId = runtime.observePointer(ref, (value) => {
+    const observerId = runtime.dif.observePointer(ref, (value) => {
         console.log("Observed pointer value:", value);
-        runtime.unobservePointer(ref, observerId);
+        runtime.dif.unobservePointer(ref, observerId);
     });
     assertEquals(observerId, 0);
-    runtime.unobservePointer(ref, observerId);
+    runtime.dif.unobservePointer(ref, observerId);
     assertThrows(
         () => {
-            runtime.unobservePointer(ref, observerId);
+            runtime.dif.unobservePointer(ref, observerId);
         },
         Error,
         `not found`,
@@ -65,13 +82,13 @@ Deno.test("pointer observe unobserve", () => {
 
 Deno.test("core text", () => {
     const script = `"Hello, world!"`;
-    const result = runtime.executeSyncDIF(script);
+    const result = runtime.dif.executeSyncDIF(script);
     assertEquals(result, { value: "Hello, world!" });
 });
 
 Deno.test("core integer", () => {
     const script = "42";
-    const result = runtime.executeSyncDIF(script);
+    const result = runtime.dif.executeSyncDIF(script);
     assertEquals(result, {
         type: "$640000",
         value: "42",
@@ -80,19 +97,19 @@ Deno.test("core integer", () => {
 
 Deno.test("core boolean", () => {
     const script = "true";
-    const result = runtime.executeSyncDIF(script);
+    const result = runtime.dif.executeSyncDIF(script);
     assertEquals(result, { value: true });
 });
 
 Deno.test("core null", () => {
     const script = "null";
-    const result = runtime.executeSyncDIF(script);
+    const result = runtime.dif.executeSyncDIF(script);
     assertEquals(result, { value: null });
 });
 
 Deno.test("core integer variants", () => {
     const script = "42u8";
-    const result = runtime.executeSyncDIF(script);
+    const result = runtime.dif.executeSyncDIF(script);
     assertEquals(result, {
         value: "42",
         type: "$640000",

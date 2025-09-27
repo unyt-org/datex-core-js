@@ -8,7 +8,7 @@ use datex_core::decompiler::{DecompileOptions, decompile_value};
 use datex_core::dif::DIFUpdate;
 use datex_core::dif::interface::{
     DIFApplyError, DIFCreatePointerError, DIFInterface, DIFObserveError,
-    DIFUpdateError,
+    DIFResolveReferenceError, DIFUpdateError,
 };
 use datex_core::dif::r#type::DIFTypeContainer;
 use datex_core::dif::value::DIFValueContainer;
@@ -27,11 +27,13 @@ use datex_core::values::core_values::endpoint::Endpoint;
 use datex_core::values::pointer::PointerAddress;
 use datex_core::values::serde::deserializer::DatexDeserializer;
 use datex_core::values::value_container::ValueContainer;
+use futures::FutureExt;
 use js_sys::Function;
 use log::{info, warn};
 use serde::{Deserialize, Serialize};
 use serde_wasm_bindgen::from_value;
 use std::fmt::Display;
+use std::pin::Pin;
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 use tsify::JsValueSerdeExt;
@@ -483,11 +485,11 @@ impl JSRuntime {
         serde_wasm_bindgen::to_value(&result).map_err(js_error)
     }
 
-    pub fn create_pointer(
+    pub async fn create_pointer(
         &self,
         value: JsValue,
         allowed_type: JsValue,
-        mutability: JsValue,
+        mutability: u8,
     ) -> Result<String, JsError> {
         let dif_value: DIFValueContainer =
             serde_wasm_bindgen::from_value(value).map_err(js_error)?;
@@ -500,9 +502,38 @@ impl JSRuntime {
                         .map_err(js_error)?,
                 )
             };
-        let dif_mutability: ReferenceMutability =
-            serde_wasm_bindgen::from_value(mutability).map_err(js_error)?;
+        let dif_mutability = ReferenceMutability::try_from(mutability)
+            .map_err(|_| js_error(ConversionError::InvalidValue))?;
         let address = DIFInterface::create_pointer(
+            self,
+            dif_value,
+            dif_allowed_type,
+            dif_mutability,
+        )
+        .await
+        .map_err(|e| js_error(e))?;
+        Ok(address.to_string())
+    }
+    pub fn create_pointer_sync(
+        &self,
+        value: JsValue,
+        allowed_type: JsValue,
+        mutability: u8,
+    ) -> Result<String, JsError> {
+        let dif_value: DIFValueContainer =
+            serde_wasm_bindgen::from_value(value).map_err(js_error)?;
+        let dif_allowed_type: Option<DIFTypeContainer> =
+            if allowed_type.is_null() || allowed_type.is_undefined() {
+                None
+            } else {
+                Some(
+                    serde_wasm_bindgen::from_value(allowed_type)
+                        .map_err(js_error)?,
+                )
+            };
+        let dif_mutability = ReferenceMutability::try_from(mutability)
+            .map_err(|_| js_error(ConversionError::InvalidValue))?;
+        let address = DIFInterface::create_pointer_sync(
             self,
             dif_value,
             dif_allowed_type,
@@ -510,6 +541,37 @@ impl JSRuntime {
         )
         .map_err(|e| js_error(e))?;
         Ok(address.to_string())
+    }
+    pub fn resolve_pointer_address_sync(
+        &self,
+        address: &str,
+    ) -> Result<JsValue, JsError> {
+        let address = Self::js_value_to_pointer_address(address)?;
+        let result = DIFInterface::resolve_pointer_address_in_memory(
+            self,
+            address.into(),
+        )
+        .map_err(|e| js_error(e))?;
+        serde_wasm_bindgen::to_value(&result).map_err(js_error)
+    }
+
+    fn resolve_pointer_address(
+        &self,
+        address: &str,
+    ) -> Result<JsValue, JsError> {
+        if let Ok(sync) = self.resolve_pointer_address_sync(address) {
+            return Ok(sync.into());
+        }
+        let address = Self::js_value_to_pointer_address(address)?;
+        let runtime = self.runtime.clone();
+        Ok(future_to_promise(async move {
+            let result = runtime
+                .resolve_pointer_address_external(address)
+                .await
+                .map_err(|e| js_error(e))?;
+            Ok(serde_wasm_bindgen::to_value(&result).map_err(js_error)?)
+        })
+        .unchecked_into())
     }
 }
 
@@ -522,6 +584,20 @@ impl DIFInterface for JSRuntime {
         self.runtime.update(address, update)
     }
 
+    async fn resolve_pointer_address_external(
+        &self,
+        address: PointerAddress,
+    ) -> Result<DIFValueContainer, DIFResolveReferenceError> {
+        self.runtime.resolve_pointer_address_external(address).await
+    }
+
+    fn resolve_pointer_address_in_memory(
+        &self,
+        address: PointerAddress,
+    ) -> Result<DIFValueContainer, DIFResolveReferenceError> {
+        self.runtime.resolve_pointer_address_in_memory(address)
+    }
+
     fn apply(
         &mut self,
         callee: DIFValueContainer,
@@ -530,13 +606,25 @@ impl DIFInterface for JSRuntime {
         self.runtime.apply(callee, value)
     }
 
-    fn create_pointer(
+    async fn create_pointer(
         &self,
         value: DIFValueContainer,
         allowed_type: Option<DIFTypeContainer>,
         mutability: ReferenceMutability,
     ) -> Result<PointerAddress, DIFCreatePointerError> {
-        self.runtime.create_pointer(value, allowed_type, mutability)
+        self.runtime
+            .create_pointer(value, allowed_type, mutability)
+            .await
+    }
+
+    fn create_pointer_sync(
+        &self,
+        value: DIFValueContainer,
+        allowed_type: Option<DIFTypeContainer>,
+        mutability: ReferenceMutability,
+    ) -> Result<PointerAddress, DIFCreatePointerError> {
+        self.runtime
+            .create_pointer_sync(value, allowed_type, mutability)
     }
 
     fn observe_pointer(

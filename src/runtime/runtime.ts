@@ -5,16 +5,7 @@ import {
     JSRuntime,
 } from "../datex-core.ts";
 import { ComHub } from "../network/com-hub.ts";
-import {
-    convertToDIFTypeContainer,
-    convertToDIFValue,
-    convertToDIFValueContainer,
-    convertToDIFValues,
-    DIFContainer,
-    DIFUpdate,
-    resolveDIFContainer as resolveDIFValueContainer,
-    resolveDIFValue,
-} from "./dif.ts";
+import { DIFHandler } from "../dif/dif-handler.ts";
 
 // auto-generated version - do not edit:
 const VERSION: string = "0.0.6";
@@ -43,11 +34,13 @@ export class Runtime {
     readonly #runtime: JSRuntime;
     readonly #memory: JSMemory;
     readonly #comHub: ComHub;
+    readonly #difHandler: DIFHandler;
 
     constructor(config: RuntimeConfig, debug_flags?: DebugFlags) {
         this.#runtime = create_runtime(JSON.stringify(config), debug_flags);
         this.#memory = this.#runtime.memory;
         this.#comHub = new ComHub(this.#runtime.com_hub);
+        this.#difHandler = new DIFHandler(this.#runtime);
     }
 
     public static async create(
@@ -82,6 +75,10 @@ export class Runtime {
         return this.#memory;
     }
 
+    get dif(): DIFHandler {
+        return this.#difHandler;
+    }
+
     get comHub(): ComHub {
         return this.#comHub;
     }
@@ -100,7 +97,7 @@ export class Runtime {
     ): Promise<string> {
         return this.#runtime.execute_with_string_result(
             datexScript,
-            convertToDIFValues(values),
+            this.#difHandler.convertToDIFValues(values),
             decompileOptions,
         );
     }
@@ -112,65 +109,9 @@ export class Runtime {
     ): string {
         return this.#runtime.execute_sync_with_string_result(
             datexScript,
-            convertToDIFValues(values),
+            this.#difHandler.convertToDIFValues(values),
             decompileOptions,
         );
-    }
-
-    public executeDIF(
-        datexScript: string,
-        values: unknown[] | null = [],
-    ): Promise<DIFContainer> {
-        return this.#runtime.execute(
-            datexScript,
-            convertToDIFValues(values),
-        );
-    }
-
-    public executeSyncDIF(
-        datexScript: string,
-        values: unknown[] | null = [],
-    ): DIFContainer {
-        return this.#runtime.execute_sync(
-            datexScript,
-            convertToDIFValues(values),
-        );
-    }
-
-    public createPointer(
-        value: unknown,
-        allowedType: unknown | null = null,
-        mutability: "Mutable" | "Immutable" | "Final",
-    ): string {
-        const difValueContainer = convertToDIFValueContainer(value);
-        // if (typeof difValueContainer !== "string") {
-        //     difValueContainer.type!
-        // }
-
-        const difTypeContainer = allowedType != undefined
-            ? convertToDIFTypeContainer(allowedType)
-            : undefined;
-
-        return this.#runtime.create_pointer(
-            difValueContainer,
-            difTypeContainer,
-            mutability,
-        );
-    }
-
-    public updateDIF(address: string, dif: DIFUpdate) {
-        this.#runtime.update(address, dif);
-    }
-
-    public observePointer(
-        address: string,
-        callback: (value: DIFUpdate) => void,
-    ): number {
-        return this.#runtime.observe_pointer(address, callback);
-    }
-
-    public unobservePointer(address: string, observerId: number) {
-        this.#runtime.unobserve_pointer(address, observerId);
     }
 
     /**
@@ -217,11 +158,14 @@ export class Runtime {
         datexScript: string,
         values: unknown[] | null = [],
     ): Promise<T> {
-        const difValueContainer = await this.executeDIF(datexScript, values);
+        const difValueContainer = await this.#difHandler.executeDIF(
+            datexScript,
+            values,
+        );
         if (difValueContainer === null) {
             return undefined as T;
         }
-        return resolveDIFValueContainer<T>(difValueContainer);
+        return this.#difHandler.resolveDIFValueContainer<T>(difValueContainer);
     }
 
     /**
@@ -269,12 +213,12 @@ export class Runtime {
         datexScript: string,
         values: unknown[] | null = [],
     ): T {
-        const difValue = this.executeSyncDIF(datexScript, values);
+        const difValue = this.#difHandler.executeSyncDIF(datexScript, values);
         console.debug("difValue", difValue);
         if (difValue === null) {
             return undefined as T;
         }
-        const result = resolveDIFValueContainer<T>(difValue);
+        const result = this.#difHandler.resolveDIFValueContainer<T>(difValue);
         if (result instanceof Promise) {
             throw new Error(
                 "executeSync cannot return a Promise. Use execute() instead.",
@@ -288,7 +232,7 @@ export class Runtime {
         decompileOptions: DecompileOptions | null = null,
     ): string {
         return this.valueToString(
-            convertToDIFValue(value),
+            this.#difHandler.convertToDIFValue(value),
             decompileOptions,
         );
     }

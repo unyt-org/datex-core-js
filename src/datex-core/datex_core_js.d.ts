@@ -197,6 +197,11 @@ export class JSPointer {
 export class JSRuntime {
     private constructor();
     free(): void;
+    create_pointer_sync(
+        value: any,
+        allowed_type: any,
+        mutability: number,
+    ): string;
     value_to_string(dif_value: any, decompile_options: any): string;
     unobserve_pointer(address: string, observer_id: number): void;
     crypto_test_tmp(): Promise<Promise<any>>;
@@ -211,8 +216,12 @@ export class JSRuntime {
         receivers: string[],
     ): Uint8Array;
     start(): Promise<void>;
-    create_pointer(value: any, allowed_type: any, mutability: any): string;
     observe_pointer(address: string, callback: Function): number;
+    create_pointer(
+        value: any,
+        allowed_type: any,
+        mutability: number,
+    ): Promise<string>;
     update(address: string, update: any): void;
     execute_with_string_result(
         script: string,
