@@ -216,18 +216,10 @@ export class JSRuntime {
     unobserve_pointer(address: string, observer_id: number): void;
     update(address: string, update: any): void;
     apply(callee: any, value: any): any;
-    create_pointer(
-        value: any,
-        allowed_type: any,
-        mutability: number,
-    ): Promise<string>;
-    create_pointer_sync(
-        value: any,
-        allowed_type: any,
-        mutability: number,
-    ): string;
+    create_pointer(value: any, allowed_type: any, mutability: number): string;
     resolve_pointer_address_sync(address: string): any;
     resolve_pointer_address(address: string): any;
+    free_pointer(address: string): void;
     com_hub: JSComHub;
     readonly version: string;
     readonly endpoint: string;

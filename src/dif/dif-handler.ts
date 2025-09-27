@@ -13,13 +13,12 @@ import {
     type DIFValueContainer,
     type ReferenceMutability,
 } from "./definitions.ts";
-import { PointerCache } from "./pointer-cache.ts";
 
 export class DIFHandler {
     /** The JSRuntime interface for the underlying Datex Core runtime */
     #runtime: JSRuntime;
     /** The pointer cache for storing and reusing object instances on the JS side */
-    #pointerCache: PointerCache;
+    readonly #cache = new Map<string, WeakRef<WeakKey>>();
 
     /**
      * Creates a new DIFHandler instance.
@@ -28,10 +27,8 @@ export class DIFHandler {
      */
     constructor(
         runtime: JSRuntime,
-        pointerCache: PointerCache = new PointerCache(),
     ) {
         this.#runtime = runtime;
-        this.#pointerCache = pointerCache;
     }
 
     /**
@@ -70,38 +67,17 @@ export class DIFHandler {
 
     /**
      * Creates a new pointer for the specified value.
-     * @param value - The DIFValue value to create a pointer for.
+     * @param difValue - The DIFValue value to create a pointer for.
      * @param allowedType - The allowed type for the pointer.
      * @param mutability - The mutability of the pointer.
-     * @returns A Promise that resolves to the created pointer address.
+     * @returns The created pointer address.
      */
     public createPointer(
         difValue: DIFValue,
         allowedType: DIFTypeContainer | null = null,
         mutability: ReferenceMutability,
-    ): Promise<string> {
-        return this.#runtime.create_pointer(
-            difValue,
-            allowedType,
-            mutability,
-        );
-    }
-
-    /**
-     * Creates a new pointer for the specified value synchronously.
-     * This method can only be used if the difValue only contains pointer addresses that are already loaded in memory -
-     * otherwise, use the asynchronous `createPointer` method instead.
-     * @param value - The DIFValue value to create a pointer for.
-     * @param allowedType - The allowed type for the pointer.
-     * @param mutability - The mutability of the pointer.
-     * @returns The created pointer address.
-     */
-    public createPointerSync(
-        difValue: DIFValue,
-        allowedType: DIFTypeContainer | null = null,
-        mutability: ReferenceMutability,
     ): string {
-        return this.#runtime.create_pointer_sync(
+        return this.#runtime.create_pointer(
             difValue,
             allowedType,
             mutability,
@@ -119,29 +95,8 @@ export class DIFHandler {
         address: string,
         allowedType: DIFTypeContainer | null = null,
         mutability: ReferenceMutability,
-    ): Promise<string> {
-        return this.#runtime.create_pointer(
-            address,
-            allowedType,
-            mutability,
-        );
-    }
-
-    /**
-     * Creates a new pointer that points to an existing address synchronously.
-     * This method can only be used if the pointer for the address is already loaded in memory -
-     * otherwise, use the asynchronous `createRefPointer` method instead.
-     * @param address - The address to create a reference pointer for.
-     * @param allowedType - The allowed type for the pointer.
-     * @param mutability - The mutability of the pointer.
-     * @returns A Promise that resolves to the created pointer address.
-     */
-    public createRefPointerSync(
-        address: string,
-        allowedType: DIFTypeContainer | null = null,
-        mutability: ReferenceMutability,
     ): string {
-        return this.#runtime.create_pointer_sync(
+        return this.#runtime.create_pointer(
             address,
             allowedType,
             mutability,
@@ -432,5 +387,18 @@ export class DIFHandler {
     ): boolean {
         const addressNum = parseInt(address, 16);
         return addressNum >= range[0] && addressNum < range[1];
+    }
+
+    protected storePointer(address: string, value: WeakKey): void {
+        this.#cache.set(address, new WeakRef(value));
+        // register finalizer to clean up the cache and free the pointer in the runtime
+        // when the object is garbage collected
+        const finalizationRegistry = new FinalizationRegistry(
+            (address: string) => {
+                this.#cache.delete(address);
+                this.#runtime.free_pointer(address);
+            },
+        );
+        finalizationRegistry.register(value, address);
     }
 }

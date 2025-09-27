@@ -6,8 +6,10 @@ import { DIFUpdate, ReferenceMutability } from "../../src/dif/definitions.ts";
 const runtime = new Runtime({ endpoint: "@jonas" });
 
 Deno.test("pointer create", () => {
-    const ref = runtime.dif.createPointerSync(
-        "Hello, world!",
+    const ref = runtime.dif.createPointer(
+        {
+            value: "Hello, Datex!",
+        },
         undefined,
         ReferenceMutability.Mutable,
     );
@@ -48,8 +50,8 @@ Deno.test("pointer create and resolve", () => {
         `Invalid`,
     );
 
-    const ptr = runtime.dif.createPointerSync(
-        "unyt.org",
+    const ptr = runtime.dif.createPointer(
+        { value: "unyt.org" },
         undefined,
         ReferenceMutability.Mutable,
     );
@@ -59,9 +61,23 @@ Deno.test("pointer create and resolve", () => {
     assertEquals(resolved, "unyt.org");
 });
 
+Deno.test("pointer object create and cache", () => {
+    const obj = { a: 123, b: 456 };
+    const ptr = runtime.dif.createPointer(
+        { value: { a: { value: 123 }, b: { value: 456 } } },
+        undefined,
+        ReferenceMutability.Mutable,
+    );
+    const resolved = runtime.dif.resolveDIFValueContainerSync<
+        Record<string, number>
+    >(
+        ptr,
+    );
+});
+
 Deno.test("observer immutable", () => {
-    let ref = runtime.dif.createPointerSync(
-        "Immutable",
+    let ref = runtime.dif.createPointer(
+        { value: "Immutable" },
         undefined,
         ReferenceMutability.Immutable,
     );
@@ -73,8 +89,8 @@ Deno.test("observer immutable", () => {
         `immutable reference`,
     );
 
-    ref = runtime.dif.createPointerSync(
-        "Immutable",
+    ref = runtime.dif.createPointer(
+        { value: "Immutable" },
         undefined,
         ReferenceMutability.Final,
     );
@@ -88,8 +104,8 @@ Deno.test("observer immutable", () => {
 });
 
 Deno.test("pointer observe unobserve", () => {
-    const ref = runtime.dif.createPointerSync(
-        "42",
+    const ref = runtime.dif.createPointer(
+        { value: "42" },
         undefined,
         ReferenceMutability.Mutable,
     );
