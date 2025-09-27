@@ -13,14 +13,6 @@ export function execute(datex_script: string, formatted: boolean): string;
  * Does not return the result of the script, but only indicates success or failure.
  */
 export function execute_internal(datex_script: string): boolean;
-export interface TCPServerInterfaceSetupData {
-    port: number;
-}
-
-export interface TCPClientInterfaceSetupData {
-    address: string;
-}
-
 export interface WebRTCInterfaceSetupData {
     peer_endpoint: string;
     ice_servers: RTCIceServer[] | null;
@@ -35,6 +27,14 @@ export interface RTCIceServer {
 export interface SerialInterfaceSetupData {
     port_name: string | null;
     baud_rate: number;
+}
+
+export interface TCPServerInterfaceSetupData {
+    port: number;
+}
+
+export interface TCPClientInterfaceSetupData {
+    address: string;
 }
 
 export type BaseInterfaceSetupData = InterfaceProperties;
@@ -185,11 +185,6 @@ export class JSComHub {
     ): Promise<void>;
     webrtc_interface_wait_for_connection(interface_uuid: string): Promise<void>;
 }
-export class JSMemory {
-    private constructor();
-    free(): void;
-    get_pointer_by_id(address: Uint8Array): JSPointer | undefined;
-}
 export class JSPointer {
     private constructor();
     free(): void;
@@ -234,7 +229,6 @@ export class JSRuntime {
     resolve_pointer_address_sync(address: string): any;
     resolve_pointer_address(address: string): any;
     com_hub: JSComHub;
-    memory: JSMemory;
     readonly version: string;
     readonly endpoint: string;
 }

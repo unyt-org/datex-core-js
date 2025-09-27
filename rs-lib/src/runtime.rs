@@ -1,6 +1,5 @@
 use crate::crypto::crypto_js::CryptoJS;
 use crate::js_utils::{js_array, js_error};
-use crate::memory::JSMemory;
 use crate::network::com_hub::JSComHub;
 use crate::utils::time::TimeJS;
 use datex_core::crypto::crypto::CryptoTrait;
@@ -46,7 +45,6 @@ use web_sys::js_sys::Promise;
 pub struct JSRuntime {
     runtime: Runtime,
     pub com_hub: JSComHub,
-    pub memory: JSMemory,
 }
 
 #[derive(Serialize, Deserialize, Default)]
@@ -126,11 +124,9 @@ impl JSRuntime {
 
     pub fn new(runtime: Runtime) -> JSRuntime {
         let com_hub = JSComHub::new(runtime.clone());
-        let memory = JSMemory::new(runtime.clone());
         JSRuntime {
             runtime,
             com_hub,
-            memory,
         }
     }
 }
@@ -438,7 +434,7 @@ impl JSRuntime {
         address: &str,
         callback: &Function,
     ) -> Result<u32, JsError> {
-        let address = Self::js_value_to_pointer_address(address)?;
+        let address = JSRuntime::js_value_to_pointer_address(address)?;
         let cb = callback.clone();
         let observer = move |update: &DIFUpdate| {
             let dif_value = serde_wasm_bindgen::to_value(update).unwrap();

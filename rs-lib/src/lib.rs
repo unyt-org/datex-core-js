@@ -23,7 +23,6 @@ pub mod network;
 
 pub mod crypto;
 pub mod js_utils;
-pub mod memory;
 pub mod pointer;
 pub mod utils;
 

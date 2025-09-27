@@ -1,7 +1,6 @@
 import {
     create_runtime,
     execute_internal,
-    type JSMemory,
     JSRuntime,
 } from "../datex-core.ts";
 import { ComHub } from "../network/com-hub.ts";
@@ -32,13 +31,11 @@ export class Runtime {
     public readonly js_version = VERSION;
 
     readonly #runtime: JSRuntime;
-    readonly #memory: JSMemory;
     readonly #comHub: ComHub;
     readonly #difHandler: DIFHandler;
 
     constructor(config: RuntimeConfig, debug_flags?: DebugFlags) {
         this.#runtime = create_runtime(JSON.stringify(config), debug_flags);
-        this.#memory = this.#runtime.memory;
         this.#comHub = new ComHub(this.#runtime.com_hub);
         this.#difHandler = new DIFHandler(this.#runtime);
     }
@@ -69,10 +66,6 @@ export class Runtime {
 
     get version(): string {
         return this.#runtime.version;
-    }
-
-    get memory(): JSMemory {
-        return this.#memory;
     }
 
     get dif(): DIFHandler {

@@ -18,8 +18,9 @@ Deno.test("pointer create", () => {
         console.log("Observed pointer value:", value);
         try {
             console.log("Unobserving pointer...", ref, observerId);
-            console.log(runtime.executeSync("1 + 2"));
-            // runtime.dif.observePointer(ref, () => {});
+            // FIXME wtf https://github.com/wasm-bindgen/wasm-bindgen/issues/1578
+            // console.log(runtime.executeSync("'xy'"));
+            runtime.dif.unobservePointer(ref, observerId);
             observed = value;
         } catch (e) {
             console.error("Failed to unobserve pointer:", e);
