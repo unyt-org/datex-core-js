@@ -22,9 +22,7 @@ Deno.test("observer immutable", () => {
     let ref = runtime.createPointer("Immutable", undefined, "Immutable");
     assertThrows(
         () => {
-            runtime.observePointer(ref, (value) => {
-                console.log("Observed pointer value:", value);
-            });
+            runtime.observePointer(ref, (_) => {});
         },
         Error,
         `immutable reference`,
@@ -33,9 +31,7 @@ Deno.test("observer immutable", () => {
     ref = runtime.createPointer("Immutable", undefined, "Final");
     assertThrows(
         () => {
-            runtime.observePointer(ref, (value) => {
-                console.log("Observed pointer value:", value);
-            });
+            runtime.observePointer(ref, (_) => {});
         },
         Error,
         `immutable reference`,
@@ -71,7 +67,6 @@ Deno.test("core text", () => {
     const script = `"Hello, world!"`;
     const result = runtime.executeSyncDIF(script);
     assertEquals(result, { value: "Hello, world!" });
-    console.log(result);
 });
 
 Deno.test("core integer", () => {
@@ -81,21 +76,19 @@ Deno.test("core integer", () => {
         type: "$640000",
         value: "42",
     });
-    console.log(result);
 });
 
 Deno.test("core boolean", () => {
     const script = "true";
     const result = runtime.executeSyncDIF(script);
     assertEquals(result, { value: true });
-    console.log(result);
 });
 
 Deno.test("core null", () => {
     const script = "null";
     const result = runtime.executeSyncDIF(script);
+    console.log(result); // FIXME
     assertEquals(result, { value: null });
-    console.log(result);
 });
 
 Deno.test("core integer variants", () => {
