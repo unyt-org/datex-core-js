@@ -6,7 +6,9 @@ import {
 } from "../datex-core.ts";
 import { ComHub } from "../network/com-hub.ts";
 import {
+    convertToDIFTypeContainer,
     convertToDIFValue,
+    convertToDIFValueContainer,
     convertToDIFValues,
     DIFContainer,
     DIFUpdate,
@@ -135,10 +137,29 @@ export class Runtime {
         );
     }
 
-    public createPointer(value: unknown): string {
-        const difValueContainer = convertToDIFValue(value);
-        console.log("difValueContainer", difValueContainer);
-        return this.#runtime.create_pointer(difValueContainer);
+    public createPointer(
+        value: unknown,
+        allowedType: unknown | null = null,
+        mutability: "Mutable" | "Immutable" | "Final",
+    ): string {
+        const difValueContainer = convertToDIFValueContainer(value);
+        // if (typeof difValueContainer !== "string") {
+        //     difValueContainer.type!
+        // }
+
+        const difTypeContainer = allowedType != undefined
+            ? convertToDIFTypeContainer(allowedType)
+            : undefined;
+
+        return this.#runtime.create_pointer(
+            difValueContainer,
+            difTypeContainer,
+            mutability,
+        );
+    }
+
+    public updateDIF(address: string, dif: DIFUpdate) {
+        this.#runtime.update(address, dif);
     }
 
     public observePointer(
@@ -146,6 +167,10 @@ export class Runtime {
         callback: (value: DIFUpdate) => void,
     ): number {
         return this.#runtime.observe_pointer(address, callback);
+    }
+
+    public unobservePointer(address: string, observerId: number) {
+        this.#runtime.unobserve_pointer(address, observerId);
     }
 
     /**

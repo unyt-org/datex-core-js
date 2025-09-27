@@ -10,12 +10,14 @@ use datex_core::dif::interface::{
     DIFApplyError, DIFCreatePointerError, DIFInterface, DIFObserveError,
     DIFUpdateError,
 };
+use datex_core::dif::r#type::DIFTypeContainer;
 use datex_core::dif::value::DIFValueContainer;
 use datex_core::global::dxb_block::DXBBlock;
 use datex_core::global::protocol_structures::block_header::{
     BlockHeader, FlagsAndTimestamp,
 };
 use datex_core::references::observers::ReferenceObserver;
+use datex_core::references::reference::ReferenceMutability;
 use datex_core::runtime::execution::ExecutionError;
 #[cfg(feature = "debug")]
 use datex_core::runtime::global_context::DebugFlags;
@@ -34,6 +36,7 @@ use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::future_to_promise;
+use web_sys::console::info;
 use web_sys::js_sys::Promise;
 
 #[wasm_bindgen(getter_with_clone)]
@@ -475,11 +478,32 @@ impl JSRuntime {
         serde_wasm_bindgen::to_value(&result).map_err(js_error)
     }
 
-    pub fn create_pointer(&self, value: JsValue) -> Result<String, JsError> {
+    pub fn create_pointer(
+        &self,
+        value: JsValue,
+        allowed_type: JsValue,
+        mutability: JsValue,
+    ) -> Result<String, JsError> {
         let dif_value: DIFValueContainer =
             serde_wasm_bindgen::from_value(value).map_err(js_error)?;
-        let address = DIFInterface::create_pointer(self, dif_value)
-            .map_err(|e| js_error(e))?;
+        let dif_allowed_type: Option<DIFTypeContainer> =
+            if allowed_type.is_null() || allowed_type.is_undefined() {
+                None
+            } else {
+                Some(
+                    serde_wasm_bindgen::from_value(allowed_type)
+                        .map_err(js_error)?,
+                )
+            };
+        let dif_mutability: ReferenceMutability =
+            serde_wasm_bindgen::from_value(mutability).map_err(js_error)?;
+        let address = DIFInterface::create_pointer(
+            self,
+            dif_value,
+            dif_allowed_type,
+            dif_mutability,
+        )
+        .map_err(|e| js_error(e))?;
         Ok(address.to_string())
     }
 }
@@ -504,8 +528,10 @@ impl DIFInterface for JSRuntime {
     fn create_pointer(
         &self,
         value: DIFValueContainer,
+        allowed_type: Option<DIFTypeContainer>,
+        mutability: ReferenceMutability,
     ) -> Result<PointerAddress, DIFCreatePointerError> {
-        self.runtime.create_pointer(value)
+        self.runtime.create_pointer(value, allowed_type, mutability)
     }
 
     fn observe_pointer(

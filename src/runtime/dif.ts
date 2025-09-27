@@ -28,7 +28,7 @@ const CoreTypeAddressRanges = {
 /** 3, 5, or 26 byte hex string */
 export type DIFPointerAddress = string;
 export type DIFValue = {
-    type: DIFTypeContainer;
+    type?: DIFTypeContainer;
     value: DIFRepresentationValue;
 };
 export type DIFContainer = DIFValue | DIFPointerAddress;
@@ -238,6 +238,27 @@ export function resolveDIFValueContainer<T extends unknown>(
     }
 }
 
+export function convertToDIFTypeContainer<T extends unknown>(
+    type: T,
+): DIFTypeContainer {
+    if (typeof type === "string") {
+        return type; // pointer address
+    } else {
+        return type as unknown as DIFType; // TODO
+    }
+}
+export function convertToDIFValueContainer<T extends unknown>(
+    value: T,
+): DIFValueContainer {
+    // FIXME check also $pointer ids instance here
+    return convertToDIFValue(value);
+    // if (typeof value === "string") {
+    //     return value;
+    // } else {
+    //     return convertToDIFValue(value);
+    // }
+}
+
 /**
  * Converts a given JS value to its DIFValue representation.
  */
@@ -268,7 +289,6 @@ export function convertToDIFValue<T extends unknown>(
         };
     } else if (typeof value === "string") {
         return {
-            type: CoreTypeAddress.text,
             value,
         };
     } else if (value instanceof Endpoint) {

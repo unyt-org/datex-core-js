@@ -1,12 +1,47 @@
 import { Runtime } from "../../src/runtime/runtime.ts";
 import { assertEquals } from "jsr:@std/assert";
+import { assertThrows } from "jsr:@std/assert/throws";
 
 const runtime = new Runtime({ endpoint: "@jonas" });
 
 Deno.test("pointer create", () => {
-    let p = runtime.createPointer("xxxx");
-    console.log("Pointer address:", p);
-    assertEquals(typeof p, "string");
+    const ref = runtime.createPointer("Hello, world!", undefined, "Mutable");
+    assertEquals(typeof ref, "string");
+    console.log(ref);
+    const observerId = runtime.observePointer(ref, (value) => {
+        console.log("Observed pointer value:", value);
+        runtime.unobservePointer(ref, observerId);
+    });
+
+    runtime.updateDIF(ref, {
+        value: "Hello, Datex!",
+        kind: "Replace",
+    });
+});
+
+Deno.test("pointer observe unobserve", () => {
+    const ref = runtime.createPointer("42", undefined, "Mutable");
+    assertThrows(
+        () => {
+            runtime.unobservePointer(ref, 42);
+        },
+        Error,
+        `not found`,
+    );
+
+    const observerId = runtime.observePointer(ref, (value) => {
+        console.log("Observed pointer value:", value);
+        runtime.unobservePointer(ref, observerId);
+    });
+    assertEquals(observerId, 0);
+    runtime.unobservePointer(ref, observerId);
+    assertThrows(
+        () => {
+            runtime.unobservePointer(ref, observerId);
+        },
+        Error,
+        `not found`,
+    );
 });
 
 /**

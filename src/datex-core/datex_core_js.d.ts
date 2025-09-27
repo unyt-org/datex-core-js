@@ -13,6 +13,22 @@ export function execute_internal(datex_script: string): boolean;
 export function execute(datex_script: string, formatted: boolean): string;
 export function create_runtime(config: string, debug_flags: any): JSRuntime;
 export function compile(datex_script: string): void;
+export interface WebRTCInterfaceSetupData {
+    peer_endpoint: string;
+    ice_servers: RTCIceServer[] | null;
+}
+
+export interface RTCIceServer {
+    urls: string[];
+    username: string | null;
+    credential: string | null;
+}
+
+export interface SerialInterfaceSetupData {
+    port_name: string | null;
+    baud_rate: number;
+}
+
 export type ReconnectionConfig = "NoReconnect" | "InstantReconnect" | {
     ReconnectWithTimeout: { timeout: { secs: number; nanos: number } };
 } | {
@@ -86,6 +102,8 @@ export interface InterfaceProperties {
     reconnect_attempts: number | null;
 }
 
+export type BaseInterfaceSetupData = InterfaceProperties;
+
 export interface WebSocketServerInterfaceSetupData {
     port: number;
     /**
@@ -98,30 +116,12 @@ export interface WebSocketClientInterfaceSetupData {
     address: string;
 }
 
-export type BaseInterfaceSetupData = InterfaceProperties;
-
 export interface TCPClientInterfaceSetupData {
     address: string;
 }
 
 export interface TCPServerInterfaceSetupData {
     port: number;
-}
-
-export interface WebRTCInterfaceSetupData {
-    peer_endpoint: string;
-    ice_servers: RTCIceServer[] | null;
-}
-
-export interface RTCIceServer {
-    urls: string[];
-    username: string | null;
-    credential: string | null;
-}
-
-export interface SerialInterfaceSetupData {
-    port_name: string | null;
-    baud_rate: number;
 }
 
 export class BaseJSInterface {
@@ -211,7 +211,7 @@ export class JSRuntime {
         receivers: string[],
     ): Uint8Array;
     start(): Promise<void>;
-    create_pointer(value: any): string;
+    create_pointer(value: any, allowed_type: any, mutability: any): string;
     observe_pointer(address: string, callback: Function): number;
     update(address: string, update: any): void;
     execute_with_string_result(
