@@ -203,6 +203,7 @@ export class JSRuntime {
         mutability: number,
     ): string;
     value_to_string(dif_value: any, decompile_options: any): string;
+    resolve_pointer_address_sync(address: string): any;
     unobserve_pointer(address: string, observer_id: number): void;
     crypto_test_tmp(): Promise<Promise<any>>;
     _stop(): Promise<void>;
@@ -231,6 +232,7 @@ export class JSRuntime {
     execute_sync(script: string, dif_values?: any[] | null): any;
     execute(script: string, dif_values?: any[] | null): Promise<any>;
     apply(callee: any, value: any): any;
+    resolve_pointer_address(address: string): any;
     readonly endpoint: string;
     readonly version: string;
     com_hub: JSComHub;

@@ -23,6 +23,26 @@ Deno.test("pointer create", () => {
     });
 });
 
+Deno.test("pointer create and resolve", () => {
+    assertThrows(
+        () => {
+            runtime.dif.resolveDIFValueContainerSync<string>("non-existing");
+        },
+        Error,
+        `Invalid`,
+    );
+
+    const ptr = runtime.dif.createPointerSync(
+        "unyt.org",
+        undefined,
+        ReferenceMutability.Mutable,
+    );
+    const resolved = runtime.dif.resolveDIFValueContainerSync<string>(
+        ptr,
+    );
+    assertEquals(resolved, "unyt.org");
+});
+
 Deno.test("observer immutable", () => {
     let ref = runtime.dif.createPointerSync(
         "Immutable",

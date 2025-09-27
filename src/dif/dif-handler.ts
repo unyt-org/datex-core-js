@@ -3,16 +3,16 @@ import { Endpoint } from "../runtime/special-core-types.ts";
 import {
     CoreTypeAddress,
     CoreTypeAddressRanges,
-    DIFArray,
-    DIFContainer,
-    DIFObject,
-    DIFPointerAddress,
-    DIFType,
-    DIFTypeContainer,
-    DIFUpdate,
-    DIFValue,
-    DIFValueContainer,
-    ReferenceMutability,
+    type DIFArray,
+    type DIFContainer,
+    type DIFObject,
+    type DIFPointerAddress,
+    type DIFType,
+    type DIFTypeContainer,
+    type DIFUpdate,
+    type DIFValue,
+    type DIFValueContainer,
+    type ReferenceMutability,
 } from "./definitions.ts";
 
 export class DIFHandler {
@@ -45,39 +45,33 @@ export class DIFHandler {
 
     public createPointer(
         value: unknown,
-        allowedType: unknown | null = null,
+        allowedType: DIFTypeContainer | null = null,
         mutability: ReferenceMutability,
     ): Promise<string> {
         const difValue = this.convertToDIFValue(value);
-        const difTypeContainer = allowedType != undefined
-            ? this.convertToDIFTypeContainer(allowedType)
-            : undefined;
         return this.#runtime.create_pointer(
             difValue,
-            difTypeContainer,
+            allowedType,
             mutability,
         );
     }
 
     public createPointerSync(
         value: unknown,
-        allowedType: unknown | null = null,
+        allowedType: DIFTypeContainer | null = null,
         mutability: ReferenceMutability,
     ): string {
         const difValue = this.convertToDIFValue(value);
-        const difTypeContainer = allowedType != undefined
-            ? this.convertToDIFTypeContainer(allowedType)
-            : undefined;
         return this.#runtime.create_pointer_sync(
             difValue,
-            difTypeContainer,
+            allowedType,
             mutability,
         );
     }
 
     public createRefPointer(
         address: string,
-        allowedType: unknown | null = null,
+        allowedType: DIFTypeContainer | null = null,
         mutability: ReferenceMutability,
     ): Promise<string> {
         return this.#runtime.create_pointer(
@@ -88,7 +82,7 @@ export class DIFHandler {
     }
     public createRefPointerSync(
         address: string,
-        allowedType: unknown | null = null,
+        allowedType: DIFTypeContainer | null = null,
         mutability: ReferenceMutability,
     ): string {
         return this.#runtime.create_pointer_sync(
@@ -122,6 +116,10 @@ export class DIFHandler {
     public resolveDIFValue<T extends unknown>(
         value: DIFValue,
     ): T | Promise<T> {
+        if (value.type === undefined) {
+            return value.value as T;
+        }
+
         // boolean and text types values are just returned as is
         if (
             value.type === CoreTypeAddress.boolean ||
@@ -195,16 +193,6 @@ export class DIFHandler {
         }
     }
 
-    public resolveDIFContainer<T extends unknown>(
-        value: DIFContainer,
-    ): T | Promise<T> {
-        if (typeof value === "string") {
-            throw new Error("Pointer resolution not implemented yet");
-        } else {
-            return this.resolveDIFValue<T>(value);
-        }
-    }
-
     promiseAllOrSync<T>(values: (T | Promise<T>)[]): Promise<T[]> | T[] {
         if (values.some((v) => v instanceof Promise)) {
             return Promise.all(values);
@@ -240,34 +228,28 @@ export class DIFHandler {
             return this.resolvePointerAddress(value);
         }
     }
+    public resolveDIFValueContainerSync<T extends unknown>(
+        value: DIFValueContainer,
+    ): T {
+        const result = this.resolveDIFValueContainer(value);
+        if (result instanceof Promise) {
+            throw new Error(
+                "resolveDIFValueContainerSync cannot return a Promise. Use resolveDIFValueContainer() instead.",
+            );
+        }
+        return result as T;
+    }
 
     public resolvePointerAddress<T extends unknown>(
         address: string,
     ): Promise<T> | T {
-        return this.resolveDIFValueContainer(
-            this.#runtime.resolve_pointer_address(address),
-        );
-    }
-
-    public convertToDIFTypeContainer<T extends unknown>(
-        type: T,
-    ): DIFTypeContainer {
-        if (typeof type === "string") {
-            return type; // pointer address
-        } else {
-            return type as unknown as DIFType; // TODO
+        const entry = this.#runtime.resolve_pointer_address(address);
+        if (entry instanceof Promise) {
+            return entry.then((e) => this.resolveDIFValueContainer(e) as T);
         }
-    }
-    public convertToDIFValueContainer<T extends unknown>(
-        value: T,
-    ): DIFValueContainer {
-        // FIXME check also $pointer ids instance here
-        return this.convertToDIFValue(value);
-        // if (typeof value === "string") {
-        //     return value;
-        // } else {
-        //     return convertToDIFValue(value);
-        // }
+        return this.resolveDIFValueContainer(
+            entry,
+        );
     }
 
     /**

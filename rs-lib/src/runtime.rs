@@ -555,7 +555,7 @@ impl JSRuntime {
         serde_wasm_bindgen::to_value(&result).map_err(js_error)
     }
 
-    fn resolve_pointer_address(
+    pub fn resolve_pointer_address(
         &self,
         address: &str,
     ) -> Result<JsValue, JsError> {
