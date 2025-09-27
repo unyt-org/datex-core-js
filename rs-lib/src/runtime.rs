@@ -15,6 +15,7 @@ use datex_core::global::dxb_block::DXBBlock;
 use datex_core::global::protocol_structures::block_header::{
     BlockHeader, FlagsAndTimestamp,
 };
+use datex_core::references::observers::ReferenceObserver;
 use datex_core::runtime::execution::ExecutionError;
 #[cfg(feature = "debug")]
 use datex_core::runtime::global_context::DebugFlags;
@@ -24,6 +25,7 @@ use datex_core::values::core_values::endpoint::Endpoint;
 use datex_core::values::pointer::PointerAddress;
 use datex_core::values::serde::deserializer::DatexDeserializer;
 use datex_core::values::value_container::ValueContainer;
+use js_sys::Function;
 use log::info;
 use serde::{Deserialize, Serialize};
 use serde_wasm_bindgen::from_value;
@@ -409,29 +411,103 @@ impl JSRuntime {
             }
         }
     }
+
+    fn js_value_to_pointer_address(
+        address: &str,
+    ) -> Result<PointerAddress, JsError> {
+        PointerAddress::try_from(address)
+            .map_err(|_| js_error(ConversionError::InvalidValue))
+    }
 }
+
+// DIF
+#[wasm_bindgen]
+impl JSRuntime {
+    #[wasm_bindgen(js_name = observePointer)]
+    pub fn observe_pointer(
+        &self,
+        address: &str,
+        callback: &Function,
+    ) -> Result<u32, JsError> {
+        let address = Self::js_value_to_pointer_address(address)?;
+        let cb = callback.clone();
+        let observer: ReferenceObserver =
+            Box::new(move |update: &DIFUpdate| {
+                let dif_value = serde_wasm_bindgen::to_value(update).unwrap();
+                let _ = cb.call1(&JsValue::NULL, &dif_value);
+            });
+        DIFInterface::observe_pointer(self, address.into(), observer)
+            .map_err(|e| js_error(e))
+    }
+
+    #[wasm_bindgen(js_name = unobservePointer)]
+    pub fn unobserve_pointer(
+        &self,
+        address: &str,
+        observer_id: u32,
+    ) -> Result<(), JsError> {
+        let address = Self::js_value_to_pointer_address(address)?;
+        DIFInterface::unobserve_pointer(self, address.into(), observer_id)
+            .map_err(|e| js_error(e))
+    }
+
+    pub fn update(
+        &mut self,
+        address: &str,
+        update: JsValue,
+    ) -> Result<(), JsError> {
+        let address = Self::js_value_to_pointer_address(address)?;
+        let dif_update: DIFUpdate =
+            serde_wasm_bindgen::from_value(update).map_err(js_error)?;
+        DIFInterface::update(self, address.into(), dif_update)
+            .map_err(|e| js_error(e))
+    }
+
+    pub fn apply(
+        &mut self,
+        callee: JsValue,
+        value: JsValue,
+    ) -> Result<JsValue, JsError> {
+        let dif_callee: DIFValueContainer =
+            serde_wasm_bindgen::from_value(callee).map_err(js_error)?;
+        let dif_value: DIFValueContainer =
+            serde_wasm_bindgen::from_value(value).map_err(js_error)?;
+        let result = DIFInterface::apply(self, dif_callee, dif_value)
+            .map_err(|e| js_error(e))?;
+        serde_wasm_bindgen::to_value(&result).map_err(js_error)
+    }
+
+    pub fn create_pointer(&self, value: JsValue) -> Result<String, JsError> {
+        let dif_value: DIFValueContainer =
+            serde_wasm_bindgen::from_value(value).map_err(js_error)?;
+        let address = DIFInterface::create_pointer(self, dif_value)
+            .map_err(|e| js_error(e))?;
+        Ok(address.to_string())
+    }
+}
+
 impl DIFInterface for JSRuntime {
     fn update(
         &mut self,
         address: PointerAddress,
         update: DIFUpdate,
     ) -> Result<(), DIFUpdateError> {
-        todo!()
+        self.runtime.update(address, update)
     }
 
     fn apply(
         &mut self,
         callee: DIFValueContainer,
         value: DIFValueContainer,
-    ) -> Result<DIFApplyError, ExecutionError> {
-        todo!()
+    ) -> Result<DIFValueContainer, DIFApplyError> {
+        self.runtime.apply(callee, value)
     }
 
     fn create_pointer(
         &self,
         value: DIFValueContainer,
     ) -> Result<PointerAddress, DIFCreatePointerError> {
-        todo!()
+        self.runtime.create_pointer(value)
     }
 
     fn observe_pointer(
@@ -439,7 +515,7 @@ impl DIFInterface for JSRuntime {
         address: PointerAddress,
         observer: datex_core::references::observers::ReferenceObserver,
     ) -> Result<u32, DIFObserveError> {
-        todo!()
+        self.runtime.observe_pointer(address, observer)
     }
 
     fn unobserve_pointer(
@@ -447,7 +523,7 @@ impl DIFInterface for JSRuntime {
         address: PointerAddress,
         observer_id: u32,
     ) -> Result<(), DIFObserveError> {
-        todo!()
+        self.runtime.unobserve_pointer(address, observer_id)
     }
 }
 
