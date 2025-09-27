@@ -8,7 +8,9 @@ import { ComHub } from "../network/com-hub.ts";
 import {
     convertToDIFValue,
     convertToDIFValues,
-    type DIFValue,
+    DIFContainer,
+    DIFUpdate,
+    resolveDIFContainer as resolveDIFValueContainer,
     resolveDIFValue,
 } from "./dif.ts";
 
@@ -116,7 +118,7 @@ export class Runtime {
     public executeDIF(
         datexScript: string,
         values: unknown[] | null = [],
-    ): Promise<DIFValue> {
+    ): Promise<DIFContainer> {
         return this.#runtime.execute(
             datexScript,
             convertToDIFValues(values),
@@ -126,11 +128,24 @@ export class Runtime {
     public executeSyncDIF(
         datexScript: string,
         values: unknown[] | null = [],
-    ): DIFValue {
+    ): DIFContainer {
         return this.#runtime.execute_sync(
             datexScript,
             convertToDIFValues(values),
         );
+    }
+
+    public createPointer(value: unknown): string {
+        const difValueContainer = convertToDIFValue(value);
+        console.log("difValueContainer", difValueContainer);
+        return this.#runtime.create_pointer(difValueContainer);
+    }
+
+    public observePointer(
+        address: string,
+        callback: (value: DIFUpdate) => void,
+    ): number {
+        return this.#runtime.observe_pointer(address, callback);
     }
 
     /**
@@ -177,11 +192,11 @@ export class Runtime {
         datexScript: string,
         values: unknown[] | null = [],
     ): Promise<T> {
-        const difValue = await this.executeDIF(datexScript, values);
-        if (difValue === null) {
+        const difValueContainer = await this.executeDIF(datexScript, values);
+        if (difValueContainer === null) {
             return undefined as T;
         }
-        return resolveDIFValue<T>(difValue);
+        return resolveDIFValueContainer<T>(difValueContainer);
     }
 
     /**
@@ -234,14 +249,20 @@ export class Runtime {
         if (difValue === null) {
             return undefined as T;
         }
-        return resolveDIFValue<T>(difValue);
+        const result = resolveDIFValueContainer<T>(difValue);
+        if (result instanceof Promise) {
+            throw new Error(
+                "executeSync cannot return a Promise. Use execute() instead.",
+            );
+        }
+        return result;
     }
 
     public valueToString(
         value: unknown,
         decompileOptions: DecompileOptions | null = null,
     ): string {
-        return JSRuntime.value_to_string(
+        return this.valueToString(
             convertToDIFValue(value),
             decompileOptions,
         );

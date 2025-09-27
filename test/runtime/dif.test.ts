@@ -1,7 +1,14 @@
-import {Runtime} from "../../src/runtime/runtime.ts";
+import { Runtime } from "../../src/runtime/runtime.ts";
 import { assertEquals } from "jsr:@std/assert";
 
 const runtime = new Runtime({ endpoint: "@jonas" });
+
+Deno.test("pointer create", () => {
+    let p = runtime.createPointer("xxxx");
+    console.log("Pointer address:", p);
+    assertEquals(typeof p, "string");
+});
+
 /**
  * hash(1) ->
  */

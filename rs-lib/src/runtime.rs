@@ -423,7 +423,6 @@ impl JSRuntime {
 // DIF
 #[wasm_bindgen]
 impl JSRuntime {
-    #[wasm_bindgen(js_name = observePointer)]
     pub fn observe_pointer(
         &self,
         address: &str,
@@ -440,7 +439,6 @@ impl JSRuntime {
             .map_err(|e| js_error(e))
     }
 
-    #[wasm_bindgen(js_name = unobservePointer)]
     pub fn unobserve_pointer(
         &self,
         address: &str,

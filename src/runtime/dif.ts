@@ -26,11 +26,12 @@ const CoreTypeAddressRanges = {
 } as const;
 
 /** 3, 5, or 26 byte hex string */
-type DIFPointerAddress = string;
-type DIFValue = {
-    type: DIFTypeContainer
-    value: DIFCoreValue;
-}
+export type DIFPointerAddress = string;
+export type DIFValue = {
+    type: DIFTypeContainer;
+    value: DIFRepresentationValue;
+};
+export type DIFContainer = DIFValue | DIFPointerAddress;
 
 const DIFTypeKinds = {
     Structural: 0,
@@ -47,40 +48,34 @@ const DIFReferenceMutability = {
     Immutable: 1,
     Final: 2,
 } as const;
-type DIFReferenceMutability = typeof DIFReferenceMutability[keyof typeof DIFReferenceMutability];
+type DIFReferenceMutability =
+    typeof DIFReferenceMutability[keyof typeof DIFReferenceMutability];
 
-type DIFTypeDefinition<Kind extends DIFTypeKind = DIFTypeKind> =
-    Kind extends typeof DIFTypeKinds.Structural
-        ? DIFValue
-    : Kind extends typeof DIFTypeKinds.Reference
-        ? DIFPointerAddress
-    : Kind extends typeof DIFTypeKinds.Intersection
-        ? Array<DIFTypeContainer>
-    : Kind extends typeof DIFTypeKinds.Union
-        ? Array<DIFTypeContainer>
-    : Kind extends typeof DIFTypeKinds.Unit
-        ? null
-    : Kind extends typeof DIFTypeKinds.Function
-        ? unknown // TODO
+type DIFTypeDefinition<Kind extends DIFTypeKind = DIFTypeKind> = Kind extends
+    typeof DIFTypeKinds.Structural ? DIFValue
+    : Kind extends typeof DIFTypeKinds.Reference ? DIFPointerAddress
+    : Kind extends typeof DIFTypeKinds.Intersection ? Array<DIFTypeContainer>
+    : Kind extends typeof DIFTypeKinds.Union ? Array<DIFTypeContainer>
+    : Kind extends typeof DIFTypeKinds.Unit ? null
+    : Kind extends typeof DIFTypeKinds.Function ? unknown // TODO
     : never;
 
 type DIFType<Kind extends DIFTypeKind = DIFTypeKind> = {
-    name?: string,
-    kind: Kind,
-    def: DIFTypeDefinition<Kind>,
-    mut?: DIFReferenceMutability,
-}
+    name?: string;
+    kind: Kind;
+    def: DIFTypeDefinition<Kind>;
+    mut?: DIFReferenceMutability;
+};
 
-type DIFValueContainer = DIFValue|DIFPointerAddress;
-type DIFTypeContainer = DIFType|DIFPointerAddress
-
+type DIFValueContainer = DIFValue | DIFPointerAddress;
+type DIFTypeContainer = DIFType | DIFPointerAddress;
 
 // TODO: wasm_bindgen currently returns a Map here - could we also just use an object, or is a Map actually more efficient?
 export type DIFObject = Map<string, DIFValueContainer>;
 export type DIFArray = DIFValueContainer[];
-export type DIFMap = [DIFValueContainer,DIFValueContainer][];
+export type DIFMap = [DIFValueContainer, DIFValueContainer][];
 
-export type DIFCoreValue =
+export type DIFRepresentationValue =
     | string
     | number
     | boolean
@@ -89,6 +84,23 @@ export type DIFCoreValue =
     | DIFMap
     | DIFArray;
 
+// DIFProperty
+export type DIFProperty =
+    | { kind: "Text"; value: string }
+    | { kind: "Integer"; value: number }
+    | { kind: "Value"; value: DIFValueContainer };
+
+// DIFUpdate
+export type DIFUpdate =
+    | { kind: "Replace"; value: DIFValueContainer }
+    | { kind: "Push"; value: DIFValueContainer }
+    | {
+        kind: "UpdateProperty";
+        value: {
+            property: DIFProperty;
+            value: DIFValueContainer;
+        };
+    };
 
 /**
  * Resolves a DIFValue to its corresponding JS value.
@@ -98,35 +110,51 @@ export type DIFCoreValue =
  */
 export function resolveDIFValue<T extends unknown>(
     value: DIFValue,
-): T|Promise<T> {
+): T | Promise<T> {
     // if the core_type is the same as the type, we can just return a core value
     const isCoreType = value.type === value.type;
     // const isPointer = !!value.ptr_id; // TODO: handle pointers
 
     if (isCoreType) {
         // boolean and text types values are just returned as is
-        if (value.type === CoreTypeAddress.boolean || value.type == CoreTypeAddress.text) {
+        if (
+            value.type === CoreTypeAddress.boolean ||
+            value.type == CoreTypeAddress.text
+        ) {
             return value.value as T;
         } // small integers are interpreted as JS numbers
         else if (
             typeof value.type === "string" && (
                 value.type == CoreTypeAddress.integer ||
-                isPointerAddressInRange(value.type, CoreTypeAddressRanges.small_signed_integers) ||
-                isPointerAddressInRange(value.type, CoreTypeAddressRanges.small_unsigned_integers)
+                isPointerAddressInRange(
+                    value.type,
+                    CoreTypeAddressRanges.small_signed_integers,
+                ) ||
+                isPointerAddressInRange(
+                    value.type,
+                    CoreTypeAddressRanges.small_unsigned_integers,
+                )
             )
         ) {
             return Number(value.value as number) as T;
         } // big integers are interpreted as JS BigInt
         else if (
             typeof value.type === "string" && (
-                isPointerAddressInRange(value.type, CoreTypeAddressRanges.big_signed_integers) ||
-                isPointerAddressInRange(value.type, CoreTypeAddressRanges.big_unsigned_integers)
+                isPointerAddressInRange(
+                    value.type,
+                    CoreTypeAddressRanges.big_signed_integers,
+                ) ||
+                isPointerAddressInRange(
+                    value.type,
+                    CoreTypeAddressRanges.big_unsigned_integers,
+                )
             )
         ) {
             return BigInt(value.value as number) as T;
         } // decimal types are interpreted as JS numbers
         else if (
-            typeof value.type === "string" && isPointerAddressInRange(value.type, CoreTypeAddressRanges.decimals)
+            typeof value.type === "string" &&
+            isPointerAddressInRange(value.type, CoreTypeAddressRanges.decimals)
         ) {
             return (Number(value.value) as number) as T;
         } // TODO: wasm_bindgen returns undefined here, although it should be null. So we just return null for now.
@@ -137,21 +165,24 @@ export function resolveDIFValue<T extends unknown>(
             return Endpoint.get(value.value as string) as T;
         } // array types are resolved to arrays of DIFValues
         else if (value.type === CoreTypeAddress.array) {
-            return promiseAllOrSync((value.value as DIFArray).map((v) =>
-                resolveDIFValueContainer(v)
-            )) as T|Promise<T>;
-        }
-        else if (value.type === CoreTypeAddress.list) {
-            return promiseAllOrSync((value.value as DIFArray).map((v) =>
-                resolveDIFValueContainer(v)
-            )) as T|Promise<T>;
+            return promiseAllOrSync(
+                (value.value as DIFArray).map((v) =>
+                    resolveDIFValueContainer(v)
+                ),
+            ) as T | Promise<T>;
+        } else if (value.type === CoreTypeAddress.list) {
+            return promiseAllOrSync(
+                (value.value as DIFArray).map((v) =>
+                    resolveDIFValueContainer(v)
+                ),
+            ) as T | Promise<T>;
         } // object types are resolved to objects with string keys and DIFValues
         else if (value.type === CoreTypeAddress.struct) {
             const resolvedObj: { [key: string]: unknown } = {};
             for (const [key, val] of (value.value as DIFObject).entries()) {
                 resolvedObj[key] = resolveDIFValueContainer(val);
             }
-            return promiseFromObjectOrSync(resolvedObj) as T|Promise<T>;
+            return promiseFromObjectOrSync(resolvedObj) as T | Promise<T>;
         }
     } else {
         throw new Error("custom types not supported yet");
@@ -160,7 +191,17 @@ export function resolveDIFValue<T extends unknown>(
     return undefined as T;
 }
 
-function promiseAllOrSync<T>(values: (T|Promise<T>)[]): Promise<T[]>|T[] {
+export function resolveDIFContainer<T extends unknown>(
+    value: DIFContainer,
+): T | Promise<T> {
+    if (typeof value === "string") {
+        throw new Error("Pointer resolution not implemented yet");
+    } else {
+        return resolveDIFValue<T>(value);
+    }
+}
+
+function promiseAllOrSync<T>(values: (T | Promise<T>)[]): Promise<T[]> | T[] {
     if (values.some((v) => v instanceof Promise)) {
         return Promise.all(values);
     } else {
@@ -168,11 +209,13 @@ function promiseAllOrSync<T>(values: (T|Promise<T>)[]): Promise<T[]>|T[] {
     }
 }
 
-function promiseFromObjectOrSync<T>(values: {[key: string]: T|Promise<T>}): Promise<{[key: string]: T}>|{[key: string]: T} {
+function promiseFromObjectOrSync<T>(
+    values: { [key: string]: T | Promise<T> },
+): Promise<{ [key: string]: T }> | { [key: string]: T } {
     const valueArray = Object.values(values);
     if (valueArray.some((v) => v instanceof Promise)) {
         return Promise.all(valueArray).then((resolvedValues) => {
-            const resolvedObj: {[key: string]: T} = {};
+            const resolvedObj: { [key: string]: T } = {};
             let i = 0;
             for (const key of Object.keys(values)) {
                 resolvedObj[key] = resolvedValues[i++];
@@ -180,19 +223,16 @@ function promiseFromObjectOrSync<T>(values: {[key: string]: T|Promise<T>}): Prom
             return resolvedObj;
         });
     } else {
-        return values as {[key: string]: T};
+        return values as { [key: string]: T };
     }
 }
 
-
-
 export function resolveDIFValueContainer<T extends unknown>(
     value: DIFValueContainer,
-): T|Promise<T> {
+): T | Promise<T> {
     if (typeof value !== "string") {
         return resolveDIFValue(value);
-    }
-    else {
+    } else {
         // todo resolve pointer id
         return undefined as T;
     }
@@ -268,7 +308,10 @@ export function convertToDIFValues<T extends unknown[]>(
 /**
  * Returns true if the given address is within the specified address range.
  */
-function isPointerAddressInRange(address: DIFPointerAddress, range: readonly [number, number]): boolean {
+function isPointerAddressInRange(
+    address: DIFPointerAddress,
+    range: readonly [number, number],
+): boolean {
     const addressNum = parseInt(address, 16);
     return addressNum >= range[0] && addressNum < range[1];
 }
