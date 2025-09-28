@@ -33,10 +33,20 @@ export class Ref<T> {
      * @throws If the reference is immutable or the new value is of an incompatible type.
      */
     set value(newValue: T) {
+        const oldValue = this.#value;
+        if (oldValue === newValue) return;
+
         this.#value = newValue;
-        this.#difHandler.updatePointer(
-            this.#pointerAddress,
-            DIF_Replace(this.#difHandler, newValue),
-        );
+        try {
+            // Try to update the pointer
+            this.#difHandler.updatePointer(
+                this.#pointerAddress,
+                DIF_Replace(this.#difHandler, newValue),
+            );
+        } catch (e) {
+            // If it fails, revert to old value
+            this.#value = oldValue;
+            console.error("Failed to update pointer, reverting value:", e);
+        }
     }
 }
