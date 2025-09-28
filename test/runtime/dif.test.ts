@@ -1,11 +1,12 @@
 import { Runtime } from "../../src/runtime/runtime.ts";
-import { assert, assertEquals } from "jsr:@std/assert";
+import { assert, assertEquals, assertNotStrictEquals } from "jsr:@std/assert";
 import { assertThrows } from "jsr:@std/assert/throws";
 import {
     CoreTypeAddress,
     type DIFRepresentationValue,
     type DIFUpdate,
     DIFUpdateKind,
+    type DIFValue,
     ReferenceMutability,
 } from "../../src/dif/definitions.ts";
 import { assertStrictEquals } from "jsr:@std/assert/strict-equals";
@@ -39,6 +40,47 @@ Deno.test("pointer create with observe", () => {
         value: { value: "Hello, Datex!" },
         kind: DIFUpdateKind.Replace,
     });
+});
+
+// FIXME
+Deno.test("pointer create struct", () => {
+    const innerPtr = runtime.createPointer(
+        3 as number,
+        undefined,
+        ReferenceMutability.Mutable,
+    );
+    const struct = { a: 1.0, b: "text", c: { d: true }, e: { f: innerPtr } };
+    const ptr = runtime.createPointer(
+        struct,
+        undefined,
+        ReferenceMutability.Mutable,
+    ) as { a: number; b: string; c: { d: boolean }; e: { f: typeof innerPtr } };
+    assertThrows(
+        () => {
+            ptr.a = 2;
+        },
+        Error,
+        `modify`,
+    );
+    assertThrows(
+        () => {
+            // @ts-ignore $
+            ptr.x = 2;
+        },
+        Error,
+        `modify`,
+    );
+    assertThrows(
+        () => {
+            ptr.c.d = false;
+        },
+        Error,
+        `modify`,
+    );
+
+    ptr.e.f = 42;
+    assertEquals((innerPtr as Ref<number>).value, 42);
+    assertNotStrictEquals(ptr, { ...struct, e: { f: 42 } });
 });
 
 Deno.test("pointer create and resolve", () => {

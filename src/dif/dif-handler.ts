@@ -9,10 +9,12 @@ import {
     type DIFMap,
     type DIFObject,
     type DIFPointerAddress,
+    type DIFProperty,
     DIFReferenceMutability,
     type DIFType,
     type DIFTypeContainer,
     type DIFUpdate,
+    DIFUpdateKind,
     type DIFValue,
     type DIFValueContainer,
     ReferenceMutability,
@@ -586,9 +588,51 @@ export class DIFHandler {
         ) {
             return new Ref(value, pointerAddress, this);
         } // TODO: wrap in proxy for generic objects and nested refs
-        else {
+        else if (typeof value === "object") {
+            return this.wrapJSObjectInProxy(value);
+        } else {
             return value;
         }
+    }
+
+    private isRef(value: unknown): value is Ref<unknown> {
+        return value instanceof Ref;
+    }
+
+    private wrapJSObjectInProxy<T extends object>(
+        value: T,
+    ): (T | Ref<any>) & WeakKey {
+        // deno-lint-ignore no-this-alias
+        const self = this;
+        return new Proxy(value, {
+            get(target, prop, receiver) {
+                const val = Reflect.get(target, prop, receiver);
+                if (val && typeof val === "object" && !self.isRef(val)) {
+                    return self.wrapJSObjectInProxy(val);
+                }
+                return val;
+            },
+            set(target, prop, newValue, receiver) {
+                const oldValue = Reflect.get(target, prop, receiver);
+                if (!self.isRef(oldValue)) {
+                    throw new Error(
+                        `Cannot modify non-Ref property "${String(prop)}"`,
+                    );
+                }
+                oldValue.value = newValue;
+                return true;
+            },
+            deleteProperty() {
+                throw new Error(
+                    "Cannot delete properties from a Refs-only object",
+                );
+            },
+            defineProperty() {
+                throw new Error(
+                    "Cannot define new properties on a Refs-only object",
+                );
+            },
+        });
     }
 
     /// Returns the pointer address for the given value if it is already cached, or null otherwise.

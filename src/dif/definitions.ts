@@ -113,8 +113,6 @@ export type DIFUpdate =
     | { kind: typeof DIFUpdateKind["Push"]; value: DIFValueContainer }
     | {
         kind: typeof DIFUpdateKind["UpdateProperty"];
-        value: {
-            property: DIFProperty;
-            value: DIFValueContainer;
-        };
+        property: DIFProperty;
+        value: DIFValueContainer;
     };
