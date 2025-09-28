@@ -12,7 +12,6 @@ import { assertStrictEquals } from "jsr:@std/assert/strict-equals";
 import { Ref } from "../../src/refs/ref.ts";
 
 const runtime = new Runtime({ debug: true, endpoint: "@jonas" });
-
 Deno.test("pointer create with observe", () => {
     const ref = runtime.dif.createPointer(
         {
@@ -25,26 +24,15 @@ Deno.test("pointer create with observe", () => {
 
     let observed: DIFUpdate | null = null;
     const observerId = runtime.dif.observePointerBindDirect(ref, (value) => {
-        console.log("Observed pointer value:", value);
-        try {
-            console.log("Unobserving pointer...", ref, observerId);
-            // FIXME wtf, unobservePointerBindDirect throws an error here because of "recursive use of an object detected"!?
-            // https://github.com/wasm-bindgen/wasm-bindgen/issues/1578
-            // NOTE: the exact same test without JS wasm_bindgen bindings is implemented in datex-core and works perfectly fine
-            // Has nothing to do with unobservePointerBindDirect, also fails e.g. with runtime.executeSync
-            console.log(runtime.executeSync("'xy'"));
-            // runtime.dif.unobservePointerBindDirect(ref, observerId);
-            observed = value;
-        } catch (e) {
-            console.error("Failed to unobserve pointer:", e);
-        }
+        runtime.executeSync("'xy'");
+        runtime.dif.unobservePointerBindDirect(ref, observerId);
+        observed = value;
     });
 
     runtime.dif.updatePointer(ref, {
         value: { value: "Hello, Datex!" },
         kind: DIFUpdateKind.Replace,
     });
-    console.log("done updating pointer");
 
     // if not equal, unobservePointer potentially failed
     assertEquals(observed, {
@@ -279,22 +267,9 @@ Deno.test("pointer primitive ref update and observe local", () => {
     assertEquals(observedUpdate, null);
 });
 
-Deno.test("observer immutable", () => {
-    let ref = runtime.dif.createPointer(
-        { value: "Immutable" },
-        undefined,
-        ReferenceMutability.Immutable,
-    );
-    assertThrows(
-        () => {
-            runtime.dif.observePointerBindDirect(ref, (_) => {});
-        },
-        Error,
-        `immutable reference`,
-    );
-
-    ref = runtime.dif.createPointer(
-        { value: "Immutable" },
+Deno.test("observer final", () => {
+    const ref = runtime.dif.createPointer(
+        { value: "Final" },
         undefined,
         ReferenceMutability.Final,
     );
@@ -303,7 +278,7 @@ Deno.test("observer immutable", () => {
             runtime.dif.observePointerBindDirect(ref, (_) => {});
         },
         Error,
-        `immutable reference`,
+        `final reference`,
     );
 });
 

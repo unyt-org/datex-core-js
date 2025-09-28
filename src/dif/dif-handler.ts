@@ -1,4 +1,4 @@
-import type { JSRuntime } from "../datex-core.ts";
+import type { JSRuntime, RuntimeDIFHandle } from "../datex-core.ts";
 import { Ref } from "../refs/ref.ts";
 import { Endpoint } from "../runtime/special-core-types.ts";
 import {
@@ -21,6 +21,7 @@ import {
 export class DIFHandler {
     /** The JSRuntime interface for the underlying Datex Core runtime */
     #runtime: JSRuntime;
+    #handle: RuntimeDIFHandle;
     /** The pointer cache for storing and reusing object instances on the JS side
      * If the pointer is a final ref, it is not being observed and 'final' is set to true
      */
@@ -47,6 +48,7 @@ export class DIFHandler {
         runtime: JSRuntime,
     ) {
         this.#runtime = runtime;
+        this.#handle = runtime.dif();
     }
 
     /**
@@ -95,7 +97,7 @@ export class DIFHandler {
         allowedType: DIFTypeContainer | null = null,
         mutability: ReferenceMutability,
     ): string {
-        return this.#runtime.create_pointer(
+        return this.#handle.create_pointer(
             difValue,
             allowedType,
             mutability,
@@ -114,7 +116,7 @@ export class DIFHandler {
         allowedType: DIFTypeContainer | null = null,
         mutability: ReferenceMutability,
     ): string {
-        return this.#runtime.create_pointer(
+        return this.#handle.create_pointer(
             address,
             allowedType,
             mutability,
@@ -128,7 +130,7 @@ export class DIFHandler {
      */
     public updatePointer(address: string, dif: DIFUpdate) {
         console.log("Updating pointer", address, dif);
-        this.#runtime.get_handle().update(address, dif);
+        this.#handle.update(address, dif);
     }
 
     /**
@@ -146,7 +148,7 @@ export class DIFHandler {
         address: string,
         callback: (value: DIFUpdate) => void,
     ): number {
-        return this.#runtime.get_handle().observe(address, callback);
+        return this.#runtime.dif().observe_pointer(address, callback);
     }
 
     /**
@@ -157,7 +159,7 @@ export class DIFHandler {
      * @param observerId - The observer ID returned by the observePointer method.
      */
     public unobservePointerBindDirect(address: string, observerId: number) {
-        this.#runtime.get_handle().unobserve_pointer(address, observerId);
+        this.#runtime.dif().unobserve_pointer(address, observerId);
     }
 
     /**
@@ -414,7 +416,7 @@ export class DIFHandler {
         }
         // if not in cache, resolve from runtime
         const entry: DIFValueContainer | Promise<DIFValueContainer> = this
-            .#runtime.resolve_pointer_address(address);
+            .#handle.resolve_pointer_address(address);
         return this.mapPromise(entry, (e) => {
             const value: T | Promise<T> = this.resolveDIFValueContainer(e);
             return this.mapPromise(value, (v) => {
@@ -445,7 +447,7 @@ export class DIFHandler {
             return cached as T;
         }
         // if not in cache, resolve from runtime
-        const entry: DIFValueContainer = this.#runtime
+        const entry: DIFValueContainer = this.#handle
             .resolve_pointer_address_sync(address);
         const value: T = this.resolveDIFValueContainerSync(
             entry,

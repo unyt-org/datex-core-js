@@ -144,19 +144,15 @@ impl JSRuntime {
                 .await
                 .map_err(|e| JsValue::from_str(&format!("{e:?}")))?;
 
-            info!("#1");
-
             let encryption_key_pair = crypto
                 .new_encryption_key_pair()
                 .await
                 .map_err(|e| JsValue::from_str(&format!("{e:?}")))?;
-            info!("#2");
 
             let encrypted_message = crypto
                 .encrypt_rsa(vec![1, 2, 3], encryption_key_pair.0.clone())
                 .await
                 .map_err(|e| JsValue::from_str(&format!("{e:?}")))?;
-            info!("#3");
 
             let decrypted_message = crypto
                 .decrypt_rsa(
@@ -165,13 +161,11 @@ impl JSRuntime {
                 )
                 .await
                 .map_err(|e| JsValue::from_str(&format!("{e:?}")))?;
-            info!("#4");
 
             let signed_message = crypto
                 .sign_rsa(vec![1, 2, 3], sign_key_pair.1.clone())
                 .await
                 .map_err(|e| JsValue::from_str(&format!("{e:?}")))?;
-            info!("#5");
 
             let verified = crypto
                 .verify_rsa(
@@ -181,12 +175,10 @@ impl JSRuntime {
                 )
                 .await
                 .map_err(|e| JsValue::from_str(&format!("{e:?}")))?;
-            info!("#6");
 
             if !verified {
                 return Err(JsValue::from_str("Verification failed"));
             }
-            info!("#7");
 
             let js_array = js_array(&[
                 encryption_key_pair.0,
@@ -415,142 +407,42 @@ impl JSRuntime {
             }
         }
     }
+    /// Get a handle to the DIF interface of the runtime
+    pub fn dif(&self) -> RuntimeDIFHandle {
+        RuntimeDIFHandle {
+            internal: self.runtime.internal.clone(),
+        }
+    }
+}
 
+#[wasm_bindgen]
+pub struct RuntimeDIFHandle {
+    internal: Rc<RuntimeInternal>,
+}
+
+#[wasm_bindgen]
+impl RuntimeDIFHandle {
     fn js_value_to_pointer_address(
         address: &str,
     ) -> Result<PointerAddress, JsError> {
         PointerAddress::try_from(address)
             .map_err(|_| js_error(ConversionError::InvalidValue))
     }
-}
 
-fn call_js(cb: Rc<Function>, update: &DIFUpdate) {
-    let dif_value = serde_wasm_bindgen::to_value(update).unwrap();
-    let _ = cb.call1(&JsValue::NULL, &dif_value);
-}
-
-// #[wasm_bindgen]
-// pub struct ObserverProxy {
-//     callback: Rc<Function>,
-//     runtime_inner: Runtime,
-// }
-
-// impl ObserverProxy {
-//     pub fn notify(&self, update: &DIFUpdate) {
-//         let val = serde_wasm_bindgen::to_value(update).unwrap();
-//         let _ = self.callback.call1(&JsValue::NULL, &val);
-//     }
-
-//     pub fn remove(&self, address: PointerAddress, observer_id: u32) {
-//         self.runtime_inner
-//             .unobserve_pointer(address, observer_id)
-//             .unwrap();
-//     }
-// }
-
-#[wasm_bindgen]
-pub struct RuntimeHandle {
-    internal: Rc<RuntimeInternal>,
-}
-
-#[wasm_bindgen]
-impl RuntimeHandle {
-    /// Call this inside the JS callback safely
-    pub fn unobserve_pointer(&self, address: &str, observer_id: u32) {
-        let address = PointerAddress::try_from(address).unwrap();
-        self.internal
-            .unobserve_pointer(address, observer_id)
-            .unwrap()
-    }
-
-    /// Call update_pointer inside callback safely
-    pub fn update(&self, address: &str, update: JsValue) {
-        let address = PointerAddress::try_from(address).unwrap();
-        let dif_update: DIFUpdate =
-            serde_wasm_bindgen::from_value(update).unwrap();
-        self.internal.update(address, dif_update).unwrap();
-    }
-
-    /// Call execute_sync inside callback safely
-    pub fn observe(
-        &self,
-        address: &str,
-        callback: &Function,
-    ) -> Result<u32, JsError> {
-        let address = PointerAddress::try_from(address)
-            .map_err(|_| js_error(ConversionError::InvalidValue))?;
-        let cb = Rc::new(callback.clone());
-        let observer = move |update: &DIFUpdate| {
-            call_js(cb.clone(), update);
-        };
-        self.internal
-            .observe_pointer(address, observer)
-            .map_err(|e| js_error(e))
-    }
-}
-
-// DIF
-#[wasm_bindgen]
-impl JSRuntime {
-    pub fn get_handle(&self) -> RuntimeHandle {
-        RuntimeHandle {
-            internal: self.runtime.internal.clone(),
-        }
-    }
     pub fn observe_pointer(
         &self,
         address: &str,
         callback: &Function,
     ) -> Result<u32, JsError> {
-        let address = JSRuntime::js_value_to_pointer_address(address)?;
-        let cb = Rc::new(callback.clone());
-        let internal_rc = self.runtime.internal.clone(); // clone Rc
-
+        let address = RuntimeDIFHandle::js_value_to_pointer_address(address)?;
+        let cb = callback.clone();
         let observer = move |update: &DIFUpdate| {
-            // Convert update to JS value
             let js_value = serde_wasm_bindgen::to_value(update).unwrap();
-
-            // Call JS callback — must not call runtime methods on `self`
             let _ = cb.call1(&JsValue::NULL, &js_value);
         };
-
-        internal_rc
+        self.internal
             .observe_pointer(address, observer)
             .map_err(|e| js_error(e))
-
-        // DIFInterface::observe_pointer(self, address.into(), observer)
-        //     .map_err(|e| js_error(e))
-        // let closure = Closure::wrap(Box::new({
-        //     let cb = cb.clone();
-        //     move |js_update: JsValue| {
-        //         let _ = cb.call1(&JsValue::NULL, &js_update);
-        //     }
-        // }) as Box<dyn FnMut(JsValue)>);
-        // let closure_ref =
-        //     closure.as_ref().unchecked_ref::<js_sys::Function>().clone();
-
-        // let r = self
-        //     .runtime
-        //     .observe_pointer(address, move |arg0: &DIFUpdate| {
-        //         let js_value = serde_wasm_bindgen::to_value(arg0).unwrap();
-        //         closure_ref.call1(&JsValue::NULL, &js_value).unwrap();
-        //     })
-        //     .map_err(|e| js_error(e))?;
-
-        // // Now we can forget the original closure to keep it alive for JS
-        // closure.forget();
-        // Ok(r)
-        // info!("observe1");
-
-        // let res = DIFInterface::observe_pointer(
-        //     self,
-        //     address.into(),
-        //     |arg0: &DIFUpdate| observer(arg0.clone()),
-        // )
-        // .map_err(|e| js_error(e));
-
-        // info!("observe2");
-        // res
     }
 
     pub fn unobserve_pointer(
@@ -558,11 +450,7 @@ impl JSRuntime {
         address: &str,
         observer_id: u32,
     ) -> Result<(), JsError> {
-        info!(
-            "Unobserve pointer called with address: {}, observer_id: {}",
-            address, observer_id
-        );
-        let address = Self::js_value_to_pointer_address(address)?;
+        let address = RuntimeDIFHandle::js_value_to_pointer_address(address)?;
         DIFInterface::unobserve_pointer(self, address.into(), observer_id)
             .map_err(|e| js_error(e))
     }
@@ -647,10 +535,9 @@ impl JSRuntime {
             return Ok(sync.into());
         }
         let address = Self::js_value_to_pointer_address(address)?;
-        let runtime = self.runtime.clone();
+        let runtime = self.internal.clone();
         Ok(future_to_promise(async move {
             let result = runtime
-                .internal
                 .resolve_pointer_address_external(address)
                 .await
                 .map_err(|e| js_error(e))?;
@@ -660,21 +547,20 @@ impl JSRuntime {
     }
 }
 
-impl DIFInterface for JSRuntime {
+impl DIFInterface for RuntimeDIFHandle {
     fn update(
         &self,
         address: PointerAddress,
         update: DIFUpdate,
     ) -> Result<(), DIFUpdateError> {
-        self.runtime.internal.update(address, update)
+        self.internal.update(address, update)
     }
 
     async fn resolve_pointer_address_external(
         &self,
         address: PointerAddress,
     ) -> Result<DIFValueContainer, DIFResolveReferenceError> {
-        self.runtime
-            .internal
+        self.internal
             .resolve_pointer_address_external(address)
             .await
     }
@@ -683,9 +569,7 @@ impl DIFInterface for JSRuntime {
         &self,
         address: PointerAddress,
     ) -> Result<DIFValueContainer, DIFResolveReferenceError> {
-        self.runtime
-            .internal
-            .resolve_pointer_address_in_memory(address)
+        self.internal.resolve_pointer_address_in_memory(address)
     }
 
     fn apply(
@@ -693,7 +577,7 @@ impl DIFInterface for JSRuntime {
         callee: DIFValueContainer,
         value: DIFValueContainer,
     ) -> Result<DIFValueContainer, DIFApplyError> {
-        self.runtime.internal.apply(callee, value)
+        self.internal.apply(callee, value)
     }
 
     fn create_pointer(
@@ -702,8 +586,7 @@ impl DIFInterface for JSRuntime {
         allowed_type: Option<DIFTypeContainer>,
         mutability: ReferenceMutability,
     ) -> Result<PointerAddress, DIFCreatePointerError> {
-        self.runtime
-            .internal
+        self.internal
             .create_pointer(value, allowed_type, mutability)
     }
 
@@ -712,7 +595,7 @@ impl DIFInterface for JSRuntime {
         address: PointerAddress,
         observer: F,
     ) -> Result<u32, DIFObserveError> {
-        self.runtime.internal.observe_pointer(address, observer)
+        self.internal.observe_pointer(address, observer)
     }
 
     fn unobserve_pointer(
@@ -720,26 +603,9 @@ impl DIFInterface for JSRuntime {
         address: PointerAddress,
         observer_id: u32,
     ) -> Result<(), DIFObserveError> {
-        self.runtime
-            .internal
-            .unobserve_pointer(address, observer_id)
+        self.internal.unobserve_pointer(address, observer_id)
     }
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_execute_sync() {
-        let config = r#"{"endpoint": "@jonas"}"#;
-        let deserializer = DatexDeserializer::from_script(config).unwrap();
-        let val: ValueContainer =
-            Deserialize::deserialize(deserializer).unwrap();
-        println!("{}", config);
-
-        let deserializer = DatexDeserializer::from_script(config).unwrap();
-        let val: RuntimeConfig =
-            Deserialize::deserialize(deserializer).unwrap();
-    }
-}
+mod tests {}

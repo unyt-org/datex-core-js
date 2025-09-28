@@ -192,32 +192,21 @@ export class JSPointer {
 export class JSRuntime {
     private constructor();
     free(): void;
-    /**
-     * Resolve a pointer address, returning a Promise
-     * If the pointer is in memory, the promise resolves immediately
-     * If the pointer is not in memory, it will be loaded first
-     */
-    resolve_pointer_address(address: string): any;
-    unobserve_pointer(address: string, observer_id: number): void;
-    update(address: string, update: any): void;
     start(): Promise<void>;
     _create_block(
         body: Uint8Array | null | undefined,
         receivers: string[],
     ): Uint8Array;
-    observe_pointer(address: string, callback: Function): number;
     /**
-     * Resolve a pointer address synchronously if it's in memory, otherwise return an error
+     * Get a handle to the DIF interface of the runtime
      */
-    resolve_pointer_address_sync(address: string): any;
+    dif(): RuntimeDIFHandle;
     execute_with_string_result(
         script: string,
         dif_values: any[] | null | undefined,
         decompile_options: any,
     ): Promise<string>;
-    apply(callee: any, value: any): any;
     _stop(): Promise<void>;
-    get_handle(): RuntimeHandle;
     value_to_string(dif_value: any, decompile_options: any): string;
     execute_sync(script: string, dif_values?: any[] | null): any;
     crypto_test_tmp(): Promise<Promise<any>>;
@@ -226,26 +215,28 @@ export class JSRuntime {
         dif_values: any[] | null | undefined,
         decompile_options: any,
     ): string;
-    create_pointer(value: any, allowed_type: any, mutability: number): string;
     execute(script: string, dif_values?: any[] | null): Promise<any>;
     com_hub: JSComHub;
     readonly endpoint: string;
     readonly version: string;
 }
-export class RuntimeHandle {
+export class RuntimeDIFHandle {
     private constructor();
     free(): void;
-    /**
-     * Call this inside the JS callback safely
-     */
     unobserve_pointer(address: string, observer_id: number): void;
+    observe_pointer(address: string, callback: Function): number;
     /**
-     * Call execute_sync inside callback safely
+     * Resolve a pointer address synchronously if it's in memory, otherwise return an error
      */
-    observe(address: string, callback: Function): number;
+    resolve_pointer_address_sync(address: string): any;
+    apply(callee: any, value: any): any;
+    create_pointer(value: any, allowed_type: any, mutability: number): string;
     /**
-     * Call update_pointer inside callback safely
+     * Resolve a pointer address, returning a Promise
+     * If the pointer is in memory, the promise resolves immediately
+     * If the pointer is not in memory, it will be loaded first
      */
+    resolve_pointer_address(address: string): any;
     update(address: string, update: any): void;
 }
 export class WebSocketServerRegistry {
