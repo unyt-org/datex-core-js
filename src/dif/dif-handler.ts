@@ -567,7 +567,6 @@ export class DIFHandler {
         mutability: ReferenceMutability = ReferenceMutability.Mutable,
     ): T | Ref<T> {
         const difValue = this.convertJSValueToDIFValue(value);
-        console.log("difValue", difValue);
         const ptrAddress = this.createPointer(
             difValue,
             allowedType,

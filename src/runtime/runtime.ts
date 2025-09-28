@@ -209,7 +209,6 @@ export class Runtime {
         values: unknown[] | null = [],
     ): T {
         const difValue = this.#difHandler.executeSyncDIF(datexScript, values);
-        console.debug("difValue", difValue);
         if (difValue === null) {
             return undefined as T;
         }

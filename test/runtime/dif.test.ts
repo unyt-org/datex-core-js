@@ -11,7 +11,7 @@ import {
 import { assertStrictEquals } from "jsr:@std/assert/strict-equals";
 import { Ref } from "../../src/refs/ref.ts";
 
-const runtime = new Runtime({ debug: true, endpoint: "@jonas" });
+const runtime = new Runtime({ endpoint: "@jonas" });
 Deno.test("pointer create with observe", () => {
     const ref = runtime.dif.createPointer(
         {
