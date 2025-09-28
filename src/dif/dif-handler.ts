@@ -128,7 +128,7 @@ export class DIFHandler {
      */
     public updatePointer(address: string, dif: DIFUpdate) {
         console.log("Updating pointer", address, dif);
-        this.#runtime.update(address, dif);
+        this.#runtime.get_handle().update(address, dif);
     }
 
     /**
@@ -146,7 +146,7 @@ export class DIFHandler {
         address: string,
         callback: (value: DIFUpdate) => void,
     ): number {
-        return this.#runtime.observe_pointer(address, callback);
+        return this.#runtime.get_handle().observe(address, callback);
     }
 
     /**
@@ -157,7 +157,7 @@ export class DIFHandler {
      * @param observerId - The observer ID returned by the observePointer method.
      */
     public unobservePointerBindDirect(address: string, observerId: number) {
-        this.#runtime.unobserve_pointer(address, observerId);
+        this.#runtime.get_handle().unobserve_pointer(address, observerId);
     }
 
     /**

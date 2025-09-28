@@ -11,7 +11,7 @@ import {
 import { assertStrictEquals } from "jsr:@std/assert/strict-equals";
 import { Ref } from "../../src/refs/ref.ts";
 
-const runtime = new Runtime({ endpoint: "@jonas" });
+const runtime = new Runtime({ debug: true, endpoint: "@jonas" });
 
 Deno.test("pointer create with observe", () => {
     const ref = runtime.dif.createPointer(
@@ -32,8 +32,8 @@ Deno.test("pointer create with observe", () => {
             // https://github.com/wasm-bindgen/wasm-bindgen/issues/1578
             // NOTE: the exact same test without JS wasm_bindgen bindings is implemented in datex-core and works perfectly fine
             // Has nothing to do with unobservePointerBindDirect, also fails e.g. with runtime.executeSync
-            // console.log(runtime.executeSync("'xy'"));
-            runtime.dif.unobservePointerBindDirect(ref, observerId);
+            console.log(runtime.executeSync("'xy'"));
+            // runtime.dif.unobservePointerBindDirect(ref, observerId);
             observed = value;
         } catch (e) {
             console.error("Failed to unobserve pointer:", e);
@@ -44,6 +44,7 @@ Deno.test("pointer create with observe", () => {
         value: { value: "Hello, Datex!" },
         kind: DIFUpdateKind.Replace,
     });
+    console.log("done updating pointer");
 
     // if not equal, unobservePointer potentially failed
     assertEquals(observed, {

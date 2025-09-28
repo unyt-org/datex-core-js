@@ -5,7 +5,10 @@ use crate::utils::time::TimeJS;
 use datex_core::crypto::crypto::CryptoTrait;
 use datex_core::decompiler::{DecompileOptions, decompile_value};
 use datex_core::dif::DIFUpdate;
-use datex_core::dif::interface::{DIFApplyError, DIFCreatePointerError, DIFFreeError, DIFInterface, DIFObserveError, DIFResolveReferenceError, DIFUpdateError};
+use datex_core::dif::interface::{
+    DIFApplyError, DIFCreatePointerError, DIFFreeError, DIFInterface,
+    DIFObserveError, DIFResolveReferenceError, DIFUpdateError,
+};
 use datex_core::dif::r#type::DIFTypeContainer;
 use datex_core::dif::value::DIFValueContainer;
 use datex_core::global::dxb_block::DXBBlock;
@@ -18,7 +21,8 @@ use datex_core::runtime::execution::ExecutionError;
 #[cfg(feature = "debug")]
 use datex_core::runtime::global_context::DebugFlags;
 use datex_core::runtime::global_context::GlobalContext;
-use datex_core::runtime::{Runtime, RuntimeConfig, RuntimeInternal};
+use datex_core::runtime::{self, Runtime, RuntimeConfig, RuntimeInternal};
+use datex_core::task::spawn_local;
 use datex_core::values::core_values::endpoint::Endpoint;
 use datex_core::values::pointer::PointerAddress;
 use datex_core::values::serde::deserializer::DatexDeserializer;
@@ -30,6 +34,7 @@ use serde::{Deserialize, Serialize};
 use serde_wasm_bindgen::from_value;
 use std::fmt::Display;
 use std::pin::Pin;
+use std::rc::Rc;
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 use tsify::JsValueSerdeExt;
@@ -121,10 +126,7 @@ impl JSRuntime {
 
     pub fn new(runtime: Runtime) -> JSRuntime {
         let com_hub = JSComHub::new(runtime.clone());
-        JSRuntime {
-            runtime,
-            com_hub,
-        }
+        JSRuntime { runtime, com_hub }
     }
 }
 
@@ -382,9 +384,8 @@ impl JSRuntime {
         // convert JsValue to DIFValue
         let dif_value: DIFValueContainer = from_value(js_value).unwrap();
         // convert DIFValue to ValueContainer
-        if let Ok(value_container) = dif_value.to_value_container(
-            &self.runtime.memory().borrow()
-        )
+        if let Ok(value_container) =
+            dif_value.to_value_container(&self.runtime.memory().borrow())
         {
             Ok(value_container)
         } else {
@@ -423,22 +424,133 @@ impl JSRuntime {
     }
 }
 
+fn call_js(cb: Rc<Function>, update: &DIFUpdate) {
+    let dif_value = serde_wasm_bindgen::to_value(update).unwrap();
+    let _ = cb.call1(&JsValue::NULL, &dif_value);
+}
+
+// #[wasm_bindgen]
+// pub struct ObserverProxy {
+//     callback: Rc<Function>,
+//     runtime_inner: Runtime,
+// }
+
+// impl ObserverProxy {
+//     pub fn notify(&self, update: &DIFUpdate) {
+//         let val = serde_wasm_bindgen::to_value(update).unwrap();
+//         let _ = self.callback.call1(&JsValue::NULL, &val);
+//     }
+
+//     pub fn remove(&self, address: PointerAddress, observer_id: u32) {
+//         self.runtime_inner
+//             .unobserve_pointer(address, observer_id)
+//             .unwrap();
+//     }
+// }
+
+#[wasm_bindgen]
+pub struct RuntimeHandle {
+    internal: Rc<RuntimeInternal>,
+}
+
+#[wasm_bindgen]
+impl RuntimeHandle {
+    /// Call this inside the JS callback safely
+    pub fn unobserve_pointer(&self, address: &str, observer_id: u32) {
+        let address = PointerAddress::try_from(address).unwrap();
+        self.internal
+            .unobserve_pointer(address, observer_id)
+            .unwrap()
+    }
+
+    /// Call update_pointer inside callback safely
+    pub fn update(&self, address: &str, update: JsValue) {
+        let address = PointerAddress::try_from(address).unwrap();
+        let dif_update: DIFUpdate =
+            serde_wasm_bindgen::from_value(update).unwrap();
+        self.internal.update(address, dif_update).unwrap();
+    }
+
+    /// Call execute_sync inside callback safely
+    pub fn observe(
+        &self,
+        address: &str,
+        callback: &Function,
+    ) -> Result<u32, JsError> {
+        let address = PointerAddress::try_from(address)
+            .map_err(|_| js_error(ConversionError::InvalidValue))?;
+        let cb = Rc::new(callback.clone());
+        let observer = move |update: &DIFUpdate| {
+            call_js(cb.clone(), update);
+        };
+        self.internal
+            .observe_pointer(address, observer)
+            .map_err(|e| js_error(e))
+    }
+}
+
 // DIF
 #[wasm_bindgen]
 impl JSRuntime {
+    pub fn get_handle(&self) -> RuntimeHandle {
+        RuntimeHandle {
+            internal: self.runtime.internal.clone(),
+        }
+    }
     pub fn observe_pointer(
         &self,
         address: &str,
         callback: &Function,
     ) -> Result<u32, JsError> {
         let address = JSRuntime::js_value_to_pointer_address(address)?;
-        let cb = callback.clone();
+        let cb = Rc::new(callback.clone());
+        let internal_rc = self.runtime.internal.clone(); // clone Rc
+
         let observer = move |update: &DIFUpdate| {
-            let dif_value = serde_wasm_bindgen::to_value(update).unwrap();
-            let _ = cb.call1(&JsValue::NULL, &dif_value);
+            // Convert update to JS value
+            let js_value = serde_wasm_bindgen::to_value(update).unwrap();
+
+            // Call JS callback — must not call runtime methods on `self`
+            let _ = cb.call1(&JsValue::NULL, &js_value);
         };
-        DIFInterface::observe_pointer(self, address.into(), observer)
+
+        internal_rc
+            .observe_pointer(address, observer)
             .map_err(|e| js_error(e))
+
+        // DIFInterface::observe_pointer(self, address.into(), observer)
+        //     .map_err(|e| js_error(e))
+        // let closure = Closure::wrap(Box::new({
+        //     let cb = cb.clone();
+        //     move |js_update: JsValue| {
+        //         let _ = cb.call1(&JsValue::NULL, &js_update);
+        //     }
+        // }) as Box<dyn FnMut(JsValue)>);
+        // let closure_ref =
+        //     closure.as_ref().unchecked_ref::<js_sys::Function>().clone();
+
+        // let r = self
+        //     .runtime
+        //     .observe_pointer(address, move |arg0: &DIFUpdate| {
+        //         let js_value = serde_wasm_bindgen::to_value(arg0).unwrap();
+        //         closure_ref.call1(&JsValue::NULL, &js_value).unwrap();
+        //     })
+        //     .map_err(|e| js_error(e))?;
+
+        // // Now we can forget the original closure to keep it alive for JS
+        // closure.forget();
+        // Ok(r)
+        // info!("observe1");
+
+        // let res = DIFInterface::observe_pointer(
+        //     self,
+        //     address.into(),
+        //     |arg0: &DIFUpdate| observer(arg0.clone()),
+        // )
+        // .map_err(|e| js_error(e));
+
+        // info!("observe2");
+        // res
     }
 
     pub fn unobserve_pointer(
@@ -446,6 +558,10 @@ impl JSRuntime {
         address: &str,
         observer_id: u32,
     ) -> Result<(), JsError> {
+        info!(
+            "Unobserve pointer called with address: {}, observer_id: {}",
+            address, observer_id
+        );
         let address = Self::js_value_to_pointer_address(address)?;
         DIFInterface::unobserve_pointer(self, address.into(), observer_id)
             .map_err(|e| js_error(e))
@@ -534,6 +650,7 @@ impl JSRuntime {
         let runtime = self.runtime.clone();
         Ok(future_to_promise(async move {
             let result = runtime
+                .internal
                 .resolve_pointer_address_external(address)
                 .await
                 .map_err(|e| js_error(e))?;
@@ -549,21 +666,26 @@ impl DIFInterface for JSRuntime {
         address: PointerAddress,
         update: DIFUpdate,
     ) -> Result<(), DIFUpdateError> {
-        self.runtime.update(address, update)
+        self.runtime.internal.update(address, update)
     }
 
     async fn resolve_pointer_address_external(
         &self,
         address: PointerAddress,
     ) -> Result<DIFValueContainer, DIFResolveReferenceError> {
-        self.runtime.resolve_pointer_address_external(address).await
+        self.runtime
+            .internal
+            .resolve_pointer_address_external(address)
+            .await
     }
 
     fn resolve_pointer_address_in_memory(
         &self,
         address: PointerAddress,
     ) -> Result<DIFValueContainer, DIFResolveReferenceError> {
-        self.runtime.resolve_pointer_address_in_memory(address)
+        self.runtime
+            .internal
+            .resolve_pointer_address_in_memory(address)
     }
 
     fn apply(
@@ -571,7 +693,7 @@ impl DIFInterface for JSRuntime {
         callee: DIFValueContainer,
         value: DIFValueContainer,
     ) -> Result<DIFValueContainer, DIFApplyError> {
-        self.runtime.apply(callee, value)
+        self.runtime.internal.apply(callee, value)
     }
 
     fn create_pointer(
@@ -581,6 +703,7 @@ impl DIFInterface for JSRuntime {
         mutability: ReferenceMutability,
     ) -> Result<PointerAddress, DIFCreatePointerError> {
         self.runtime
+            .internal
             .create_pointer(value, allowed_type, mutability)
     }
 
@@ -589,7 +712,7 @@ impl DIFInterface for JSRuntime {
         address: PointerAddress,
         observer: F,
     ) -> Result<u32, DIFObserveError> {
-        self.runtime.observe_pointer(address, observer)
+        self.runtime.internal.observe_pointer(address, observer)
     }
 
     fn unobserve_pointer(
@@ -597,7 +720,9 @@ impl DIFInterface for JSRuntime {
         address: PointerAddress,
         observer_id: u32,
     ) -> Result<(), DIFObserveError> {
-        self.runtime.unobserve_pointer(address, observer_id)
+        self.runtime
+            .internal
+            .unobserve_pointer(address, observer_id)
     }
 }
 
