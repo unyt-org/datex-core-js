@@ -5,7 +5,7 @@ import {
 } from "../datex-core.ts";
 import { ComHub } from "../network/com-hub.ts";
 import { DIFHandler } from "../dif/dif-handler.ts";
-import { type DIFType, ReferenceMutability } from "../dif/definitions.ts";
+import { DIFReferenceMutability, type DIFType } from "../dif/definitions.ts";
 import type { Ref } from "../refs/ref.ts";
 
 // auto-generated version - do not edit:
@@ -267,7 +267,7 @@ export class Runtime {
     public createPointer<T>(
         value: T,
         allowedType: DIFType | null = null,
-        mutability: ReferenceMutability = ReferenceMutability.Mutable,
+        mutability: DIFReferenceMutability = DIFReferenceMutability.Mutable,
     ): T | Ref<T> {
         return this.#difHandler.createPointerFromJSValue(
             value,

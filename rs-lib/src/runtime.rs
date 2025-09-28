@@ -27,11 +27,12 @@ use datex_core::values::value_container::ValueContainer;
 use futures::FutureExt;
 use js_sys::Function;
 use serde::{Deserialize, Serialize};
-use serde_wasm_bindgen::from_value;
+use serde_wasm_bindgen::{from_value, Error};
 use std::fmt::Display;
 use std::rc::Rc;
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
+use datex_core::dif::reference::DIFReference;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::future_to_promise;
 use web_sys::js_sys::Promise;
@@ -338,13 +339,8 @@ impl JSRuntime {
             None => JsValue::NULL,
             Some(value_container) => {
                 let dif_value_container =
-                    DIFValueContainer::try_from(&value_container)
-                        .expect("Conversion to DIFValue failed");
-                dif_value_container
-                    .serialize(
-                        &serde_wasm_bindgen::Serializer::json_compatible(),
-                    )
-                    .unwrap()
+                    DIFValueContainer::from_value_container(&value_container, self.runtime.memory());
+                to_js_value(&dif_value_container).unwrap()
             }
         }
     }
@@ -370,7 +366,7 @@ impl JSRuntime {
         let dif_value: DIFValueContainer = from_value(js_value).unwrap();
         // convert DIFValue to ValueContainer
         if let Ok(value_container) =
-            dif_value.to_value_container(&self.runtime.memory().borrow())
+            dif_value.to_value_container(self.runtime.memory())
         {
             Ok(value_container)
         } else {
@@ -408,6 +404,13 @@ impl JSRuntime {
     }
 }
 
+/// Convert a serializable value to a JsValue (JSON compatible)
+fn to_js_value<T: Serialize>(value: &T) -> Result<JsValue, Error> {
+    value.serialize(
+        &serde_wasm_bindgen::Serializer::json_compatible(),
+    )
+}
+
 #[wasm_bindgen]
 pub struct RuntimeDIFHandle {
     internal: Rc<RuntimeInternal>,
@@ -430,7 +433,7 @@ impl RuntimeDIFHandle {
         let address = RuntimeDIFHandle::js_value_to_pointer_address(address)?;
         let cb = callback.clone();
         let observer = move |update: &DIFUpdate| {
-            let js_value = serde_wasm_bindgen::to_value(update).unwrap();
+            let js_value = to_js_value(update).unwrap();
             let _ = cb.call1(&JsValue::NULL, &js_value);
         };
         self.internal
@@ -471,7 +474,7 @@ impl RuntimeDIFHandle {
             serde_wasm_bindgen::from_value(value).map_err(js_error)?;
         let result = DIFInterface::apply(self, dif_callee, dif_value)
             .map_err(js_error)?;
-        serde_wasm_bindgen::to_value(&result).map_err(js_error)
+        to_js_value(&result).map_err(js_error)
     }
 
     pub fn create_pointer(
@@ -514,7 +517,7 @@ impl RuntimeDIFHandle {
             address,
         )
         .map_err(js_error)?;
-        serde_wasm_bindgen::to_value(&result).map_err(js_error)
+        to_js_value(&result).map_err(js_error)
     }
 
     /// Resolve a pointer address, returning a Promise
@@ -534,7 +537,7 @@ impl RuntimeDIFHandle {
                 .resolve_pointer_address_external(address)
                 .await
                 .map_err(js_error)?;
-            Ok(serde_wasm_bindgen::to_value(&result).map_err(js_error)?)
+            Ok(to_js_value(&result).map_err(js_error)?)
         })
         .unchecked_into())
     }
@@ -552,7 +555,7 @@ impl DIFInterface for RuntimeDIFHandle {
     async fn resolve_pointer_address_external(
         &self,
         address: PointerAddress,
-    ) -> Result<DIFValueContainer, DIFResolveReferenceError> {
+    ) -> Result<DIFReference, DIFResolveReferenceError> {
         self.internal
             .resolve_pointer_address_external(address)
             .await
@@ -561,7 +564,7 @@ impl DIFInterface for RuntimeDIFHandle {
     fn resolve_pointer_address_in_memory(
         &self,
         address: PointerAddress,
-    ) -> Result<DIFValueContainer, DIFResolveReferenceError> {
+    ) -> Result<DIFReference, DIFResolveReferenceError> {
         self.internal.resolve_pointer_address_in_memory(address)
     }
 

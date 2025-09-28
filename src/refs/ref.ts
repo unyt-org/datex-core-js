@@ -36,17 +36,11 @@ export class Ref<T> {
         const oldValue = this.#value;
         if (oldValue === newValue) return;
 
+        // Try to update the pointer
+        this.#difHandler.updatePointer(
+            this.#pointerAddress,
+            DIF_Replace(this.#difHandler, newValue),
+        );
         this.#value = newValue;
-        try {
-            // Try to update the pointer
-            this.#difHandler.updatePointer(
-                this.#pointerAddress,
-                DIF_Replace(this.#difHandler, newValue),
-            );
-        } catch (e) {
-            // If it fails, revert to old value
-            this.#value = oldValue;
-            console.error("Failed to update pointer, reverting value:", e);
-        }
     }
 }

@@ -3,23 +3,23 @@ import { assert, assertEquals, assertNotStrictEquals } from "jsr:@std/assert";
 import { assertThrows } from "jsr:@std/assert/throws";
 import {
     CoreTypeAddress,
+    DIFReferenceMutability,
     type DIFRepresentationValue,
     type DIFUpdate,
     DIFUpdateKind,
-    type DIFValue,
-    ReferenceMutability,
 } from "../../src/dif/definitions.ts";
 import { assertStrictEquals } from "jsr:@std/assert/strict-equals";
 import { Ref } from "../../src/refs/ref.ts";
+import { difValueContainerToDisplayString } from "../../src/dif/display.ts";
 
-const runtime = new Runtime({ endpoint: "@jonas" });
+const runtime = new Runtime({ endpoint: "@jonas", debug: true });
 Deno.test("pointer create with observe", () => {
     const ref = runtime.dif.createPointer(
         {
             value: "Hello, Datex!",
         },
         undefined,
-        ReferenceMutability.Mutable,
+        DIFReferenceMutability.Mutable,
     );
     assertEquals(typeof ref, "string");
 
@@ -28,16 +28,18 @@ Deno.test("pointer create with observe", () => {
         runtime.executeSync("'xy'");
         runtime.dif.unobservePointerBindDirect(ref, observerId);
         observed = value;
+        // TODO: print error message somewhere (don't throw)
+        throw new Error("Should not be called again");
     });
 
     runtime.dif.updatePointer(ref, {
-        value: { value: "Hello, Datex!" },
+        value: { value: "Hello, Datex 2" },
         kind: DIFUpdateKind.Replace,
     });
 
     // if not equal, unobservePointer potentially failed
     assertEquals(observed, {
-        value: { value: "Hello, Datex!" },
+        value: { value: "Hello, Datex 2" },
         kind: DIFUpdateKind.Replace,
     });
 });
@@ -47,13 +49,13 @@ Deno.test("pointer create struct", () => {
     const innerPtr = runtime.createPointer(
         3 as number,
         undefined,
-        ReferenceMutability.Mutable,
+        DIFReferenceMutability.Mutable,
     );
     const struct = { a: 1.0, b: "text", c: { d: true }, e: { f: innerPtr } };
     const ptrObj = runtime.createPointer(
         struct,
         undefined,
-        ReferenceMutability.Mutable,
+        DIFReferenceMutability.Mutable,
     ) as { a: number; b: string; c: { d: boolean }; e: { f: typeof innerPtr } };
     assertThrows(
         () => {
@@ -96,7 +98,7 @@ Deno.test("pointer create and resolve", () => {
     const ptr = runtime.dif.createPointer(
         { value: "unyt.org" },
         undefined,
-        ReferenceMutability.Mutable,
+        DIFReferenceMutability.Mutable,
     );
     const resolved = runtime.dif.resolveDIFValueContainerSync<string>(
         ptr,
@@ -114,7 +116,7 @@ Deno.test("pointer object create and resolve", () => {
             value: initialDIFValue,
         },
         undefined,
-        ReferenceMutability.Mutable,
+        DIFReferenceMutability.Mutable,
     );
     console.log("ptr address", ptr);
     const loadedDIFValue = runtime.dif.resolvePointerAddress(ptr);
@@ -129,7 +131,7 @@ Deno.test("pointer object create and cache", () => {
     console.log("ptrObj", ptrObj);
     assertEquals(ptrObj, val);
 
-    const ptrId = runtime.dif.getPointerAddressForValue(val);
+    const ptrId = runtime.dif.getPointerAddressForValue(ptrObj);
     console.log("ptrId", ptrId);
     if (!ptrId) {
         throw new Error("Pointer ID not found for value");
@@ -138,8 +140,41 @@ Deno.test("pointer object create and cache", () => {
     // check if cache is used when resolving the pointer again
     const loadedObj = runtime.dif.resolvePointerAddress(ptrId);
     console.log("loadedObj", loadedObj);
+
+    console.log(
+        difValueContainerToDisplayString(
+            runtime.dif._handle.resolve_pointer_address(ptrId),
+        ),
+    );
+
     // identical object reference
-    assertStrictEquals(loadedObj, val);
+    assertStrictEquals(loadedObj, ptrObj);
+});
+
+Deno.test("pointer map create and cache", () => {
+    const val = new Map([[1, 2], [3, 4]]);
+    const ptrMap = runtime.createPointer(val) as Map<number, number>;
+    console.log("ptrMap", ptrMap);
+    assertEquals(ptrMap, val);
+
+    const ptrId = runtime.dif.getPointerAddressForValue(ptrMap);
+    console.log("ptrId", ptrId);
+    if (!ptrId) {
+        throw new Error("Pointer ID not found for value");
+    }
+
+    // check if cache is used when resolving the pointer again
+    const loadedObj = runtime.dif.resolvePointerAddress(ptrId);
+    console.log("loadedObj", loadedObj);
+
+    console.log(
+        difValueContainerToDisplayString(
+            runtime.dif._handle.resolve_pointer_address(ptrId),
+        ),
+    );
+
+    // identical object reference
+    assertStrictEquals(loadedObj, ptrMap);
 });
 
 Deno.test("pointer primitive ref create and cache", () => {
@@ -189,7 +224,7 @@ Deno.test("immutable pointer primitive ref update", () => {
     const ptrObj = runtime.createPointer(
         val as number,
         undefined,
-        ReferenceMutability.Immutable,
+        DIFReferenceMutability.Immutable,
     );
     if (!(ptrObj instanceof Ref)) {
         throw new Error("Pointer object is not a Ref");
@@ -217,7 +252,7 @@ Deno.test("final pointer primitive ref update", () => {
     const ptrObj = runtime.createPointer(
         val as number,
         undefined,
-        ReferenceMutability.Final,
+        DIFReferenceMutability.Final,
     );
     if (!(ptrObj instanceof Ref)) {
         throw new Error("Pointer object is not a Ref");
@@ -313,7 +348,7 @@ Deno.test("observer final", () => {
     const ref = runtime.dif.createPointer(
         { value: "Final" },
         undefined,
-        ReferenceMutability.Final,
+        DIFReferenceMutability.Final,
     );
     assertThrows(
         () => {
@@ -328,7 +363,7 @@ Deno.test("pointer observe unobserve", () => {
     const ref = runtime.dif.createPointer(
         { value: "42" },
         undefined,
-        ReferenceMutability.Mutable,
+        DIFReferenceMutability.Mutable,
     );
     assertThrows(
         () => {

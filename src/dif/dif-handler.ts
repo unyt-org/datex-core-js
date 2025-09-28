@@ -10,6 +10,7 @@ import {
     type DIFObject,
     type DIFPointerAddress,
     type DIFProperty,
+    DIFReference,
     DIFReferenceMutability,
     type DIFType,
     type DIFTypeContainer,
@@ -17,8 +18,8 @@ import {
     DIFUpdateKind,
     type DIFValue,
     type DIFValueContainer,
-    ReferenceMutability,
 } from "./definitions.ts";
+import { difValueContainerToDisplayString } from "./display.ts";
 
 export class DIFHandler {
     /** The JSRuntime interface for the underlying Datex Core runtime */
@@ -39,6 +40,10 @@ export class DIFHandler {
 
     get _observers() {
         return this.#observers;
+    }
+
+    get _handle() {
+        return this.#handle;
     }
 
     /**
@@ -97,7 +102,7 @@ export class DIFHandler {
     public createPointer(
         difValue: DIFValue,
         allowedType: DIFTypeContainer | null = null,
-        mutability: ReferenceMutability,
+        mutability: DIFReferenceMutability,
     ): string {
         return this.#handle.create_pointer(
             difValue,
@@ -116,7 +121,7 @@ export class DIFHandler {
     public createRefPointer(
         address: string,
         allowedType: DIFTypeContainer | null = null,
-        mutability: ReferenceMutability,
+        mutability: DIFReferenceMutability,
     ): string {
         return this.#handle.create_pointer(
             address,
@@ -243,11 +248,11 @@ export class DIFHandler {
         else if (
             typeof value.type === "string" && (
                 value.type == CoreTypeAddress.integer ||
-                this.isPointerAddressInRange(
+                this.isPointerAddressInAdresses(
                     value.type,
                     CoreTypeAddressRanges.small_signed_integers,
                 ) ||
-                this.isPointerAddressInRange(
+                this.isPointerAddressInAdresses(
                     value.type,
                     CoreTypeAddressRanges.small_unsigned_integers,
                 )
@@ -257,11 +262,11 @@ export class DIFHandler {
         } // big integers are interpreted as JS BigInt
         else if (
             typeof value.type === "string" && (
-                this.isPointerAddressInRange(
+                this.isPointerAddressInAdresses(
                     value.type,
                     CoreTypeAddressRanges.big_signed_integers,
                 ) ||
-                this.isPointerAddressInRange(
+                this.isPointerAddressInAdresses(
                     value.type,
                     CoreTypeAddressRanges.big_unsigned_integers,
                 )
@@ -271,7 +276,7 @@ export class DIFHandler {
         } // decimal types are interpreted as JS numbers
         else if (
             typeof value.type === "string" &&
-            this.isPointerAddressInRange(
+            this.isPointerAddressInAdresses(
                 value.type,
                 CoreTypeAddressRanges.decimals,
             )
@@ -296,14 +301,18 @@ export class DIFHandler {
         } // struct types are resolved from a DIFObject (aka JS Map) to a JS object
         else if (value.type === CoreTypeAddress.struct) {
             const resolvedObj: { [key: string]: unknown } = {};
-            for (const [key, val] of value.value as DIFObject) {
+            for (const [key, val] of Object.entries(value.value as DIFObject)) {
                 resolvedObj[key] = this.resolveDIFValueContainer(val);
             }
             return this.promiseFromObjectOrSync(resolvedObj) as T | Promise<T>;
         } // map types are resolved from a DIFObject (aka JS Map) or Array of key-value pairs to a JS object
         else if (value.type === CoreTypeAddress.map) {
             const resolvedObj: { [key: string]: unknown } = {};
-            for (const [key, val] of value.value as (DIFObject | DIFMap)) {
+            for (
+                const [key, val] of (Array.isArray(value.value)
+                    ? (value.value as DIFMap)
+                    : Object.entries(value.value as DIFObject))
+            ) {
                 // TODO: currently always converting to an object here, but this should be a Map per default
                 resolvedObj[key as string] = this.resolveDIFValueContainer(val);
             }
@@ -415,16 +424,20 @@ export class DIFHandler {
             return cached as T;
         }
         // if not in cache, resolve from runtime
-        const entry: DIFValueContainer | Promise<DIFValueContainer> = this
+        const reference: DIFReference | Promise<DIFReference> = this
             .#handle.resolve_pointer_address(address);
-        return this.mapPromise(entry, (e) => {
-            const value: T | Promise<T> = this.resolveDIFValueContainer(e);
+        return this.mapPromise(reference, (reference) => {
+            const value: T | Promise<T> = this.resolveDIFValueContainer(
+                reference.value,
+            );
             return this.mapPromise(value, (v) => {
                 // init pointer
-                // get mutablity from DIFValue. TODO: this does not work for all cases.
-                const mutability = ((e as DIFValue).type as DIFType)?.mut ||
-                    DIFReferenceMutability.Mutable;
-                this.initPointer(address, v, mutability);
+                this.initPointer(
+                    address,
+                    v,
+                    reference.mutability,
+                    reference.allowed_type,
+                );
                 return v;
             });
         }) as Promise<T> | T;
@@ -447,15 +460,12 @@ export class DIFHandler {
             return cached as T;
         }
         // if not in cache, resolve from runtime
-        const entry: DIFValueContainer = this.#handle
+        const entry: DIFReference = this.#handle
             .resolve_pointer_address_sync(address);
         const value: T = this.resolveDIFValueContainerSync(
-            entry,
+            entry.value,
         );
-        // init pointer
-        const mutability = ((entry as DIFValue).type as DIFType)?.mut ||
-            DIFReferenceMutability.Mutable;
-        this.initPointer(address, value, mutability);
+        this.initPointer(address, value, entry.mutability, entry.allowed_type);
         return value;
     }
 
@@ -474,12 +484,11 @@ export class DIFHandler {
     /**
      * Returns true if the given address is within the specified address range.
      */
-    protected isPointerAddressInRange(
+    protected isPointerAddressInAdresses(
         address: DIFPointerAddress,
-        range: readonly [number, number],
+        range: Set<string>,
     ): boolean {
-        const addressNum = parseInt(address, 16);
-        return addressNum >= range[0] && addressNum < range[1];
+        return range.has(address);
     }
 
     /**
@@ -489,13 +498,18 @@ export class DIFHandler {
     protected initPointer<T>(
         ptrAddress: string,
         value: T,
-        mutability: ReferenceMutability,
+        mutability: DIFReferenceMutability,
+        allowedType: DIFTypeContainer | null = null,
     ): T | Ref<T> {
-        const refValue = this.wrapJSValueInProxy(value, ptrAddress);
+        const refValue = this.wrapJSValueInProxy(
+            value,
+            ptrAddress,
+            allowedType,
+        );
 
         // if not final, observe  to keep the pointer 'live' and receive updates
         let observerId: number | null = null;
-        if (mutability !== ReferenceMutability.Final) {
+        if (mutability !== DIFReferenceMutability.Final) {
             observerId = this.observePointerBindDirect(
                 ptrAddress,
                 (update) => {
@@ -563,21 +577,29 @@ export class DIFHandler {
      */
     public createPointerFromJSValue<T>(
         value: T,
-        allowedType: DIFType | null = null,
-        mutability: ReferenceMutability = ReferenceMutability.Mutable,
+        allowedType: DIFTypeContainer | null = null,
+        mutability: DIFReferenceMutability = DIFReferenceMutability.Mutable,
     ): T | Ref<T> {
         const difValue = this.convertJSValueToDIFValue(value);
+        console.log("DIF", difValueContainerToDisplayString(difValue));
         const ptrAddress = this.createPointer(
             difValue,
             allowedType,
             mutability,
         );
-        return this.initPointer(ptrAddress, value, mutability); // TODO: map to correct pointer wrapper type
+        // get inferred allowed type from pointer if not explicitly set
+        if (!allowedType) {
+            allowedType = (this.#handle.resolve_pointer_address_sync(
+                ptrAddress,
+            ) as DIFReference).allowed_type;
+        }
+        return this.initPointer(ptrAddress, value, mutability, allowedType); // TODO: map to correct pointer wrapper type
     }
 
     protected wrapJSValueInProxy<T>(
         value: T,
         pointerAddress: string,
+        type: DIFTypeContainer | null = null,
     ): (T | Ref<T>) & WeakKey {
         // primitive values are always wrapped in a Ref proxy
         if (
@@ -686,10 +708,21 @@ export class DIFHandler {
             return {
                 value: value.map((v) => this.convertJSValueToDIFValue(v)),
             };
+        } else if (value instanceof Map) {
+            const map: [DIFValue, DIFValue][] = value.entries().map((
+                [k, v],
+            ) => [
+                this.convertJSValueToDIFValue(k),
+                this.convertJSValueToDIFValue(v),
+            ] as [DIFValue, DIFValue]).toArray();
+            return {
+                type: CoreTypeAddress.map,
+                value: map,
+            };
         } else if (typeof value === "object") {
-            const map: Map<string, DIFValue> = new Map();
+            const map: Record<string, DIFValue> = {};
             for (const [key, val] of Object.entries(value)) {
-                map.set(key, this.convertJSValueToDIFValue(val));
+                map[key] = this.convertJSValueToDIFValue(val);
             }
             return {
                 type: CoreTypeAddress.map,
