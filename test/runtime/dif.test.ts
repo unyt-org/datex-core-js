@@ -50,14 +50,14 @@ Deno.test("pointer create struct", () => {
         ReferenceMutability.Mutable,
     );
     const struct = { a: 1.0, b: "text", c: { d: true }, e: { f: innerPtr } };
-    const ptr = runtime.createPointer(
+    const ptrObj = runtime.createPointer(
         struct,
         undefined,
         ReferenceMutability.Mutable,
     ) as { a: number; b: string; c: { d: boolean }; e: { f: typeof innerPtr } };
     assertThrows(
         () => {
-            ptr.a = 2;
+            ptrObj.a = 2;
         },
         Error,
         `modify`,
@@ -65,22 +65,22 @@ Deno.test("pointer create struct", () => {
     assertThrows(
         () => {
             // @ts-ignore $
-            ptr.x = 2;
+            ptrObj.x = 2;
         },
         Error,
         `modify`,
     );
     assertThrows(
         () => {
-            ptr.c.d = false;
+            ptrObj.c.d = false;
         },
         Error,
         `modify`,
     );
 
-    ptr.e.f = 42;
+    ptrObj.e.f = 42;
     assertEquals((innerPtr as Ref<number>).value, 42);
-    assertNotStrictEquals(ptr, { ...struct, e: { f: 42 } });
+    assertNotStrictEquals(ptrObj, { ...struct, e: { f: 42 } });
 });
 
 Deno.test("pointer create and resolve", () => {
