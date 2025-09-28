@@ -129,7 +129,7 @@ export class DIFHandler {
      * @param dif - The DIFUpdate object containing the update information.
      */
     public updatePointer(address: string, dif: DIFUpdate) {
-        console.log("Updating pointer", address, dif);
+        console.debug("Updating pointer", address, dif);
         this.#handle.update(address, dif);
     }
 
@@ -226,8 +226,6 @@ export class DIFHandler {
     public resolveDIFValue<T extends unknown>(
         value: DIFValue,
     ): T | Promise<T> {
-        console.log("resolve DIF Value", value);
-
         if (value.type === undefined) {
             return value.value as T;
         }
@@ -506,7 +504,7 @@ export class DIFHandler {
                             cb(update);
                         }
                     }
-                    console.log("Pointer update received", update);
+                    console.debug("Pointer update received", update);
                 },
             );
         }
