@@ -9,6 +9,7 @@ import {
     type DIFMap,
     type DIFObject,
     type DIFPointerAddress,
+    DIFReferenceMutability,
     type DIFType,
     type DIFTypeContainer,
     type DIFUpdate,
@@ -21,12 +22,21 @@ export class DIFHandler {
     /** The JSRuntime interface for the underlying Datex Core runtime */
     #runtime: JSRuntime;
     /** The pointer cache for storing and reusing object instances on the JS side
-     * If the pointer is not actively observed, 'live' is set to false
+     * If the pointer is a final ref, it is not being observed and 'final' is set to true
      */
     readonly #cache = new Map<
         string,
-        { val: WeakRef<WeakKey>; live: boolean }
+        { val: WeakRef<WeakKey>; final: boolean }
     >();
+
+    readonly #observers = new Map<
+        string,
+        Map<number, (value: DIFUpdate) => void>
+    >();
+
+    get _observers() {
+        return this.#observers;
+    }
 
     /**
      * Creates a new DIFHandler instance.
@@ -122,13 +132,17 @@ export class DIFHandler {
     }
 
     /**
-     * Registers an observer callback for changes to the DIF value at the specified address.
+     * Registers an observer callback for changes to the DIF value at the specified address
+     * directly on the DATEX core runtime.
+     * This method should only be used internally, since it comes with additional overhead.
+     * For normal use cases, use the observePointer method instead.
      * The callback will be invoked whenever the value at the address is updated.
      * @param address - The address of the DIF value to observe.
      * @param callback - The callback function to invoke on updates.
      * @returns An observer ID that can be used to unregister the observer.
+     * @throws If the pointer is final.
      */
-    public observePointer(
+    public observePointerBindDirect(
         address: string,
         callback: (value: DIFUpdate) => void,
     ): number {
@@ -136,12 +150,69 @@ export class DIFHandler {
     }
 
     /**
-     * Unregisters an observer for the specified address using the observer ID.
+     * Unregisters an observer that was registered directly on the DATEX core runtime
+     * with the observePointerBindDirect method.
+     * For internal use only.
      * @param address - The address of the DIF value being observed.
      * @param observerId - The observer ID returned by the observePointer method.
      */
-    public unobservePointer(address: string, observerId: number) {
+    public unobservePointerBindDirect(address: string, observerId: number) {
         this.#runtime.unobserve_pointer(address, observerId);
+    }
+
+    /**
+     * Registers a local observer callback for changes to the DIF value at the specified address.
+     * The callback will be invoked whenever the value at the address is updated.
+     * In contrast to observePointerBindDirect, this method does not register the observer
+     * directly on the DATEX core runtime, but keeps it local in the JS side, which prevents
+     * unnecessary overhead from additional cross-language calls.
+     * @param address - The address of the DIF value to observe.
+     * @param callback - The callback function to invoke on updates.
+     * @returns An observer ID that can be used to unregister the observer.
+     * @throws If the pointer is final.
+     */
+    public observePointer(
+        address: string,
+        callback: (value: DIFUpdate) => void,
+    ): number {
+        let cached = this.#cache.get(address);
+        if (!cached) {
+            // first resolve the pointer to make sure it's loaded in the cache
+            this.resolvePointerAddressSync(address);
+            cached = this.#cache.get(address)!;
+        }
+
+        // make sure the pointer is not final
+        if (cached.final) {
+            throw new Error(`Cannot final reference $${address}`);
+        }
+
+        // directly add to observers map
+        let observers = this.#observers.get(address);
+        if (!observers) {
+            observers = new Map();
+            this.#observers.set(address, observers);
+        }
+        const observerId = observers.size + 1;
+        observers.set(observerId, callback);
+        return observerId;
+    }
+
+    /**
+     * Unregisters an observer that was registered with the observePointer method.
+     * @param address - The address of the DIF value being observed.
+     * @param observerId - The observer ID returned by the observePointer method.
+     * @returns True if the observer was successfully unregistered, false otherwise.
+     */
+    public unobservePointer(address: string, observerId: number): boolean {
+        const observers = this.#observers.get(address);
+        if (observers) {
+            observers.delete(observerId);
+            if (observers.size === 0) {
+                return this.#observers.delete(address);
+            }
+        }
+        return false;
     }
 
     /**
@@ -276,6 +347,20 @@ export class DIFHandler {
     }
 
     /**
+     * Maps a value or Promise of a value to another value or Promise of a value using the provided onfulfilled function.
+     */
+    public mapPromise<T, N>(
+        value: T | Promise<T>,
+        onfulfilled: (value: T) => N,
+    ): N | Promise<N> {
+        if (value instanceof Promise) {
+            return value.then(onfulfilled);
+        } else {
+            return onfulfilled(value);
+        }
+    }
+
+    /**
      * Resolves a DIFValueContainer (either a DIFValue or a pointer address) to its corresponding JS value.
      * If the container contains pointers that are not yet loaded in memory, it returns a Promise that resolves to the value.
      * Otherwise, it returns the resolved value directly.
@@ -328,13 +413,48 @@ export class DIFHandler {
             return cached as T;
         }
         // if not in cache, resolve from runtime
-        const entry = this.#runtime.resolve_pointer_address(address);
-        if (entry instanceof Promise) {
-            return entry.then((e) => this.resolveDIFValueContainer(e) as T);
+        const entry: DIFValueContainer | Promise<DIFValueContainer> = this
+            .#runtime.resolve_pointer_address(address);
+        return this.mapPromise(entry, (e) => {
+            const value: T | Promise<T> = this.resolveDIFValueContainer(e);
+            return this.mapPromise(value, (v) => {
+                // init pointer
+                // get mutablity from DIFValue. TODO: this does not work for all cases.
+                const mutability = ((e as DIFValue).type as DIFType)?.mut ||
+                    DIFReferenceMutability.Mutable;
+                this.initPointer(address, v, mutability);
+                return v;
+            });
+        }) as Promise<T> | T;
+    }
+
+    /**
+     * Resolves a pointer address to its corresponding JS value synchronously.
+     * If the pointer address is not yet loaded in memory, it returns a Promise that resolves to the value.
+     * Otherwise, it returns the resolved value directly.
+     * @param address - The pointer address to resolve.
+     * @returns The resolved value as type T, or a Promise that resolves to type T.
+     * @throws If the resolution would require asynchronous operations.
+     */
+    public resolvePointerAddressSync<T extends unknown>(
+        address: string,
+    ): T {
+        // check cache first
+        const cached = this.getCachedPointer(address);
+        if (cached) {
+            return cached as T;
         }
-        return this.resolveDIFValueContainer(
+        // if not in cache, resolve from runtime
+        const entry: DIFValueContainer = this.#runtime
+            .resolve_pointer_address_sync(address);
+        const value: T = this.resolveDIFValueContainerSync(
             entry,
         );
+        // init pointer
+        const mutability = ((entry as DIFValue).type as DIFType)?.mut ||
+            DIFReferenceMutability.Mutable;
+        this.initPointer(address, value, mutability);
+        return value;
     }
 
     /**
@@ -360,24 +480,63 @@ export class DIFHandler {
         return addressNum >= range[0] && addressNum < range[1];
     }
 
-    /// Cache the given pointer value with the given address in the JS side cache.
-    protected cachePointer(
+    /**
+     * Initializes a pointer with the given value and mutability, by
+     * adding a proxy wrapper if necessary, and setting up observation and caching on the JS side.
+     */
+    protected initPointer<T>(
+        ptrAddress: string,
+        value: T,
+        mutability: ReferenceMutability,
+    ): T | Ref<T> {
+        const refValue = this.wrapJSValueInProxy(value, ptrAddress);
+
+        // if not final, observe  to keep the pointer 'live' and receive updates
+        let observerId: number | null = null;
+        if (mutability !== ReferenceMutability.Final) {
+            observerId = this.observePointerBindDirect(
+                ptrAddress,
+                (update) => {
+                    // call all local observers
+                    const observers = this.#observers.get(ptrAddress);
+                    if (observers) {
+                        for (const cb of observers.values()) {
+                            cb(update);
+                        }
+                    }
+                    console.log("Pointer update received", update);
+                },
+            );
+        }
+
+        this.cacheWrappedPointerValue(ptrAddress, refValue, observerId);
+
+        return refValue;
+    }
+
+    /**
+     * Caches the given pointer value with the given address in the JS side cache.
+     * The pointer must already be wrapped if necessary.
+     */
+    protected cacheWrappedPointerValue(
         address: string,
         value: WeakKey,
         observerId: number | null,
     ): void {
         this.#cache.set(address, {
             val: new WeakRef(value),
-            live: observerId !== null,
+            final: observerId === null,
         });
         // register finalizer to clean up the cache and free the pointer in the runtime
         // when the object is garbage collected
         const finalizationRegistry = new FinalizationRegistry(
             (address: string) => {
                 this.#cache.delete(address);
+                // remove local observers
+                this.#observers.delete(address);
                 // if observer is active, unregister it
                 if (observerId !== null) {
-                    this.unobservePointer(address, observerId);
+                    this.unobservePointerBindDirect(address, observerId);
                 } // if no observer is active, free the pointer
                 else {
                     this.#runtime.free_pointer(address);
@@ -393,9 +552,6 @@ export class DIFHandler {
             const deref = cached.val.deref();
             if (deref) {
                 return deref;
-            } else if (!cached.live) {
-                // if the object was garbage collected and is not live anymore, we can remove it from the cache
-                this.#cache.delete(address);
             }
         }
         return undefined;
@@ -418,21 +574,7 @@ export class DIFHandler {
             allowedType,
             mutability,
         );
-
-        const refValue = this.wrapJSValueInProxy(value, ptrAddress);
-
-        // if not final, observe  to keep the pointer 'live' and receive updates
-        let observerId: number | null = null;
-        if (mutability !== ReferenceMutability.Final) {
-            observerId = this.observePointer(
-                ptrAddress,
-                (update) => {
-                    console.log("Pointer update received", update);
-                },
-            );
-        }
-        this.cachePointer(ptrAddress, refValue, observerId);
-        return refValue; // TODO: map to correct pointer wrapper type
+        return this.initPointer(ptrAddress, value, mutability); // TODO: map to correct pointer wrapper type
     }
 
     protected wrapJSValueInProxy<T>(

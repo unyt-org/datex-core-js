@@ -1,5 +1,5 @@
 import { Runtime } from "../../src/runtime/runtime.ts";
-import { assertEquals } from "jsr:@std/assert";
+import { assert, assertEquals } from "jsr:@std/assert";
 import { assertThrows } from "jsr:@std/assert/throws";
 import {
     CoreTypeAddress,
@@ -24,13 +24,13 @@ Deno.test("pointer create", () => {
     assertEquals(typeof ref, "string");
 
     let observed: DIFUpdate | null = null;
-    const observerId = runtime.dif.observePointer(ref, (value) => {
+    const observerId = runtime.dif.observePointerBindDirect(ref, (value) => {
         console.log("Observed pointer value:", value);
         try {
             console.log("Unobserving pointer...", ref, observerId);
             // FIXME wtf https://github.com/wasm-bindgen/wasm-bindgen/issues/1578
             // console.log(runtime.executeSync("'xy'"));
-            runtime.dif.unobservePointer(ref, observerId);
+            runtime.dif.unobservePointerBindDirect(ref, observerId);
             observed = value;
         } catch (e) {
             console.error("Failed to unobserve pointer:", e);
@@ -132,7 +132,6 @@ Deno.test("pointer primitive ref update", () => {
     if (!(ptrObj instanceof Ref)) {
         throw new Error("Pointer object is not a Ref");
     }
-    console.log("ptrObj", ptrObj);
     assertEquals(ptrObj.value, val);
 
     // get value of ptrObj from DATEX execution
@@ -151,7 +150,7 @@ Deno.test("pointer primitive ref update", () => {
     assertEquals(result, "&mut 456");
 });
 
-Deno.test("pointer primitive ref immutable update", () => {
+Deno.test("immutable pointer primitive ref update", () => {
     const val = 123;
     const ptrObj = runtime.createPointer(
         val as number,
@@ -161,7 +160,6 @@ Deno.test("pointer primitive ref immutable update", () => {
     if (!(ptrObj instanceof Ref)) {
         throw new Error("Pointer object is not a Ref");
     }
-    console.log("ptrObj", ptrObj);
     assertEquals(ptrObj.value, val);
 
     // get value of ptrObj from DATEX execution
@@ -180,7 +178,7 @@ Deno.test("pointer primitive ref immutable update", () => {
     );
 });
 
-Deno.test("pointer primitive ref final update", () => {
+Deno.test("final pointer primitive ref update", () => {
     const val = 123;
     const ptrObj = runtime.createPointer(
         val as number,
@@ -190,7 +188,6 @@ Deno.test("pointer primitive ref final update", () => {
     if (!(ptrObj instanceof Ref)) {
         throw new Error("Pointer object is not a Ref");
     }
-    console.log("ptrObj", ptrObj);
     assertEquals(ptrObj.value, val);
 
     // get value of ptrObj from DATEX execution
@@ -209,6 +206,75 @@ Deno.test("pointer primitive ref final update", () => {
     );
 });
 
+Deno.test("pointer primitive ref update and observe", () => {
+    const val = 123;
+    const ptrObj = runtime.createPointer(val as number) as Ref<number>;
+    assertEquals(ptrObj.value, val);
+
+    let observedUpdate: DIFUpdate | null = null;
+    runtime.dif.observePointerBindDirect(ptrObj.pointerAddress, (update) => {
+        console.log("Observed pointer update:", update);
+        observedUpdate = update;
+    });
+
+    // update the ref value
+    ptrObj.value = 456;
+
+    // check if the update was observed
+    assertEquals(observedUpdate, {
+        kind: DIFUpdateKind.Replace,
+        value: {
+            value: 456,
+        },
+    });
+});
+
+Deno.test("pointer primitive ref update and observe local", () => {
+    const val = 123;
+    const ptrObj = runtime.createPointer(val as number) as Ref<number>;
+    assertEquals(ptrObj.value, val);
+
+    let observedUpdate: DIFUpdate | null = null;
+    const observerId = runtime.dif.observePointer(
+        ptrObj.pointerAddress,
+        (update) => {
+            console.log("Observed pointer update:", update);
+            observedUpdate = update;
+        },
+    );
+    // check if observer is registered
+    assertEquals(runtime.dif._observers.get(ptrObj.pointerAddress)?.size, 1);
+    assert(runtime.dif._observers.get(ptrObj.pointerAddress)?.has(observerId));
+
+    // update the ref value
+    ptrObj.value = 456;
+
+    // check if the update was observed
+    assertEquals(observedUpdate, {
+        kind: DIFUpdateKind.Replace,
+        value: {
+            value: 456,
+        },
+    });
+
+    // unobserve
+    runtime.dif.unobservePointer(ptrObj.pointerAddress, observerId);
+    // check if observer is unregistered
+    assertEquals(
+        runtime.dif._observers.get(ptrObj.pointerAddress)?.size,
+        undefined,
+    );
+    assert(
+        !runtime.dif._observers.has(ptrObj.pointerAddress),
+    );
+
+    // update the ref value again
+    observedUpdate = null;
+    ptrObj.value = 789;
+    // check that no update was observed
+    assertEquals(observedUpdate, null);
+});
+
 Deno.test("observer immutable", () => {
     let ref = runtime.dif.createPointer(
         { value: "Immutable" },
@@ -217,7 +283,7 @@ Deno.test("observer immutable", () => {
     );
     assertThrows(
         () => {
-            runtime.dif.observePointer(ref, (_) => {});
+            runtime.dif.observePointerBindDirect(ref, (_) => {});
         },
         Error,
         `immutable reference`,
@@ -230,7 +296,7 @@ Deno.test("observer immutable", () => {
     );
     assertThrows(
         () => {
-            runtime.dif.observePointer(ref, (_) => {});
+            runtime.dif.observePointerBindDirect(ref, (_) => {});
         },
         Error,
         `immutable reference`,
@@ -245,21 +311,21 @@ Deno.test("pointer observe unobserve", () => {
     );
     assertThrows(
         () => {
-            runtime.dif.unobservePointer(ref, 42);
+            runtime.dif.unobservePointerBindDirect(ref, 42);
         },
         Error,
         `not found`,
     );
 
-    const observerId = runtime.dif.observePointer(ref, (value) => {
+    const observerId = runtime.dif.observePointerBindDirect(ref, (value) => {
         console.log("Observed pointer value:", value);
-        runtime.dif.unobservePointer(ref, observerId);
+        runtime.dif.unobservePointerBindDirect(ref, observerId);
     });
     assertEquals(observerId, 0);
-    runtime.dif.unobservePointer(ref, observerId);
+    runtime.dif.unobservePointerBindDirect(ref, observerId);
     assertThrows(
         () => {
-            runtime.dif.unobservePointer(ref, observerId);
+            runtime.dif.unobservePointerBindDirect(ref, observerId);
         },
         Error,
         `not found`,
