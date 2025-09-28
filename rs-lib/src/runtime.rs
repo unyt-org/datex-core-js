@@ -6,7 +6,7 @@ use datex_core::crypto::crypto::CryptoTrait;
 use datex_core::decompiler::{DecompileOptions, decompile_value};
 use datex_core::dif::DIFUpdate;
 use datex_core::dif::interface::{
-    DIFApplyError, DIFCreatePointerError, DIFFreeError, DIFInterface,
+    DIFApplyError, DIFCreatePointerError, DIFInterface,
     DIFObserveError, DIFResolveReferenceError, DIFUpdateError,
 };
 use datex_core::dif::r#type::DIFTypeContainer;
@@ -15,32 +15,25 @@ use datex_core::global::dxb_block::DXBBlock;
 use datex_core::global::protocol_structures::block_header::{
     BlockHeader, FlagsAndTimestamp,
 };
-use datex_core::references::observers::ReferenceObserver;
 use datex_core::references::reference::ReferenceMutability;
-use datex_core::runtime::execution::ExecutionError;
 #[cfg(feature = "debug")]
 use datex_core::runtime::global_context::DebugFlags;
 use datex_core::runtime::global_context::GlobalContext;
-use datex_core::runtime::{self, Runtime, RuntimeConfig, RuntimeInternal};
-use datex_core::task::spawn_local;
+use datex_core::runtime::{Runtime, RuntimeConfig, RuntimeInternal};
 use datex_core::values::core_values::endpoint::Endpoint;
 use datex_core::values::pointer::PointerAddress;
 use datex_core::values::serde::deserializer::DatexDeserializer;
 use datex_core::values::value_container::ValueContainer;
 use futures::FutureExt;
 use js_sys::Function;
-use log::{info, warn};
 use serde::{Deserialize, Serialize};
 use serde_wasm_bindgen::from_value;
 use std::fmt::Display;
-use std::pin::Pin;
 use std::rc::Rc;
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
-use tsify::JsValueSerdeExt;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::future_to_promise;
-use web_sys::console::info;
 use web_sys::js_sys::Promise;
 
 #[wasm_bindgen(getter_with_clone)]
@@ -221,7 +214,7 @@ impl JSRuntime {
 
         block.recalculate_struct();
         block.set_receivers(
-            &receivers
+            receivers
                 .iter()
                 .map(|r| Endpoint::from_str(r))
                 .collect::<Result<Vec<Endpoint>, _>>()
@@ -442,7 +435,7 @@ impl RuntimeDIFHandle {
         };
         self.internal
             .observe_pointer(address, observer)
-            .map_err(|e| js_error(e))
+            .map_err(js_error)
     }
 
     pub fn unobserve_pointer(
@@ -451,8 +444,8 @@ impl RuntimeDIFHandle {
         observer_id: u32,
     ) -> Result<(), JsError> {
         let address = RuntimeDIFHandle::js_value_to_pointer_address(address)?;
-        DIFInterface::unobserve_pointer(self, address.into(), observer_id)
-            .map_err(|e| js_error(e))
+        DIFInterface::unobserve_pointer(self, address, observer_id)
+            .map_err(js_error)
     }
 
     pub fn update(
@@ -463,8 +456,8 @@ impl RuntimeDIFHandle {
         let address = Self::js_value_to_pointer_address(address)?;
         let dif_update: DIFUpdate =
             serde_wasm_bindgen::from_value(update).map_err(js_error)?;
-        DIFInterface::update(self, address.into(), dif_update)
-            .map_err(|e| js_error(e))
+        DIFInterface::update(self, address, dif_update)
+            .map_err(js_error)
     }
 
     pub fn apply(
@@ -477,7 +470,7 @@ impl RuntimeDIFHandle {
         let dif_value: DIFValueContainer =
             serde_wasm_bindgen::from_value(value).map_err(js_error)?;
         let result = DIFInterface::apply(self, dif_callee, dif_value)
-            .map_err(|e| js_error(e))?;
+            .map_err(js_error)?;
         serde_wasm_bindgen::to_value(&result).map_err(js_error)
     }
 
@@ -506,7 +499,7 @@ impl RuntimeDIFHandle {
             dif_allowed_type,
             dif_mutability,
         )
-        .map_err(|e| js_error(e))?;
+        .map_err(js_error)?;
         Ok(address.to_address_string())
     }
 
@@ -518,9 +511,9 @@ impl RuntimeDIFHandle {
         let address = Self::js_value_to_pointer_address(address)?;
         let result = DIFInterface::resolve_pointer_address_in_memory(
             self,
-            address.into(),
+            address,
         )
-        .map_err(|e| js_error(e))?;
+        .map_err(js_error)?;
         serde_wasm_bindgen::to_value(&result).map_err(js_error)
     }
 
@@ -532,7 +525,7 @@ impl RuntimeDIFHandle {
         address: &str,
     ) -> Result<JsValue, JsError> {
         if let Ok(sync) = self.resolve_pointer_address_sync(address) {
-            return Ok(sync.into());
+            return Ok(sync);
         }
         let address = Self::js_value_to_pointer_address(address)?;
         let runtime = self.internal.clone();
@@ -540,7 +533,7 @@ impl RuntimeDIFHandle {
             let result = runtime
                 .resolve_pointer_address_external(address)
                 .await
-                .map_err(|e| js_error(e))?;
+                .map_err(js_error)?;
             Ok(serde_wasm_bindgen::to_value(&result).map_err(js_error)?)
         })
         .unchecked_into())
