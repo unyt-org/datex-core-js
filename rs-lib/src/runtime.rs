@@ -380,11 +380,11 @@ impl JSRuntime {
         js_value: JsValue,
     ) -> Result<ValueContainer, ConversionError> {
         // convert JsValue to DIFValue
-        let dif_value: DIFValueContainer =
-            serde_wasm_bindgen::from_value(js_value).unwrap();
+        let dif_value: DIFValueContainer = from_value(js_value).unwrap();
         // convert DIFValue to ValueContainer
-        if let Some(value_container) =
-            self.runtime.as_value_container(&dif_value)
+        if let Ok(value_container) = dif_value.to_value_container(
+            &self.runtime.memory().borrow()
+        )
         {
             Ok(value_container)
         } else {
@@ -503,8 +503,12 @@ impl JSRuntime {
             dif_mutability,
         )
         .map_err(|e| js_error(e))?;
-        Ok(address.to_string())
+        Ok(address.to_address_string())
     }
+
+    /// Resolve a pointer address synchronously if it's in memory, otherwise return an error
+    /// When this method succeeds, it automatically marks the pointer as non-garbage-collectable
+    /// until free_pointer is called
     pub fn resolve_pointer_address_sync(
         &self,
         address: &str,
@@ -518,6 +522,10 @@ impl JSRuntime {
         serde_wasm_bindgen::to_value(&result).map_err(js_error)
     }
 
+    /// Resolve a pointer address, returning a Promise
+    /// If the pointer is in memory, the promise resolves immediately
+    /// If the pointer is not in memory, it will be loaded first
+    /// When this method succeeds, it automatically marks the pointer as non-garbage-collectable
     pub fn resolve_pointer_address(
         &self,
         address: &str,

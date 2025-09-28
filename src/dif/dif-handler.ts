@@ -1,24 +1,32 @@
 import type { JSRuntime } from "../datex-core.ts";
+import { Ref } from "../refs/ref.ts";
 import { Endpoint } from "../runtime/special-core-types.ts";
 import {
     CoreTypeAddress,
     CoreTypeAddressRanges,
     type DIFArray,
     type DIFContainer,
+    DIFMap,
     type DIFObject,
     type DIFPointerAddress,
+    DIFType,
     type DIFTypeContainer,
     type DIFUpdate,
     type DIFValue,
     type DIFValueContainer,
-    type ReferenceMutability,
+    ReferenceMutability,
 } from "./definitions.ts";
 
 export class DIFHandler {
     /** The JSRuntime interface for the underlying Datex Core runtime */
     #runtime: JSRuntime;
-    /** The pointer cache for storing and reusing object instances on the JS side */
-    readonly #cache = new Map<string, WeakRef<WeakKey>>();
+    /** The pointer cache for storing and reusing object instances on the JS side
+     * If the pointer is not actively observed, 'live' is set to false
+     */
+    readonly #cache = new Map<
+        string,
+        { val: WeakRef<WeakKey>; live: boolean }
+    >();
 
     /**
      * Creates a new DIFHandler instance.
@@ -108,7 +116,8 @@ export class DIFHandler {
      * @param address - The address of the DIF value to update.
      * @param dif - The DIFUpdate object containing the update information.
      */
-    public updateDIF(address: string, dif: DIFUpdate) {
+    public updatePointer(address: string, dif: DIFUpdate) {
+        console.log("Updating pointer", address, dif);
         this.#runtime.update(address, dif);
     }
 
@@ -144,6 +153,8 @@ export class DIFHandler {
     public resolveDIFValue<T extends unknown>(
         value: DIFValue,
     ): T | Promise<T> {
+        console.log("resolve DIF Value", value);
+
         if (value.type === undefined) {
             return value.value as T;
         }
@@ -209,11 +220,19 @@ export class DIFHandler {
                     this.resolveDIFValueContainer(v)
                 ),
             ) as T | Promise<T>;
-        } // object types are resolved to objects with string keys and DIFValues
+        } // struct types are resolved from a DIFObject (aka JS Map) to a JS object
         else if (value.type === CoreTypeAddress.struct) {
             const resolvedObj: { [key: string]: unknown } = {};
-            for (const [key, val] of Object.entries(value.value as DIFObject)) {
+            for (const [key, val] of value.value as DIFObject) {
                 resolvedObj[key] = this.resolveDIFValueContainer(val);
+            }
+            return this.promiseFromObjectOrSync(resolvedObj) as T | Promise<T>;
+        } // map types are resolved from a DIFObject (aka JS Map) or Array of key-value pairs to a JS object
+        else if (value.type === CoreTypeAddress.map) {
+            const resolvedObj: { [key: string]: unknown } = {};
+            for (const [key, val] of value.value as (DIFObject | DIFMap)) {
+                // TODO: currently always converting to an object here, but this should be a Map per default
+                resolvedObj[key as string] = this.resolveDIFValueContainer(val);
             }
             return this.promiseFromObjectOrSync(resolvedObj) as T | Promise<T>;
         } else {
@@ -303,6 +322,12 @@ export class DIFHandler {
     public resolvePointerAddress<T extends unknown>(
         address: string,
     ): Promise<T> | T {
+        // check cache first
+        const cached = this.getCachedPointer(address);
+        if (cached) {
+            return cached as T;
+        }
+        // if not in cache, resolve from runtime
         const entry = this.#runtime.resolve_pointer_address(address);
         if (entry instanceof Promise) {
             return entry.then((e) => this.resolveDIFValueContainer(e) as T);
@@ -313,26 +338,152 @@ export class DIFHandler {
     }
 
     /**
+     * Converts an array of JS values to an array of DIFValues.
+     * If the input is null, it returns null.
+     * @param values
+     */
+    public convertToDIFValues<T extends unknown[]>(
+        values: T | null,
+    ): DIFValue[] | null {
+        return values?.map((value) => this.convertJSValueToDIFValue(value)) ||
+            null;
+    }
+
+    /**
+     * Returns true if the given address is within the specified address range.
+     */
+    protected isPointerAddressInRange(
+        address: DIFPointerAddress,
+        range: readonly [number, number],
+    ): boolean {
+        const addressNum = parseInt(address, 16);
+        return addressNum >= range[0] && addressNum < range[1];
+    }
+
+    /// Cache the given pointer value with the given address in the JS side cache.
+    protected cachePointer(
+        address: string,
+        value: WeakKey,
+        observerId: number | null,
+    ): void {
+        this.#cache.set(address, {
+            val: new WeakRef(value),
+            live: observerId !== null,
+        });
+        // register finalizer to clean up the cache and free the pointer in the runtime
+        // when the object is garbage collected
+        const finalizationRegistry = new FinalizationRegistry(
+            (address: string) => {
+                this.#cache.delete(address);
+                // if observer is active, unregister it
+                if (observerId !== null) {
+                    this.unobservePointer(address, observerId);
+                } // if no observer is active, free the pointer
+                else {
+                    this.#runtime.free_pointer(address);
+                }
+            },
+        );
+        finalizationRegistry.register(value, address);
+    }
+
+    protected getCachedPointer(address: string): WeakKey | undefined {
+        const cached = this.#cache.get(address);
+        if (cached) {
+            const deref = cached.val.deref();
+            if (deref) {
+                return deref;
+            } else if (!cached.live) {
+                // if the object was garbage collected and is not live anymore, we can remove it from the cache
+                this.#cache.delete(address);
+            }
+        }
+        return undefined;
+    }
+
+    /**
+     * Creates a new pointer containg the given JS value.
+     * The returned value is a proxy object that behaves like the original object,
+     * but also propagates changes between JS and the DATEX runtime.
+     */
+    public createPointerFromJSValue<T>(
+        value: T,
+        allowedType: DIFType | null = null,
+        mutability: ReferenceMutability = ReferenceMutability.Mutable,
+    ): T | Ref<T> {
+        const difValue = this.convertJSValueToDIFValue(value);
+        console.log("difValue", difValue);
+        const ptrAddress = this.createPointer(
+            difValue,
+            allowedType,
+            mutability,
+        );
+
+        const refValue = this.wrapJSValueInProxy(value, ptrAddress);
+
+        // if not final, observe  to keep the pointer 'live' and receive updates
+        let observerId: number | null = null;
+        if (mutability !== ReferenceMutability.Final) {
+            observerId = this.observePointer(
+                ptrAddress,
+                (update) => {
+                    console.log("Pointer update received", update);
+                },
+            );
+        }
+        this.cachePointer(ptrAddress, refValue, observerId);
+        return refValue; // TODO: map to correct pointer wrapper type
+    }
+
+    protected wrapJSValueInProxy<T>(
+        value: T,
+        pointerAddress: string,
+    ): (T | Ref<T>) & WeakKey {
+        // primitive values are always wrapped in a Ref proxy
+        if (
+            value === null || value === undefined ||
+            typeof value === "boolean" ||
+            typeof value === "number" || typeof value === "bigint" ||
+            typeof value === "string"
+        ) {
+            return new Ref(value, pointerAddress, this);
+        } // TODO: wrap in proxy for generic objects and nested refs
+        else {
+            return value;
+        }
+    }
+
+    /// Returns the pointer address for the given value if it is already cached, or null otherwise.
+    /// TODO: optimize by using a reverse map or direct Symbols on the objects
+    /// But this is probably not important for normal use cases
+    public getPointerAddressForValue<T>(value: T): string | null {
+        for (const [address, entry] of this.#cache) {
+            const deref = entry.val.deref();
+            if (deref === value) {
+                return address;
+            }
+        }
+        return null;
+    }
+
+    /**
      * Converts a given JS value to its DIFValue representation.
      */
-    public convertToDIFValue<T extends unknown>(
+    public convertJSValueToDIFValue<T extends unknown>(
         value: T,
     ): DIFValue {
         // assuming core values
         // TODO: handle custom types
         if (value === null) {
             return {
-                type: CoreTypeAddress.null,
                 value: null,
             };
         } else if (typeof value === "boolean") {
             return {
-                type: CoreTypeAddress.boolean,
                 value,
             };
         } else if (typeof value === "number") {
             return {
-                type: CoreTypeAddress.decimal_f64,
                 value,
             };
         } else if (typeof value === "bigint") {
@@ -351,54 +502,18 @@ export class DIFHandler {
             };
         } else if (Array.isArray(value)) {
             return {
-                type: CoreTypeAddress.array,
-                value: value.map((v) => this.convertToDIFValue(v)),
+                value: value.map((v) => this.convertJSValueToDIFValue(v)),
             };
         } else if (typeof value === "object") {
-            const map: Record<string, DIFValue> = {};
+            const map: Map<string, DIFValue> = new Map();
             for (const [key, val] of Object.entries(value)) {
-                map[key] = this.convertToDIFValue(val);
+                map.set(key, this.convertJSValueToDIFValue(val));
             }
             return {
-                type: CoreTypeAddress.struct,
+                type: CoreTypeAddress.map,
                 value: map,
             };
         }
         throw new Error("Unsupported type for conversion to DIFValue");
-    }
-
-    /**
-     * Converts an array of JS values to an array of DIFValues.
-     * If the input is null, it returns null.
-     * @param values
-     */
-    public convertToDIFValues<T extends unknown[]>(
-        values: T | null,
-    ): DIFValue[] | null {
-        return values?.map((value) => this.convertToDIFValue(value)) || null;
-    }
-
-    /**
-     * Returns true if the given address is within the specified address range.
-     */
-    protected isPointerAddressInRange(
-        address: DIFPointerAddress,
-        range: readonly [number, number],
-    ): boolean {
-        const addressNum = parseInt(address, 16);
-        return addressNum >= range[0] && addressNum < range[1];
-    }
-
-    protected storePointer(address: string, value: WeakKey): void {
-        this.#cache.set(address, new WeakRef(value));
-        // register finalizer to clean up the cache and free the pointer in the runtime
-        // when the object is garbage collected
-        const finalizationRegistry = new FinalizationRegistry(
-            (address: string) => {
-                this.#cache.delete(address);
-                this.#runtime.free_pointer(address);
-            },
-        );
-        finalizationRegistry.register(value, address);
     }
 }

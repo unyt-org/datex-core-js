@@ -13,41 +13,13 @@ export function execute(datex_script: string, formatted: boolean): string;
  * Does not return the result of the script, but only indicates success or failure.
  */
 export function execute_internal(datex_script: string): boolean;
-export interface WebRTCInterfaceSetupData {
-    peer_endpoint: string;
-    ice_servers: RTCIceServer[] | null;
-}
-
-export interface RTCIceServer {
-    urls: string[];
-    username: string | null;
-    credential: string | null;
-}
-
-export interface SerialInterfaceSetupData {
-    port_name: string | null;
-    baud_rate: number;
-}
+export type BaseInterfaceSetupData = InterfaceProperties;
 
 export interface TCPServerInterfaceSetupData {
     port: number;
 }
 
 export interface TCPClientInterfaceSetupData {
-    address: string;
-}
-
-export type BaseInterfaceSetupData = InterfaceProperties;
-
-export interface WebSocketServerInterfaceSetupData {
-    port: number;
-    /**
-     * if true, the server will use wss (secure WebSocket). Defaults to true.
-     */
-    secure: boolean | null;
-}
-
-export interface WebSocketClientInterfaceSetupData {
     address: string;
 }
 
@@ -123,6 +95,34 @@ export interface InterfaceProperties {
 }
 
 export type InterfaceDirection = "In" | "Out" | "InOut";
+
+export interface WebSocketServerInterfaceSetupData {
+    port: number;
+    /**
+     * if true, the server will use wss (secure WebSocket). Defaults to true.
+     */
+    secure: boolean | null;
+}
+
+export interface WebSocketClientInterfaceSetupData {
+    address: string;
+}
+
+export interface WebRTCInterfaceSetupData {
+    peer_endpoint: string;
+    ice_servers: RTCIceServer[] | null;
+}
+
+export interface RTCIceServer {
+    urls: string[];
+    username: string | null;
+    credential: string | null;
+}
+
+export interface SerialInterfaceSetupData {
+    port_name: string | null;
+    baud_rate: number;
+}
 
 export class BaseJSInterface {
     private constructor();
@@ -217,7 +217,18 @@ export class JSRuntime {
     update(address: string, update: any): void;
     apply(callee: any, value: any): any;
     create_pointer(value: any, allowed_type: any, mutability: number): string;
+    /**
+     * Resolve a pointer address synchronously if it's in memory, otherwise return an error
+     * When this method succeeds, it automatically marks the pointer as non-garbage-collectable
+     * until free_pointer is called
+     */
     resolve_pointer_address_sync(address: string): any;
+    /**
+     * Resolve a pointer address, returning a Promise
+     * If the pointer is in memory, the promise resolves immediately
+     * If the pointer is not in memory, it will be loaded first
+     * When this method succeeds, it automatically marks the pointer as non-garbage-collectable
+     */
     resolve_pointer_address(address: string): any;
     free_pointer(address: string): void;
     com_hub: JSComHub;

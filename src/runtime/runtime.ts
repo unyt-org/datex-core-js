@@ -1,10 +1,8 @@
-import {
-    create_runtime,
-    execute_internal,
-    JSRuntime,
-} from "../datex-core.ts";
+import { create_runtime, execute_internal, JSRuntime } from "../datex-core.ts";
 import { ComHub } from "../network/com-hub.ts";
 import { DIFHandler } from "../dif/dif-handler.ts";
+import { DIFType, ReferenceMutability } from "../dif/definitions.ts";
+import { Ref } from "../refs/ref.ts";
 
 // auto-generated version - do not edit:
 const VERSION: string = "0.0.6";
@@ -225,7 +223,7 @@ export class Runtime {
         decompileOptions: DecompileOptions | null = null,
     ): string {
         return this.valueToString(
-            this.#difHandler.convertToDIFValue(value),
+            this.#difHandler.convertJSValueToDIFValue(value),
             decompileOptions,
         );
     }
@@ -256,5 +254,22 @@ export class Runtime {
 
     public _execute_internal(datexScript: string): boolean {
         return execute_internal(datexScript);
+    }
+
+    /**
+     * Creates a new pointer containg the given JS value.
+     * The returned value is a proxy object that behaves like the original object,
+     * but also propagates changes between JS and the DATEX runtime.
+     */
+    public createPointer<T>(
+        value: T,
+        allowedType: DIFType | null = null,
+        mutability: ReferenceMutability = ReferenceMutability.Mutable,
+    ): T | Ref<T> {
+        return this.#difHandler.createPointerFromJSValue(
+            value,
+            allowedType,
+            mutability,
+        );
     }
 }

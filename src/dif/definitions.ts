@@ -10,7 +10,7 @@ export const CoreTypeAddress = {
     array: "640004",
     struct: "640005",
     list: "640006",
-    map: "640007",
+    map: "040000",
     endpoint: "640008",
 } as const;
 export type CoreTypeAddress =
@@ -81,7 +81,7 @@ export type DIFValueContainer = DIFValue | DIFPointerAddress;
 export type DIFTypeContainer = DIFType | DIFPointerAddress;
 
 // TODO: wasm_bindgen currently returns a Map here - could we also just use an object, or is a Map actually more efficient?
-export type DIFObject = Record<string, DIFValueContainer>;
+export type DIFObject = Map<string, DIFValueContainer>;
 export type DIFArray = DIFValueContainer[];
 export type DIFMap = [DIFValueContainer, DIFValueContainer][];
 
@@ -100,12 +100,19 @@ export type DIFProperty =
     | { kind: "Integer"; value: number }
     | { kind: "Value"; value: DIFValueContainer };
 
+export const DIFUpdateKind = {
+    Replace: 'Replace',
+    Push: 'Push',
+    UpdateProperty: 'UpdateProperty',
+} as const;
+export type DIFUpdateKind = typeof DIFUpdateKind[keyof typeof DIFUpdateKind];
+
 // DIFUpdate
 export type DIFUpdate =
-    | { kind: "Replace"; value: DIFValueContainer }
-    | { kind: "Push"; value: DIFValueContainer }
+    | { kind: typeof DIFUpdateKind["Replace"]; value: DIFValueContainer }
+    | { kind: typeof DIFUpdateKind["Push"]; value: DIFValueContainer }
     | {
-        kind: "UpdateProperty";
+        kind: typeof DIFUpdateKind["UpdateProperty"];
         value: {
             property: DIFProperty;
             value: DIFValueContainer;
