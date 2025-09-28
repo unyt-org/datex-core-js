@@ -1,0 +1,32 @@
+import { type DIFUpdate, DIFUpdateKind } from "./definitions.ts";
+import type { DIFHandler } from "./dif-handler.ts";
+
+/**
+ * Creates a DIFUpdate object that describes replacing a pointer's value.
+ */
+export function DIF_Replace<T>(difHandler: DIFHandler, value: T): DIFUpdate {
+    const difValue = difHandler.convertJSValueToDIFValue(value);
+    return {
+        kind: DIFUpdateKind.Replace,
+        value: difValue,
+    };
+}
+
+/**
+ * Creates a DIFUpdate object that describes updating a property of a pointer's value.
+ */
+export function DIF_UpdateProperty<K, V>(
+    difHandler: DIFHandler,
+    property: K,
+    value: V,
+): DIFUpdate {
+    const difKey = difHandler.convertJSValueToDIFValue(property);
+    const difValue = difHandler.convertJSValueToDIFValue(value);
+    return {
+        kind: DIFUpdateKind.UpdateProperty,
+        value: {
+            property: { kind: "Value", value: difKey },
+            value: difValue,
+        },
+    };
+}

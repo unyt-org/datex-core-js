@@ -1,8 +1,12 @@
-import { create_runtime, execute_internal, JSRuntime } from "../datex-core.ts";
+import {
+    create_runtime,
+    execute_internal,
+    type JSRuntime,
+} from "../datex-core.ts";
 import { ComHub } from "../network/com-hub.ts";
 import { DIFHandler } from "../dif/dif-handler.ts";
-import { DIFType, ReferenceMutability } from "../dif/definitions.ts";
-import { Ref } from "../refs/ref.ts";
+import { type DIFType, ReferenceMutability } from "../dif/definitions.ts";
+import type { Ref } from "../refs/ref.ts";
 
 // auto-generated version - do not edit:
 const VERSION: string = "0.0.6";

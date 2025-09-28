@@ -3,8 +3,8 @@ import { assertEquals } from "jsr:@std/assert";
 import { assertThrows } from "jsr:@std/assert/throws";
 import {
     CoreTypeAddress,
-    DIFRepresentationValue,
-    DIFUpdate,
+    type DIFRepresentationValue,
+    type DIFUpdate,
     DIFUpdateKind,
     ReferenceMutability,
 } from "../../src/dif/definitions.ts";

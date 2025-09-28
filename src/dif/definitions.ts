@@ -101,9 +101,9 @@ export type DIFProperty =
     | { kind: "Value"; value: DIFValueContainer };
 
 export const DIFUpdateKind = {
-    Replace: 'Replace',
-    Push: 'Push',
-    UpdateProperty: 'UpdateProperty',
+    Replace: "Replace",
+    Push: "Push",
+    UpdateProperty: "UpdateProperty",
 } as const;
 export type DIFUpdateKind = typeof DIFUpdateKind[keyof typeof DIFUpdateKind];
 
