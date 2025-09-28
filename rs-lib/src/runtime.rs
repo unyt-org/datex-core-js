@@ -507,8 +507,6 @@ impl JSRuntime {
     }
 
     /// Resolve a pointer address synchronously if it's in memory, otherwise return an error
-    /// When this method succeeds, it automatically marks the pointer as non-garbage-collectable
-    /// until free_pointer is called
     pub fn resolve_pointer_address_sync(
         &self,
         address: &str,
@@ -525,7 +523,6 @@ impl JSRuntime {
     /// Resolve a pointer address, returning a Promise
     /// If the pointer is in memory, the promise resolves immediately
     /// If the pointer is not in memory, it will be loaded first
-    /// When this method succeeds, it automatically marks the pointer as non-garbage-collectable
     pub fn resolve_pointer_address(
         &self,
         address: &str,
@@ -543,12 +540,6 @@ impl JSRuntime {
             Ok(serde_wasm_bindgen::to_value(&result).map_err(js_error)?)
         })
         .unchecked_into())
-    }
-
-    pub fn free_pointer(&self, address: &str) -> Result<(), JsError> {
-        let address = Self::js_value_to_pointer_address(address)?;
-        DIFInterface::free_pointer(self, address.into())
-            .map_err(|e| js_error(e))
     }
 }
 
@@ -607,10 +598,6 @@ impl DIFInterface for JSRuntime {
         observer_id: u32,
     ) -> Result<(), DIFObserveError> {
         self.runtime.unobserve_pointer(address, observer_id)
-    }
-
-    fn free_pointer(&self, address: PointerAddress) -> Result<(), DIFFreeError> {
-        self.runtime.free_pointer(address)
     }
 }
 

@@ -537,9 +537,6 @@ export class DIFHandler {
                 // if observer is active, unregister it
                 if (observerId !== null) {
                     this.unobservePointerBindDirect(address, observerId);
-                } // if no observer is active, free the pointer
-                else {
-                    this.#runtime.free_pointer(address);
                 }
             },
         );
