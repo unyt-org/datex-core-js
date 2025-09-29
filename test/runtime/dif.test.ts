@@ -1,4 +1,7 @@
-import { Runtime } from "../../src/runtime/runtime.ts";
+import {
+    DeepReadonlyPreserveLiterals,
+    Runtime,
+} from "../../src/runtime/runtime.ts";
 import { assert, assertEquals, assertNotStrictEquals } from "jsr:@std/assert";
 import { assertThrows } from "jsr:@std/assert/throws";
 import {
@@ -44,10 +47,61 @@ Deno.test("pointer create with observe", () => {
     });
 });
 
+Deno.test("pointer create primitive", () => {
+    runtime.createPointer(
+        42,
+        undefined,
+        DIFReferenceMutability.Final,
+    ) satisfies Ref<42>;
+
+    runtime.createPointer(
+        42,
+        undefined,
+        DIFReferenceMutability.Mutable,
+    ) satisfies Ref<number>;
+
+    runtime.createPointer(
+        "hello world",
+        undefined,
+        DIFReferenceMutability.Final,
+    ) satisfies Ref<"hello world">;
+
+    runtime.createPointer(
+        "hello world",
+        undefined,
+        DIFReferenceMutability.Mutable,
+    ) satisfies Ref<string>;
+
+    runtime.createPointer(
+        true,
+        undefined,
+        DIFReferenceMutability.Final,
+    ) satisfies Ref<true>;
+
+    runtime.createPointer(
+        { x: true } as const,
+        undefined,
+        DIFReferenceMutability.Final,
+    ) satisfies {
+        readonly x: Ref<true>;
+    };
+
+    const a = runtime.createPointer(5, undefined, DIFReferenceMutability.Final);
+    const b = runtime.createPointer(
+        { x: a },
+        undefined,
+        DIFReferenceMutability.Mutable,
+    ) satisfies {
+        x: Ref<5> | 5;
+    };
+    b.x satisfies Ref<5> | 5;
+    b.x = 5;
+});
+
 // FIXME
 Deno.test("pointer create struct", () => {
     const innerPtr = runtime.createPointer(
-        3 as number,
+        3,
         undefined,
         DIFReferenceMutability.Mutable,
     );
@@ -56,9 +110,10 @@ Deno.test("pointer create struct", () => {
         struct,
         undefined,
         DIFReferenceMutability.Mutable,
-    ) as { a: number; b: string; c: { d: boolean }; e: { f: typeof innerPtr } };
+    );
     assertThrows(
         () => {
+            // @ts-ignore: Property 'a' is read-only
             ptrObj.a = 2;
         },
         Error,
@@ -66,7 +121,7 @@ Deno.test("pointer create struct", () => {
     );
     assertThrows(
         () => {
-            // @ts-ignore $
+            // @ts-ignore: Property 'x' does not exist
             ptrObj.x = 2;
         },
         Error,
@@ -74,6 +129,7 @@ Deno.test("pointer create struct", () => {
     );
     assertThrows(
         () => {
+            // @ts-ignore: Property 'd' is read-only
             ptrObj.c.d = false;
         },
         Error,
@@ -81,7 +137,7 @@ Deno.test("pointer create struct", () => {
     );
 
     ptrObj.e.f = 42;
-    assertEquals((innerPtr as Ref<number>).value, 42);
+    assertEquals(innerPtr.value, 42);
     assertNotStrictEquals(ptrObj, { ...struct, e: { f: 42 } });
 });
 
@@ -129,7 +185,10 @@ Deno.test("pointer object create and cache", () => {
     const val = { a: 123, b: 456 };
     const ptrObj = runtime.createPointer(val);
     console.log("ptrObj", ptrObj);
-    assertEquals(ptrObj, val);
+    assertEquals(
+        ptrObj,
+        val,
+    );
 
     const ptrId = runtime.dif.getPointerAddressForValue(ptrObj);
     console.log("ptrId", ptrId);
@@ -153,7 +212,7 @@ Deno.test("pointer object create and cache", () => {
 
 Deno.test("pointer map create and cache", () => {
     const val = new Map([[1, 2], [3, 4]]);
-    const ptrMap = runtime.createPointer(val) as Map<number, number>;
+    const ptrMap = runtime.createPointer(val);
     console.log("ptrMap", ptrMap);
     assertEquals(ptrMap, val);
 

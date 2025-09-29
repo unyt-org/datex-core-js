@@ -264,11 +264,15 @@ export class Runtime {
      * The returned value is a proxy object that behaves like the original object,
      * but also propagates changes between JS and the DATEX runtime.
      */
-    public createPointer<T>(
-        value: T,
-        allowedType: DIFType | null = null,
-        mutability: DIFReferenceMutability = DIFReferenceMutability.Mutable,
-    ): T | Ref<T> {
+    public createPointer<
+        V,
+        M extends DIFReferenceMutability =
+            typeof DIFReferenceMutability.Mutable,
+    >(
+        value: V & {},
+        allowedType?: any | null,
+        mutability?: M,
+    ): PointerOut<V, M> {
         return this.#difHandler.createPointerFromJSValue(
             value,
             allowedType,
@@ -276,3 +280,50 @@ export class Runtime {
         );
     }
 }
+
+type WidenLiteral<T> = T extends string ? string
+    : T extends number ? number
+    : T extends boolean ? boolean
+    : T extends bigint ? bigint
+    : T extends symbol ? symbol
+    : T;
+
+type IsRef<T> = T extends Ref<unknown> ? true : false;
+type IsPlainObject<T> = T extends object ? T extends any[] ? false
+    : T extends Function ? false
+    : T extends Date ? false
+    : T extends Map<any, any> ? false
+    : T extends Set<any> ? false
+    : T extends WeakMap<any, any> ? false
+    : T extends WeakSet<any> ? false
+    : T extends Promise<any> ? false
+    : true
+    : false;
+type ContainsRef<T> = IsRef<T> extends true ? true
+    : T extends object
+        ? { [K in keyof T]: ContainsRef<T[K]> }[keyof T] extends true ? true
+        : false
+    : false;
+
+export type AssignableRef<T> = Ref<T> | T;
+
+// type PointerOut<V, M extends DIFReferenceMutability> = V extends Ref<infer U>
+//     ? Ref<U> | U
+//     : V extends object
+//         ? ContainsRef<V> extends true ? { [K in keyof V]: PointerOut<V[K], M> }
+//         : { readonly [K in keyof V]: PointerOut<V[K], M> }
+//     : M extends typeof DIFReferenceMutability.Final ? Ref<V>
+//     : Ref<WidenLiteral<V>>;
+
+type PointerOut<V, M extends DIFReferenceMutability> =
+    // already a Ref
+    V extends Ref<infer U> ? Ref<U> | U
+        : V extends object ? IsPlainObject<V> extends true ? (
+                    ContainsRef<V> extends true
+                        ? { [K in keyof V]: PointerOut<V[K], M> } // keep refs assignable
+                        : { readonly [K in keyof V]: PointerOut<V[K], M> } // freeze plain object if no refs
+                )
+            : Ref<V>
+        // primitive
+        : M extends typeof DIFReferenceMutability.Final ? Ref<V> // literal preserved
+        : Ref<WidenLiteral<V>>; // widen
