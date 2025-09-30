@@ -244,7 +244,6 @@ Deno.test("pointer map create and cache", () => {
 
     // check if cache is used when resolving the pointer again
     const loadedMap = runtime.dif.resolvePointerAddress(ptrId);
-    console.log("loadedMap", loadedMap);
 
     console.log(
         difValueContainerToDisplayString(

@@ -609,8 +609,7 @@ export class DIFHandler {
             typeof value === "string"
         ) {
             return new Ref(value, pointerAddress, this);
-        } // TODO: wrap in proxy for generic objects and nested refs
-        else if (value instanceof Map) {
+        } else if (value instanceof Map) {
             return this.proxifyJSMap(value, pointerAddress);
         } else if (typeof value === "object") {
             return this.wrapJSObjectInProxy(value);
@@ -623,10 +622,10 @@ export class DIFHandler {
         return value instanceof Ref;
     }
 
-    private proxifyJSMap<K, V>(
-        map: Map<K, V>,
+    private proxifyJSMap<T extends Map<K, V>, K, V>(
+        map: T,
         pointerAddress: string,
-    ): Map<K, V> & WeakKey {
+    ): T {
         const originalSet = map.set;
         const originalDelete = map.delete;
         const originalClear = map.clear;
