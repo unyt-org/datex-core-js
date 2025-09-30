@@ -610,7 +610,9 @@ export class DIFHandler {
         ) {
             return new Ref(value, pointerAddress, this);
         } // TODO: wrap in proxy for generic objects and nested refs
-        else if (typeof value === "object") {
+        else if (value instanceof Map) {
+            return this.proxifyJSMap(value, pointerAddress);
+        } else if (typeof value === "object") {
             return this.wrapJSObjectInProxy(value);
         } else {
             return value;
@@ -619,6 +621,54 @@ export class DIFHandler {
 
     private isRef(value: unknown): value is Ref<unknown> {
         return value instanceof Ref;
+    }
+
+    private proxifyJSMap<K, V>(
+        map: Map<K, V>,
+        pointerAddress: string,
+    ): Map<K, V> & WeakKey {
+        const originalSet = map.set;
+        const originalDelete = map.delete;
+        const originalClear = map.clear;
+        // deno-lint-ignore no-this-alias
+        const self = this;
+        Object.defineProperties(map, {
+            set: {
+                value: function (key: K, value: V) {
+                    self.updatePointer(pointerAddress, {
+                        kind: DIFUpdateKind.UpdateProperty,
+                        property: {
+                            kind: "Value",
+                            value: self.convertJSValueToDIFValue(key),
+                        } as DIFProperty,
+                        value: self.convertJSValueToDIFValue(value),
+                    });
+                    return originalSet.call(this, key, value);
+                },
+                configurable: true,
+                writable: true,
+            },
+            delete: {
+                value: function (key: K) {
+                    console.log("Before delete:", key);
+                    const result = originalDelete.call(this, key);
+                    return result;
+                },
+                configurable: true,
+                writable: true,
+            },
+            clear: {
+                value: function () {
+                    console.log("Before clear");
+                    const result = originalClear.call(this);
+                    return result;
+                },
+                configurable: true,
+                writable: true,
+            },
+        });
+
+        return map;
     }
 
     private wrapJSObjectInProxy<T extends object>(
@@ -719,7 +769,7 @@ export class DIFHandler {
                 type: CoreTypeAddress.map,
                 value: map,
             };
-        } else if (typeof value === "object") {
+        } else if (typeof value === "object" && value !== null) {
             const map: Record<string, DIFValue> = {};
             for (const [key, val] of Object.entries(value)) {
                 map[key] = this.convertJSValueToDIFValue(val);

@@ -289,17 +289,6 @@ type WidenLiteral<T> = T extends string ? string
     : T;
 
 type IsRef<T> = T extends Ref<unknown> ? true : false;
-type IsPlainObject<T> = T extends object ? T extends any[] ? false
-    : T extends Function ? false
-    : T extends Date ? false
-    : T extends Map<any, any> ? false
-    : T extends Set<any> ? false
-    : T extends WeakMap<any, any> ? false
-    : T extends WeakSet<any> ? false
-    : T extends Promise<any> ? false
-    : true
-    : false;
-
 type ContainsRef<T> = IsRef<T> extends true ? true
     : T extends object
         ? { [K in keyof T]: ContainsRef<T[K]> }[keyof T] extends true ? true
@@ -308,50 +297,54 @@ type ContainsRef<T> = IsRef<T> extends true ? true
 
 export type AssignableRef<T> = Ref<T> | T & { value?: T };
 
-// type ObjectFieldOut<T, M extends DIFReferenceMutability> = T extends
-//     Ref<infer U> ? AssignableRef<U>
-//     : T extends object
-//         ? IsPlainObject<T> extends true
-//             ? ContainsRef<T> extends true
-//                 ? { [K in keyof T]: ObjectFieldOut<T[K], M> }
-//             : { readonly [K in keyof T]: ObjectFieldOut<T[K], M> }
-//         : Ref<T>
-//     : T;
+type Builtins =
+    | Function
+    | Date
+    | RegExp
+    | Map<any, any>
+    | Set<any>
+    | WeakMap<any, any>
+    | WeakSet<any>
+    | Array<any>;
 
-// type PointerOut<V, M extends DIFReferenceMutability> = V extends Ref<infer U>
-//     ? AssignableRef<U>
-//     : V extends object
-//         ? IsPlainObject<V> extends true
-//             ? ContainsRef<V> extends true
-//                 ? { [K in keyof V]: ObjectFieldOut<V[K], M> }
-//             : { readonly [K in keyof V]: ObjectFieldOut<V[K], M> }
-//         : Ref<V>
-//     : M extends typeof DIFReferenceMutability.Final ? Ref<V>
-//     : Ref<WidenLiteral<V>>;
+type IsPlainObject<T> = T extends Builtins ? false
+    : T extends object ? true
+    : false;
 
 type ObjectFieldOut<T, M extends DIFReferenceMutability> = T extends
-    Ref<infer U> ? M extends typeof DIFReferenceMutability.Final ? Ref<U> // Final → frozen ref
-    : AssignableRef<U>
-    : T extends object
-        ? IsPlainObject<T> extends true
-            ? ContainsRef<T> extends true
+    Ref<infer U>
+    ? M extends typeof DIFReferenceMutability.Final ? Ref<U> : AssignableRef<U>
+    : IsPlainObject<T> extends true ? (
+            ContainsRef<T> extends true
                 ? M extends typeof DIFReferenceMutability.Final
                     ? { readonly [K in keyof T]: ObjectFieldOut<T[K], M> }
                 : { [K in keyof T]: ObjectFieldOut<T[K], M> }
-            : { readonly [K in keyof T]: ObjectFieldOut<T[K], M> }
-        : Ref<T>
+                : { readonly [K in keyof T]: ObjectFieldOut<T[K], M> }
+        )
     : T;
 
 type PointerOut<V, M extends DIFReferenceMutability> = V extends Ref<infer U>
-    ? M extends typeof DIFReferenceMutability.Final ? Ref<U> // frozen ref
-    : AssignableRef<U>
-    : V extends object
-        ? IsPlainObject<V> extends true
-            ? ContainsRef<V> extends true
+    ? M extends typeof DIFReferenceMutability.Final ? Ref<U> : AssignableRef<U>
+    : IsPlainObject<V> extends true ? (
+            ContainsRef<V> extends true
                 ? M extends typeof DIFReferenceMutability.Final
                     ? { readonly [K in keyof V]: ObjectFieldOut<V[K], M> }
                 : { [K in keyof V]: ObjectFieldOut<V[K], M> }
-            : { readonly [K in keyof V]: ObjectFieldOut<V[K], M> }
-        : Ref<V>
+                : { readonly [K in keyof V]: ObjectFieldOut<V[K], M> }
+        )
+    : V extends Builtins ? Pointer<V>
     : M extends typeof DIFReferenceMutability.Final ? Ref<V>
     : Ref<WidenLiteral<V>>;
+
+type CollectionProps<T> = {
+    [K in keyof T as K extends "value" ? never : K]: T[K];
+};
+
+interface MapRef<K, V> extends Ref<Map<K, V>>, CollectionProps<Map<K, V>> {}
+interface SetRef<T> extends Ref<Set<T>>, CollectionProps<Set<T>> {}
+interface ArrayRef<T> extends Ref<T[]>, CollectionProps<T[]> {}
+
+type Pointer<T> = T extends Map<infer K, infer V> ? MapRef<K, V>
+    : T extends Set<infer U> ? SetRef<U>
+    : T extends Array<infer U> ? ArrayRef<U>
+    : Ref<T>;

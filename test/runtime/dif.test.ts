@@ -1,5 +1,11 @@
 import { Runtime } from "../../src/runtime/runtime.ts";
-import { assert, assertEquals, assertNotStrictEquals } from "jsr:@std/assert";
+import {
+    assert,
+    assertEquals,
+    assertMatch,
+    assertNotStrictEquals,
+    assertObjectMatch,
+} from "jsr:@std/assert";
 import { assertThrows } from "jsr:@std/assert/throws";
 import {
     CoreTypeAddress,
@@ -225,18 +231,20 @@ Deno.test("pointer object create and cache", () => {
 Deno.test("pointer map create and cache", () => {
     const val = new Map([[1, 2], [3, 4]]);
     const ptrMap = runtime.createPointer(val);
-    console.log("ptrMap", ptrMap);
     assertEquals(ptrMap, val);
+    ptrMap.set(5, 6);
+    ptrMap satisfies Map<number, number>;
+    ptrMap.value satisfies Map<number, number>;
+    assertEquals(ptrMap.get(5), 6);
 
     const ptrId = runtime.dif.getPointerAddressForValue(ptrMap);
-    console.log("ptrId", ptrId);
     if (!ptrId) {
         throw new Error("Pointer ID not found for value");
     }
 
     // check if cache is used when resolving the pointer again
-    const loadedObj = runtime.dif.resolvePointerAddress(ptrId);
-    console.log("loadedObj", loadedObj);
+    const loadedMap = runtime.dif.resolvePointerAddress(ptrId);
+    console.log("loadedMap", loadedMap);
 
     console.log(
         difValueContainerToDisplayString(
@@ -245,7 +253,7 @@ Deno.test("pointer map create and cache", () => {
     );
 
     // identical object reference
-    assertStrictEquals(loadedObj, ptrMap);
+    assertStrictEquals(loadedMap, ptrMap);
 });
 
 Deno.test("pointer primitive ref create and cache", () => {
