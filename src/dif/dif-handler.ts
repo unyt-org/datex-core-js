@@ -575,11 +575,11 @@ export class DIFHandler {
      * The returned value is a proxy object that behaves like the original object,
      * but also propagates changes between JS and the DATEX runtime.
      */
-    public createPointerFromJSValue<T>(
-        value: T,
+    public createPointerFromJSValue(
+        value: unknown,
         allowedType: DIFTypeContainer | null = null,
         mutability: DIFReferenceMutability = DIFReferenceMutability.Mutable,
-    ): T | Ref<T> {
+    ): unknown | Ref<unknown> {
         const difValue = this.convertJSValueToDIFValue(value);
         console.log("DIF", difValueContainerToDisplayString(difValue));
         const ptrAddress = this.createPointer(

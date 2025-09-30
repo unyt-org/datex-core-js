@@ -277,7 +277,7 @@ export class Runtime {
             value,
             allowedType,
             mutability,
-        );
+        ) as PointerOut<V, M>;
     }
 }
 
@@ -299,31 +299,59 @@ type IsPlainObject<T> = T extends object ? T extends any[] ? false
     : T extends Promise<any> ? false
     : true
     : false;
+
 type ContainsRef<T> = IsRef<T> extends true ? true
     : T extends object
         ? { [K in keyof T]: ContainsRef<T[K]> }[keyof T] extends true ? true
         : false
     : false;
 
-export type AssignableRef<T> = Ref<T> | T;
+export type AssignableRef<T> = Ref<T> | T & { value?: T };
+
+// type ObjectFieldOut<T, M extends DIFReferenceMutability> = T extends
+//     Ref<infer U> ? AssignableRef<U>
+//     : T extends object
+//         ? IsPlainObject<T> extends true
+//             ? ContainsRef<T> extends true
+//                 ? { [K in keyof T]: ObjectFieldOut<T[K], M> }
+//             : { readonly [K in keyof T]: ObjectFieldOut<T[K], M> }
+//         : Ref<T>
+//     : T;
 
 // type PointerOut<V, M extends DIFReferenceMutability> = V extends Ref<infer U>
-//     ? Ref<U> | U
+//     ? AssignableRef<U>
 //     : V extends object
-//         ? ContainsRef<V> extends true ? { [K in keyof V]: PointerOut<V[K], M> }
-//         : { readonly [K in keyof V]: PointerOut<V[K], M> }
+//         ? IsPlainObject<V> extends true
+//             ? ContainsRef<V> extends true
+//                 ? { [K in keyof V]: ObjectFieldOut<V[K], M> }
+//             : { readonly [K in keyof V]: ObjectFieldOut<V[K], M> }
+//         : Ref<V>
 //     : M extends typeof DIFReferenceMutability.Final ? Ref<V>
 //     : Ref<WidenLiteral<V>>;
 
-type PointerOut<V, M extends DIFReferenceMutability> =
-    // already a Ref
-    V extends Ref<infer U> ? Ref<U> | U
-        : V extends object ? IsPlainObject<V> extends true ? (
-                    ContainsRef<V> extends true
-                        ? { [K in keyof V]: PointerOut<V[K], M> } // keep refs assignable
-                        : { readonly [K in keyof V]: PointerOut<V[K], M> } // freeze plain object if no refs
-                )
-            : Ref<V>
-        // primitive
-        : M extends typeof DIFReferenceMutability.Final ? Ref<V> // literal preserved
-        : Ref<WidenLiteral<V>>; // widen
+type ObjectFieldOut<T, M extends DIFReferenceMutability> = T extends
+    Ref<infer U> ? M extends typeof DIFReferenceMutability.Final ? Ref<U> // Final → frozen ref
+    : AssignableRef<U>
+    : T extends object
+        ? IsPlainObject<T> extends true
+            ? ContainsRef<T> extends true
+                ? M extends typeof DIFReferenceMutability.Final
+                    ? { readonly [K in keyof T]: ObjectFieldOut<T[K], M> }
+                : { [K in keyof T]: ObjectFieldOut<T[K], M> }
+            : { readonly [K in keyof T]: ObjectFieldOut<T[K], M> }
+        : Ref<T>
+    : T;
+
+type PointerOut<V, M extends DIFReferenceMutability> = V extends Ref<infer U>
+    ? M extends typeof DIFReferenceMutability.Final ? Ref<U> // frozen ref
+    : AssignableRef<U>
+    : V extends object
+        ? IsPlainObject<V> extends true
+            ? ContainsRef<V> extends true
+                ? M extends typeof DIFReferenceMutability.Final
+                    ? { readonly [K in keyof V]: ObjectFieldOut<V[K], M> }
+                : { [K in keyof V]: ObjectFieldOut<V[K], M> }
+            : { readonly [K in keyof V]: ObjectFieldOut<V[K], M> }
+        : Ref<V>
+    : M extends typeof DIFReferenceMutability.Final ? Ref<V>
+    : Ref<WidenLiteral<V>>;

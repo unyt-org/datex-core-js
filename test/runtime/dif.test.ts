@@ -1,7 +1,4 @@
-import {
-    DeepReadonlyPreserveLiterals,
-    Runtime,
-} from "../../src/runtime/runtime.ts";
+import { Runtime } from "../../src/runtime/runtime.ts";
 import { assert, assertEquals, assertNotStrictEquals } from "jsr:@std/assert";
 import { assertThrows } from "jsr:@std/assert/throws";
 import {
@@ -83,7 +80,7 @@ Deno.test("pointer create primitive", () => {
         undefined,
         DIFReferenceMutability.Final,
     ) satisfies {
-        readonly x: Ref<true>;
+        readonly x: true;
     };
 
     const a = runtime.createPointer(5, undefined, DIFReferenceMutability.Final);
@@ -106,11 +103,22 @@ Deno.test("pointer create struct", () => {
         DIFReferenceMutability.Mutable,
     );
     const struct = { a: 1.0, b: "text", c: { d: true }, e: { f: innerPtr } };
+
+    { // can not assign to ptrObjFinal.e.f
+        const ptrObjFinal = runtime.createPointer(
+            struct,
+            undefined,
+            DIFReferenceMutability.Final,
+        );
+        ptrObjFinal.e satisfies { readonly f: Ref<number> | number };
+    }
+
     const ptrObj = runtime.createPointer(
         struct,
         undefined,
         DIFReferenceMutability.Mutable,
     );
+
     assertThrows(
         () => {
             // @ts-ignore: Property 'a' is read-only
@@ -135,10 +143,14 @@ Deno.test("pointer create struct", () => {
         Error,
         `modify`,
     );
-
-    ptrObj.e.f = 42;
+    innerPtr.value = 42;
     assertEquals(innerPtr.value, 42);
-    assertNotStrictEquals(ptrObj, { ...struct, e: { f: 42 } });
+    assertEquals(ptrObj.e.f.value, 42);
+    innerPtr.value = 7;
+    assertEquals(ptrObj.e.f.value, 7);
+    assertEquals(innerPtr.value, 7);
+
+    ptrObj.e.f = 10;
 });
 
 Deno.test("pointer create and resolve", () => {
