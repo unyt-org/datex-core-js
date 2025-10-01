@@ -435,7 +435,7 @@ export class DIFHandler {
                 this.initPointer(
                     address,
                     v,
-                    reference.mutability,
+                    reference.mut,
                     reference.allowed_type,
                 );
                 return v;
@@ -465,7 +465,7 @@ export class DIFHandler {
         const value: T = this.resolveDIFValueContainerSync(
             entry.value,
         );
-        this.initPointer(address, value, entry.mutability, entry.allowed_type);
+        this.initPointer(address, value, entry.mut, entry.allowed_type);
         return value;
     }
 
@@ -635,9 +635,9 @@ export class DIFHandler {
             set: {
                 value: function (key: K, value: V) {
                     self.updatePointer(pointerAddress, {
-                        kind: DIFUpdateKind.UpdateProperty,
-                        property: {
-                            kind: "Value",
+                        kind: DIFUpdateKind.Set,
+                        key: {
+                            kind: "value",
                             value: self.convertJSValueToDIFValue(key),
                         } as DIFProperty,
                         value: self.convertJSValueToDIFValue(value),
@@ -649,7 +649,13 @@ export class DIFHandler {
             },
             delete: {
                 value: function (key: K) {
-                    console.log("Before delete:", key);
+                    self.updatePointer(pointerAddress, {
+                        kind: DIFUpdateKind.Remove,
+                        key: {
+                            kind: "value",
+                            value: self.convertJSValueToDIFValue(key),
+                        } as DIFProperty,
+                    });
                     const result = originalDelete.call(this, key);
                     return result;
                 },
@@ -658,7 +664,9 @@ export class DIFHandler {
             },
             clear: {
                 value: function () {
-                    console.log("Before clear");
+                    self.updatePointer(pointerAddress, {
+                        kind: DIFUpdateKind.Clear,
+                    });
                     const result = originalClear.call(this);
                     return result;
                 },

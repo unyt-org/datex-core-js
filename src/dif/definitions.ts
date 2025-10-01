@@ -133,7 +133,7 @@ export type DIFType<Kind extends DIFTypeKind = DIFTypeKind> = {
 export type DIFReference = {
     value: DIFValueContainer;
     allowed_type: DIFTypeContainer;
-    mutability: DIFReferenceMutability;
+    mut: DIFReferenceMutability;
 };
 
 export type DIFValueContainer = DIFValue | DIFPointerAddress;
@@ -155,23 +155,26 @@ export type DIFRepresentationValue =
 
 // DIFProperty
 export type DIFProperty =
-    | { kind: "Text"; value: string }
-    | { kind: "Integer"; value: number }
-    | { kind: "Value"; value: DIFValueContainer };
+    | { kind: "text"; value: string }
+    | { kind: "index"; value: number }
+    | { kind: "value"; value: DIFValueContainer };
 
 export const DIFUpdateKind = {
-    Replace: "Replace",
-    Push: "Push",
-    UpdateProperty: "UpdateProperty",
+    Replace: "replace",
+    Push: "push",
+    Set: "set",
+    Remove: "remove",
+    Clear: "clear",
 } as const;
 export type DIFUpdateKind = typeof DIFUpdateKind[keyof typeof DIFUpdateKind];
 
-// DIFUpdate
 export type DIFUpdate =
-    | { kind: typeof DIFUpdateKind["Replace"]; value: DIFValueContainer }
-    | { kind: typeof DIFUpdateKind["Push"]; value: DIFValueContainer }
+    | { kind: typeof DIFUpdateKind.Replace; value: DIFValueContainer }
+    | { kind: typeof DIFUpdateKind.Push; value: DIFValueContainer }
+    | { kind: typeof DIFUpdateKind.Remove; key: DIFProperty }
     | {
-        kind: typeof DIFUpdateKind["UpdateProperty"];
-        property: DIFProperty;
+        kind: typeof DIFUpdateKind.Set;
+        key: DIFProperty;
         value: DIFValueContainer;
-    };
+    }
+    | { kind: typeof DIFUpdateKind.Clear };

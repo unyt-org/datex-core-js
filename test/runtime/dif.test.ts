@@ -9,6 +9,7 @@ import {
 import { assertThrows } from "jsr:@std/assert/throws";
 import {
     CoreTypeAddress,
+    type DIFReference,
     DIFReferenceMutability,
     type DIFRepresentationValue,
     type DIFUpdate,
@@ -16,7 +17,10 @@ import {
 } from "../../src/dif/definitions.ts";
 import { assertStrictEquals } from "jsr:@std/assert/strict-equals";
 import { Ref } from "../../src/refs/ref.ts";
-import { difValueContainerToDisplayString } from "../../src/dif/display.ts";
+import {
+    difReferenceToDisplayString,
+    difValueContainerToDisplayString,
+} from "../../src/dif/display.ts";
 
 const runtime = new Runtime({ endpoint: "@jonas", debug: true });
 Deno.test("pointer create with observe", () => {
@@ -101,7 +105,6 @@ Deno.test("pointer create primitive", () => {
     b.x = 5;
 });
 
-// FIXME
 Deno.test("pointer create struct", () => {
     const innerPtr = runtime.createPointer(
         3,
@@ -237,6 +240,10 @@ Deno.test("pointer map create and cache", () => {
     ptrMap.value satisfies Map<number, number>;
     assertEquals(ptrMap.get(5), 6);
 
+    ptrMap.delete(1);
+    assertEquals(ptrMap.has(1), false);
+    assertEquals(ptrMap.size, 2);
+
     const ptrId = runtime.dif.getPointerAddressForValue(ptrMap);
     if (!ptrId) {
         throw new Error("Pointer ID not found for value");
@@ -244,13 +251,16 @@ Deno.test("pointer map create and cache", () => {
 
     // check if cache is used when resolving the pointer again
     const loadedMap = runtime.dif.resolvePointerAddress(ptrId);
-
+    console.log("loadedMap", loadedMap);
     console.log(
-        difValueContainerToDisplayString(
-            runtime.dif._handle.resolve_pointer_address(ptrId),
+        difReferenceToDisplayString(
+            runtime.dif._handle.resolve_pointer_address(
+                ptrId,
+            ) as DIFReference,
         ),
     );
 
+    ptrMap.clear();
     // identical object reference
     assertStrictEquals(loadedMap, ptrMap);
 });

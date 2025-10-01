@@ -4,12 +4,13 @@ use crate::network::com_hub::JSComHub;
 use crate::utils::time::TimeJS;
 use datex_core::crypto::crypto::CryptoTrait;
 use datex_core::decompiler::{DecompileOptions, decompile_value};
-use datex_core::dif::DIFUpdate;
 use datex_core::dif::interface::{
-    DIFApplyError, DIFCreatePointerError, DIFInterface,
-    DIFObserveError, DIFResolveReferenceError, DIFUpdateError,
+    DIFApplyError, DIFCreatePointerError, DIFInterface, DIFObserveError,
+    DIFResolveReferenceError, DIFUpdateError,
 };
+use datex_core::dif::reference::DIFReference;
 use datex_core::dif::r#type::DIFTypeContainer;
+use datex_core::dif::update::DIFUpdate;
 use datex_core::dif::value::DIFValueContainer;
 use datex_core::global::dxb_block::DXBBlock;
 use datex_core::global::protocol_structures::block_header::{
@@ -27,12 +28,11 @@ use datex_core::values::value_container::ValueContainer;
 use futures::FutureExt;
 use js_sys::Function;
 use serde::{Deserialize, Serialize};
-use serde_wasm_bindgen::{from_value, Error};
+use serde_wasm_bindgen::{Error, from_value};
 use std::fmt::Display;
 use std::rc::Rc;
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
-use datex_core::dif::reference::DIFReference;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::future_to_promise;
 use web_sys::js_sys::Promise;
@@ -339,7 +339,10 @@ impl JSRuntime {
             None => JsValue::NULL,
             Some(value_container) => {
                 let dif_value_container =
-                    DIFValueContainer::from_value_container(&value_container, self.runtime.memory());
+                    DIFValueContainer::from_value_container(
+                        &value_container,
+                        self.runtime.memory(),
+                    );
                 to_js_value(&dif_value_container).unwrap()
             }
         }
@@ -406,9 +409,7 @@ impl JSRuntime {
 
 /// Convert a serializable value to a JsValue (JSON compatible)
 fn to_js_value<T: Serialize>(value: &T) -> Result<JsValue, Error> {
-    value.serialize(
-        &serde_wasm_bindgen::Serializer::json_compatible(),
-    )
+    value.serialize(&serde_wasm_bindgen::Serializer::json_compatible())
 }
 
 #[wasm_bindgen]
@@ -459,8 +460,7 @@ impl RuntimeDIFHandle {
         let address = Self::js_value_to_pointer_address(address)?;
         let dif_update: DIFUpdate =
             serde_wasm_bindgen::from_value(update).map_err(js_error)?;
-        DIFInterface::update(self, address, dif_update)
-            .map_err(js_error)
+        DIFInterface::update(self, address, dif_update).map_err(js_error)
     }
 
     pub fn apply(
@@ -512,11 +512,9 @@ impl RuntimeDIFHandle {
         address: &str,
     ) -> Result<JsValue, JsError> {
         let address = Self::js_value_to_pointer_address(address)?;
-        let result = DIFInterface::resolve_pointer_address_in_memory(
-            self,
-            address,
-        )
-        .map_err(js_error)?;
+        let result =
+            DIFInterface::resolve_pointer_address_in_memory(self, address)
+                .map_err(js_error)?;
         to_js_value(&result).map_err(js_error)
     }
 

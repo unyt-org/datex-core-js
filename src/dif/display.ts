@@ -1,21 +1,43 @@
 import {
     CoreTypeAddress,
+    type DIFReference,
+    DIFReferenceMutability,
     type DIFRepresentationValue,
     type DIFTypeContainer,
     type DIFValueContainer,
 } from "./definitions.ts";
 
-export function difValueContainerToDisplayString(
-    difValue: DIFValueContainer,
+export function mutabilityToDisplayString(mut: DIFReferenceMutability): string {
+    if (mut === DIFReferenceMutability.Mutable) {
+        return "mutable";
+    } else if (mut === DIFReferenceMutability.Final) {
+        return "final";
+    } else if (mut === DIFReferenceMutability.Immutable) {
+        return "immutable";
+    }
+    throw new Error("Unknown mutability: " + mut);
+}
+
+export function difReferenceToDisplayString(
+    reference: DIFReference,
 ): string {
-    if (typeof difValue === "string") {
-        return addressToDisplayString(difValue);
+    const typeString = difTypeContainerToDisplayString(reference.allowed_type);
+    const valueString = difValueContainerToDisplayString(reference.value);
+    const mutString = mutabilityToDisplayString(reference.mut);
+    return `${mutString} ${valueString} (allowed: ${typeString})`;
+}
+
+export function difValueContainerToDisplayString(
+    container: DIFValueContainer,
+): string {
+    if (typeof container === "string") {
+        return addressToDisplayString(container);
     } else {
-        const typeString = difValue.type
-            ? difTypeContainerToDisplayString(difValue.type)
+        const typeString = container.type
+            ? difTypeContainerToDisplayString(container.type)
             : null;
         const valueString = difRepresentationValueToDisplayString(
-            difValue.value,
+            container.value,
         );
         if (typeString) {
             return `{ type: ${typeString}, value: ${valueString} }`;
