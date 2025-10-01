@@ -9,11 +9,11 @@ import {
 
 export function mutabilityToDisplayString(mut: DIFReferenceMutability): string {
     if (mut === DIFReferenceMutability.Mutable) {
-        return "mutable";
+        return "&mut ";
     } else if (mut === DIFReferenceMutability.Final) {
-        return "final";
+        return "&final ";
     } else if (mut === DIFReferenceMutability.Immutable) {
-        return "immutable";
+        return "&";
     }
     throw new Error("Unknown mutability: " + mut);
 }
@@ -24,7 +24,7 @@ export function difReferenceToDisplayString(
     const typeString = difTypeContainerToDisplayString(reference.allowed_type);
     const valueString = difValueContainerToDisplayString(reference.value);
     const mutString = mutabilityToDisplayString(reference.mut);
-    return `${mutString} ${valueString} (allowed: ${typeString})`;
+    return `${mutString}${valueString} (allowed: ${typeString})`;
 }
 
 export function difValueContainerToDisplayString(
