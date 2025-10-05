@@ -99,8 +99,8 @@ impl JSRuntime {
         let runtime = Runtime::init(
             config,
             GlobalContext {
-                crypto: Arc::new(Mutex::new(CryptoJS)),
-                time: Arc::new(Mutex::new(TimeJS)),
+                crypto: Arc::new(CryptoJS),
+                time: Arc::new(TimeJS),
 
                 #[cfg(feature = "debug")]
                 debug_flags: debug_flags.unwrap_or_default().into(),

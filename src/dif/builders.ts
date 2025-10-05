@@ -23,10 +23,8 @@ export function DIF_UpdateProperty<K, V>(
     const difKey = difHandler.convertJSValueToDIFValue(property);
     const difValue = difHandler.convertJSValueToDIFValue(value);
     return {
-        kind: DIFUpdateKind.UpdateProperty,
-        value: {
-            property: { kind: "Value", value: difKey },
-            value: difValue,
-        },
+        kind: DIFUpdateKind.Set,
+        key: { kind: "value", value: difKey },
+        value: difValue,
     };
 }
