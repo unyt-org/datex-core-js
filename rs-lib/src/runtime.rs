@@ -32,7 +32,7 @@ use serde_wasm_bindgen::{Error, from_value};
 use std::fmt::Display;
 use std::rc::Rc;
 use std::str::FromStr;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::future_to_promise;
 use web_sys::js_sys::Promise;
