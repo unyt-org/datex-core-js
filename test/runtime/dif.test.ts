@@ -196,10 +196,21 @@ Deno.test("pointer object create and resolve", () => {
         DIFReferenceMutability.Mutable,
     );
     console.log("ptr address", ptr);
-    const loadedDIFValue = runtime.dif.resolvePointerAddress(ptr);
+    const loadedDIFValue = runtime.dif._handle.resolve_pointer_address_sync(
+        ptr,
+    );
     console.log("loadedObj", loadedDIFValue);
 
-    assertEquals(loadedDIFValue, initialDIFValue);
+    assertEquals(
+        loadedDIFValue,
+        {
+            allowed_type: "0c0000",
+            mut: DIFReferenceMutability.Mutable,
+            value: {
+                value: initialDIFValue,
+            },
+        } satisfies DIFReference,
+    );
 });
 
 Deno.test("pointer object create and cache", () => {

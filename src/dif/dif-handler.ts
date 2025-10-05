@@ -233,27 +233,38 @@ export class DIFHandler {
     public resolveDIFValue<T extends unknown>(
         value: DIFValue,
     ): T | Promise<T> {
-        if (value.type === undefined) {
-            return value.value as T;
+        console.log("RESOLVE", value);
+        let type = value.type;
+        if (type === undefined) {
+            if (Array.isArray(value.value)) {
+                if (Array.isArray(value.value[0])) {
+                    type = CoreTypeAddress.map;
+                } else {
+                    type = CoreTypeAddress.array;
+                }
+            } else {
+                return value.value as T;
+            }
         }
+        console.log(type, value);
 
         // null, boolean and text types values are just returned as is
         if (
-            value.type === CoreTypeAddress.boolean ||
-            value.type == CoreTypeAddress.text ||
-            value.type === CoreTypeAddress.null
+            type === CoreTypeAddress.boolean ||
+            type == CoreTypeAddress.text ||
+            type === CoreTypeAddress.null
         ) {
             return value.value as T;
         } // small integers are interpreted as JS numbers
         else if (
-            typeof value.type === "string" && (
-                value.type == CoreTypeAddress.integer ||
+            typeof type === "string" && (
+                type == CoreTypeAddress.integer ||
                 this.isPointerAddressInAdresses(
-                    value.type,
+                    type,
                     CoreTypeAddressRanges.small_signed_integers,
                 ) ||
                 this.isPointerAddressInAdresses(
-                    value.type,
+                    type,
                     CoreTypeAddressRanges.small_unsigned_integers,
                 )
             )
@@ -261,13 +272,13 @@ export class DIFHandler {
             return Number(value.value as number) as T;
         } // big integers are interpreted as JS BigInt
         else if (
-            typeof value.type === "string" && (
+            typeof type === "string" && (
                 this.isPointerAddressInAdresses(
-                    value.type,
+                    type,
                     CoreTypeAddressRanges.big_signed_integers,
                 ) ||
                 this.isPointerAddressInAdresses(
-                    value.type,
+                    type,
                     CoreTypeAddressRanges.big_unsigned_integers,
                 )
             )
@@ -275,48 +286,63 @@ export class DIFHandler {
             return BigInt(value.value as number) as T;
         } // decimal types are interpreted as JS numbers
         else if (
-            typeof value.type === "string" &&
+            typeof type === "string" &&
             this.isPointerAddressInAdresses(
-                value.type,
+                type,
                 CoreTypeAddressRanges.decimals,
             )
         ) {
             return (Number(value.value) as number) as T;
         } // endpoint types are resolved to Endpoint instances
-        else if (value.type === CoreTypeAddress.endpoint) {
+        else if (type === CoreTypeAddress.endpoint) {
             return Endpoint.get(value.value as string) as T;
         } // array types are resolved to arrays of DIFValues
-        else if (value.type === CoreTypeAddress.array) {
+        else if (type === CoreTypeAddress.array) {
             return this.promiseAllOrSync(
                 (value.value as DIFArray).map((v) =>
                     this.resolveDIFValueContainer(v)
                 ),
             ) as T | Promise<T>;
-        } else if (value.type === CoreTypeAddress.list) {
+        } else if (type === CoreTypeAddress.list) {
             return this.promiseAllOrSync(
                 (value.value as DIFArray).map((v) =>
                     this.resolveDIFValueContainer(v)
                 ),
             ) as T | Promise<T>;
         } // struct types are resolved from a DIFObject (aka JS Map) to a JS object
-        else if (value.type === CoreTypeAddress.struct) {
+        else if (type === CoreTypeAddress.struct) {
             const resolvedObj: { [key: string]: unknown } = {};
             for (const [key, val] of Object.entries(value.value as DIFObject)) {
                 resolvedObj[key] = this.resolveDIFValueContainer(val);
             }
             return this.promiseFromObjectOrSync(resolvedObj) as T | Promise<T>;
         } // map types are resolved from a DIFObject (aka JS Map) or Array of key-value pairs to a JS object
-        else if (value.type === CoreTypeAddress.map) {
-            const resolvedObj: { [key: string]: unknown } = {};
-            for (
-                const [key, val] of (Array.isArray(value.value)
-                    ? (value.value as DIFMap)
-                    : Object.entries(value.value as DIFObject))
-            ) {
-                // TODO: currently always converting to an object here, but this should be a Map per default
-                resolvedObj[key as string] = this.resolveDIFValueContainer(val);
+        else if (type === CoreTypeAddress.map) {
+            if (Array.isArray(value.value)) {
+                const resolvedMap = new Map<unknown, unknown>();
+                for (const [key, val] of (value.value as DIFMap)) {
+                    // TODO: currently always converting to an object here, but this should be a Map per default
+                    resolvedMap.set(
+                        this.resolveDIFValueContainer(key),
+                        this.resolveDIFValueContainer(val),
+                    );
+                }
+                // TODO: map promises
+                return resolvedMap as unknown as T | Promise<T>;
+            } else {
+                const resolvedObj: { [key: string]: unknown } = {};
+                for (
+                    const [key, val] of Object.entries(value.value as DIFObject)
+                ) {
+                    // TODO: currently always converting to an object here, but this should be a Map per default
+                    resolvedObj[key as string] = this.resolveDIFValueContainer(
+                        val,
+                    );
+                }
+                return this.promiseFromObjectOrSync(resolvedObj) as
+                    | T
+                    | Promise<T>;
             }
-            return this.promiseFromObjectOrSync(resolvedObj) as T | Promise<T>;
         } else {
             // custom types not implemented yet
             throw new Error("Custom type resolution not implemented yet");
@@ -776,7 +802,7 @@ export class DIFHandler {
                 type: CoreTypeAddress.map,
                 value: map,
             };
-        } else if (typeof value === "object" && value !== null) {
+        } else if (typeof value === "object") {
             const map: Record<string, DIFValue> = {};
             for (const [key, val] of Object.entries(value)) {
                 map[key] = this.convertJSValueToDIFValue(val);

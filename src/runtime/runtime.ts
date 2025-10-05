@@ -225,7 +225,7 @@ export class Runtime {
         value: unknown,
         decompileOptions: DecompileOptions | null = null,
     ): string {
-        return this.valueToString(
+        return this.#runtime.value_to_string(
             this.#difHandler.convertJSValueToDIFValue(value),
             decompileOptions,
         );

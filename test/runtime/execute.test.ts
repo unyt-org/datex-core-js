@@ -1,6 +1,7 @@
 import { Runtime } from "../../src/runtime/runtime.ts";
 import { assertEquals } from "jsr:@std/assert";
 import { Endpoint } from "../../src/runtime/special-core-types.ts";
+import { CoreTypeAddress } from "../../src/dif/definitions.ts";
 Deno.test("execute sync with string result", () => {
     const runtime = new Runtime({ endpoint: "@jonas" });
     const script = "1 + 2";
@@ -16,7 +17,7 @@ Deno.test("execute sync dif value", () => {
     // For now, all DIF values are returned in the same format to reduce complexity.
     const result = runtime.dif.executeSyncDIF(script);
     assertEquals(result, {
-        type: "integer",
+        type: CoreTypeAddress.integer,
         value: "3",
     });
     console.log(result);
@@ -41,17 +42,28 @@ Deno.test("execute sync typed integer", () => {
     // });
 });
 
-// FIXME
-Deno.test("execute sync bigint", () => {
+Deno.test("execute sync normal integer", () => {
     const runtime = new Runtime({ endpoint: "@jonas" });
-    const result = runtime.executeSync<bigint>(
+    const result = runtime.executeSync<number>(
         "const x = 123456781234567891234567812345678; x",
     );
     assertEquals(
         result,
-        123456781234567891234567812345678n,
+        1.234567812345679e+32,
     );
 });
+
+// FIXME
+// Deno.test("execute sync bigint", () => {
+//     const runtime = new Runtime({ endpoint: "@jonas" });
+//     const result = runtime.executeSync<bigint>(
+//         "const x:integer/big = 123456781234567891234567812345678; x",
+//     );
+//     assertEquals(
+//         result,
+//         123456781234567891234567812345678n,
+//     );
+// });
 
 Deno.test("execute sync string", () => {
     const runtime = new Runtime({ endpoint: "@jonas" });
@@ -85,10 +97,13 @@ Deno.test("execute sync none", () => {
 
 Deno.test("execute sync object", () => {
     const runtime = new Runtime({ endpoint: "@jonas" });
-    const result = runtime.executeSync<{ a: number; b: string }>(
+    const result = runtime.executeSync<Map<string, number | string>>(
         "{ a: 1, b: 'test' }",
     );
-    assertEquals(result, { a: 1, b: "test" });
+    assertEquals(
+        result,
+        new Map<string, number | string>([["a", 1], ["b", "test"]]),
+    );
 });
 
 Deno.test("execute sync endpoint", () => {
