@@ -3,7 +3,7 @@ import { assertEquals } from "jsr:@std/assert";
 Deno.test("decompile integer without formatting", () => {
     const runtime = new Runtime({ endpoint: "@jonas" });
     const result = runtime.valueToString(42);
-    assertEquals(result, "42");
+    assertEquals(result, "42f64");
 });
 
 // FIXME: colorization in new decompiler

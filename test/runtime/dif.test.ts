@@ -306,7 +306,7 @@ Deno.test("pointer primitive ref update", () => {
     let result = runtime.executeSyncWithStringResult(
         "$" + ptrObj.pointerAddress,
     );
-    assertEquals(result, "&mut 123");
+    assertEquals(result, "&mut 123f64");
 
     // update the ref value
     ptrObj.value = 456;
@@ -315,7 +315,7 @@ Deno.test("pointer primitive ref update", () => {
     result = runtime.executeSyncWithStringResult(
         "$" + ptrObj.pointerAddress,
     );
-    assertEquals(result, "&mut 456");
+    assertEquals(result, "&mut 456f64");
 });
 
 Deno.test("immutable pointer primitive ref update", () => {
@@ -334,7 +334,7 @@ Deno.test("immutable pointer primitive ref update", () => {
     const result = runtime.executeSyncWithStringResult(
         "$" + ptrObj.pointerAddress,
     );
-    assertEquals(result, "&123");
+    assertEquals(result, "&123f64");
 
     // update the ref value
     assertThrows(
@@ -362,7 +362,7 @@ Deno.test("final pointer primitive ref update", () => {
     const result = runtime.executeSyncWithStringResult(
         "$" + ptrObj.pointerAddress,
     );
-    assertEquals(result, "&final 123");
+    assertEquals(result, "&final 123f64");
 
     // update the ref value
     assertThrows(
