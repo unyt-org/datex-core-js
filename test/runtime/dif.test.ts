@@ -518,7 +518,7 @@ Deno.test("core integer variants", () => {
     const script = "42u8";
     const result = runtime.dif.executeSyncDIF(script);
     assertEquals(result, {
-        value: "42",
-        type: CoreTypeAddress.integer, // TODO: this must be changed to integer_u8, but type information is currently lost in compilation
+        value: 42,
+        type: CoreTypeAddress.integer_u8,
     });
 });
