@@ -3,16 +3,46 @@
 // deno-fmt-ignore-file
 
 export function compile(datex_script: string): void;
-/**
- * Executes a Datex script and returns the result as a string.
- */
-export function execute(datex_script: string, formatted: boolean): string;
+export function create_runtime(config: string, debug_flags: any): JSRuntime;
 /**
  * Executes a Datex script and returns true when execution was successful.
  * Does not return the result of the script, but only indicates success or failure.
  */
 export function execute_internal(datex_script: string): boolean;
-export function create_runtime(config: string, debug_flags: any): JSRuntime;
+/**
+ * Executes a Datex script and returns the result as a string.
+ */
+export function execute(datex_script: string, formatted: boolean): string;
+export interface WebRTCInterfaceSetupData {
+    peer_endpoint: string;
+    ice_servers: RTCIceServer[] | null;
+}
+
+export interface RTCIceServer {
+    urls: string[];
+    username: string | null;
+    credential: string | null;
+}
+
+export interface SerialInterfaceSetupData {
+    port_name: string | null;
+    baud_rate: number;
+}
+
+export type BaseInterfaceSetupData = InterfaceProperties;
+
+export interface WebSocketServerInterfaceSetupData {
+    port: number;
+    /**
+     * if true, the server will use wss (secure WebSocket). Defaults to true.
+     */
+    secure: boolean | null;
+}
+
+export interface WebSocketClientInterfaceSetupData {
+    address: string;
+}
+
 export interface InterfaceProperties {
     /**
      * the type of the interface, by which it is identified
@@ -75,6 +105,8 @@ export interface InterfaceProperties {
     reconnect_attempts: number | null;
 }
 
+export type InterfaceDirection = "In" | "Out" | "InOut";
+
 export type ReconnectionConfig = "NoReconnect" | "InstantReconnect" | {
     ReconnectWithTimeout: { timeout: { secs: number; nanos: number } };
 } | {
@@ -84,44 +116,12 @@ export type ReconnectionConfig = "NoReconnect" | "InstantReconnect" | {
     };
 };
 
-export type InterfaceDirection = "In" | "Out" | "InOut";
-
-export interface WebRTCInterfaceSetupData {
-    peer_endpoint: string;
-    ice_servers: RTCIceServer[] | null;
-}
-
-export interface WebSocketClientInterfaceSetupData {
-    address: string;
-}
-
-export interface WebSocketServerInterfaceSetupData {
-    port: number;
-    /**
-     * if true, the server will use wss (secure WebSocket). Defaults to true.
-     */
-    secure: boolean | null;
-}
-
-export type BaseInterfaceSetupData = InterfaceProperties;
-
 export interface TCPClientInterfaceSetupData {
     address: string;
 }
 
 export interface TCPServerInterfaceSetupData {
     port: number;
-}
-
-export interface RTCIceServer {
-    urls: string[];
-    username: string | null;
-    credential: string | null;
-}
-
-export interface SerialInterfaceSetupData {
-    port_name: string | null;
-    baud_rate: number;
 }
 
 export class BaseJSInterface {
@@ -131,25 +131,43 @@ export class BaseJSInterface {
 export class JSComHub {
     private constructor();
     free(): void;
-    webrtc_interface_create_answer(
-        interface_uuid: string,
-        offer: Uint8Array,
-    ): Promise<Uint8Array>;
-    webrtc_interface_wait_for_connection(interface_uuid: string): Promise<void>;
-    webrtc_interface_add_ice_candidate(
-        interface_uuid: string,
-        candidate: Uint8Array,
-    ): Promise<void>;
+    base_interface_test_send_block(
+        uuid: string,
+        socket_uuid: string,
+        data: Uint8Array,
+    ): Promise<boolean>;
+    base_interface_register_socket(uuid: string, direction: string): string;
+    base_interface_destroy_socket(uuid: string, socket_uuid: string): void;
+    base_interface_receive(
+        uuid: string,
+        socket_uuid: string,
+        data: Uint8Array,
+    ): void;
+    base_interface_on_send(uuid: string, func: Function): void;
     webrtc_interface_set_on_ice_candidate(
         interface_uuid: string,
         on_ice_candidate: Function,
     ): void;
-    webrtc_interface_create_offer(interface_uuid: string): Promise<Uint8Array>;
     webrtc_interface_set_answer(
         interface_uuid: string,
         answer: Uint8Array,
     ): Promise<void>;
-    close_interface(interface_uuid: string): Promise<any>;
+    webrtc_interface_wait_for_connection(interface_uuid: string): Promise<void>;
+    webrtc_interface_create_answer(
+        interface_uuid: string,
+        offer: Uint8Array,
+    ): Promise<Uint8Array>;
+    webrtc_interface_create_offer(interface_uuid: string): Promise<Uint8Array>;
+    webrtc_interface_add_ice_candidate(
+        interface_uuid: string,
+        candidate: Uint8Array,
+    ): Promise<void>;
+    websocket_server_interface_add_socket(
+        interface_uuid: string,
+        websocket: WebSocket,
+    ): string;
+    update(): Promise<void>;
+    get_metadata_string(): string;
     /**
      * Send a block to the given interface and socket
      * This does not involve the routing on the ComHub level.
@@ -162,28 +180,10 @@ export class JSComHub {
         socket_uuid: string,
     ): Promise<boolean>;
     _drain_incoming_blocks(): Uint8Array[];
-    update(): Promise<void>;
-    register_default_interface_factories(): void;
-    get_metadata_string(): string;
-    get_trace_string(endpoint: string): Promise<string | undefined>;
     create_interface(interface_type: string, properties: string): Promise<any>;
-    websocket_server_interface_add_socket(
-        interface_uuid: string,
-        websocket: WebSocket,
-    ): string;
-    base_interface_register_socket(uuid: string, direction: string): string;
-    base_interface_test_send_block(
-        uuid: string,
-        socket_uuid: string,
-        data: Uint8Array,
-    ): Promise<boolean>;
-    base_interface_receive(
-        uuid: string,
-        socket_uuid: string,
-        data: Uint8Array,
-    ): void;
-    base_interface_on_send(uuid: string, func: Function): void;
-    base_interface_destroy_socket(uuid: string, socket_uuid: string): void;
+    get_trace_string(endpoint: string): Promise<string | undefined>;
+    register_default_interface_factories(): void;
+    close_interface(interface_uuid: string): Promise<any>;
 }
 export class JSPointer {
     private constructor();
@@ -192,6 +192,17 @@ export class JSPointer {
 export class JSRuntime {
     private constructor();
     free(): void;
+    execute(script: string, dif_values?: any[] | null): Promise<any>;
+    execute_with_string_result(
+        script: string,
+        dif_values: any[] | null | undefined,
+        decompile_options: any,
+    ): Promise<string>;
+    crypto_test_tmp(): Promise<Promise<any>>;
+    _create_block(
+        body: Uint8Array | null | undefined,
+        receivers: string[],
+    ): Uint8Array;
     _stop(): Promise<void>;
     execute_sync(script: string, dif_values?: any[] | null): any;
     /**
@@ -199,30 +210,27 @@ export class JSRuntime {
      */
     dif(): RuntimeDIFHandle;
     start(): Promise<void>;
-    execute(script: string, dif_values?: any[] | null): Promise<any>;
-    execute_with_string_result(
-        script: string,
-        dif_values: any[] | null | undefined,
-        decompile_options: any,
-    ): Promise<string>;
-    _create_block(
-        body: Uint8Array | null | undefined,
-        receivers: string[],
-    ): Uint8Array;
     execute_sync_with_string_result(
         script: string,
         dif_values: any[] | null | undefined,
         decompile_options: any,
     ): string;
-    crypto_test_tmp(): Promise<Promise<any>>;
     value_to_string(dif_value: any, decompile_options: any): string;
-    com_hub: JSComHub;
     readonly endpoint: string;
     readonly version: string;
+    com_hub: JSComHub;
 }
 export class RuntimeDIFHandle {
     private constructor();
     free(): void;
+    unobserve_pointer(address: string, observer_id: number): void;
+    observe_pointer(address: string, callback: Function): number;
+    create_pointer(value: any, allowed_type: any, mutability: number): string;
+    /**
+     * Resolve a pointer address synchronously if it's in memory, otherwise return an error
+     */
+    resolve_pointer_address_sync(address: string): any;
+    apply(callee: any, value: any): any;
     update(address: string, update: any): void;
     /**
      * Resolve a pointer address, returning a Promise
@@ -230,14 +238,6 @@ export class RuntimeDIFHandle {
      * If the pointer is not in memory, it will be loaded first
      */
     resolve_pointer_address(address: string): any;
-    observe_pointer(address: string, callback: Function): number;
-    apply(callee: any, value: any): any;
-    create_pointer(value: any, allowed_type: any, mutability: number): string;
-    unobserve_pointer(address: string, observer_id: number): void;
-    /**
-     * Resolve a pointer address synchronously if it's in memory, otherwise return an error
-     */
-    resolve_pointer_address_sync(address: string): any;
 }
 export class WebSocketServerRegistry {
     private constructor();
