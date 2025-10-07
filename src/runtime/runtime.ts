@@ -5,7 +5,10 @@ import {
 } from "../datex-core.ts";
 import { ComHub } from "../network/com-hub.ts";
 import { DIFHandler } from "../dif/dif-handler.ts";
-import { DIFReferenceMutability, type DIFType } from "../dif/definitions.ts";
+import type {
+    DIFReferenceMutability,
+    DIFTypeContainer,
+} from "../dif/definitions.ts";
 import type { Ref } from "../refs/ref.ts";
 
 // auto-generated version - do not edit:
@@ -269,8 +272,9 @@ export class Runtime {
         M extends DIFReferenceMutability =
             typeof DIFReferenceMutability.Mutable,
     >(
+        // deno-lint-ignore ban-types
         value: V & {},
-        allowedType?: any | null,
+        allowedType?: DIFTypeContainer | null,
         mutability?: M,
     ): PointerOut<V, M> {
         return this.#difHandler.createPointerFromJSValue(
@@ -298,14 +302,15 @@ type ContainsRef<T> = IsRef<T> extends true ? true
 export type AssignableRef<T> = Ref<T> | T & { value?: T };
 
 type Builtins =
+    // deno-lint-ignore ban-types
     | Function
     | Date
     | RegExp
-    | Map<any, any>
-    | Set<any>
-    | WeakMap<any, any>
-    | WeakSet<any>
-    | Array<any>;
+    | Map<unknown, unknown>
+    | Set<unknown>
+    | WeakMap<WeakKey, unknown>
+    | WeakSet<WeakKey>
+    | Array<unknown>;
 
 type IsPlainObject<T> = T extends Builtins ? false
     : T extends object ? true

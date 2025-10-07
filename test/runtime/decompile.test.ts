@@ -1,5 +1,5 @@
 import { Runtime } from "../../src/runtime/runtime.ts";
-import { assertEquals } from "jsr:@std/assert";
+import { assertEquals } from "@std/assert";
 Deno.test("decompile integer without formatting", () => {
     const runtime = new Runtime({ endpoint: "@jonas" });
     const result = runtime.valueToString(42);

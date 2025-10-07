@@ -1,5 +1,5 @@
 import { Runtime } from "../../src/runtime/runtime.ts";
-import { assertEquals } from "jsr:@std/assert";
+import { assertEquals } from "@std/assert";
 import { Endpoint } from "../../src/runtime/special-core-types.ts";
 import { CoreTypeAddress } from "../../src/dif/definitions.ts";
 Deno.test("execute sync with string result", () => {
@@ -35,11 +35,10 @@ Deno.test("execute sync typed integer", () => {
     const result = runtime.dif.executeSyncDIF(
         "42u8",
     );
-    // assertEquals(result, {
-    //     ptr_id: undefined,
-    //     type: "integer/u8",
-    //     value: "42",
-    // });
+    assertEquals(result, {
+        type: CoreTypeAddress.integer_u8,
+        value: 42,
+    });
 });
 
 Deno.test("execute sync normal integer", () => {

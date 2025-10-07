@@ -1,10 +1,10 @@
-import { assert } from "jsr:@std/assert/assert";
+import { assert } from "@std/assert/assert";
 import { Runtime } from "../../src/runtime/runtime.ts";
-import * as uuid from "jsr:@std/uuid";
+import * as uuid from "@std/uuid";
 import { sleep } from "../utils.ts";
-import { assertFalse } from "jsr:@std/assert/false";
-import { assertEquals } from "jsr:@std/assert/equals";
-import { assertThrows } from "jsr:@std/assert/throws";
+import { assertFalse } from "@std/assert/false";
+import { assertEquals } from "@std/assert/equals";
+import { assertThrows } from "@std/assert/throws";
 import { isNodeOrBun } from "../is-node.ts";
 import type { BaseInterfaceSetupData } from "../../src/datex-core/datex_core_js.d.ts";
 import "../../src/network/interface-impls/base.ts";

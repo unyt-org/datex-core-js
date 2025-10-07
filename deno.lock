@@ -1,38 +1,32 @@
 {
   "version": "5",
   "specifiers": {
-    "jsr:@david/code-block-writer@^13.0.2": "13.0.3",
+    "jsr:@david/code-block-writer@^13.0.3": "13.0.3",
     "jsr:@david/path@0.2": "0.2.0",
     "jsr:@david/temp@~0.1.1": "0.1.1",
-    "jsr:@deno/cache-dir@0.20": "0.20.1",
-    "jsr:@deno/dnt@~0.42.1": "0.42.1",
-    "jsr:@deno/graph@0.86": "0.86.9",
+    "jsr:@deno/dnt@~0.42.1": "0.42.3",
     "jsr:@qnighy/dedent@*": "0.1.2",
+    "jsr:@qnighy/dedent@~0.1.2": "0.1.2",
     "jsr:@std/assert@*": "1.0.13",
-    "jsr:@std/bytes@^1.0.5": "1.0.6",
-    "jsr:@std/bytes@^1.0.6": "1.0.6",
+    "jsr:@std/assert@^1.0.15": "1.0.15",
     "jsr:@std/cli@*": "1.0.20",
-    "jsr:@std/cli@^1.0.11": "1.0.20",
-    "jsr:@std/crypto@^1.0.5": "1.0.5",
-    "jsr:@std/encoding@*": "1.0.10",
+    "jsr:@std/cli@^1.0.23": "1.0.23",
     "jsr:@std/encoding@^1.0.6": "1.0.10",
     "jsr:@std/fmt@1": "1.0.8",
-    "jsr:@std/fmt@^1.0.3": "1.0.8",
     "jsr:@std/fmt@^1.0.4": "1.0.8",
+    "jsr:@std/fmt@^1.0.8": "1.0.8",
     "jsr:@std/fs@1": "1.0.19",
     "jsr:@std/fs@^1.0.10": "1.0.19",
-    "jsr:@std/fs@^1.0.6": "1.0.19",
+    "jsr:@std/internal@^1.0.10": "1.0.12",
+    "jsr:@std/internal@^1.0.12": "1.0.12",
     "jsr:@std/internal@^1.0.6": "1.0.9",
-    "jsr:@std/internal@^1.0.9": "1.0.9",
-    "jsr:@std/io@0.225": "0.225.2",
-    "jsr:@std/path@1": "1.1.1",
-    "jsr:@std/path@^1.0.8": "1.1.1",
-    "jsr:@std/path@^1.1.1": "1.1.1",
-    "jsr:@std/streams@^1.0.9": "1.0.10",
+    "jsr:@std/internal@^1.0.9": "1.0.12",
+    "jsr:@std/path@1": "1.1.2",
+    "jsr:@std/path@^1.1.1": "1.1.2",
+    "jsr:@std/streams@^1.0.9": "1.0.12",
     "jsr:@std/tar@~0.1.4": "0.1.6",
-    "jsr:@std/uuid@*": "1.0.9",
-    "jsr:@ts-morph/bootstrap@0.25": "0.25.0",
-    "jsr:@ts-morph/common@0.25": "0.25.0",
+    "jsr:@ts-morph/bootstrap@0.27": "0.27.0",
+    "jsr:@ts-morph/common@0.27": "0.27.0",
     "npm:@unyt/datex@0.0.6": "0.0.6",
     "npm:typescript@5.8.3": "5.8.3"
   },
@@ -53,39 +47,14 @@
         "jsr:@david/path"
       ]
     },
-    "@deno/cache-dir@0.20.1": {
-      "integrity": "dc4f3add14307f3ff3b712441ea4acabcbfc9a13f67c5adc78c3aac16ac5e2a0",
-      "dependencies": [
-        "jsr:@deno/graph",
-        "jsr:@std/fmt@^1.0.3",
-        "jsr:@std/fs@^1.0.6",
-        "jsr:@std/io",
-        "jsr:@std/path@^1.0.8"
-      ]
-    },
-    "@deno/dnt@0.42.1": {
-      "integrity": "85322b38eb40d4e8c5216d62536152c35b1bda9dc47c8c60860610397b960223",
+    "@deno/dnt@0.42.3": {
+      "integrity": "62a917a0492f3c8af002dce90605bb0d41f7d29debc06aca40dba72ab65d8ae3",
       "dependencies": [
         "jsr:@david/code-block-writer",
-        "jsr:@deno/cache-dir",
         "jsr:@std/fmt@1",
         "jsr:@std/fs@1",
         "jsr:@std/path@1",
         "jsr:@ts-morph/bootstrap"
-      ]
-    },
-    "@deno/graph@0.86.9": {
-      "integrity": "c4f353a695bcc5246c099602977dabc6534eacea9999a35a8cb24e807192e6a1"
-    },
-    "@deno/wasmbuild@0.19.2": {
-      "integrity": "f4a92beae788e2fd68189aefb6a6d8c3be79519c3ef8429a10519296379c33d1",
-      "dependencies": [
-        "jsr:@david/path",
-        "jsr:@david/temp",
-        "jsr:@std/encoding@^1.0.6",
-        "jsr:@std/fmt@^1.0.4",
-        "jsr:@std/fs@^1.0.10",
-        "jsr:@std/tar"
       ]
     },
     "@deno/wasmbuild@0.19.3": {
@@ -93,8 +62,7 @@
       "dependencies": [
         "jsr:@david/path",
         "jsr:@david/temp",
-        "jsr:@std/cli@^1.0.11",
-        "jsr:@std/encoding@^1.0.6",
+        "jsr:@std/encoding",
         "jsr:@std/fmt@^1.0.4",
         "jsr:@std/fs@^1.0.10",
         "jsr:@std/tar"
@@ -109,14 +77,20 @@
         "jsr:@std/internal@^1.0.6"
       ]
     },
-    "@std/bytes@1.0.6": {
-      "integrity": "f6ac6adbd8ccd99314045f5703e23af0a68d7f7e58364b47d2c7f408aeb5820a"
+    "@std/assert@1.0.15": {
+      "integrity": "d64018e951dbdfab9777335ecdb000c0b4e3df036984083be219ce5941e4703b",
+      "dependencies": [
+        "jsr:@std/internal@^1.0.12"
+      ]
     },
     "@std/cli@1.0.20": {
       "integrity": "a8c384a2c98cec6ec6a2055c273a916e2772485eb784af0db004c5ab8ba52333"
     },
-    "@std/crypto@1.0.5": {
-      "integrity": "0dcfbb319fe0bba1bd3af904ceb4f948cde1b92979ec1614528380ed308a3b40"
+    "@std/cli@1.0.23": {
+      "integrity": "bf95b7a9425ba2af1ae5a6359daf58c508f2decf711a76ed2993cd352498ccca",
+      "dependencies": [
+        "jsr:@std/internal@^1.0.12"
+      ]
     },
     "@std/encoding@1.0.10": {
       "integrity": "8783c6384a2d13abd5e9e87a7ae0520a30e9f56aeeaa3bdf910a3eaaf5c811a1"
@@ -134,20 +108,17 @@
     "@std/internal@1.0.9": {
       "integrity": "bdfb97f83e4db7a13e8faab26fb1958d1b80cc64366501af78a0aee151696eb8"
     },
-    "@std/io@0.225.2": {
-      "integrity": "3c740cd4ee4c082e6cfc86458f47e2ab7cb353dc6234d5e9b1f91a2de5f4d6c7",
+    "@std/internal@1.0.12": {
+      "integrity": "972a634fd5bc34b242024402972cd5143eac68d8dffaca5eaa4dba30ce17b027"
+    },
+    "@std/path@1.1.2": {
+      "integrity": "c0b13b97dfe06546d5e16bf3966b1cadf92e1cc83e56ba5476ad8b498d9e3038",
       "dependencies": [
-        "jsr:@std/bytes@^1.0.5"
+        "jsr:@std/internal@^1.0.10"
       ]
     },
-    "@std/path@1.1.1": {
-      "integrity": "fe00026bd3a7e6a27f73709b83c607798be40e20c81dde655ce34052fd82ec76",
-      "dependencies": [
-        "jsr:@std/internal@^1.0.9"
-      ]
-    },
-    "@std/streams@1.0.10": {
-      "integrity": "75c0b1431873cd0d8b3d679015220204d36d3c7420d93b60acfc379eb0dc30af"
+    "@std/streams@1.0.12": {
+      "integrity": "ae925fa1dc459b1abf5cbaa28cc5c7b0485853af3b2a384b0dc22d86e59dfbf4"
     },
     "@std/tar@0.1.6": {
       "integrity": "7f06a5359518262207e1c28ea965fd552dff3ba2047d2e9225339af287b1f3a4",
@@ -155,21 +126,14 @@
         "jsr:@std/streams"
       ]
     },
-    "@std/uuid@1.0.9": {
-      "integrity": "44b627bf2d372fe1bd099e2ad41b2be41a777fc94e62a3151006895a037f1642",
-      "dependencies": [
-        "jsr:@std/bytes@^1.0.6",
-        "jsr:@std/crypto"
-      ]
-    },
-    "@ts-morph/bootstrap@0.25.0": {
-      "integrity": "3cd33ee80ac0aab8e5d2660c639a02187f0c8abfe454636ce86c00eb7e8407db",
+    "@ts-morph/bootstrap@0.27.0": {
+      "integrity": "b8d7bc8f7942ce853dde4161b28f9aa96769cef3d8eebafb379a81800b9e2448",
       "dependencies": [
         "jsr:@ts-morph/common"
       ]
     },
-    "@ts-morph/common@0.25.0": {
-      "integrity": "e3ed1771e2fb61fbc3d2cb39ebbc4f89cd686d6d9bc6d91a71372be055ac1967",
+    "@ts-morph/common@0.27.0": {
+      "integrity": "c7b73592d78ce8479b356fd4f3d6ec3c460d77753a8680ff196effea7a939052",
       "dependencies": [
         "jsr:@std/fs@1",
         "jsr:@std/path@1"
@@ -289,7 +253,12 @@
   },
   "workspace": {
     "dependencies": [
-      "jsr:@deno/dnt@~0.42.1"
+      "jsr:@david/path@0.2",
+      "jsr:@deno/dnt@~0.42.1",
+      "jsr:@qnighy/dedent@~0.1.2",
+      "jsr:@std/assert@^1.0.15",
+      "jsr:@std/cli@^1.0.23",
+      "jsr:@std/fmt@^1.0.8"
     ]
   }
 }

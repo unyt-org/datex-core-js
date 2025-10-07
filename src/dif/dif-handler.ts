@@ -10,9 +10,8 @@ import {
     type DIFObject,
     type DIFPointerAddress,
     type DIFProperty,
-    DIFReference,
+    type DIFReference,
     DIFReferenceMutability,
-    type DIFType,
     type DIFTypeContainer,
     type DIFUpdate,
     DIFUpdateKind,
@@ -38,11 +37,11 @@ export class DIFHandler {
         Map<number, (value: DIFUpdate) => void>
     >();
 
-    get _observers() {
+    get _observers(): Map<string, Map<number, (value: DIFUpdate) => void>> {
         return this.#observers;
     }
 
-    get _handle() {
+    get _handle(): RuntimeDIFHandle {
         return this.#handle;
     }
 
@@ -552,8 +551,7 @@ export class DIFHandler {
         }
 
         this.cacheWrappedPointerValue(ptrAddress, refValue, observerId);
-
-        return refValue;
+        return refValue as T | Ref<T>;
     }
 
     /**
@@ -625,8 +623,8 @@ export class DIFHandler {
     protected wrapJSValueInProxy<T>(
         value: T,
         pointerAddress: string,
-        type: DIFTypeContainer | null = null,
-    ): (T | Ref<T>) & WeakKey {
+        _type: DIFTypeContainer | null = null,
+    ): (T | Ref<unknown>) & WeakKey {
         // primitive values are always wrapped in a Ref proxy
         if (
             value === null || value === undefined ||
@@ -706,7 +704,7 @@ export class DIFHandler {
 
     private wrapJSObjectInProxy<T extends object>(
         value: T,
-    ): (T | Ref<any>) & WeakKey {
+    ): (T | Ref<unknown>) & WeakKey {
         // deno-lint-ignore no-this-alias
         const self = this;
         return new Proxy(value, {

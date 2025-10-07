@@ -5,7 +5,7 @@
  * NOTE: as more JS values are supported, this test should be extended to cover all of them.
  */
 import { Runtime } from "../../src/runtime/runtime.ts";
-import { assertEquals } from "jsr:@std/assert";
+import { assertEquals } from "@std/assert";
 
 /**
  * Test values that are used to verify the value parity.

@@ -1,4 +1,4 @@
-import { assertEquals } from "jsr:@std/assert/equals";
+import { assertEquals } from "@std/assert/equals";
 import { CoreTypeAddress } from "../../src/dif/definitions.ts";
 import { TS_TYPE } from "../../src/types/ts-types.ts";
 

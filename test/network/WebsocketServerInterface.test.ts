@@ -1,6 +1,6 @@
-import { assert } from "jsr:@std/assert/assert";
+import { assert } from "@std/assert/assert";
 import { Runtime } from "../../src/runtime/runtime.ts";
-import * as uuid from "jsr:@std/uuid";
+import * as uuid from "@std/uuid";
 import { isNodeOrBun } from "../is-node.ts";
 import "../../src/network/interface-impls/websocket-client.ts";
 import "../../src/network/interface-impls/websocket-server-deno.ts";

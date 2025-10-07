@@ -1,12 +1,6 @@
 import { Runtime } from "../../src/runtime/runtime.ts";
-import {
-    assert,
-    assertEquals,
-    assertMatch,
-    assertNotStrictEquals,
-    assertObjectMatch,
-} from "jsr:@std/assert";
-import { assertThrows } from "jsr:@std/assert/throws";
+import { assert, assertEquals } from "@std/assert";
+import { assertThrows } from "@std/assert/throws";
 import {
     CoreTypeAddress,
     type DIFReference,
@@ -15,7 +9,7 @@ import {
     type DIFUpdate,
     DIFUpdateKind,
 } from "../../src/dif/definitions.ts";
-import { assertStrictEquals } from "jsr:@std/assert/strict-equals";
+import { assertStrictEquals } from "@std/assert/strict-equals";
 import { Ref } from "../../src/refs/ref.ts";
 import {
     difReferenceToDisplayString,

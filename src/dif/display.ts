@@ -89,7 +89,7 @@ export function difTypeContainerToDisplayString(
 }
 
 export function addressToDisplayString(address: string): string {
-    const found = Object.entries(CoreTypeAddress).find(([name, addr]) => {
+    const found = Object.entries(CoreTypeAddress).find(([_, addr]) => {
         return addr === address;
     });
     if (found) {
