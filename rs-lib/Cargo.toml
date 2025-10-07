@@ -31,14 +31,14 @@ datex_macros = { version = "0.1.0", git = "https://github.com/unyt-org/datex-cor
 
 async-trait = "0.1.87"
 url = "2.5.4"
-wasm-bindgen = { version = "=0.2.100", features = [] }
+wasm-bindgen = { version = "=0.2.102", features = [] }
 # FIXME make serde-wasm-bindgen optional
 serde-wasm-bindgen = "0.6"
 serde = { version = "1.0", features = ["derive"] }
 # serde-wasm-bindgen = "0.6"
 
 wasm-bindgen-futures = "0.4.50"
-js-sys = "=0.3.77"
+js-sys = "=0.3.79"
 console_error_panic_hook = "0.1"
 
 
@@ -54,7 +54,7 @@ tsify = "0.5.5"
 # webrtc
 # tokio = { version = "1.43.0", default-features = false, features = [] }
 [dependencies.web-sys]
-version = "0.3.77"
+version = "0.3.79"
 features = [
     "Window",
     "BinaryType",
