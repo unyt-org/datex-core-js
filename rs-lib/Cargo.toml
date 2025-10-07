@@ -27,7 +27,7 @@ datex-core = { version = "0.0.5", git = "https://github.com/unyt-org/datex-core"
     "wasm_runtime",
     "wasm_webrtc",
 ] }
-datex_macros = { version = "0.1.0", git = "https://github.com/unyt-org/datex-core", branch = "feat/dif", package = "datex_macros" }
+datex_macros = { version = "0.1.1", git = "https://github.com/unyt-org/datex-core", branch = "feat/dif", package = "datex_macros" }
 
 async-trait = "0.1.87"
 url = "2.5.4"
