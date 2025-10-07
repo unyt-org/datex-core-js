@@ -12,6 +12,7 @@
     "jsr:@std/bytes@^1.0.5": "1.0.6",
     "jsr:@std/bytes@^1.0.6": "1.0.6",
     "jsr:@std/cli@*": "1.0.20",
+    "jsr:@std/cli@^1.0.11": "1.0.20",
     "jsr:@std/crypto@^1.0.5": "1.0.5",
     "jsr:@std/encoding@*": "1.0.10",
     "jsr:@std/encoding@^1.0.6": "1.0.10",
@@ -81,6 +82,18 @@
       "dependencies": [
         "jsr:@david/path",
         "jsr:@david/temp",
+        "jsr:@std/encoding@^1.0.6",
+        "jsr:@std/fmt@^1.0.4",
+        "jsr:@std/fs@^1.0.10",
+        "jsr:@std/tar"
+      ]
+    },
+    "@deno/wasmbuild@0.19.3": {
+      "integrity": "71c641f2c8edeb9344fa2dd783bfdf9944e2ee7227ed6195237044c2e0db3f2a",
+      "dependencies": [
+        "jsr:@david/path",
+        "jsr:@david/temp",
+        "jsr:@std/cli@^1.0.11",
         "jsr:@std/encoding@^1.0.6",
         "jsr:@std/fmt@^1.0.4",
         "jsr:@std/fs@^1.0.10",
