@@ -379,7 +379,7 @@ dependencies = [
  "async-trait",
  "console_error_panic_hook",
  "datex-core",
- "datex_macros 0.1.0",
+ "datex_macros 0.1.1 (git+https://github.com/unyt-org/datex-core?branch=feat%2Fdif)",
  "futures",
  "futures-channel",
  "futures-timer",
@@ -400,8 +400,7 @@ dependencies = [
 
 [[package]]
 name = "datex_macros"
-version = "0.1.0"
-source = "git+https://github.com/unyt-org/datex-core?branch=feat%2Fdif#f2d48e668f01d347c78dcc8d291a52ecb736e19d"
+version = "0.1.1"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -411,6 +410,7 @@ dependencies = [
 [[package]]
 name = "datex_macros"
 version = "0.1.1"
+source = "git+https://github.com/unyt-org/datex-core?branch=feat%2Fdif#e9db6298eb8cc3c04e96f5f54ac11f8569221e53"
 dependencies = [
  "proc-macro2",
  "quote",
