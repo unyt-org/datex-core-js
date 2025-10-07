@@ -2,12 +2,9 @@ import { runBuildCommand } from "https://jsr.io/@deno/wasmbuild/0.19.3/lib/comma
 import { Path } from "jsr:@david/path@^0.2.0";
 import { format } from "https://deno.land/std@0.224.0/fmt/bytes.ts";
 import { parseArgs } from "jsr:@std/cli/parse-args";
-import { parse } from "https://deno.land/std@0.224.0/toml/mod.ts";
 import { dedent } from "jsr:@qnighy/dedent";
 
-const configText = await Deno.readTextFile(".cargo/config.toml");
-const RUST_FLAGS =
-    (parse(configText).build as { rustflags?: string[] })?.rustflags ?? [];
+const RUST_FLAGS = ["--cfg=web_sys_unstable_apis"];
 const PREVIOUS_RUSTFLAGS = Deno.env.has("RUSTFLAGS")
     ? Deno.env.get("RUSTFLAGS")
     : null;
