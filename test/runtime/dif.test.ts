@@ -6,7 +6,7 @@ import {
     type DIFReference,
     DIFReferenceMutability,
     type DIFRepresentationValue,
-    DIFUpdate,
+    type DIFUpdate,
     type DIFUpdateData,
     DIFUpdateKind,
 } from "../../src/dif/definitions.ts";

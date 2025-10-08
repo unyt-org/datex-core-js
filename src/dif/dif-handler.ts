@@ -13,12 +13,12 @@ import {
     type DIFReference,
     DIFReferenceMutability,
     type DIFTypeContainer,
-    DIFUpdate,
+    type DIFUpdate,
     type DIFUpdateData,
     DIFUpdateKind,
     type DIFValue,
     type DIFValueContainer,
-    ObserveOptions,
+    type ObserveOptions,
 } from "./definitions.ts";
 import { difValueContainerToDisplayString } from "./display.ts";
 
