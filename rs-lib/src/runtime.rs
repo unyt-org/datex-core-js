@@ -10,7 +10,7 @@ use datex_core::dif::interface::{
 };
 use datex_core::dif::reference::DIFReference;
 use datex_core::dif::r#type::DIFTypeContainer;
-use datex_core::dif::update::DIFUpdate;
+use datex_core::dif::update::{DIFUpdate, DIFUpdateData};
 use datex_core::dif::value::DIFValueContainer;
 use datex_core::global::dxb_block::DXBBlock;
 use datex_core::global::protocol_structures::block_header::{
@@ -33,6 +33,7 @@ use std::fmt::Display;
 use std::rc::Rc;
 use std::str::FromStr;
 use std::sync::Arc;
+use datex_core::references::observers::{ObserveOptions, TransceiverId};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::future_to_promise;
 use web_sys::js_sys::Promise;
@@ -428,17 +429,20 @@ impl RuntimeDIFHandle {
 
     pub fn observe_pointer(
         &self,
+        transceiver_id: TransceiverId,
         address: &str,
+        observe_options: JsValue,
         callback: &Function,
     ) -> Result<u32, JsError> {
         let address = RuntimeDIFHandle::js_value_to_pointer_address(address)?;
         let cb = callback.clone();
+        let observe_options: ObserveOptions = from_value(observe_options).map_err(js_error)?;
         let observer = move |update: &DIFUpdate| {
             let js_value = to_js_value(update).unwrap();
             let _ = cb.call1(&JsValue::NULL, &js_value);
         };
         self.internal
-            .observe_pointer(address, observer)
+            .observe_pointer(transceiver_id, address, observe_options, observer)
             .map_err(js_error)
     }
 
@@ -451,16 +455,28 @@ impl RuntimeDIFHandle {
         DIFInterface::unobserve_pointer(self, address, observer_id)
             .map_err(js_error)
     }
+    
+    pub fn update_observer_options(
+        &self,
+        address: &str,
+        observer_id: u32,
+        observe_options: JsValue,
+    ) -> Result<(), JsError> {
+        let address = RuntimeDIFHandle::js_value_to_pointer_address(address)?;
+        let observe_options: ObserveOptions = from_value(observe_options).map_err(js_error)?;
+        DIFInterface::update_observer_options(self, address, observer_id, observe_options)
+            .map_err(js_error)
+    }
 
     pub fn update(
         &mut self,
+        transceiver_id: TransceiverId,
         address: &str,
         update: JsValue,
     ) -> Result<(), JsError> {
         let address = Self::js_value_to_pointer_address(address)?;
-        let dif_update: DIFUpdate =
-            serde_wasm_bindgen::from_value(update).map_err(js_error)?;
-        DIFInterface::update(self, address, dif_update).map_err(js_error)
+        let dif_update_data: DIFUpdateData = from_value(update).map_err(js_error)?;
+        DIFInterface::update(self, transceiver_id, address, dif_update_data).map_err(js_error)
     }
 
     pub fn apply(
@@ -468,10 +484,8 @@ impl RuntimeDIFHandle {
         callee: JsValue,
         value: JsValue,
     ) -> Result<JsValue, JsError> {
-        let dif_callee: DIFValueContainer =
-            serde_wasm_bindgen::from_value(callee).map_err(js_error)?;
-        let dif_value: DIFValueContainer =
-            serde_wasm_bindgen::from_value(value).map_err(js_error)?;
+        let dif_callee: DIFValueContainer = from_value(callee).map_err(js_error)?;
+        let dif_value: DIFValueContainer = from_value(value).map_err(js_error)?;
         let result = DIFInterface::apply(self, dif_callee, dif_value)
             .map_err(js_error)?;
         to_js_value(&result).map_err(js_error)
@@ -483,14 +497,13 @@ impl RuntimeDIFHandle {
         allowed_type: JsValue,
         mutability: u8,
     ) -> Result<String, JsError> {
-        let dif_value: DIFValueContainer =
-            serde_wasm_bindgen::from_value(value).map_err(js_error)?;
+        let dif_value: DIFValueContainer = from_value(value).map_err(js_error)?;
         let dif_allowed_type: Option<DIFTypeContainer> =
             if allowed_type.is_null() || allowed_type.is_undefined() {
                 None
             } else {
                 Some(
-                    serde_wasm_bindgen::from_value(allowed_type)
+                    from_value(allowed_type)
                         .map_err(js_error)?,
                 )
             };
@@ -544,10 +557,11 @@ impl RuntimeDIFHandle {
 impl DIFInterface for RuntimeDIFHandle {
     fn update(
         &self,
+        source_id: TransceiverId,
         address: PointerAddress,
-        update: DIFUpdate,
+        update: DIFUpdateData,
     ) -> Result<(), DIFUpdateError> {
-        self.internal.update(address, update)
+        self.internal.update(source_id, address, update)
     }
 
     async fn resolve_pointer_address_external(
@@ -586,10 +600,17 @@ impl DIFInterface for RuntimeDIFHandle {
 
     fn observe_pointer<F: Fn(&DIFUpdate) + 'static>(
         &self,
+        transceiver_id: TransceiverId,
         address: PointerAddress,
+        options: ObserveOptions,
         observer: F,
     ) -> Result<u32, DIFObserveError> {
-        self.internal.observe_pointer(address, observer)
+        self.internal.observe_pointer(
+            transceiver_id,
+            address,
+            options,
+            observer,
+        )
     }
 
     fn unobserve_pointer(
@@ -598,6 +619,10 @@ impl DIFInterface for RuntimeDIFHandle {
         observer_id: u32,
     ) -> Result<(), DIFObserveError> {
         self.internal.unobserve_pointer(address, observer_id)
+    }
+
+    fn update_observer_options(&self, address: PointerAddress, observer_id: u32, options: ObserveOptions) -> Result<(), DIFObserveError> {
+        self.internal.update_observer_options(address, observer_id, options)
     }
 }
 

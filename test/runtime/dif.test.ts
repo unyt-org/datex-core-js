@@ -6,7 +6,8 @@ import {
     type DIFReference,
     DIFReferenceMutability,
     type DIFRepresentationValue,
-    type DIFUpdate,
+    DIFUpdate,
+    type DIFUpdateData,
     DIFUpdateKind,
 } from "../../src/dif/definitions.ts";
 import { assertStrictEquals } from "@std/assert/strict-equals";
@@ -34,7 +35,7 @@ Deno.test("pointer create with observe", () => {
         observed = value;
         // TODO: print error message somewhere (don't throw)
         throw new Error("Should not be called again");
-    });
+    }, { relay_own_updates: true });
 
     runtime.dif.updatePointer(ref, {
         value: { value: "Hello, Datex 2" },
@@ -43,9 +44,38 @@ Deno.test("pointer create with observe", () => {
 
     // if not equal, unobservePointer potentially failed
     assertEquals(observed, {
+        source_id: runtime.dif._transceiver_id,
+        data: {
+            value: { value: "Hello, Datex 2" },
+            kind: DIFUpdateKind.Replace,
+        },
+    });
+});
+
+Deno.test("pointer create without observe", () => {
+    const ref = runtime.dif.createPointer(
+        {
+            value: "Hello, Datex!",
+        },
+        undefined,
+        DIFReferenceMutability.Mutable,
+    );
+    assertEquals(typeof ref, "string");
+
+    let observed: DIFUpdate | null = null;
+    const observerId = runtime.dif.observePointerBindDirect(ref, (value) => {
+        runtime.executeSync("'xy'");
+        runtime.dif.unobservePointerBindDirect(ref, observerId);
+        observed = value;
+    });
+
+    runtime.dif.updatePointer(ref, {
         value: { value: "Hello, Datex 2" },
         kind: DIFUpdateKind.Replace,
     });
+
+    // observer should not be called, because relay_own_updates is false and the source is the same as the observer
+    assertEquals(observed, null);
 });
 
 Deno.test("pointer create primitive", () => {
@@ -377,16 +407,19 @@ Deno.test("pointer primitive ref update and observe", () => {
     runtime.dif.observePointerBindDirect(ptrObj.pointerAddress, (update) => {
         console.log("Observed pointer update:", update);
         observedUpdate = update;
-    });
+    }, { relay_own_updates: true });
 
     // update the ref value
     ptrObj.value = 456;
 
     // check if the update was observed
     assertEquals(observedUpdate, {
-        kind: DIFUpdateKind.Replace,
-        value: {
-            value: 456,
+        source_id: runtime.dif._transceiver_id,
+        data: {
+            kind: DIFUpdateKind.Replace,
+            value: {
+                value: 456,
+            },
         },
     });
 });
@@ -396,7 +429,7 @@ Deno.test("pointer primitive ref update and observe local", () => {
     const ptrObj = runtime.createPointer(val as number) as Ref<number>;
     assertEquals(ptrObj.value, val);
 
-    let observedUpdate: DIFUpdate | null = null;
+    let observedUpdate: DIFUpdateData | null = null;
     const observerId = runtime.dif.observePointer(
         ptrObj.pointerAddress,
         (update) => {
@@ -435,6 +468,94 @@ Deno.test("pointer primitive ref update and observe local", () => {
     ptrObj.value = 789;
     // check that no update was observed
     assertEquals(observedUpdate, null);
+});
+
+Deno.test("pointer primitive ref remote update and observe bind direct", () => {
+    const val = 123;
+    const ptrObj = runtime.createPointer(val as number) as Ref<number>;
+    assertEquals(ptrObj.value, val);
+
+    let observedUpdate: DIFUpdate | null = null;
+    runtime.dif.observePointerBindDirect(
+        ptrObj.pointerAddress,
+        (update) => {
+            console.log("Observed pointer update:", update);
+            observedUpdate = update;
+        },
+    );
+
+    // fake a remote update from transceiver 42
+    runtime.dif._handle.update(42, ptrObj.pointerAddress, {
+        value: { value: 456 },
+        kind: DIFUpdateKind.Replace,
+    });
+
+    // check if the update was observed
+    assertEquals(observedUpdate, {
+        source_id: 42,
+        data: {
+            kind: DIFUpdateKind.Replace,
+            value: {
+                value: 456,
+            },
+        },
+    });
+
+    assertEquals(ptrObj.value, 456);
+});
+
+Deno.test("pointer primitive ref remote update and observe local", () => {
+    const val = 123;
+    const ptrObj = runtime.createPointer(val as number) as Ref<number>;
+    assertEquals(ptrObj.value, val);
+
+    let observedUpdate: DIFUpdateData | null = null;
+    runtime.dif.observePointer(
+        ptrObj.pointerAddress,
+        (update) => {
+            console.log("Observed pointer update:", update);
+            observedUpdate = update;
+        },
+    );
+
+    // fake a remote update from transceiver 42
+    runtime.dif._handle.update(42, ptrObj.pointerAddress, {
+        value: { value: 456 },
+        kind: DIFUpdateKind.Replace,
+    });
+
+    // check if the update was observed
+    assertEquals(observedUpdate, {
+        kind: DIFUpdateKind.Replace,
+        value: {
+            value: 456,
+        },
+    });
+
+    assertEquals(ptrObj.value, 456);
+
+    observedUpdate = null;
+
+    // fake a local update
+    runtime.dif._handle.update(
+        runtime.dif._transceiver_id,
+        ptrObj.pointerAddress,
+        {
+            value: { value: 789 },
+            kind: DIFUpdateKind.Replace,
+        },
+    );
+
+    // local observer should still be triggered
+    assertEquals(observedUpdate, {
+        kind: DIFUpdateKind.Replace,
+        value: {
+            value: 789,
+        },
+    });
+
+    // local value should not be updated since the update came from own transceiver
+    assertEquals(ptrObj.value, 456);
 });
 
 Deno.test("observer final", () => {

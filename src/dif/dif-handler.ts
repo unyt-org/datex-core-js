@@ -13,10 +13,12 @@ import {
     type DIFReference,
     DIFReferenceMutability,
     type DIFTypeContainer,
-    type DIFUpdate,
+    DIFUpdate,
+    type DIFUpdateData,
     DIFUpdateKind,
     type DIFValue,
     type DIFValueContainer,
+    ObserveOptions,
 } from "./definitions.ts";
 import { difValueContainerToDisplayString } from "./display.ts";
 
@@ -24,25 +26,33 @@ export class DIFHandler {
     /** The JSRuntime interface for the underlying Datex Core runtime */
     #runtime: JSRuntime;
     #handle: RuntimeDIFHandle;
+
+    // always 0 for now - potentially used for multi DIF transceivers using the same underlying runtime
+    readonly #transceiver_id = 0;
+
     /** The pointer cache for storing and reusing object instances on the JS side
-     * If the pointer is a final ref, it is not being observed and 'final' is set to true
+     * The observerId is only set if the pointer is being observed (if not final).
      */
     readonly #cache = new Map<
         string,
-        { val: WeakRef<WeakKey>; final: boolean }
+        { val: WeakRef<WeakKey>; observerId: number | null }
     >();
 
     readonly #observers = new Map<
         string,
-        Map<number, (value: DIFUpdate) => void>
+        Map<number, (value: DIFUpdateData) => void>
     >();
 
-    get _observers(): Map<string, Map<number, (value: DIFUpdate) => void>> {
+    get _observers(): Map<string, Map<number, (value: DIFUpdateData) => void>> {
         return this.#observers;
     }
 
     get _handle(): RuntimeDIFHandle {
         return this.#handle;
+    }
+
+    get _transceiver_id(): number {
+        return this.#transceiver_id;
     }
 
     /**
@@ -134,9 +144,8 @@ export class DIFHandler {
      * @param address - The address of the DIF value to update.
      * @param dif - The DIFUpdate object containing the update information.
      */
-    public updatePointer(address: string, dif: DIFUpdate) {
-        console.debug("Updating pointer", address, dif);
-        this.#handle.update(address, dif);
+    public updatePointer(address: string, dif: DIFUpdateData) {
+        this.#handle.update(this.#transceiver_id, address, dif);
     }
 
     /**
@@ -153,8 +162,60 @@ export class DIFHandler {
     public observePointerBindDirect(
         address: string,
         callback: (value: DIFUpdate) => void,
+        options: ObserveOptions = { relay_own_updates: false },
     ): number {
-        return this.#runtime.dif().observe_pointer(address, callback);
+        return this.#runtime.dif().observe_pointer(
+            this.#transceiver_id,
+            address,
+            options,
+            callback,
+        );
+    }
+
+    /**
+     * Updates the observe options for a registered observer.
+     * @param address - The address of the DIF value being observed.
+     * @param observerId - The observer ID returned by the observePointer method.
+     * @param options - The new observe options to apply.
+     */
+    private updateObserverOptions(
+        address: string,
+        observerId: number,
+        options: ObserveOptions,
+    ) {
+        this.#runtime.dif().update_observer_options(
+            address,
+            observerId,
+            options,
+        );
+    }
+
+    /**
+     * Enables propagation of own updates for a registered observer.
+     * @param address - The address of the DIF value being observed.
+     * @param observerId - The observer ID returned by the observePointer method.
+     */
+    public enableOwnUpdatesPropagation(
+        address: string,
+        observerId: number,
+    ) {
+        this.updateObserverOptions(address, observerId, {
+            relay_own_updates: true,
+        });
+    }
+
+    /**
+     * Disables propagation of own updates for a registered observer.
+     * @param address - The address of the DIF value being observed.
+     * @param observerId - The observer ID returned by the observePointer method.
+     */
+    public disableOwnUpdatesPropagation(
+        address: string,
+        observerId: number,
+    ) {
+        this.updateObserverOptions(address, observerId, {
+            relay_own_updates: false,
+        });
     }
 
     /**
@@ -181,7 +242,7 @@ export class DIFHandler {
      */
     public observePointer(
         address: string,
-        callback: (value: DIFUpdate) => void,
+        callback: (value: DIFUpdateData) => void,
     ): number {
         let cached = this.#cache.get(address);
         if (!cached) {
@@ -190,9 +251,9 @@ export class DIFHandler {
             cached = this.#cache.get(address)!;
         }
 
-        // make sure the pointer is not final
-        if (cached.final) {
-            throw new Error(`Cannot final reference $${address}`);
+        // make sure the pointer is not final (no observer)
+        if (cached.observerId === null) {
+            throw new Error(`Cannot observe final reference $${address}`);
         }
 
         // directly add to observers map
@@ -200,6 +261,8 @@ export class DIFHandler {
         if (!observers) {
             observers = new Map();
             this.#observers.set(address, observers);
+            // first local observer for this address - enable own updates propagation
+            this.enableOwnUpdatesPropagation(address, cached.observerId);
         }
         const observerId = observers.size + 1;
         observers.set(observerId, callback);
@@ -217,6 +280,16 @@ export class DIFHandler {
         if (observers) {
             observers.delete(observerId);
             if (observers.size === 0) {
+                // no local observers left - disable own updates propagation and remove from map
+                const cached = this.#cache.get(address);
+                if (cached?.observerId) {
+                    this.disableOwnUpdatesPropagation(
+                        address,
+                        cached.observerId,
+                    );
+                } else {
+                    console.error(`No observer found for address ${address}`);
+                }
                 return this.#observers.delete(address);
             }
         }
@@ -538,11 +611,15 @@ export class DIFHandler {
             observerId = this.observePointerBindDirect(
                 ptrAddress,
                 (update) => {
+                    // if source_id is not own transceiver id, handle pointer update
+                    if (update.source_id !== this.#transceiver_id) {
+                        this.handlePointerUpdate(ptrAddress, update.data);
+                    }
                     // call all local observers
                     const observers = this.#observers.get(ptrAddress);
                     if (observers) {
                         for (const cb of observers.values()) {
-                            cb(update);
+                            cb(update.data);
                         }
                     }
                     console.debug("Pointer update received", update);
@@ -552,6 +629,32 @@ export class DIFHandler {
 
         this.cacheWrappedPointerValue(ptrAddress, refValue, observerId);
         return refValue as T | Ref<T>;
+    }
+
+    /**
+     * Handles a pointer update received from the DATEX core runtime.
+     * If the pointer is cached and has a dereferenceable value, it updates the value.
+     * @param address - The address of the pointer being updated.
+     * @param update - The DIFUpdateData containing the update information.
+     * @returns True if the pointer was found and updated, false otherwise.
+     */
+    protected handlePointerUpdate(
+        address: string,
+        update: DIFUpdateData,
+    ): boolean {
+        const cached = this.#cache.get(address);
+        if (!cached) return false;
+        const deref = cached.val.deref();
+        if (!deref) return false;
+
+        if (deref instanceof Ref && update.kind === DIFUpdateKind.Replace) {
+            deref.updateValueSilently(this.resolveDIFValueContainerSync(
+                update.value,
+            ));
+        }
+        // TODO: handle generic updates for values (depending on type interface definition)
+
+        return true;
     }
 
     /**
@@ -565,7 +668,7 @@ export class DIFHandler {
     ): void {
         this.#cache.set(address, {
             val: new WeakRef(value),
-            final: observerId === null,
+            observerId,
         });
         // register finalizer to clean up the cache and free the pointer in the runtime
         // when the object is garbage collected

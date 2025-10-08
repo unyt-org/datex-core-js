@@ -410,7 +410,7 @@ dependencies = [
 [[package]]
 name = "datex_macros"
 version = "0.1.1"
-source = "git+https://github.com/unyt-org/datex-core?branch=feat%2Fdif#e9db6298eb8cc3c04e96f5f54ac11f8569221e53"
+source = "git+https://github.com/unyt-org/datex-core?branch=feat%2Fdif#9648309fd922f35e5afdd646f7d0bb9c02a29dd4"
 dependencies = [
  "proc-macro2",
  "quote",

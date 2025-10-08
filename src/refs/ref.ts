@@ -21,6 +21,15 @@ export class Ref<T> {
     }
 
     /**
+     * Silently updates the value of the reference without notifying observers.
+     * This should only be used internally.
+     * @param newValue - The new value to set.
+     */
+    updateValueSilently(newValue: T) {
+        this.#value = newValue;
+    }
+
+    /**
      * Gets the current value of the reference.
      */
     get value(): T {

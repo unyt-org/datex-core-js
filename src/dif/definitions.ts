@@ -168,7 +168,7 @@ export const DIFUpdateKind = {
 } as const;
 export type DIFUpdateKind = typeof DIFUpdateKind[keyof typeof DIFUpdateKind];
 
-export type DIFUpdate =
+export type DIFUpdateData =
     | { kind: typeof DIFUpdateKind.Replace; value: DIFValueContainer }
     | { kind: typeof DIFUpdateKind.Push; value: DIFValueContainer }
     | { kind: typeof DIFUpdateKind.Remove; key: DIFProperty }
@@ -178,3 +178,12 @@ export type DIFUpdate =
         value: DIFValueContainer;
     }
     | { kind: typeof DIFUpdateKind.Clear };
+
+export type DIFUpdate = {
+    source_id: number;
+    data: DIFUpdateData;
+};
+
+export type ObserveOptions = {
+    relay_own_updates: boolean;
+};
