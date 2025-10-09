@@ -109,7 +109,6 @@ export type DIFReference = {
 export type DIFValueContainer = DIFValue | DIFPointerAddress;
 export type DIFTypeContainer = DIFType | DIFPointerAddress;
 
-// TODO: wasm_bindgen currently returns a Map here - could we also just use an object, or is a Map actually more efficient?
 export type DIFObject = Record<string, DIFValueContainer>;
 export type DIFArray = DIFValueContainer[];
 export type DIFMap = [DIFValueContainer, DIFValueContainer][];
