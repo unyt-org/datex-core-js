@@ -1,33 +1,3 @@
-/*
-Null: $010000
-Type: $020000
-Boolean: $030000
-Struct: $040000
-Array: $060000
-Endpoint: $070000
-Text: $080000
-List: $090000
-Union: $0a0000
-Unit: $0b0000
-Map: $0c0000
-
-Decimal(None): $2c0100
-Decimal(Some(F32)): $2d0100
-Decimal(Some(F64)): $2e0100
-Decimal(Some(Big)): $2f0100
-Integer(None): $640000
-Integer(Some(U8)): $650000
-Integer(Some(U16)): $660000
-Integer(Some(U32)): $670000
-Integer(Some(U64)): $680000
-Integer(Some(U128)): $690000
-Integer(Some(I8)): $6a0000
-Integer(Some(I16)): $6b0000
-Integer(Some(I32)): $6c0000
-Integer(Some(I64)): $6d0000
-Integer(Some(I128)): $6e0000
-Integer(Some(Big)): $6f0000
-*/
 export const CoreTypeAddress = {
     // TODO: keep up to date
     integer: "640000",
