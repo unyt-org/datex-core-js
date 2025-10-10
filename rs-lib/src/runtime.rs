@@ -5,8 +5,6 @@ use datex_core::values::core_values::endpoint::Endpoint;
 use datex_core::runtime::global_context::DebugFlags;
 use datex_core::runtime::global_context::GlobalContext;
 use serde::{Deserialize, Serialize};
-use std::str::FromStr;
-use std::sync::{Arc, Mutex};
 use log::info;
 use crate::crypto::crypto_js::CryptoJS;
 use crate::utils::time::TimeJS;
@@ -25,17 +23,12 @@ use datex_core::global::protocol_structures::block_header::{
     BlockHeader, FlagsAndTimestamp,
 };
 use datex_core::references::reference::ReferenceMutability;
-#[cfg(feature = "debug")]
-use datex_core::runtime::global_context::DebugFlags;
-use datex_core::runtime::global_context::GlobalContext;
 use datex_core::runtime::{Runtime, RuntimeConfig, RuntimeInternal};
 use datex_core::serde::deserializer::DatexDeserializer;
-use datex_core::values::core_values::endpoint::Endpoint;
 use datex_core::values::pointer::PointerAddress;
 use datex_core::values::value_container::ValueContainer;
 use futures::FutureExt;
 use js_sys::Function;
-use serde::{Deserialize, Serialize};
 use serde_wasm_bindgen::{Error, from_value};
 use std::fmt::Display;
 use std::rc::Rc;
