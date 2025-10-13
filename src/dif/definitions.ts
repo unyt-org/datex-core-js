@@ -120,7 +120,7 @@ export type DIFRepresentationValue =
 // DIFProperty
 export type DIFProperty =
     | { kind: "text"; value: string }
-    | { kind: "index"; value: number }
+    | { kind: "index"; value: number } // FIXME shall we optimize this? as number of wrap pointer address in obj and use plain dif value container without nesting
     | { kind: "value"; value: DIFValueContainer };
 
 export const DIFUpdateKind = {
