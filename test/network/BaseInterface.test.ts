@@ -24,26 +24,8 @@ const config: BaseInterfaceSetupData = {
     reconnect_attempts: null,
     close_timestamp: null,
 };
-// Deno.test("custom properties no reconnect", () => {
-//     const runtime = new Runtime("@unyt");
-//     const config: InterfaceProperties = {
-//         name: "base",
-//         interface_type: "base",
-//         channel: "test",
-//         direction: "InOut",
-//         round_trip_time: 1000,
-//         max_bandwidth: 1,
-//         continuous_connection: true,
-//         allow_redirects: true,
-//         is_secure_channel: true,
-//         reconnection_config: "NoReconnect",
-//         reconnect_attempts: undefined,
-//     };
-//     const baseInterface = new BaseJSInterface(runtime._runtime, config);
-//     assertEquals(baseInterface.properties, config);
-// });
 
-Deno.test("custom properties with reconnect", async () => {
+Deno.test("custom properties no reconnect", async () => {
     const runtime = new Runtime({ endpoint: "@unyt" });
 
     const baseInterface = await runtime.comHub.createInterface<
@@ -141,7 +123,7 @@ Deno.test("test receive and send", async () => {
     );
 });
 
-// TODO:
+// TODO: add tests for worker
 Deno.test("worker", async () => {
     // FIXME: temporarily disabled because workers are not yet supported for node.js/dnt
     if (isNodeOrBun) {

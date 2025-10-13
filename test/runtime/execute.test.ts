@@ -52,17 +52,16 @@ Deno.test("execute sync normal integer", () => {
     );
 });
 
-// FIXME
-// Deno.test("execute sync bigint", () => {
-//     const runtime = new Runtime({ endpoint: "@jonas" });
-//     const result = runtime.executeSync<bigint>(
-//         "const x:integer/big = 123456781234567891234567812345678; x",
-//     );
-//     assertEquals(
-//         result,
-//         123456781234567891234567812345678n,
-//     );
-// });
+Deno.test("execute sync bigint", () => {
+    const runtime = new Runtime({ endpoint: "@jonas" });
+    const result = runtime.executeSync<bigint>(
+        "const x:integer/big = 123456781234567891234567812345678big; x",
+    );
+    assertEquals(
+        result,
+        123456781234567891234567812345678n,
+    );
+});
 
 Deno.test("execute sync string", () => {
     const runtime = new Runtime({ endpoint: "@jonas" });

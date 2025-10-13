@@ -11,7 +11,7 @@ export const CoreTypeAddress = {
     integer_i32: "6c0000",
     integer_i64: "6d0000",
     integer_i128: "6e0000",
-    integer_big: "64000C",
+    integer_big: "6f0000",
     decimal: "2c0100",
     decimal_f32: "2d0100",
     decimal_f64: "2e0100",

@@ -2,17 +2,42 @@
 // deno-lint-ignore-file
 // deno-fmt-ignore-file
 
-export function compile(datex_script: string): void;
+/**
+ * Executes a Datex script and returns the result as a string.
+ */
+export function execute(datex_script: string, formatted: boolean): string;
 export function create_runtime(config: string, debug_flags: any): JSRuntime;
 /**
  * Executes a Datex script and returns true when execution was successful.
  * Does not return the result of the script, but only indicates success or failure.
  */
 export function execute_internal(datex_script: string): boolean;
-/**
- * Executes a Datex script and returns the result as a string.
- */
-export function execute(datex_script: string, formatted: boolean): string;
+export interface TCPClientInterfaceSetupData {
+    address: string;
+}
+
+export interface TCPServerInterfaceSetupData {
+    port: number;
+}
+
+export interface WebRTCInterfaceSetupData {
+    peer_endpoint: string;
+    ice_servers: RTCIceServer[] | null;
+}
+
+export interface RTCIceServer {
+    urls: string[];
+    username: string | null;
+    credential: string | null;
+}
+
+export interface SerialInterfaceSetupData {
+    port_name: string | null;
+    baud_rate: number;
+}
+
+export type BaseInterfaceSetupData = InterfaceProperties;
+
 export interface InterfaceProperties {
     /**
      * the type of the interface, by which it is identified
@@ -85,32 +110,6 @@ export type ReconnectionConfig = "NoReconnect" | "InstantReconnect" | {
         attempts: number;
     };
 };
-
-export interface WebRTCInterfaceSetupData {
-    peer_endpoint: string;
-    ice_servers: RTCIceServer[] | null;
-}
-
-export interface RTCIceServer {
-    urls: string[];
-    username: string | null;
-    credential: string | null;
-}
-
-export interface SerialInterfaceSetupData {
-    port_name: string | null;
-    baud_rate: number;
-}
-
-export type BaseInterfaceSetupData = InterfaceProperties;
-
-export interface TCPClientInterfaceSetupData {
-    address: string;
-}
-
-export interface TCPServerInterfaceSetupData {
-    port: number;
-}
 
 export interface WebSocketServerInterfaceSetupData {
     port: number;
