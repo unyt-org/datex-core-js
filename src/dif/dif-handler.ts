@@ -264,6 +264,7 @@ export class DIFHandler {
             // first local observer for this address - enable own updates propagation
             this.enableOwnUpdatesPropagation(address, cached.observerId);
         }
+        // FIXME make this more robust for delete/re-add cases
         const observerId = observers.size + 1;
         observers.set(observerId, callback);
         return observerId;
