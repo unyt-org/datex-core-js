@@ -6,7 +6,6 @@ extern crate core;
 
 use serde_wasm_bindgen::from_value;
 // use datex_cli_core::CLI;
-use datex_core::compiler;
 
 use datex_core::compiler::{CompileOptions, compile_script, compile_template};
 use datex_core::decompiler::{DecompileOptions, decompile_body};
