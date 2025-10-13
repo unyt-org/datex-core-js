@@ -1,5 +1,16 @@
 export const CoreTypeAddress = {
-    // TODO: keep up to date
+    null: "010000",
+    type: "020000",
+    boolean: "030000",
+    endpoint: "070000",
+    text: "080000",
+    list: "090000",
+    unit: "0b0000",
+    map: "0c0000",
+    decimal: "2c0100",
+    decimal_f32: "2d0100",
+    decimal_f64: "2e0100",
+    decimal_big: "2f0100",
     integer: "640000",
     integer_u8: "650000",
     integer_u16: "660000",
@@ -12,20 +23,6 @@ export const CoreTypeAddress = {
     integer_i64: "6d0000",
     integer_i128: "6e0000",
     integer_big: "6f0000",
-    decimal: "2c0100",
-    decimal_f32: "2d0100",
-    decimal_f64: "2e0100",
-    decimal_big: "2f0100",
-    null: "010000",
-    boolean: "030000",
-    text: "080000",
-    array: "060000",
-    struct: "040000",
-    list: "090000",
-    map: "0c0000",
-    endpoint: "070000",
-    union: "0a0000",
-    unit: "0b0000",
 } as const;
 export type CoreTypeAddress =
     typeof CoreTypeAddress[keyof typeof CoreTypeAddress];

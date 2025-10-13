@@ -312,7 +312,7 @@ export class DIFHandler {
                 if (Array.isArray(value.value[0])) {
                     type = CoreTypeAddress.map;
                 } else {
-                    type = CoreTypeAddress.array;
+                    type = CoreTypeAddress.list;
                 }
             } else {
                 return value.value as T;
@@ -368,27 +368,22 @@ export class DIFHandler {
         } // endpoint types are resolved to Endpoint instances
         else if (type === CoreTypeAddress.endpoint) {
             return Endpoint.get(value.value as string) as T;
-        } // array types are resolved to arrays of DIFValues
-        else if (type === CoreTypeAddress.array) {
-            return this.promiseAllOrSync(
-                (value.value as DIFArray).map((v) =>
-                    this.resolveDIFValueContainer(v)
-                ),
-            ) as T | Promise<T>;
         } else if (type === CoreTypeAddress.list) {
             return this.promiseAllOrSync(
                 (value.value as DIFArray).map((v) =>
                     this.resolveDIFValueContainer(v)
                 ),
             ) as T | Promise<T>;
-        } // struct types are resolved from a DIFObject (aka JS Map) to a JS object
-        else if (type === CoreTypeAddress.struct) {
-            const resolvedObj: { [key: string]: unknown } = {};
-            for (const [key, val] of Object.entries(value.value as DIFObject)) {
-                resolvedObj[key] = this.resolveDIFValueContainer(val);
-            }
-            return this.promiseFromObjectOrSync(resolvedObj) as T | Promise<T>;
-        } // map types are resolved from a DIFObject (aka JS Map) or Array of key-value pairs to a JS object
+        } // FIXME: Implement structural lists
+        // struct types are resolved from a DIFObject (aka JS Map) to a JS object
+        // else if (type === CoreTypeAddress.struct) {
+        //     const resolvedObj: { [key: string]: unknown } = {};
+        //     for (const [key, val] of Object.entries(value.value as DIFObject)) {
+        //         resolvedObj[key] = this.resolveDIFValueContainer(val);
+        //     }
+        //     return this.promiseFromObjectOrSync(resolvedObj) as T | Promise<T>;
+        // }
+        // map types are resolved from a DIFObject (aka JS Map) or Array of key-value pairs to a JS object
         else if (type === CoreTypeAddress.map) {
             if (Array.isArray(value.value)) {
                 const resolvedMap = new Map<unknown, unknown>();

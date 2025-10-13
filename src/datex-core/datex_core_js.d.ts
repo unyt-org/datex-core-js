@@ -12,14 +12,6 @@ export function create_runtime(config: string, debug_flags: any): JSRuntime;
  * Does not return the result of the script, but only indicates success or failure.
  */
 export function execute_internal(datex_script: string): boolean;
-export interface TCPClientInterfaceSetupData {
-    address: string;
-}
-
-export interface TCPServerInterfaceSetupData {
-    port: number;
-}
-
 export interface WebRTCInterfaceSetupData {
     peer_endpoint: string;
     ice_servers: RTCIceServer[] | null;
@@ -36,7 +28,27 @@ export interface SerialInterfaceSetupData {
     baud_rate: number;
 }
 
+export interface WebSocketServerInterfaceSetupData {
+    port: number;
+    /**
+     * if true, the server will use wss (secure WebSocket). Defaults to true.
+     */
+    secure: boolean | null;
+}
+
+export interface WebSocketClientInterfaceSetupData {
+    address: string;
+}
+
 export type BaseInterfaceSetupData = InterfaceProperties;
+
+export interface TCPClientInterfaceSetupData {
+    address: string;
+}
+
+export interface TCPServerInterfaceSetupData {
+    port: number;
+}
 
 export interface InterfaceProperties {
     /**
@@ -110,18 +122,6 @@ export type ReconnectionConfig = "NoReconnect" | "InstantReconnect" | {
         attempts: number;
     };
 };
-
-export interface WebSocketServerInterfaceSetupData {
-    port: number;
-    /**
-     * if true, the server will use wss (secure WebSocket). Defaults to true.
-     */
-    secure: boolean | null;
-}
-
-export interface WebSocketClientInterfaceSetupData {
-    address: string;
-}
 
 export class BaseJSInterface {
     private constructor();
