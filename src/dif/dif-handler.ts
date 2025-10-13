@@ -606,7 +606,14 @@ export class DIFHandler {
                     const observers = this.#observers.get(ptrAddress);
                     if (observers) {
                         for (const cb of observers.values()) {
-                            cb(update.data);
+                            try {
+                                cb(update.data);
+                            } catch (e) {
+                                console.error(
+                                    "Error in pointer observer callback",
+                                    e,
+                                );
+                            }
                         }
                     }
                     console.debug("Pointer update received", update);
