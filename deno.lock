@@ -14,6 +14,7 @@
     "jsr:@std/cli@^1.0.11": "1.0.23",
     "jsr:@std/cli@^1.0.23": "1.0.23",
     "jsr:@std/crypto@^1.0.5": "1.0.5",
+    "jsr:@std/encoding@^1.0.10": "1.0.10",
     "jsr:@std/encoding@^1.0.6": "1.0.10",
     "jsr:@std/fmt@1": "1.0.8",
     "jsr:@std/fmt@^1.0.4": "1.0.8",
@@ -67,7 +68,7 @@
         "jsr:@david/path",
         "jsr:@david/temp",
         "jsr:@std/cli@^1.0.11",
-        "jsr:@std/encoding",
+        "jsr:@std/encoding@^1.0.6",
         "jsr:@std/fmt@^1.0.4",
         "jsr:@std/fs@^1.0.10",
         "jsr:@std/tar"
@@ -276,6 +277,7 @@
       "jsr:@qnighy/dedent@~0.1.2",
       "jsr:@std/assert@^1.0.15",
       "jsr:@std/cli@^1.0.23",
+      "jsr:@std/encoding@^1.0.10",
       "jsr:@std/fmt@^1.0.8",
       "jsr:@std/uuid@^1.0.9"
     ]

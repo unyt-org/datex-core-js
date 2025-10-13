@@ -30,6 +30,7 @@
         "@qnighy/dedent": "jsr:@qnighy/dedent@^0.1.2",
         "@std/assert": "jsr:@std/assert@^1.0.15",
         "@std/cli": "jsr:@std/cli@^1.0.23",
+        "@std/encoding": "jsr:@std/encoding@^1.0.10",
         "@std/fmt": "jsr:@std/fmt@^1.0.8",
         "@std/uuid": "jsr:@std/uuid@^1.0.9"
     },
