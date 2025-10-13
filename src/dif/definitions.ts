@@ -88,8 +88,6 @@ export type DIFTypeDefinition<Kind extends DIFTypeKind = DIFTypeKind> =
         : Kind extends typeof DIFTypeKinds.Function ? unknown // TODO
         : never;
 
-// FIXME shall we split up actualType and allowedType, as the actual type does not need
-// to represent unions and intersections?
 export type DIFType<Kind extends DIFTypeKind = DIFTypeKind> = {
     name?: string;
     kind: Kind;
