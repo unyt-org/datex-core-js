@@ -33,7 +33,6 @@ extern "C" {
 
 #[wasm_bindgen]
 pub fn create_runtime(config: &str, debug_flags: JsValue) -> JSRuntime {
-    console_error_panic_hook::set_once();
     let debug_flags: Option<JSDebugFlags> =
         from_value(debug_flags).unwrap_or_default();
     JSRuntime::create(config, debug_flags)

@@ -377,7 +377,6 @@ name = "datex-core-js"
 version = "0.0.6"
 dependencies = [
  "async-trait",
- "console_error_panic_hook",
  "datex-core",
  "datex_macros 0.1.1 (git+https://github.com/unyt-org/datex-core?branch=feat%2Fdif)",
  "futures",
