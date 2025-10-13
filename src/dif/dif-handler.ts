@@ -375,16 +375,7 @@ export class DIFHandler {
                     this.resolveDIFValueContainer(v)
                 ),
             ) as T | Promise<T>;
-        } // FIXME: Implement structural lists
-        // struct types are resolved from a DIFObject (aka JS Map) to a JS object
-        // else if (type === CoreTypeAddress.struct) {
-        //     const resolvedObj: { [key: string]: unknown } = {};
-        //     for (const [key, val] of Object.entries(value.value as DIFObject)) {
-        //         resolvedObj[key] = this.resolveDIFValueContainer(val);
-        //     }
-        //     return this.promiseFromObjectOrSync(resolvedObj) as T | Promise<T>;
-        // }
-        // map types are resolved from a DIFObject (aka JS Map) or Array of key-value pairs to a JS object
+        } // map types are resolved from a DIFObject (aka JS Map) or Array of key-value pairs to a JS object
         else if (type === CoreTypeAddress.map) {
             if (Array.isArray(value.value)) {
                 const resolvedMap = new Map<unknown, unknown>();
