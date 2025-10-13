@@ -24,9 +24,8 @@ use futures::channel::mpsc;
 use futures::{SinkExt, StreamExt};
 use log::{error, info, warn};
 use url::Url;
-use wasm_bindgen::prelude::wasm_bindgen;
-use wasm_bindgen::{prelude::Closure, JsCast};
-use web_sys::{js_sys, ErrorEvent, MessageEvent};
+use wasm_bindgen::{JsCast, prelude::Closure};
+use web_sys::{ErrorEvent, MessageEvent, js_sys};
 
 pub struct WebSocketClientJSInterface {
     pub address: Url,
@@ -41,15 +40,6 @@ impl SingleSocketProvider for WebSocketClientJSInterface {
 }
 wrap_error_for_js!(JSWebSocketError, datex_core::network::com_interfaces::default_com_interfaces::websocket::websocket_common::WebSocketError);
 use datex_macros::{com_interface, create_opener};
-
-
-
-#[wasm_bindgen(typescript_custom_section)]
-const WEBSOCKET_CLIENT_INTERFACE_SETUP_DATA: &'static str = r#"
-type WebSocketClientInterfaceSetupData = {
-    address: string;
-};
-"#;
 
 #[com_interface]
 impl WebSocketClientJSInterface {

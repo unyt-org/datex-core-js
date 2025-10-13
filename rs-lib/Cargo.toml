@@ -20,35 +20,40 @@ panic = "abort"
 
 [dependencies]
 log = { version = "0.4", features = ["std", "serde"] }
-datex-core = { version = "0.0.5", git = "https://github.com/unyt-org/datex-core", branch = "feat/ref", default-features = false, features = [
+datex-core = { version = "0.0.5", git = "https://github.com/unyt-org/datex-core", branch = "feat/dif", default-features = false, features = [
     "std",
+    "serde",
     "wasm_logger",
     "wasm_runtime",
     "wasm_webrtc",
 ] }
-datex_macros = { version = "0.1.0", git = "https://github.com/unyt-org/datex-core", branch = "feat/ref", package = "datex_macros" }
+datex_macros = { version = "0.1.1", git = "https://github.com/unyt-org/datex-core", branch = "feat/dif", package = "datex_macros" }
 
 async-trait = "0.1.87"
 url = "2.5.4"
-wasm-bindgen = { version = "=0.2.100", features = [] }
+wasm-bindgen = { version = "=0.2.102", features = [] }
 # FIXME make serde-wasm-bindgen optional
 serde-wasm-bindgen = "0.6"
 serde = { version = "1.0", features = ["derive"] }
 # serde-wasm-bindgen = "0.6"
 
 wasm-bindgen-futures = "0.4.50"
-js-sys = "=0.3.77"
+js-sys = "=0.3.79"
+
 
 # webrtc
 futures = { version = "0.3", default-features = false }           # = "0.11", 
 futures-timer = { version = "3", features = ["wasm-bindgen"] }
 uuid = { version = "1.15.1", features = ["js"], optional = true }
 futures-channel = "0.3.31"
+specta-typescript = "0.0.9"
+specta = "1.0.5"
+tsify = "0.5.5"
 
 # webrtc
 # tokio = { version = "1.43.0", default-features = false, features = [] }
 [dependencies.web-sys]
-version = "0.3.77"
+version = "0.3.79"
 features = [
     "Window",
     "BinaryType",
@@ -86,6 +91,7 @@ features = [
     "RtcDataChannelEvent",
     "RtcConfiguration",
     "RtcIceServer",
+    "MediaStream",
 ]
 
 [dev-dependencies]
@@ -98,7 +104,7 @@ default = [
     "wasm_serial",
     "wasm_webrtc",
 ]
-debug = ["datex-core/debug"]
+debug = ["datex-core/debug", "datex-core/wasm_runtime"]
 wasm_websocket_server = [] # only required for a backend js runtime
 wasm_websocket_client = [] # full support
 wasm_serial = [] # only required for frontend js runtime

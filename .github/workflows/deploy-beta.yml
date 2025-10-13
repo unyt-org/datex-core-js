@@ -1,16 +1,16 @@
-name: Release
+name: Deploy beta
+description: Deploy the latest commit of the selected branch to GitHub Pages and update the "beta" draft release.
 
 on:
-    push:
-        branches:
-            - main
+    workflow_dispatch:
+
 permissions:
     contents: write
     pages: write
     id-token: write
 
 jobs:
-    release:
+    release-beta:
         runs-on: ubuntu-latest
         name: Release
         steps:
@@ -51,18 +51,23 @@ jobs:
               run: |
                   git config user.name "github-actions"
                   git config user.email "github-actions@github.com"
-                  git tag "v${{ env.version }}"
-                  git push origin "v${{ env.version }}"
+                  git tag -f beta
+                  git push origin -f beta
 
             - name: Create Draft Release
               uses: softprops/action-gh-release@v2
               with:
-                  draft: true
-                  tag_name: "v${{ env.version }}"
+                  prerelease: true
+                  make_latest: false
+                  tag_name: "beta"
                   files: ./datex.js
                   generate_release_notes: true
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Store commit-hash in pages directory
+              run: |
+                  echo "$(git rev-parse HEAD)" > ./pages/commit-hash.txt
 
             - name: Upload build artifacts
               uses: actions/upload-pages-artifact@v3
@@ -70,7 +75,7 @@ jobs:
                   path: ./pages
                   retention-days: 3
     deploy:
-        needs: release
+        needs: release-beta
         name: Deploy JS to GitHub Pages
         runs-on: ubuntu-latest
         environment:

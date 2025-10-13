@@ -1,6 +1,6 @@
-import { assert } from "jsr:@std/assert/assert";
+import { assert } from "@std/assert/assert";
 import { Runtime } from "../../src/runtime/runtime.ts";
-import * as uuid from "jsr:@std/uuid";
+import * as uuid from "@std/uuid";
 import { isNodeOrBun } from "../is-node.ts";
 import "../../src/network/interface-impls/websocket-client.ts";
 import "../../src/network/interface-impls/websocket-server-deno.ts";
@@ -33,7 +33,7 @@ Deno.test("connect two runtimes", async () => {
         WebSockerServerDenoInterfaceImpl
     >(
         "websocket-server",
-        { port: PORT },
+        { port: PORT, secure: false },
     );
 
     const runtimeB = new Runtime({ endpoint: "@test_b" });
@@ -76,7 +76,7 @@ Deno.test("send data between two runtimes", async () => {
 
     await sleep(1000);
 
-    const res = await runtimeA.execute("@test_b :: 1 + 2");
+    const res = await runtimeA.executeWithStringResult("@test_b :: 1 + 2");
     assert(res === "3", "Expected result from remote execution to be 3");
 
     await serverInterface.close();

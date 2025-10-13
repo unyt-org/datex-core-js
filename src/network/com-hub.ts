@@ -105,4 +105,12 @@ export class ComHub {
         }
         console.log(trace);
     }
+
+    public sendBlock(
+        block: Uint8Array,
+        interface_uuid: string,
+        socket_uuid: string,
+    ): Promise<boolean> {
+        return this.#jsComHub.send_block(block, interface_uuid, socket_uuid);
+    }
 }

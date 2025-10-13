@@ -3,17 +3,19 @@ use super::com_interfaces::matchbox_js_interface::MatchboxClientRegistry;
 
 use datex_core::global::dxb_block::IncomingSection;
 use datex_core::network::com_hub::{ComHubError, InterfacePriority};
-use datex_core::network::com_interfaces::com_interface::{ComInterface, ComInterfaceFactory, ComInterfaceUUID};
+use datex_core::network::com_interfaces::com_interface::{
+    ComInterface, ComInterfaceFactory, ComInterfaceUUID,
+};
 use datex_core::network::com_interfaces::com_interface_socket::ComInterfaceSocketUUID;
-use datex_core::stdlib::{cell::RefCell, rc::Rc};
-use datex_core::{network::com_hub::ComHub, utils::uuid::UUID};
 use datex_core::runtime::Runtime;
+use datex_core::stdlib::{cell::RefCell, rc::Rc};
+use datex_core::values::core_values::endpoint::Endpoint;
+use datex_core::{network::com_hub::ComHub, utils::uuid::UUID};
 use log::error;
+use std::str::FromStr;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::future_to_promise;
 use web_sys::js_sys::{self, Promise};
-use std::str::FromStr;
-use datex_core::values::core_values::endpoint::Endpoint;
 
 #[wasm_bindgen]
 #[derive(Clone)]
@@ -27,16 +29,17 @@ pub struct JSComHub {
  */
 impl JSComHub {
     pub fn new(runtime: Runtime) -> JSComHub {
-        JSComHub {
-            runtime
-        }
+        JSComHub { runtime }
     }
 
     pub fn com_hub(&self) -> &ComHub {
         self.runtime.com_hub()
     }
 
-    pub fn get_interface_for_uuid<T: ComInterface>(&self, uuid: String) -> Result<Rc<RefCell<T>>, ComHubError> {
+    pub fn get_interface_for_uuid<T: ComInterface>(
+        &self,
+        uuid: String,
+    ) -> Result<Rc<RefCell<T>>, ComHubError> {
         let base_interface = self
             .com_hub()
             .get_interface_by_uuid::<T>(&ComInterfaceUUID::from_string(uuid));
@@ -78,7 +81,12 @@ impl JSComHub {
             crate::network::com_interfaces::serial_js_interface::SerialJSInterface::factory
         );
 
-        // TODO: wasm_webrtc
+        //wasm_webrtc
+        #[cfg(feature = "wasm_webrtc")]
+        self.com_hub().register_interface_factory(
+            "webrtc".to_string(),
+            crate::network::com_interfaces::webrtc_js_interface::WebRTCJSInterface::factory
+        );
     }
 
     pub fn create_interface(
@@ -89,17 +97,26 @@ impl JSComHub {
         let runtime = self.runtime.clone();
         future_to_promise(async move {
             let com_hub = runtime.com_hub();
-            let properties = runtime.execute_sync(&properties, &[], None)
+            let properties = runtime
+                .execute_sync(&properties, &[], None)
                 .map_err(|e| JsError::new(&format!("{e:?}")))?;
             if let Some(properties) = properties {
                 let interface = com_hub
-                    .create_interface(&interface_type, properties, InterfacePriority::default())
+                    .create_interface(
+                        &interface_type,
+                        properties,
+                        InterfacePriority::default(),
+                    )
                     .await
                     .map_err(|e| JsError::new(&format!("{e:?}")))?;
-                Ok(JsValue::from_str(&interface.borrow().get_uuid().0.to_string()))
-            }
-            else {
-                Err(JsError::new("Failed to create interface: properties are empty").into())
+                Ok(JsValue::from_str(
+                    &interface.borrow().get_uuid().0.to_string(),
+                ))
+            } else {
+                Err(JsError::new(
+                    "Failed to create interface: properties are empty",
+                )
+                .into())
             }
         })
     }
@@ -142,7 +159,8 @@ impl JSComHub {
             ComInterfaceUUID(UUID::from_string(interface_uuid));
         let socket_uuid =
             ComInterfaceSocketUUID(UUID::from_string(socket_uuid));
-        self.com_hub().get_dyn_interface_by_uuid(&interface_uuid)
+        self.com_hub()
+            .get_dyn_interface_by_uuid(&interface_uuid)
             .expect("Failed to find interface")
             .borrow_mut()
             .send_block(block, socket_uuid)
@@ -194,10 +212,9 @@ impl JSComHub {
         if let Ok(endpoint) = endpoint {
             let trace = self.com_hub().record_trace(endpoint).await;
             trace.map(|t| t.to_string())
-        }
-        else {
+        } else {
             println!("Invalid endpoint: {}", endpoint.unwrap_err());
             None
-        }        
+        }
     }
 }

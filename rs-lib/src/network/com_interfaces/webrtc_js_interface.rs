@@ -6,17 +6,18 @@ use std::sync::Mutex;
 use std::time::Duration; // FIXME no-std
 
 use async_trait::async_trait;
+use datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common::media_tracks::{MediaKind, MediaTrack, MediaTracks};
 use datex_core::values::core_values::endpoint::Endpoint;
 use datex_core::network::com_interfaces::com_interface::{
-    ComInterface, ComInterfaceInfo, ComInterfaceSockets, ComInterfaceUUID,
+    ComInterface, ComInterfaceError, ComInterfaceFactory, ComInterfaceInfo, ComInterfaceSockets
 };
 use datex_core::network::com_interfaces::com_interface_properties::InterfaceProperties;
 use datex_core::network::com_interfaces::com_interface_socket::ComInterfaceSocketUUID;
-use datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common_new::data_channels::{DataChannel, DataChannels};
-use datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common_new::structures::{RTCIceCandidateInitDX, RTCIceServer, RTCSdpTypeDX, RTCSessionDescriptionDX};
-use datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common_new::utils::WebRTCError;
-use datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common_new::webrtc_commons::WebRTCCommon;
-use datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common_new::webrtc_trait::{WebRTCTrait, WebRTCTraitInternal};
+use datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common::data_channels::{DataChannel, DataChannels};
+use datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common::structures::{RTCIceCandidateInitDX, RTCIceServer, RTCSdpTypeDX, RTCSessionDescriptionDX};
+use datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common::utils::WebRTCError;
+use datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common::webrtc_commons::{WebRTCCommon, WebRTCInterfaceSetupData};
+use datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common::webrtc_trait::{WebRTCTrait, WebRTCTraitInternal};
 use datex_core::network::com_interfaces::socket_provider::SingleSocketProvider;
 use datex_core::stdlib::sync::Arc;
 use datex_core::task::spawn_local;
@@ -26,37 +27,53 @@ use datex_core::network::com_interfaces::com_interface::ComInterfaceState;
 use js_sys::{Array, Function, Reflect};
 use wasm_bindgen_futures::JsFuture;
 
-use crate::define_registry;
 use crate::js_utils::TryAsByteSlice;
-use datex_core::network::com_hub::InterfacePriority;
+use crate::network::com_hub::JSComHub;
+use crate::wrap_error_for_js;
+use datex_core::network::com_hub::ComHubError;
 use datex_macros::{com_interface, create_opener};
 use log::{error, info};
-use wasm_bindgen::prelude::{wasm_bindgen, Closure};
-use wasm_bindgen::{JsCast, JsError, JsValue};
+use wasm_bindgen::prelude::{Closure, wasm_bindgen};
+use wasm_bindgen::{JsCast, JsValue};
 use web_sys::{
-    MessageEvent, RtcConfiguration, RtcDataChannel, RtcDataChannelEvent,
-    RtcIceCandidateInit, RtcIceServer, RtcPeerConnection,
+    MediaStream, MessageEvent, RtcConfiguration, RtcDataChannel,
+    RtcDataChannelEvent, RtcIceCandidateInit, RtcIceServer, RtcPeerConnection,
     RtcPeerConnectionIceEvent, RtcSdpType, RtcSessionDescriptionInit,
     RtcSignalingState,
 };
+
+wrap_error_for_js!(JSWebRTCError, datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common::utils::WebRTCError);
+
+impl From<ComHubError> for JSWebRTCError {
+    fn from(err: ComHubError) -> Self {
+        WebRTCError::ComHubError(err).into()
+    }
+}
+
 pub struct WebRTCJSInterface {
     info: ComInterfaceInfo,
     commons: Arc<Mutex<WebRTCCommon>>,
     peer_connection: Rc<Option<RtcPeerConnection>>,
     data_channels: Rc<RefCell<DataChannels<RtcDataChannel>>>,
+    local_media_tracks: Rc<RefCell<MediaTracks<MediaStream>>>,
+    remote_media_tracks: Rc<RefCell<MediaTracks<MediaStream>>>,
 }
 impl SingleSocketProvider for WebRTCJSInterface {
     fn provide_sockets(&self) -> Arc<Mutex<ComInterfaceSockets>> {
         self.get_sockets()
     }
 }
-impl WebRTCTrait<RtcDataChannel> for WebRTCJSInterface {
+impl WebRTCTrait<RtcDataChannel, MediaStream, MediaStream>
+    for WebRTCJSInterface
+{
     fn new(peer_endpoint: impl Into<Endpoint>) -> Self {
         WebRTCJSInterface {
             info: ComInterfaceInfo::default(),
             commons: Arc::new(Mutex::new(WebRTCCommon::new(peer_endpoint))),
             peer_connection: Rc::new(None),
             data_channels: Rc::new(RefCell::new(DataChannels::default())),
+            local_media_tracks: Rc::new(RefCell::new(MediaTracks::default())),
+            remote_media_tracks: Rc::new(RefCell::new(MediaTracks::default())),
         }
     }
     fn new_with_ice_servers(
@@ -70,7 +87,34 @@ impl WebRTCTrait<RtcDataChannel> for WebRTCJSInterface {
 }
 
 #[async_trait(?Send)]
-impl WebRTCTraitInternal<RtcDataChannel> for WebRTCJSInterface {
+impl WebRTCTraitInternal<RtcDataChannel, MediaStream, MediaStream>
+    for WebRTCJSInterface
+{
+    fn provide_remote_media_tracks(
+        &self,
+    ) -> Rc<RefCell<MediaTracks<MediaStream>>> {
+        self.remote_media_tracks.clone()
+    }
+    fn provide_local_media_tracks(
+        &self,
+    ) -> Rc<RefCell<MediaTracks<MediaStream>>> {
+        self.local_media_tracks.clone()
+    }
+
+    async fn handle_create_media_channel(
+        &self,
+        id: String,
+        kind: MediaKind,
+    ) -> Result<MediaTrack<MediaStream>, WebRTCError> {
+        todo!("Implement media channel creation")
+    }
+
+    async fn handle_setup_media_channel(
+        channel: Rc<RefCell<MediaTrack<MediaStream>>>,
+    ) -> Result<(), WebRTCError> {
+        todo!("Implement media channel setup")
+    }
+
     fn provide_data_channels(
         &self,
     ) -> Rc<RefCell<DataChannels<RtcDataChannel>>> {
@@ -79,7 +123,6 @@ impl WebRTCTraitInternal<RtcDataChannel> for WebRTCJSInterface {
     fn provide_info(&self) -> &ComInterfaceInfo {
         &self.info
     }
-
     async fn handle_create_data_channel(
         &self,
     ) -> Result<DataChannel<RtcDataChannel>, WebRTCError> {
@@ -446,65 +489,75 @@ impl ComInterface for WebRTCJSInterface {
     set_opener!(open);
 }
 
-define_registry!(WebRTCRegistry, WebRTCJSInterface);
-#[wasm_bindgen]
-impl WebRTCRegistry {
-    pub async fn register(&self, endpoint: &str) -> Result<String, JsError> {
-        let com_hub = self.runtime.com_hub();
-        let endpoint = Endpoint::new(endpoint);
-        let mut webrtc_interface = WebRTCJSInterface::new(endpoint);
-        let uuid = webrtc_interface.get_uuid().clone();
-        webrtc_interface
-            .open()
-            .await
-            .map_err(|e| JsError::new(&format!("{e:?}")))?;
-
-        com_hub
-            .add_interface(
-                Rc::new(RefCell::new(webrtc_interface)),
-                InterfacePriority::default(),
-            )
-            .map_err(|e| JsError::new(&format!("{e:?}")))?;
-        Ok(uuid.0.to_string())
+impl ComInterfaceFactory<WebRTCInterfaceSetupData> for WebRTCJSInterface {
+    fn create(
+        setup_data: WebRTCInterfaceSetupData,
+    ) -> Result<WebRTCJSInterface, ComInterfaceError> {
+        if let Some(ice_servers) = setup_data.ice_servers.as_ref() {
+            if ice_servers.is_empty() {
+                error!(
+                    "Ice servers list is empty, at least one ice server is required"
+                );
+                Err(ComInterfaceError::InvalidSetupData)
+            } else {
+                Ok(WebRTCJSInterface::new_with_ice_servers(
+                    setup_data.peer_endpoint,
+                    ice_servers.to_owned(),
+                ))
+            }
+        } else {
+            Ok(WebRTCJSInterface::new(setup_data.peer_endpoint))
+        }
     }
 
-    pub async fn create_offer(
+    fn get_default_properties() -> InterfaceProperties {
+        InterfaceProperties::default()
+    }
+}
+
+#[wasm_bindgen]
+impl JSComHub {
+    pub async fn webrtc_interface_create_offer(
         &self,
         interface_uuid: String,
-    ) -> Result<Vec<u8>, JsError> {
-        let interface = self.get_interface(interface_uuid);
+    ) -> Result<Vec<u8>, JSWebRTCError> {
+        let interface =
+            self.get_interface_for_uuid::<WebRTCJSInterface>(interface_uuid)?;
         let webrtc_interface = interface.borrow();
         let offer = webrtc_interface.create_offer().await?;
         Ok(offer)
     }
 
-    pub async fn create_answer(
+    pub async fn webrtc_interface_create_answer(
         &self,
         interface_uuid: String,
         offer: Vec<u8>,
-    ) -> Result<Vec<u8>, JsError> {
-        let interface = self.get_interface(interface_uuid);
+    ) -> Result<Vec<u8>, JSWebRTCError> {
+        let interface =
+            self.get_interface_for_uuid::<WebRTCJSInterface>(interface_uuid)?;
         let webrtc_interface = interface.borrow();
         let answer = webrtc_interface.create_answer(offer).await?;
         Ok(answer)
     }
 
-    pub async fn set_answer(
+    pub async fn webrtc_interface_set_answer(
         &self,
         interface_uuid: String,
         answer: Vec<u8>,
-    ) -> Result<(), JsError> {
-        let interface = self.get_interface(interface_uuid);
+    ) -> Result<(), JSWebRTCError> {
+        let interface =
+            self.get_interface_for_uuid::<WebRTCJSInterface>(interface_uuid)?;
         let webrtc_interface = interface.borrow();
         webrtc_interface.set_answer(answer).await?;
         Ok(())
     }
-    pub fn set_on_ice_candidate(
+    pub fn webrtc_interface_set_on_ice_candidate(
         &self,
         interface_uuid: String,
         on_ice_candidate: Function,
-    ) -> Result<(), JsError> {
-        let interface = self.get_interface(interface_uuid);
+    ) -> Result<(), JSWebRTCError> {
+        let interface =
+            self.get_interface_for_uuid::<WebRTCJSInterface>(interface_uuid)?;
         let webrtc_interface = interface.borrow();
         webrtc_interface.set_on_ice_candidate(Box::new(move |candidate| {
             on_ice_candidate
@@ -514,22 +567,24 @@ impl WebRTCRegistry {
         Ok(())
     }
 
-    pub async fn add_ice_candidate(
+    pub async fn webrtc_interface_add_ice_candidate(
         &self,
         interface_uuid: String,
         candidate: Vec<u8>,
-    ) -> Result<(), JsError> {
-        let interface = self.get_interface(interface_uuid);
+    ) -> Result<(), JSWebRTCError> {
+        let interface =
+            self.get_interface_for_uuid::<WebRTCJSInterface>(interface_uuid)?;
         let webrtc_interface = interface.borrow();
         webrtc_interface.add_ice_candidate(candidate).await?;
         Ok(())
     }
 
-    pub async fn wait_for_connection(
+    pub async fn webrtc_interface_wait_for_connection(
         &self,
         interface_uuid: String,
-    ) -> Result<(), JsError> {
-        let interface = self.get_interface(interface_uuid);
+    ) -> Result<(), JSWebRTCError> {
+        let interface =
+            self.get_interface_for_uuid::<WebRTCJSInterface>(interface_uuid)?;
         let webrtc_interface = interface.borrow();
         webrtc_interface.wait_for_connection().await?;
         Ok(())

@@ -1,4 +1,4 @@
-import { encodeBase64 } from "jsr:@std/encoding/base64";
+import { encodeBase64 } from "@std/encoding/base64";
 
 // check if --inline-wasm argument is passed
 // if --inline-wasm is passed, the wasm file will be embedded into the bundle

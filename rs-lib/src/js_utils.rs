@@ -1,9 +1,5 @@
-use wasm_bindgen::JsValue;
+use wasm_bindgen::{JsError, JsValue};
 use web_sys::js_sys::{self, Array, ArrayBuffer, Object, Reflect};
-
-pub enum JsError {
-    ConversionError,
-}
 
 pub trait TryAsByteSlice {
     fn try_as_u8_slice(&self) -> Result<Vec<u8>, JsError>;
@@ -15,10 +11,9 @@ pub trait AsByteSlice {
 
 impl TryAsByteSlice for JsValue {
     fn try_as_u8_slice(&self) -> Result<Vec<u8>, JsError> {
-        let buffer: ArrayBuffer = self
-            .clone()
-            .try_into()
-            .map_err(|_| JsError::ConversionError)?;
+        let buffer: ArrayBuffer = self.clone().try_into().map_err(|_| {
+            JsError::new("Failed to convert JsValue to ArrayBuffer")
+        })?;
 
         Ok(buffer.as_u8_slice())
     }
@@ -53,4 +48,18 @@ where
         .collect::<Array>();
 
     JsValue::from(js_array)
+}
+
+pub fn js_error<T: std::fmt::Display>(err: T) -> JsError {
+    JsError::new(&err.to_string())
+}
+
+trait ToJsError<T> {
+    fn js(self) -> Result<T, JsError>;
+}
+
+impl<T, E: std::error::Error + 'static> ToJsError<T> for Result<T, E> {
+    fn js(self) -> Result<T, JsError> {
+        self.map_err(js_error)
+    }
 }
