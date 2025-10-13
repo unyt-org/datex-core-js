@@ -319,7 +319,9 @@ dependencies = [
 
 [[package]]
 name = "datex-core"
-version = "0.0.5"
+version = "0.0.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "43b45f844946d7722ef155e91be17f357c1384e2b001cb5820c8c63354da43dd"
 dependencies = [
  "ariadne",
  "async-stream",
@@ -333,7 +335,7 @@ dependencies = [
  "chumsky",
  "console_error_panic_hook",
  "console_log",
- "datex_macros 0.1.1",
+ "datex_macros",
  "default-args",
  "futures",
  "futures-core",
@@ -378,7 +380,7 @@ version = "0.0.7"
 dependencies = [
  "async-trait",
  "datex-core",
- "datex_macros 0.1.1 (git+https://github.com/unyt-org/datex-core?branch=feat%2Fdif)",
+ "datex_macros",
  "futures",
  "futures-channel",
  "futures-timer",
@@ -400,16 +402,8 @@ dependencies = [
 [[package]]
 name = "datex_macros"
 version = "0.1.1"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.106",
-]
-
-[[package]]
-name = "datex_macros"
-version = "0.1.1"
-source = "git+https://github.com/unyt-org/datex-core?branch=feat%2Fdif#65de05c42621bdb3d9663fec472ae8bbe1952533"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b1922189d0e176d0b815a911357b3c20fc878512496928dc13b72c281aa6ecee"
 dependencies = [
  "proc-macro2",
  "quote",

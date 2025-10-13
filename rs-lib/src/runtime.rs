@@ -1,12 +1,6 @@
+use crate::crypto::crypto_js::CryptoJS;
 use crate::js_utils::{js_array, js_error};
 use crate::network::com_hub::JSComHub;
-use datex_core::values::core_values::endpoint::Endpoint;
-#[cfg(feature = "debug")]
-use datex_core::runtime::global_context::DebugFlags;
-use datex_core::runtime::global_context::GlobalContext;
-use serde::{Deserialize, Serialize};
-use log::info;
-use crate::crypto::crypto_js::CryptoJS;
 use crate::utils::time::TimeJS;
 use datex_core::crypto::crypto::CryptoTrait;
 use datex_core::decompiler::{DecompileOptions, decompile_value};
@@ -22,19 +16,25 @@ use datex_core::global::dxb_block::DXBBlock;
 use datex_core::global::protocol_structures::block_header::{
     BlockHeader, FlagsAndTimestamp,
 };
+use datex_core::references::observers::{ObserveOptions, TransceiverId};
 use datex_core::references::reference::ReferenceMutability;
+#[cfg(feature = "debug")]
+use datex_core::runtime::global_context::DebugFlags;
+use datex_core::runtime::global_context::GlobalContext;
 use datex_core::runtime::{Runtime, RuntimeConfig, RuntimeInternal};
 use datex_core::serde::deserializer::DatexDeserializer;
+use datex_core::values::core_values::endpoint::Endpoint;
 use datex_core::values::pointer::PointerAddress;
 use datex_core::values::value_container::ValueContainer;
 use futures::FutureExt;
 use js_sys::Function;
+use log::info;
+use serde::{Deserialize, Serialize};
 use serde_wasm_bindgen::{Error, from_value};
 use std::fmt::Display;
 use std::rc::Rc;
 use std::str::FromStr;
 use std::sync::Arc;
-use datex_core::references::observers::{ObserveOptions, TransceiverId};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::future_to_promise;
 use web_sys::js_sys::Promise;
@@ -146,50 +146,42 @@ impl JSRuntime {
             assert_eq!(ser_pri.len(), 48_usize);
 
             // Signature
-            let sig = crypto.sig_ed25519(&sig_pri, &ser_pub.to_vec())
+            let sig = crypto
+                .sig_ed25519(&sig_pri, &ser_pub.to_vec())
                 .await
                 .unwrap();
 
-            let ver = crypto.ver_ed25519(
-                &sig_pub,
-                &sig.clone().try_into().unwrap(), 
-                &ser_pub.to_vec())
-                .await.unwrap();
-            
+            let ver = crypto
+                .ver_ed25519(&sig_pub, &sig, &ser_pub.to_vec())
+                .await
+                .unwrap();
+
             assert_eq!(sig.len(), 64);
             assert!(ver);
 
             // Derivation
-            let cli_sec = crypto.derive_x25519(&cli_pri, &ser_pub)
-                .await
-                .unwrap();
-            let ser_sec = crypto.derive_x25519(&ser_pri, &cli_pub)
-                .await
-                .unwrap();
+            let cli_sec =
+                crypto.derive_x25519(&cli_pri, &ser_pub).await.unwrap();
+            let ser_sec =
+                crypto.derive_x25519(&ser_pri, &cli_pub).await.unwrap();
 
             assert_eq!(cli_sec, ser_sec);
             assert_eq!(cli_sec.len(), 32_usize);
 
-            let hash: [u8; 32] = crypto.random_bytes(32)
-                .try_into()
-                .unwrap();
+            let hash: [u8; 32] = crypto.random_bytes(32).try_into().unwrap();
 
             // aes entailing hkdf
             let msg: Vec<u8> = b"Some message".to_vec();
             let ctr_iv: [u8; 16] = [0u8; 16];
 
             // ctr
-            let ctr_ciphered = crypto.aes_ctr_encrypt(
-                &hash,
-                &ctr_iv,
-                &msg,
-            ).await.unwrap();
+            let ctr_ciphered =
+                crypto.aes_ctr_encrypt(&hash, &ctr_iv, &msg).await.unwrap();
 
-            let ctr_deciphered = crypto.aes_ctr_decrypt(
-                &hash,
-                &ctr_iv,
-                &ctr_ciphered,
-            ).await.unwrap();
+            let ctr_deciphered = crypto
+                .aes_ctr_decrypt(&hash, &ctr_iv, &ctr_ciphered)
+                .await
+                .unwrap();
 
             assert_eq!(msg, ctr_deciphered);
             assert_ne!(msg, ctr_ciphered);
@@ -463,7 +455,8 @@ impl RuntimeDIFHandle {
     ) -> Result<u32, JsError> {
         let address = RuntimeDIFHandle::js_value_to_pointer_address(address)?;
         let cb = callback.clone();
-        let observe_options: ObserveOptions = from_value(observe_options).map_err(js_error)?;
+        let observe_options: ObserveOptions =
+            from_value(observe_options).map_err(js_error)?;
         let observer = move |update: &DIFUpdate| {
             let js_value = to_js_value(update).unwrap();
             let _ = cb.call1(&JsValue::NULL, &js_value);
@@ -482,7 +475,7 @@ impl RuntimeDIFHandle {
         DIFInterface::unobserve_pointer(self, address, observer_id)
             .map_err(js_error)
     }
-    
+
     pub fn update_observer_options(
         &self,
         address: &str,
@@ -490,9 +483,15 @@ impl RuntimeDIFHandle {
         observe_options: JsValue,
     ) -> Result<(), JsError> {
         let address = RuntimeDIFHandle::js_value_to_pointer_address(address)?;
-        let observe_options: ObserveOptions = from_value(observe_options).map_err(js_error)?;
-        DIFInterface::update_observer_options(self, address, observer_id, observe_options)
-            .map_err(js_error)
+        let observe_options: ObserveOptions =
+            from_value(observe_options).map_err(js_error)?;
+        DIFInterface::update_observer_options(
+            self,
+            address,
+            observer_id,
+            observe_options,
+        )
+        .map_err(js_error)
     }
 
     pub fn update(
@@ -502,8 +501,10 @@ impl RuntimeDIFHandle {
         update: JsValue,
     ) -> Result<(), JsError> {
         let address = Self::js_value_to_pointer_address(address)?;
-        let dif_update_data: DIFUpdateData = from_value(update).map_err(js_error)?;
-        DIFInterface::update(self, transceiver_id, address, dif_update_data).map_err(js_error)
+        let dif_update_data: DIFUpdateData =
+            from_value(update).map_err(js_error)?;
+        DIFInterface::update(self, transceiver_id, address, dif_update_data)
+            .map_err(js_error)
     }
 
     pub fn apply(
@@ -511,8 +512,10 @@ impl RuntimeDIFHandle {
         callee: JsValue,
         value: JsValue,
     ) -> Result<JsValue, JsError> {
-        let dif_callee: DIFValueContainer = from_value(callee).map_err(js_error)?;
-        let dif_value: DIFValueContainer = from_value(value).map_err(js_error)?;
+        let dif_callee: DIFValueContainer =
+            from_value(callee).map_err(js_error)?;
+        let dif_value: DIFValueContainer =
+            from_value(value).map_err(js_error)?;
         let result = DIFInterface::apply(self, dif_callee, dif_value)
             .map_err(js_error)?;
         to_js_value(&result).map_err(js_error)
@@ -524,15 +527,13 @@ impl RuntimeDIFHandle {
         allowed_type: JsValue,
         mutability: u8,
     ) -> Result<String, JsError> {
-        let dif_value: DIFValueContainer = from_value(value).map_err(js_error)?;
+        let dif_value: DIFValueContainer =
+            from_value(value).map_err(js_error)?;
         let dif_allowed_type: Option<DIFTypeContainer> =
             if allowed_type.is_null() || allowed_type.is_undefined() {
                 None
             } else {
-                Some(
-                    from_value(allowed_type)
-                        .map_err(js_error)?,
-                )
+                Some(from_value(allowed_type).map_err(js_error)?)
             };
         let dif_mutability = ReferenceMutability::try_from(mutability)
             .map_err(|_| js_error(ConversionError::InvalidValue))?;
@@ -648,8 +649,14 @@ impl DIFInterface for RuntimeDIFHandle {
         self.internal.unobserve_pointer(address, observer_id)
     }
 
-    fn update_observer_options(&self, address: PointerAddress, observer_id: u32, options: ObserveOptions) -> Result<(), DIFObserveError> {
-        self.internal.update_observer_options(address, observer_id, options)
+    fn update_observer_options(
+        &self,
+        address: PointerAddress,
+        observer_id: u32,
+        options: ObserveOptions,
+    ) -> Result<(), DIFObserveError> {
+        self.internal
+            .update_observer_options(address, observer_id, options)
     }
 }
 
