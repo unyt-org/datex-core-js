@@ -242,7 +242,6 @@ export class Runtime {
         datexScriptOrTemplateStrings: string | TemplateStringsArray,
         ...values: unknown[]
     ): { datexScript: string; valuesArray: unknown[] } {
-        //
         let datexScript: string;
         let valuesArray: unknown[];
         if (typeof datexScriptOrTemplateStrings === "string") {
