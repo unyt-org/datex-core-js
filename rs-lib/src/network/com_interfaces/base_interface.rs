@@ -286,13 +286,3 @@ impl JSComHub {
             .await)
     }
 }
-
-mod tests {
-    // use std::any::Any;
-
-    // use datex_core::network::com_interfaces::default_com_interfaces::base_interface::InterfaceDirection;
-    // use specta::{*, ts::*};
-
-    // #[test]
-    // fn it_works() {}
-}
