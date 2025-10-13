@@ -1,36 +1,64 @@
 # Development Guide
 
-## Building the rust library
+## Building the library
 
-The rust adapter code can be found in the `rs-lib` directory, the generated WASM
-and JS glue code in the `src/datex-core` directory.
+The rust adapter code can be found in the [`rs-lib`](./rs-lib/) directory, the
+generated WASM and JS glue code in the [`src/datex-core`](./src/datex-core/)
+directory.
 
-The `rs-lib` directory contains the `datex-core` submodule, which contains the
-complete [DATEX Core](https://github.com/unyt-org/datex-core.git) library.
+This project has a strong dependency on
+[DATEX Core](https://github.com/unyt-org/datex-core.git) (see
+[Cargo.toml](./rs-lib/Cargo.toml)).
 
-To generate new WASM and JS glue code for the rust library located in `rs-lib`,
-run `deno task build`.
-
-Rust nightly is required for coroutines:
+To generate a WASM binary and JS glue code, run the following command:
 
 ```sh
-rustup install nightly
-rustup default nightly
+deno task release
 ```
 
-## Testing
+To generate a debug build, run:
 
-The JS runtime can be tested by running `deno task test`. This compiles the rust
-library, generates the WASM and JS glue code, and runs all tests in the `test`
-directory. If you only want to run the tests without rebuilding the rust
-library, you can run `deno task test-no-build`.
+```sh
+deno task build
+```
 
-## Running in the browser
+Note that the project is built with **Rust Nightly**
+([`rustc 1.91.0-nightly`](https://releases.rs/docs/1.91.0/))
 
-You can test the library in the browser by running `deno task serve`. Now, you
-can open `http://localhost:8042/test/browser.html` in your browser. A new Datex
-runtime instance is automatically created and can be accessed in the developer
-console via the global `Datex` variable.
+---
+
+If you want to build the library with a local version of the
+[`datex-core`](https://github.com/unyt-org/datex-core) crate, you can override
+the dependency in a `.cargo/config.toml` file in the project root like this:
+
+```toml
+[patch."https://github.com/unyt-org/datex-core"]
+datex-core = { 
+    path = "../datex-core", # the path to your local datex-core clone
+    default-features = false, 
+    features = [
+        "std",
+        "serde",
+        "wasm_logger",
+        "wasm_runtime",
+        "wasm_webrtc",
+    ]
+}
+```
+
+## Running tests
+
+The JS build can be tested by running `deno task test`. This compiles the
+library, generates the WASM binary and JS glue code, and runs all tests in the
+[`test`](./test/) directory. If you only want to run the tests without
+rebuilding the rust library, you can run `deno task test-no-build`.
+
+## Browser testing
+
+You can test the library in the browser by running `deno task serve`. This will
+spin up a web server at `http://localhost:8042/test/browser.html` in your
+browser. A new runtime instance is automatically created and can be accessed in
+the developer console via the global `Datex` variable.
 
 ## Creating a new release
 

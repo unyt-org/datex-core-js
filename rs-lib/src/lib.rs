@@ -48,11 +48,6 @@ pub fn create_runtime(config: &str, debug_flags: JsValue) -> JSRuntime {
     JSRuntime::create(config, debug_flags)
 }
 
-#[wasm_bindgen]
-pub fn compile(datex_script: &str) {
-    compiler::compile_block(datex_script);
-}
-
 /// Executes a Datex script and returns the result as a string.
 #[wasm_bindgen]
 pub fn execute(datex_script: &str, formatted: bool) -> String {
