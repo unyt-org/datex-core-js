@@ -285,6 +285,7 @@ Deno.test("pointer map create and cache", () => {
     }
 
     // check if cache is used when resolving the pointer again
+    // FIXME avoid cache for this check
     const loadedMap = runtime.dif.resolvePointerAddress(ptrId);
     console.log("loadedMap", loadedMap);
     console.log(
