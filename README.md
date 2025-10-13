@@ -1,5 +1,7 @@
 # DATEX Core JS
 
+> Check out our specification at [datex.unyt.org](https://datex.unyt.org).
+
 [![Twitter badge][]][Twitter link] [![Discord badge][]][Discord link]
 
 <img align="right" src="assets/datex-logo-light.svg" width="150px" alt="The DATEX logo">
@@ -10,11 +12,11 @@ high-level API for working with DATEX in JavaScript and TypeScript. DATEX is
 developed and maintained by the [unyt.org](https://unyt.org) organization and
 community.
 
-You can find the legacy version of the DATEX Core library (implemented in
-TypeScript) at
+You can find the legacy version of the DATEX Core library _(implemented in
+TypeScript)_ at
 [unyt-org/datex-core-js-legacy](https://github.com/unyt-org/datex-core-js-legacy).
-The legacy version is still actively maintained and supported until this library
-reaches feature parity.
+The legacy version is still maintained and supported until this library reaches
+feature parity.
 
 ## Contributing
 

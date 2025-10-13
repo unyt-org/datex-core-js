@@ -1,8 +1,9 @@
 import { ComInterfaceImpl } from "../com-interface.ts";
 import { ComHub } from "../com-hub.ts";
-import type { BaseInterfaceSetupData } from "../../datex-core/datex_core_js.d.ts";
-
-type InterfaceDirection = "In" | "Out" | "InOut";
+import type {
+    BaseInterfaceSetupData,
+    InterfaceDirection,
+} from "../../datex-core/datex_core_js.d.ts";
 
 export class BaseInterfaceImpl
     extends ComInterfaceImpl<BaseInterfaceSetupData> {

@@ -24,11 +24,11 @@ export const Datex: Runtime = await Runtime.create(defaultConfig, {
     allow_unsigned_blocks: true,
 });
 
-try {
-    console.log(
-        "@example responded with:",
-        await Datex.execute("@example :: 'Hello, World!'"),
-    );
-} catch (error) {
-    console.error("Could not reach @example", error);
-}
+// try {
+//     console.log(
+//         "@example responded with:",
+//         await Datex.execute("@example :: 'Hello, World!'"),
+//     );
+// } catch (error) {
+//     console.error("Could not reach @example", error);
+// }

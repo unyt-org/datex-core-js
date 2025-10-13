@@ -1,8 +1,8 @@
-import { assert, assertEquals, assertRejects } from "jsr:@std/assert";
+import { assert, assertEquals, assertRejects } from "@std/assert";
 import { createMockupServer } from "./WebsocketMockupServer.ts";
 import { Runtime } from "../../src/runtime/runtime.ts";
 import { sleep } from "../utils.ts";
-import * as uuid from "jsr:@std/uuid";
+import * as uuid from "@std/uuid";
 import { isNodeOrBun } from "../is-node.ts";
 import "../../src/network/interface-impls/websocket-client.ts";
 
