@@ -6,7 +6,7 @@ use datex_core::values::pointer::PointerAddress;
 /// Generates a TypeScript mapping of core type addresses to their names.
 /// Run this test and copy the output into `src/dif/definitions.ts`.
 ///
-/// `cargo test create_core_type_ts_mapping -- --show-output`
+/// `cargo test create_core_type_ts_mapping -- --show-output --ignored`
 fn create_core_type_ts_mapping() {
     let core_lib = create_core_lib();
     let mut core_lib: Vec<(CoreLibPointerId, PointerAddress)> = core_lib
