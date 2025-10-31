@@ -20,7 +20,7 @@ panic = "abort"
 
 [dependencies]
 log = { version = "0.4", features = ["std", "serde"] }
-datex-core = { version = "0.0.6", default-features = false, features = [
+datex-core = { version = "0.0.7", default-features = false, features = [
     "std",
     "serde",
     "wasm_logger",

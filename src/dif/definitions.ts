@@ -73,7 +73,6 @@ export type DIFTypeKind = typeof DIFTypeKinds[keyof typeof DIFTypeKinds];
 export const DIFReferenceMutability = {
     Mutable: 0,
     Immutable: 1,
-    Final: 2,
 } as const;
 export type DIFReferenceMutability =
     typeof DIFReferenceMutability[keyof typeof DIFReferenceMutability];
