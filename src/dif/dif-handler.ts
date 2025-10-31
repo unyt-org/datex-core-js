@@ -592,9 +592,9 @@ export class DIFHandler {
             allowedType,
         );
 
-        // if not final, observe  to keep the pointer 'live' and receive updates
+        // if not immutable, observe to keep the pointer 'live' and receive updates
         let observerId: number | null = null;
-        if (mutability !== DIFReferenceMutability.Final) {
+        if (mutability !== DIFReferenceMutability.Immutable) {
             observerId = this.observePointerBindDirect(
                 ptrAddress,
                 (update) => {
