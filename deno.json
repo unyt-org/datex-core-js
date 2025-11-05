@@ -2,21 +2,10 @@
     "name": "@unyt/datex",
     "version": "0.0.8",
     "license": "MIT",
-    "exports": {
-        ".": "./src/mod.ts",
-        "./default": "./src/default.ts",
-        "./interface-impls/base": "./src/network/interface-impls/base.ts",
-        "./interface-impls/serial": "./src/network/interface-impls/serial.ts",
-        "./interface-impls/webrtc": "./src/network/interface-impls/webrtc.ts",
-        "./interface-impls/websocket-client": "./src/network/interface-impls/websocket-client.ts",
-        "./interface-impls/websocket-server-deno": "./src/network/interface-impls/websocket-server-deno.ts"
-    },
+    "exports": "./src/mod.ts",
     "compilerOptions": {
         "noImplicitOverride": true,
-        "lib": [
-            "deno.window",
-            "dom"
-        ]
+        "lib": ["deno.window", "dom"]
     },
     "tasks": {
         "build": "deno run -A scripts/build-wasm.ts --profile debug",
@@ -32,9 +21,7 @@
     },
     "fmt": {
         "indentWidth": 4,
-        "exclude": [
-            "./npm"
-        ]
+        "exclude": ["./npm"]
     },
     "imports": {
         "@david/path": "jsr:@david/path@^0.2.0",
@@ -48,9 +35,7 @@
         "@std/uuid": "jsr:@std/uuid@^1.0.9"
     },
     "test": {
-        "exclude": [
-            "./npm"
-        ]
+        "exclude": ["./npm"]
     },
     "publish": {
         "exclude": [
