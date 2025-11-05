@@ -38,6 +38,7 @@ use std::sync::Arc;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::future_to_promise;
 use web_sys::js_sys::Promise;
+use datex_core::runtime::AsyncContext;
 
 #[wasm_bindgen(getter_with_clone)]
 pub struct JSRuntime {
@@ -107,6 +108,7 @@ impl JSRuntime {
                 #[cfg(feature = "debug")]
                 debug_flags: debug_flags.unwrap_or_default().into(),
             },
+            AsyncContext::new()
         );
         // runtime.memory.borrow_mut().store_pointer(
         //     [

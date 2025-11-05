@@ -15,7 +15,7 @@ use datex_core::stdlib::sync::Arc;
 use datex_core::network::com_interfaces::com_interface::ComInterfaceState;
 
 use crate::wrap_error_for_js;
-use datex_core::task::spawn_with_panic_notify;
+use datex_core::task::spawn_with_panic_notify_default;
 use log::{debug, error};
 use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::JsFuture;
@@ -74,7 +74,7 @@ impl SerialJSInterface {
         let writable = port.writable();
         let writer = writable.get_writer().unwrap();
         self.tx = Some(Rc::new(RefCell::new(writer)));
-        spawn_with_panic_notify(async move {
+        spawn_with_panic_notify_default(async move {
             loop {
                 let result = JsFuture::from(reader.read()).await;
                 match result {

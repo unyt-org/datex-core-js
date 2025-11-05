@@ -20,12 +20,15 @@ panic = "abort"
 
 [dependencies]
 log = { version = "0.4", features = ["std", "serde"] }
-datex-core = { version = "0.0.7", default-features = false, features = [
+datex-core = { version = "0.0.7", git = "https://github.com/unyt-org/datex-core", branch = "feat/embedded", default-features = false, features = [
     "std",
-    "serde",
     "wasm_logger",
     "wasm_runtime",
-    "wasm_webrtc",
+    "compiler",
+    "com_websocket",
+    "com_webrtc",
+    "com_serial",
+    "syntax_highlighting_legacy"
 ] }
 datex_macros = { version = "0.1.1", package = "datex_macros" }
 
