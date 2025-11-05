@@ -1,4 +1,4 @@
-import { Datex } from "../src/mod.ts";
+import { Datex } from "../src/default.ts";
 import { SerialInterfaceImpl } from "../src/network/interface-impls/serial.ts";
 import { WebRTCInterfaceImpl } from "../src/network/interface-impls/webrtc.ts";
 
