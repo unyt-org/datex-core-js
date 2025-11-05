@@ -9,11 +9,35 @@ const VERSION: string = await Deno.readTextFile(
 
 await build({
     entryPoints: [
-        "./src/mod.ts",
-        // interface impls are not all referenced from the entry point, must be included explicitly
-        "./src/network/interface-impls/websocket-client.ts",
-        "./src/network/interface-impls/websocket-server-deno.ts",
-        "./src/network/interface-impls/base.ts",
+        {
+            name: ".",
+            path: "./src/mod.ts",
+        },
+        {
+            name: "./default",
+            path: "./src/default.ts",
+        },
+        // interface impls
+        {
+            name: "./interface-impls/base",
+            path: "./src/network/interface-impls/base.ts",
+        },
+        {
+            name: "./interface-impls/websocket-client",
+            path: "./src/network/interface-impls/websocket-client.ts",
+        },
+        {
+            name: "./interface-impls/websocket-server-deno",
+            path: "./src/network/interface-impls/websocket-server-deno.ts",
+        },
+        {
+            name: "./interface-impls/serial",
+            path: "./src/network/interface-impls/serial.ts",
+        },
+        {
+            name: "./interface-impls/webrtc",
+            path: "./src/network/interface-impls/webrtc.ts",
+        },
     ],
     outDir: "./npm",
     shims: {
