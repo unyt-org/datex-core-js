@@ -19,7 +19,7 @@ use datex_core::network::com_interfaces::com_interface::ComInterfaceState;
 use datex_core::network::com_interfaces::default_com_interfaces::websocket::websocket_common::parse_url;
 
 use crate::wrap_error_for_js;
-use datex_core::task::spawn_with_panic_notify_default;
+use datex_core::task::spawn_with_panic_notify;
 use futures::channel::mpsc;
 use futures::{SinkExt, StreamExt};
 use log::{error, info, warn};
@@ -84,7 +84,7 @@ impl WebSocketClientJSInterface {
                 .unwrap()
                 .add_socket(Arc::new(Mutex::new(socket)));
             info!("WebSocket connection opened successfully");
-            spawn_with_panic_notify_default(async move {
+            spawn_with_panic_notify(async move {
                 sender
                     .send(Ok(()))
                     .await
@@ -144,7 +144,7 @@ impl WebSocketClientJSInterface {
         Closure::new(move |e: ErrorEvent| {
             error!("Socket error event: {:?}", e.message());
             let mut sender = sender.clone();
-            spawn_with_panic_notify_default(async move {
+            spawn_with_panic_notify(async move {
                 sender
                     .send(Err(WebSocketError::ConnectionError))
                     .await
