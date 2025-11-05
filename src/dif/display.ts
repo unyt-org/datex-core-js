@@ -1,11 +1,11 @@
 import {
-    CoreTypeAddress,
     type DIFReference,
     DIFReferenceMutability,
     type DIFRepresentationValue,
     type DIFTypeContainer,
     type DIFValueContainer,
 } from "./definitions.ts";
+import { CoreTypeAddress } from "./core.ts";
 
 export function mutabilityToDisplayString(mut: DIFReferenceMutability): string {
     if (mut === DIFReferenceMutability.Mutable) {
