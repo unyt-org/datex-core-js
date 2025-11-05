@@ -3,7 +3,7 @@ use crate::js_utils::{js_array, js_error};
 use crate::network::com_hub::JSComHub;
 use crate::utils::time::TimeJS;
 use datex_core::crypto::crypto::CryptoTrait;
-use datex_core::decompiler::{DecompileOptions, decompile_value};
+use datex_core::decompiler::{DecompileOptions, decompile_value, FormattingMode};
 use datex_core::dif::interface::{
     DIFApplyError, DIFCreatePointerError, DIFInterface, DIFObserveError,
     DIFResolveReferenceError, DIFUpdateError,
@@ -411,6 +411,7 @@ impl JSRuntime {
                 from_value(decompile_options).unwrap_or_default();
             DecompileOptions {
                 formatting: Default::default(),
+                formatting_mode: FormattingMode::Pretty,
                 colorized: js_decompile_options.colorized.unwrap_or(false),
                 resolve_slots: js_decompile_options
                     .resolve_slots
