@@ -50,7 +50,8 @@ jobs:
               run: deno lint
 
             - name: Type Checking
-              run: deno check -I ./src ./test
+              run: |
+                  - deno check -I ./src ./test
 
             - name: Run Tests
               run: deno task test-no-build
