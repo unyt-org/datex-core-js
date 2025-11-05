@@ -1,6 +1,3 @@
-#[cfg(feature = "wasm_matchbox")]
-use super::com_interfaces::matchbox_js_interface::MatchboxClientRegistry;
-
 use datex_core::global::dxb_block::IncomingSection;
 use datex_core::network::com_hub::{ComHubError, InterfacePriority};
 use datex_core::network::com_interfaces::com_interface::{
