@@ -316,8 +316,8 @@ type IsPlainObject<T> = T extends Builtins ? false
     : false;
 
 type ObjectFieldOut<T, M extends DIFReferenceMutability> = T extends
-    Ref<infer U> ? M extends typeof DIFReferenceMutability.Immutable ? Ref<U>
-    : AssignableRef<U>
+    Ref<infer U>
+    ? M extends typeof DIFReferenceMutability.Immutable ? Ref<U> : AssignableRef<U>
     : IsPlainObject<T> extends true ? (
             ContainsRef<T> extends true
                 ? M extends typeof DIFReferenceMutability.Immutable
@@ -328,8 +328,7 @@ type ObjectFieldOut<T, M extends DIFReferenceMutability> = T extends
     : T;
 
 type PointerOut<V, M extends DIFReferenceMutability> = V extends Ref<infer U>
-    ? M extends typeof DIFReferenceMutability.Immutable ? Ref<U>
-    : AssignableRef<U>
+    ? M extends typeof DIFReferenceMutability.Immutable ? Ref<U> : AssignableRef<U>
     : IsPlainObject<V> extends true ? (
             ContainsRef<V> extends true
                 ? M extends typeof DIFReferenceMutability.Immutable

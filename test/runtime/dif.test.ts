@@ -117,11 +117,7 @@ Deno.test("pointer create primitive", () => {
         readonly x: true;
     };
 
-    const a = runtime.createPointer(
-        5,
-        undefined,
-        DIFReferenceMutability.Immutable,
-    );
+    const a = runtime.createPointer(5, undefined, DIFReferenceMutability.Immutable);
     const b = runtime.createPointer(
         { x: a },
         undefined,
