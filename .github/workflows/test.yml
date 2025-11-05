@@ -49,6 +49,9 @@ jobs:
             - name: Lint
               run: deno lint
 
+            - name: Type Checking
+              run: deno check -I ./src
+
             - name: Run Tests
               run: deno task test-no-build
 
