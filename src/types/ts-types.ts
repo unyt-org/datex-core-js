@@ -1,5 +1,4 @@
-import type { DIFTypeContainer } from "../dif/definitions.ts";
-import { CoreTypeAddress } from "../dif/core.ts";
+import { CoreTypeAddress, type DIFTypeContainer } from "../dif/definitions.ts";
 
 // NOTE: this only a proof of concept prototype impl. We should probably move this to rust in the future.
 /// Template function for creating TypeScript types

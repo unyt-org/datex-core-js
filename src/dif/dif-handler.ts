@@ -2,6 +2,8 @@ import type { JSRuntime, RuntimeDIFHandle } from "../datex-core.ts";
 import { Ref } from "../refs/ref.ts";
 import { Endpoint } from "../runtime/special-core-types.ts";
 import {
+    CoreTypeAddress,
+    CoreTypeAddressRanges,
     type DIFArray,
     type DIFContainer,
     type DIFMap,
@@ -18,7 +20,6 @@ import {
     type DIFValueContainer,
     type ObserveOptions,
 } from "./definitions.ts";
-import { CoreTypeAddress, CoreTypeAddressRanges } from "./core.ts";
 import { difValueContainerToDisplayString } from "./display.ts";
 
 export class DIFHandler {
