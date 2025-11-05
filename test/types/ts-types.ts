@@ -1,5 +1,5 @@
 import { assertEquals } from "@std/assert/equals";
-import { CoreTypeAddress } from "../../src/dif/core.ts";
+import { CoreTypeAddress } from "../../src/dif/definitions.ts";
 import { TS_TYPE } from "../../src/types/ts-types.ts";
 
 Deno.test("convert simple TS type to DIF type", () => {
