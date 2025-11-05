@@ -51,7 +51,7 @@ jobs:
 
             - name: Type Checking
               run: |
-                - deno check -I ./src ./test
+                  - deno check -I ./src ./test
 
             - name: Run Tests
               run: deno task test-no-build
