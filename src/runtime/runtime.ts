@@ -317,10 +317,10 @@ type IsPlainObject<T> = T extends Builtins ? false
 
 type ObjectFieldOut<T, M extends DIFReferenceMutability> = T extends
     Ref<infer U>
-    ? M extends typeof DIFReferenceMutability.Immutable ? Ref<U> : AssignableRef<U>
+    ? M extends typeof DIFReferenceMutability.Final ? Ref<U> : AssignableRef<U>
     : IsPlainObject<T> extends true ? (
             ContainsRef<T> extends true
-                ? M extends typeof DIFReferenceMutability.Immutable
+                ? M extends typeof DIFReferenceMutability.Final
                     ? { readonly [K in keyof T]: ObjectFieldOut<T[K], M> }
                 : { [K in keyof T]: ObjectFieldOut<T[K], M> }
                 : { readonly [K in keyof T]: ObjectFieldOut<T[K], M> }
@@ -328,16 +328,16 @@ type ObjectFieldOut<T, M extends DIFReferenceMutability> = T extends
     : T;
 
 type PointerOut<V, M extends DIFReferenceMutability> = V extends Ref<infer U>
-    ? M extends typeof DIFReferenceMutability.Immutable ? Ref<U> : AssignableRef<U>
+    ? M extends typeof DIFReferenceMutability.Final ? Ref<U> : AssignableRef<U>
     : IsPlainObject<V> extends true ? (
             ContainsRef<V> extends true
-                ? M extends typeof DIFReferenceMutability.Immutable
+                ? M extends typeof DIFReferenceMutability.Final
                     ? { readonly [K in keyof V]: ObjectFieldOut<V[K], M> }
                 : { [K in keyof V]: ObjectFieldOut<V[K], M> }
                 : { readonly [K in keyof V]: ObjectFieldOut<V[K], M> }
         )
     : V extends Builtins ? Pointer<V>
-    : M extends typeof DIFReferenceMutability.Immutable ? Ref<V>
+    : M extends typeof DIFReferenceMutability.Final ? Ref<V>
     : Ref<WidenLiteral<V>>;
 
 type CollectionProps<T> = {

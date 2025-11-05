@@ -10,6 +10,8 @@ import {
 export function mutabilityToDisplayString(mut: DIFReferenceMutability): string {
     if (mut === DIFReferenceMutability.Mutable) {
         return "&mut ";
+    } else if (mut === DIFReferenceMutability.Final) {
+        return "&final ";
     } else if (mut === DIFReferenceMutability.Immutable) {
         return "&";
     }

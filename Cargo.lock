@@ -44,7 +44,7 @@ version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "36f5e3dca4e09a6f340a61a0e9c7b61e030c69fc27bf29d73218f7e5e3b7638f"
 dependencies = [
- "unicode-width 0.1.14",
+ "unicode-width",
  "yansi",
 ]
 
@@ -53,12 +53,6 @@ name = "array-init"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3d62b7694a562cdf5a74227903507c56ab2cc8bdd1f781ed5cb4cf9c9f810bfc"
-
-[[package]]
-name = "arrayvec"
-version = "0.5.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "23b62fc65de8e4e7f52534fb52b0f3ed04746ae267519eef2a83941e8085068b"
 
 [[package]]
 name = "async-stream"
@@ -325,7 +319,9 @@ dependencies = [
 
 [[package]]
 name = "datex-core"
-version = "0.0.7"
+version = "0.0.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "43b45f844946d7722ef155e91be17f357c1384e2b001cb5820c8c63354da43dd"
 dependencies = [
  "ariadne",
  "async-stream",
@@ -339,7 +335,7 @@ dependencies = [
  "chumsky",
  "console_error_panic_hook",
  "console_log",
- "datex_macros 0.1.1",
+ "datex_macros",
  "default-args",
  "futures",
  "futures-core",
@@ -348,7 +344,6 @@ dependencies = [
  "gloo-timers 0.3.0",
  "hex",
  "indexmap 2.11.4",
- "indoc 2.0.7",
  "internment",
  "itertools 0.14.0",
  "lazy_static",
@@ -364,7 +359,6 @@ dependencies = [
  "num_enum",
  "ordered-float",
  "pad",
- "pretty",
  "ringmap",
  "serde",
  "serde-big-array",
@@ -386,7 +380,7 @@ version = "0.0.8"
 dependencies = [
  "async-trait",
  "datex-core",
- "datex_macros 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "datex_macros",
  "futures",
  "futures-channel",
  "futures-timer",
@@ -403,15 +397,6 @@ dependencies = [
  "wasm-bindgen-futures",
  "wasm-bindgen-test",
  "web-sys",
-]
-
-[[package]]
-name = "datex_macros"
-version = "0.1.1"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.106",
 ]
 
 [[package]]
@@ -870,15 +855,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bfa799dd5ed20a7e349f3b4639aa80d74549c81716d9ec4f994c9b5815598306"
 
 [[package]]
-name = "indoc"
-version = "2.0.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "79cf5c93f93228cf8efb3ba362535fb11199ac548a09ce117c9b1adc3030d706"
-dependencies = [
- "rustversion",
-]
-
-[[package]]
 name = "internment"
 version = "0.8.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1193,7 +1169,7 @@ version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d2ad9b889f1b12e0b9ee24db044b5129150d5eada288edc800f789928dc8c0e3"
 dependencies = [
- "unicode-width 0.1.14",
+ "unicode-width",
 ]
 
 [[package]]
@@ -1247,17 +1223,6 @@ name = "powerfmt"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "439ee305def115ba05938db6eb1644ff94165c5ab5e9420d1c1bcedbba909391"
-
-[[package]]
-name = "pretty"
-version = "0.12.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0d22152487193190344590e4f30e219cf3fe140d9e7a3fdb683d82aa2c5f4156"
-dependencies = [
- "arrayvec",
- "typed-arena",
- "unicode-width 0.2.2",
-]
 
 [[package]]
 name = "proc-macro-crate"
@@ -1561,7 +1526,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2240c3aa020aa61d2c569087d213baafbb212f4ceb9de9dd162376ea6aa0fe3"
 dependencies = [
  "document-features",
- "indoc 1.0.9",
+ "indoc",
  "once_cell",
  "paste",
  "serde",
@@ -1853,12 +1818,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "typed-arena"
-version = "2.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6af6ae20167a9ece4bcb41af5b80f8a1f1df981f6391189ce00fd257af04126a"
-
-[[package]]
 name = "unicode-ident"
 version = "1.0.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1875,12 +1834,6 @@ name = "unicode-width"
 version = "0.1.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7dd6e30e90baa6f72411720665d41d89b9a3d039dc45b8faea1ddd07f617f6af"
-
-[[package]]
-name = "unicode-width"
-version = "0.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b4ac048d71ede7ee76d585517add45da530660ef4390e49b098733c6e897f254"
 
 [[package]]
 name = "url"

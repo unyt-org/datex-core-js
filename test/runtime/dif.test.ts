@@ -82,7 +82,7 @@ Deno.test("pointer create primitive", () => {
     runtime.createPointer(
         42,
         undefined,
-        DIFReferenceMutability.Immutable,
+        DIFReferenceMutability.Final,
     ) satisfies Ref<42>;
 
     runtime.createPointer(
@@ -94,7 +94,7 @@ Deno.test("pointer create primitive", () => {
     runtime.createPointer(
         "hello world",
         undefined,
-        DIFReferenceMutability.Immutable,
+        DIFReferenceMutability.Final,
     ) satisfies Ref<"hello world">;
 
     runtime.createPointer(
@@ -106,18 +106,18 @@ Deno.test("pointer create primitive", () => {
     runtime.createPointer(
         true,
         undefined,
-        DIFReferenceMutability.Immutable,
+        DIFReferenceMutability.Final,
     ) satisfies Ref<true>;
 
     runtime.createPointer(
         { x: true } as const,
         undefined,
-        DIFReferenceMutability.Immutable,
+        DIFReferenceMutability.Final,
     ) satisfies {
         readonly x: true;
     };
 
-    const a = runtime.createPointer(5, undefined, DIFReferenceMutability.Immutable);
+    const a = runtime.createPointer(5, undefined, DIFReferenceMutability.Final);
     const b = runtime.createPointer(
         { x: a },
         undefined,
@@ -141,7 +141,7 @@ Deno.test("pointer create struct", () => {
         const ptrObjFinal = runtime.createPointer(
             struct,
             undefined,
-            DIFReferenceMutability.Immutable,
+            DIFReferenceMutability.Final,
         );
         ptrObjFinal.e satisfies { readonly f: Ref<number> | number };
     }
@@ -371,12 +371,12 @@ Deno.test("immutable pointer primitive ref update", () => {
     );
 });
 
-Deno.test("immutable pointer primitive ref update", () => {
+Deno.test("final pointer primitive ref update", () => {
     const val = 123;
     const ptrObj = runtime.createPointer(
         val as number,
         undefined,
-        DIFReferenceMutability.Immutable,
+        DIFReferenceMutability.Final,
     );
     if (!(ptrObj instanceof Ref)) {
         throw new Error("Pointer object is not a Ref");
@@ -387,7 +387,7 @@ Deno.test("immutable pointer primitive ref update", () => {
     const result = runtime.executeSyncWithStringResult(
         "$" + ptrObj.pointerAddress,
     );
-    assertEquals(result, "&123f64");
+    assertEquals(result, "&final 123f64");
 
     // update the ref value
     assertThrows(
@@ -559,18 +559,18 @@ Deno.test("pointer primitive ref remote update and observe local", () => {
     assertEquals(ptrObj.value, 456);
 });
 
-Deno.test("observer immutable", () => {
+Deno.test("observer final", () => {
     const ref = runtime.dif.createPointer(
-        { value: "Immutable" },
+        { value: "Final" },
         undefined,
-        DIFReferenceMutability.Immutable,
+        DIFReferenceMutability.Final,
     );
     assertThrows(
         () => {
             runtime.dif.observePointerBindDirect(ref, (_) => {});
         },
         Error,
-        `immutable reference`,
+        `final reference`,
     );
 });
 
