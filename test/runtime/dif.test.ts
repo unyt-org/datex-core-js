@@ -2,6 +2,7 @@ import { Runtime } from "../../src/runtime/runtime.ts";
 import { assert, assertEquals } from "@std/assert";
 import { assertThrows } from "@std/assert/throws";
 import {
+    CoreTypeAddress,
     type DIFReference,
     DIFReferenceMutability,
     type DIFRepresentationValue,
@@ -9,7 +10,6 @@ import {
     type DIFUpdateData,
     DIFUpdateKind,
 } from "../../src/dif/definitions.ts";
-import { CoreTypeAddress } from "../../src/dif/core.ts";
 import { assertStrictEquals } from "@std/assert/strict-equals";
 import { Ref } from "../../src/refs/ref.ts";
 import {
