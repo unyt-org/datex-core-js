@@ -45,7 +45,8 @@
         "@std/cli": "jsr:@std/cli@^1.0.23",
         "@std/encoding": "jsr:@std/encoding@^1.0.10",
         "@std/fmt": "jsr:@std/fmt@^1.0.8",
-        "@std/uuid": "jsr:@std/uuid@^1.0.9"
+        "@std/uuid": "jsr:@std/uuid@^1.0.9",
+        "@unyt/speck": "jsr:@unyt/speck@^0.0.10"
     },
     "test": {
         "exclude": [

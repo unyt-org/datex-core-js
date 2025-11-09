@@ -28,7 +28,7 @@ datex-core = { version = "0.0.7", git = "https://github.com/unyt-org/datex-core"
     "com_websocket",
     "com_webrtc",
     "com_serial",
-    "syntax_highlighting_legacy"
+    "syntax_highlighting_legacy",
 ] }
 datex_macros = { version = "0.1.1", package = "datex_macros" }
 

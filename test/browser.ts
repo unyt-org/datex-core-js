@@ -1,9 +1,73 @@
-import { Datex } from "../src/default.ts";
+import { Runtime } from "../src/mod.ts";
+import { parseStructure } from "https://cdn.jsdelivr.net/npm/@unyt/speck@0.0.10/esm/parser.js";
 import { SerialInterfaceImpl } from "../src/network/interface-impls/serial.ts";
 import { WebRTCInterfaceImpl } from "../src/network/interface-impls/webrtc.ts";
 
+import "../src/network/interface-impls/base.ts";
+import type {
+    BaseInterfaceImpl,
+    BaseInterfaceSetupData,
+} from "../src/network/interface-impls/base.ts";
+
+const definition = await (await fetch(
+    "https://raw.githubusercontent.com/unyt-org/datex-specification/refs/heads/main/assets/structures/dxb.json",
+)).json();
+
+/**
+ * The default instance of the Datex runtime.
+ */
+export const Datex: Runtime = await Runtime.create({
+    interfaces: [],
+    debug: false,
+}, {
+    allow_unsigned_blocks: true,
+});
+
+const config: BaseInterfaceSetupData = {
+    name: "base",
+    interface_type: "base",
+    channel: "test",
+    direction: "InOut",
+    round_trip_time: 5,
+    max_bandwidth: 1,
+    continuous_connection: true,
+    allow_redirects: true,
+    is_secure_channel: true,
+    reconnection_config: "NoReconnect",
+    reconnect_attempts: null,
+    close_timestamp: null,
+};
+
 // @ts-ignore global variable for debugging
 globalThis.Datex = Datex;
+const baseInterface = await Datex.comHub.createInterface<BaseInterfaceImpl>(
+    "base",
+    config,
+);
+baseInterface.impl.onSend(
+    (_block: Uint8Array, _receiver_socket_uuid: string) => {
+        return Promise.resolve(true);
+    },
+);
+const socketUUID = baseInterface.impl.registerSocket("InOut");
+
+document.getElementById("base")!.addEventListener("click", () => {
+    baseInterface.impl.receive(
+        socketUUID,
+        Uint8Array.from(
+            atob(
+                "AWQBWQAQACoCAAAAAAAAAAAAAAAAAAAAAAAAAAACAGpvbmFzAAAAAAAAAAAAAAAAAAAAAGJlbgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAKgD0AAAAAAAAAAA=",
+            ),
+            (c) => c.charCodeAt(0),
+        ),
+    );
+});
+
+Datex.comHub.registerIncomingBlockInterceptor(
+    (block: Uint8Array, socket_uuid: string) => {
+        console.log(parseStructure(definition, block), socket_uuid);
+    },
+);
 
 document.getElementById("serial")!.addEventListener("click", async () => {
     const serial = await Datex.comHub.createInterface(

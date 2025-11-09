@@ -4,7 +4,7 @@ import type {
     BaseInterfaceSetupData,
     InterfaceDirection,
 } from "../../datex-core/datex_core_js.d.ts";
-
+export type { BaseInterfaceSetupData, InterfaceDirection };
 export class BaseInterfaceImpl
     extends ComInterfaceImpl<BaseInterfaceSetupData> {
     public registerSocket(interfaceDirection: InterfaceDirection): string {
