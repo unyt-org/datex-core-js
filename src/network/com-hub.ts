@@ -113,4 +113,19 @@ export class ComHub {
     ): Promise<boolean> {
         return this.#jsComHub.send_block(block, interface_uuid, socket_uuid);
     }
+
+    public registerIncomingBlockInterceptor(
+        callback: (block: Uint8Array, socket_uuid: string) => void,
+    ): void {
+        this.#jsComHub.register_incoming_block_interceptor(callback);
+    }
+    public registerOutgoingBlockInterceptor(
+        callback: (
+            block: Uint8Array,
+            socket_uuid: string,
+            endpoints: string[],
+        ) => void,
+    ): void {
+        this.#jsComHub.register_outgoing_block_interceptor(callback);
+    }
 }
