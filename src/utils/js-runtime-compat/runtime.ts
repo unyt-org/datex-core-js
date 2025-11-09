@@ -6,7 +6,9 @@
  * It automatically detects the runtime environment and provides the correct
  * runtime interface.
  * Supported runtimes are:
- * - Deno / Node.js / Bun
+ * - Deno
+ * - Node.js
+ * - Bun
  * - Browser
  */
 
@@ -15,19 +17,13 @@ import type {
     JSRuntimeType,
 } from "./js-runtime-interface.ts";
 
-type global = {
-    process: {
-        versions: Record<string, string>;
-    };
-    // isPolyfill is a custom property injected by the unyt.land Deno polyfill for browsers
-    Deno: typeof Deno & { isPolyfill?: boolean };
-};
-
 function detectRuntime(): JSRuntimeType {
-    const global = globalThis as unknown as global;
-
-    if (global.Deno && !global.Deno.isPolyfill) {
+    if (globalThis.navigator?.userAgent.startsWith("Node.js")) {
+        return "node";
+    } else if (globalThis.navigator?.userAgent.startsWith("Deno")) {
         return "deno";
+    } else if (globalThis.navigator?.userAgent.startsWith("Bun")) {
+        return "bun";
     } else {
         return "browser";
     }
@@ -37,6 +33,9 @@ async function getRuntimeInterface(type: JSRuntimeType) {
     if (type === "deno") {
         const { DenoRuntimeInterface } = await import("./runtimes/deno.ts");
         return new DenoRuntimeInterface();
+    } else if (type === "node") {
+        const { NodeRuntimeInterface } = await import("./runtimes/node.ts");
+        return new NodeRuntimeInterface();
     } else {
         const { BrowserRuntimeInterface } = await import(
             "./runtimes/browser.ts"

@@ -47,7 +47,7 @@ if (code !== 0) {
     bundleContent =
         `if (!Uint8Array.fromBase64) Uint8Array.fromBase64 = (base64) => {let binaryString = atob(base64);let bytes = new Uint8Array(binaryString.length);for (let i = 0; i < binaryString.length; i++) {bytes[i] = binaryString.charCodeAt(i);}return bytes.buffer;}\n${bundleContent}`;
     bundleContent = bundleContent.replace(
-        `WebAssembly.instantiateStreaming(fetch(new URL("datex_core_js.wasm",import.meta.url))`,
+        `runtimeInterface.instantiateWebAssembly(new URL("datex_core_js.wasm", import.meta.url)`,
         `WebAssembly.instantiate(Uint8Array.fromBase64("${wasmBase64}")`,
     );
     await Deno.writeTextFile(bundleFile, bundleContent);

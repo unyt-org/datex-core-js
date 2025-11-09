@@ -1,7 +1,8 @@
 import type { JsRuntimeInterface } from "../js-runtime-interface.ts";
+import * as fs from "node:fs/promises";
 
-export class DenoRuntimeInterface implements JsRuntimeInterface {
-    readonly type = "deno";
+export class NodeRuntimeInterface implements JsRuntimeInterface {
+    readonly type = "node";
 
     readTextFile(path: string | URL): Promise<string> {
         return Deno.readTextFile(path);
@@ -11,10 +12,11 @@ export class DenoRuntimeInterface implements JsRuntimeInterface {
         return Deno.readFile(path);
     }
 
-    instantiateWebAssembly(
+    async instantiateWebAssembly(
         path: URL,
         importObject?: WebAssembly.Imports,
     ): Promise<WebAssembly.WebAssemblyInstantiatedSource> {
-        return WebAssembly.instantiateStreaming(fetch(path), importObject);
+        const file = await fs.readFile(path) as Uint8Array;
+        return (await WebAssembly.instantiate(file, importObject));
     }
 }

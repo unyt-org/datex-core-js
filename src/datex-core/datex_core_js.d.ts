@@ -2,11 +2,11 @@
 // deno-lint-ignore-file
 // deno-fmt-ignore-file
 
-export function create_runtime(config: string, debug_flags: any): JSRuntime;
 /**
  * Executes a Datex script and returns the result as a string.
  */
 export function execute(datex_script: string, formatted: boolean): string;
+export function create_runtime(config: string, debug_flags: any): JSRuntime;
 /**
  * Executes a Datex script and returns true when execution was successful.
  * Does not return the result of the script, but only indicates success or failure.
@@ -22,8 +22,6 @@ export interface RTCIceServer {
     username: string | null;
     credential: string | null;
 }
-
-export type InterfaceDirection = "In" | "Out" | "InOut";
 
 export interface InterfaceProperties {
     /**
@@ -87,6 +85,8 @@ export interface InterfaceProperties {
     reconnect_attempts: number | null;
 }
 
+export type InterfaceDirection = "In" | "Out" | "InOut";
+
 export type ReconnectionConfig = "NoReconnect" | "InstantReconnect" | {
     ReconnectWithTimeout: { timeout: { secs: number; nanos: number } };
 } | {
@@ -96,16 +96,16 @@ export type ReconnectionConfig = "NoReconnect" | "InstantReconnect" | {
     };
 };
 
-export interface WebSocketClientInterfaceSetupData {
-    address: string;
-}
-
 export interface WebSocketServerInterfaceSetupData {
     port: number;
     /**
      * if true, the server will use wss (secure WebSocket). Defaults to true.
      */
     secure: boolean | null;
+}
+
+export interface WebSocketClientInterfaceSetupData {
+    address: string;
 }
 
 export type BaseInterfaceSetupData = InterfaceProperties;
@@ -122,6 +122,10 @@ export class BaseJSInterface {
 export class JSComHub {
     private constructor();
     free(): void;
+    websocket_server_interface_add_socket(
+        interface_uuid: string,
+        websocket: WebSocket,
+    ): string;
     /**
      * Send a block to the given interface and socket
      * This does not involve the routing on the ComHub level.
@@ -171,10 +175,6 @@ export class JSComHub {
         interface_uuid: string,
         on_ice_candidate: Function,
     ): void;
-    websocket_server_interface_add_socket(
-        interface_uuid: string,
-        websocket: WebSocket,
-    ): string;
 }
 export class JSPointer {
     private constructor();
