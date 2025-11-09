@@ -12,7 +12,7 @@ import type {
 import type { Ref } from "../refs/ref.ts";
 
 // auto-generated version - do not edit:
-const VERSION: string = "0.0.8";
+const VERSION: string = "0.0.9";
 
 interface DebugFlags {
     allow_unsigned_blocks?: boolean;
