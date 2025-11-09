@@ -26,30 +26,10 @@ await build({
             name: "./interface-impls/websocket-client",
             path: "./src/network/interface-impls/websocket-client.ts",
         },
-        {
-            name: "./interface-impls/websocket-server-deno",
-            path: "./src/network/interface-impls/websocket-server-deno.ts",
-        },
-        {
-            name: "./interface-impls/serial",
-            path: "./src/network/interface-impls/serial.ts",
-        },
-        {
-            name: "./interface-impls/webrtc",
-            path: "./src/network/interface-impls/webrtc.ts",
-        },
     ],
     outDir: "./npm",
-    shims: {
-        deno: true,
-        timers: true,
-        prompts: true,
-        undici: true,
-        crypto: true,
-        weakRef: true,
-        webSocket: true,
-    },
-    typeCheck: false, // TODO: enable, currently fails because of ts errors
+    shims: {},
+    typeCheck: false, // "both",
     scriptModule: false,
     test: false, // TODO: enable, currently fails, see https://github.com/denoland/dnt/issues/249
 

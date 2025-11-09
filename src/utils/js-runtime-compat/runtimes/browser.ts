@@ -13,4 +13,11 @@ export class BrowserRuntimeInterface implements JsRuntimeInterface {
         const buffer = await response.arrayBuffer();
         return new Uint8Array(buffer);
     }
+
+    instantiateWebAssembly(
+        path: URL,
+        importObject?: WebAssembly.Imports,
+    ): Promise<WebAssembly.WebAssemblyInstantiatedSource> {
+        return WebAssembly.instantiateStreaming(fetch(path), importObject);
+    }
 }
