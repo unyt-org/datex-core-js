@@ -2,10 +2,10 @@
  * Endpoint class representing a unique communication endpoint in the Datex runtime.
  */
 export class Endpoint {
-    // the string representation of the endpoint
+    /** the string representation of the endpoint */
     readonly #endpoint: string;
 
-    // map with weak values that keeps track of all currently instantiated endpoints
+    /** map with weak values that keeps track of all currently instantiated endpoints */
     static endpoints: Map<string, WeakRef<Endpoint>> = new Map();
 
     private constructor(endpoint: string) {

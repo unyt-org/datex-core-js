@@ -345,12 +345,11 @@ type ContainsRef<T> = IsRef<T> extends true ? true
         : false
     : false;
 
-// A type representing an assignable reference or a plain value
+/** A type representing an assignable reference or a plain value **/
 export type AssignableRef<T> = Ref<T> | T & { value?: T };
 
 type Builtins =
-    // deno-lint-ignore ban-types
-    | Function
+    | ((...args: unknown[]) => unknown)
     | Date
     | RegExp
     | Map<unknown, unknown>
