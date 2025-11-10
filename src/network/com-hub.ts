@@ -17,6 +17,11 @@ export class ComHub {
         this.#jsComHub = jsComHub;
     }
 
+    /**
+     * Registers a communication interface implementation.
+     * @param interfaceType The type of the interface.
+     * @param impl The implementation class of the interface.
+     */
     static registerInterfaceImpl<N extends string>(
         interfaceType: N,
         impl: typeof ComInterfaceImpl<unknown>,
@@ -30,6 +35,11 @@ export class ComHub {
         this.#interfaceImplsByClass.set(impl, interfaceType);
     }
 
+    /**
+     * Creates a new communication interface.
+     * @param interfaceType The type of the interface to create.
+     * @param setupData The setup data for the interface.
+     */
     async createInterface<T extends typeof ComInterfaceImpl<unknown>>(
         interfaceType: T,
         setupData: T extends typeof ComInterfaceImpl<infer P> ? P : never,
@@ -106,6 +116,13 @@ export class ComHub {
         console.log(trace);
     }
 
+    /**
+     * Sends a block of data to a specific interface and socket.
+     * @param block The data block to send.
+     * @param interface_uuid The UUID of the interface to send the block to.
+     * @param socket_uuid The UUID of the socket to send the block to.
+     * @returns A promise that resolves to true if the block was sent successfully, false otherwise.
+     */
     public sendBlock(
         block: Uint8Array,
         interface_uuid: string,
@@ -114,11 +131,20 @@ export class ComHub {
         return this.#jsComHub.send_block(block, interface_uuid, socket_uuid);
     }
 
+    /**
+     * Registers a callback to intercept incoming blocks.
+     * @param callback The callback to be invoked for each incoming block.
+     */
     public registerIncomingBlockInterceptor(
         callback: (block: Uint8Array, socket_uuid: string) => void,
     ): void {
         this.#jsComHub.register_incoming_block_interceptor(callback);
     }
+
+    /**
+     * Registers a callback to intercept outgoing blocks.
+     * @param callback The callback to be invoked for each outgoing block.
+     */
     public registerOutgoingBlockInterceptor(
         callback: (
             block: Uint8Array,
