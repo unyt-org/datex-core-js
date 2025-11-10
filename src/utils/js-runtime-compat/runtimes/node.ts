@@ -5,11 +5,11 @@ export class NodeRuntimeInterface implements JsRuntimeInterface {
     readonly type = "node";
 
     readTextFile(path: string | URL): Promise<string> {
-        return Deno.readTextFile(path);
+        return fs.readFile(path, { encoding: "utf-8" });
     }
 
     readFile(path: string | URL): Promise<Uint8Array> {
-        return Deno.readFile(path);
+        return fs.readFile(path);
     }
 
     async instantiateWebAssembly(
