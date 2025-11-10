@@ -281,7 +281,7 @@ dependencies = [
 [[package]]
 name = "datex-core"
 version = "0.0.7"
-source = "git+https://github.com/unyt-org/datex-core?branch=release%2F0.0.7#b894a5ebda21df92461600c69d9428301fb890a6"
+source = "git+https://github.com/unyt-org/datex-core?branch=release%2F0.0.7#f02cd8700d7ab8979eb55be925e3c95a3d313ee2"
 dependencies = [
  "ariadne",
  "async-trait",
@@ -366,7 +366,7 @@ dependencies = [
 [[package]]
 name = "datex_macros"
 version = "0.1.1"
-source = "git+https://github.com/unyt-org/datex-core?branch=release%2F0.0.7#b894a5ebda21df92461600c69d9428301fb890a6"
+source = "git+https://github.com/unyt-org/datex-core?branch=release%2F0.0.7#f02cd8700d7ab8979eb55be925e3c95a3d313ee2"
 dependencies = [
  "proc-macro2",
  "quote",
