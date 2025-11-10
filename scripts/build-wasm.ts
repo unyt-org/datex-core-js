@@ -50,7 +50,7 @@ try {
 if (!flags.inline) {
     const jsFile = dedent`
         import * as imports from "./${NAME}.internal.js";
-        import { runtimeInterface } from "../utils/js-runtime-compat/runtime.ts";
+        import { runtimeInterface } from "../utils/js-runtime-compat/js-runtime.ts";
         const wasm = (await runtimeInterface.instantiateWebAssembly(
             new URL("${NAME}.wasm", import.meta.url),
             {

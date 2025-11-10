@@ -1,5 +1,5 @@
 /**
- * @module runtime
+ * @module
  * @description
  * The runtime module provides a runtimeInterface object that contains common
  * runtime-specific functions for reading files, etc.
@@ -32,15 +32,20 @@ function detectRuntime(): JSRuntimeType {
 }
 
 async function getRuntimeInterface(type: JSRuntimeType) {
-    if (type == "deno" || type == "node" || type == "bun") {
-        const { default: Interface } = (await import("./runtimes/"+type+".ts")) as { default: new () => JsRuntimeInterface };
+    if (type == "deno") {
+        const { default: Interface } = (await import("./runtimes/deno.ts")) as { default: new () => JsRuntimeInterface };
         return new Interface();
-    } else {
+    }
+    else if (type == "node" || type == "bun") {
+        const { default: Interface } = (await import("./runtimes/node.ts")) as { default: new () => JsRuntimeInterface };
+        return new Interface();
+    }
+    else {
         return new BrowserRuntimeInterface();
     }
 }
 
-// The runtime interface for the current runtime environment
+/** The runtime interface for the current runtime environment */
 export const runtimeInterface: JsRuntimeInterface = await getRuntimeInterface(
     detectRuntime(),
 );

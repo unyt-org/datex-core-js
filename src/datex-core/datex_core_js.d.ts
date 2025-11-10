@@ -3,14 +3,14 @@
 // deno-fmt-ignore-file
 
 /**
- * Executes a Datex script and returns the result as a string.
- */
-export function execute(datex_script: string, formatted: boolean): string;
-/**
  * Executes a Datex script and returns true when execution was successful.
  * Does not return the result of the script, but only indicates success or failure.
  */
 export function execute_internal(datex_script: string): boolean;
+/**
+ * Executes a Datex script and returns the result as a string.
+ */
+export function execute(datex_script: string, formatted: boolean): string;
 export function create_runtime(config: string, debug_flags: any): JSRuntime;
 export type InterfaceDirection = "In" | "Out" | "InOut";
 
@@ -122,6 +122,24 @@ export class BaseJSInterface {
 export class JSComHub {
     private constructor();
     free(): void;
+    webrtc_interface_set_answer(
+        interface_uuid: string,
+        answer: Uint8Array,
+    ): Promise<void>;
+    webrtc_interface_create_offer(interface_uuid: string): Promise<Uint8Array>;
+    webrtc_interface_create_answer(
+        interface_uuid: string,
+        offer: Uint8Array,
+    ): Promise<Uint8Array>;
+    webrtc_interface_add_ice_candidate(
+        interface_uuid: string,
+        candidate: Uint8Array,
+    ): Promise<void>;
+    webrtc_interface_wait_for_connection(interface_uuid: string): Promise<void>;
+    webrtc_interface_set_on_ice_candidate(
+        interface_uuid: string,
+        on_ice_candidate: Function,
+    ): void;
     /**
      * Send a block to the given interface and socket
      * This does not involve the routing on the ComHub level.
@@ -155,24 +173,6 @@ export class JSComHub {
         socket_uuid: string,
         data: Uint8Array,
     ): Promise<boolean>;
-    webrtc_interface_set_answer(
-        interface_uuid: string,
-        answer: Uint8Array,
-    ): Promise<void>;
-    webrtc_interface_create_offer(interface_uuid: string): Promise<Uint8Array>;
-    webrtc_interface_create_answer(
-        interface_uuid: string,
-        offer: Uint8Array,
-    ): Promise<Uint8Array>;
-    webrtc_interface_add_ice_candidate(
-        interface_uuid: string,
-        candidate: Uint8Array,
-    ): Promise<void>;
-    webrtc_interface_wait_for_connection(interface_uuid: string): Promise<void>;
-    webrtc_interface_set_on_ice_candidate(
-        interface_uuid: string,
-        on_ice_candidate: Function,
-    ): void;
     websocket_server_interface_add_socket(
         interface_uuid: string,
         websocket: WebSocket,

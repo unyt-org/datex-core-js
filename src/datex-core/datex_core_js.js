@@ -1,5 +1,5 @@
 import * as imports from "./datex_core_js.internal.js";
-import { runtimeInterface } from "../utils/js-runtime-compat/runtime.ts";
+import { runtimeInterface } from "../utils/js-runtime-compat/js-runtime.ts";
 const wasm = (await runtimeInterface.instantiateWebAssembly(
     new URL("datex_core_js.wasm", import.meta.url),
     {
