@@ -21,10 +21,15 @@ import {
 import { CoreTypeAddress, CoreTypeAddressRanges } from "./core.ts";
 import { difValueContainerToDisplayString } from "./display.ts";
 
+/**
+ * The DIFHandler class provides methods to interact with the DATEX Core DIF runtime,
+ * including executing Datex scripts, creating and managing pointers, and observing changes.
+ * It includes a local pointer cache to optimize performance and reduce cross-language calls.
+ */
 export class DIFHandler {
     /** The JSRuntime interface for the underlying Datex Core runtime */
     #runtime: JSRuntime;
-    #handle: RuntimeDIFHandle;
+    readonly #handle: RuntimeDIFHandle;
 
     // always 0 for now - potentially used for multi DIF transceivers using the same underlying runtime
     readonly #transceiver_id = 0;
@@ -42,14 +47,26 @@ export class DIFHandler {
         Map<number, (value: DIFUpdateData) => void>
     >();
 
+    /**
+     * Internal property
+     * @returns The map of observers for each pointer address.
+     */
     get _observers(): Map<string, Map<number, (value: DIFUpdateData) => void>> {
         return this.#observers;
     }
 
+    /**
+     * Internal property
+     * @returns The RuntimeDIFHandle instance.
+     */
     get _handle(): RuntimeDIFHandle {
         return this.#handle;
     }
 
+    /**
+     * Internal property
+     * @returns The transceiver ID of the DIF client.
+     */
     get _transceiver_id(): number {
         return this.#transceiver_id;
     }
