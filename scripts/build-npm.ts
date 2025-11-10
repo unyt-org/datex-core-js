@@ -1,4 +1,5 @@
 import { build, emptyDir } from "@deno/dnt";
+import { walk } from "jsr:@std/fs@^1.0.10/walk";
 
 await emptyDir("./npm");
 
@@ -28,7 +29,7 @@ await build({
         },
     ],
     outDir: "./npm",
-    shims: {},
+    shims: { deno: false },
     typeCheck: false, // "both",
     scriptModule: false,
     test: false, // TODO: enable, currently fails, see https://github.com/denoland/dnt/issues/249
@@ -47,7 +48,7 @@ await build({
         },
     },
     // steps to run after building and before running the tests
-    postBuild() {
+    async postBuild() {
         // replace import.meta because dnt-shim-ignore does not work here
         const datexCoreJSInternalPath = new URL(
             "../npm/esm/datex-core/datex_core_js.js",
@@ -59,6 +60,40 @@ await build({
             `import.meta.url`,
         );
         Deno.writeTextFileSync(datexCoreJSInternalPath, updatedContent);
+
+        // remove dnt polyfills completely because we don't need them
+        // this also enables support for frontend npm module builds like Vite
+        // walk all files in ../npm/esm and remove any import of _dnt.polyfills
+        const esmDir = new URL("../npm/esm/", import.meta.url);
+        const regex = /import ".*_dnt\.polyfills\.js";\n/gm;
+        for await (const entry of walk(esmDir)) {
+            if (entry.isFile) {
+                const content = Deno.readTextFileSync(entry.path);
+                if (regex.test(content)) {
+                    Deno.writeTextFileSync(
+                        entry.path,
+                        content.replace(
+                            regex,
+                            "",
+                        ),
+                    );
+                }
+            }
+        }
+        // delte all _dnt.polyfills.js/_dnt.polyfills.d.ts/_dnt.polyfills.ts_dnt.polyfills.d.ts.map/_dnt.shims.ts files in ../npm
+        const npmDir = new URL("../npm/", import.meta.url);
+        for await (const entry of walk(npmDir)) {
+            if (
+                entry.isFile &&
+                (entry.name === "_dnt.polyfills.js" ||
+                    entry.name === "_dnt.polyfills.d.ts" ||
+                    entry.name === "_dnt.polyfills.d.ts.map" ||
+                    entry.name === "_dnt.polyfills.ts" ||
+                    entry.name === "_dnt.shims.ts")
+            ) {
+                Deno.removeSync(entry.path);
+            }
+        }
 
         Deno.copyFileSync("README.md", "npm/README.md");
         Deno.copyFileSync(
