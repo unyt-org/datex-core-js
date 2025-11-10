@@ -16,6 +16,9 @@ export class Ref<T> {
         this.#difHandler = difHandler;
     }
 
+    /**
+     * Gets the address of the pointer storing the reference.
+     */
     get pointerAddress(): string {
         return this.#pointerAddress;
     }
