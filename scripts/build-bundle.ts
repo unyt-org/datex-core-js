@@ -46,7 +46,6 @@ if (code !== 0) {
     // add Uint8Array.fromBase64 polyfill at the top of the bundle (TODO: remove when supported in all browsers)
     bundleContent =
         `if (!Uint8Array.fromBase64) Uint8Array.fromBase64 = (base64) => {let binaryString = atob(base64);let bytes = new Uint8Array(binaryString.length);for (let i = 0; i < binaryString.length; i++) {bytes[i] = binaryString.charCodeAt(i);}return bytes.buffer;}\n${bundleContent}`;
-    console.log(bundleContent);
     bundleContent = bundleContent.replace(
         /\b\S+.instantiateWebAssembly\(new URL\("datex_core_js\.wasm",import\.meta\.url\)/gm,
         `WebAssembly.instantiate(Uint8Array.fromBase64("${wasmBase64}")`,
