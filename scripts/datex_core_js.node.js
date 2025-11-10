@@ -2,7 +2,8 @@ import * as imports from "./datex_core_js.internal.js";
 import { runtimeInterface, detectRuntime } from "../utils/js-runtime-compat/js-runtime.js";
 
 let wasmUrl;
-if (detectRuntime() == "browser") {
+const isVite = !!import.meta.env?.MODE;
+if (detectRuntime() == "browser" && isVite) {
     wasmUrl = (await import("./wasm_url.node.js")).default;
 } else {
     wasmUrl = new URL("datex_core_js.wasm", import.meta.url);
