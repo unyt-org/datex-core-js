@@ -44,6 +44,7 @@ async function getRuntimeInterface(type: JSRuntimeType) {
     }
 }
 
+// The runtime interface for the current runtime environment
 export const runtimeInterface: JsRuntimeInterface = await getRuntimeInterface(
     detectRuntime(),
 );

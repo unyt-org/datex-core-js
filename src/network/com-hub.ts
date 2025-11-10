@@ -1,16 +1,23 @@
 import type { JSComHub } from "../datex-core/datex_core_js.d.ts";
 import { ComInterface, type ComInterfaceImpl } from "./com-interface.ts";
 
+/**
+ * Communication hub for managing communication interfaces.
+ */
 export class ComHub {
+    // Static map of registered interface implementations.
     static #interfaceImpls = new Map<
         string,
         typeof ComInterfaceImpl<unknown>
     >();
+
+    // Static map of interface implementations by class.
     static #interfaceImplsByClass = new Map<
         typeof ComInterfaceImpl<unknown>,
         string
     >();
 
+    // The JS communication hub.
     readonly #jsComHub: JSComHub;
 
     constructor(jsComHub: JSComHub) {
