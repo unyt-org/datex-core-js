@@ -61,8 +61,7 @@ if (!flags.inline) {
         import { __wbg_set_wasm } from "./${NAME}.internal.js";
         __wbg_set_wasm(wasm.exports);
         wasm.exports.__wbindgen_start();
-
-    `.trimStart();
+`.trimStart();
 
     await outDir.resolve(`${NAME}.js`).writeText(jsFile);
 }
