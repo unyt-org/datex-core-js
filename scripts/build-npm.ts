@@ -101,6 +101,16 @@ await build({
             "npm/esm/datex-core/datex_core_js.wasm",
         );
 
+        // replace datex_core_js with custom version for node that also supports node vite builds for browsers
+        Deno.copyFileSync(
+            "scripts/datex_core_js.node.js",
+            "npm/esm/datex-core/datex_core_js.js",
+        );
+        Deno.copyFileSync(
+            "scripts/wasm_url.node.js",
+            "npm/esm/datex-core/wasm_url.node.js",
+        );
+
         // currently required for version tests
         Deno.copyFileSync("deno.json", "npm/esm/deno.json");
     },
