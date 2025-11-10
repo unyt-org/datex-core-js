@@ -27,13 +27,13 @@ export abstract class ComInterfaceImpl<SetupData> {
  * Represents a communication interface.
  */
 export class ComInterface<T extends ComInterfaceImpl<unknown>> {
-    // The UUID of the interface.
+    /** The UUID of the interface. */
     readonly uuid: string;
 
-    // The implementation of the interface.
+    /** The implementation of the interface. */
     readonly impl: T;
 
-    // The JS communication hub.
+    /** The JS communication hub. */
     readonly #jsComHub: JSComHub;
 
     constructor(uuid: string, impl: T, jsComHub: JSComHub) {

@@ -281,7 +281,7 @@ dependencies = [
 [[package]]
 name = "datex-core"
 version = "0.0.7"
-source = "git+https://github.com/unyt-org/datex-core?branch=feat%2Fembedded#a9aa62cfa039903de48df3cc2b018b9ff845855d"
+source = "git+https://github.com/unyt-org/datex-core?branch=release%2F0.0.7#b894a5ebda21df92461600c69d9428301fb890a6"
 dependencies = [
  "ariadne",
  "async-trait",
@@ -292,7 +292,7 @@ dependencies = [
  "chumsky",
  "console_error_panic_hook",
  "console_log",
- "datex_macros 0.1.1 (git+https://github.com/unyt-org/datex-core?branch=feat%2Fembedded)",
+ "datex_macros 0.1.1 (git+https://github.com/unyt-org/datex-core?branch=release%2F0.0.7)",
  "futures",
  "futures-core",
  "futures-util",
@@ -366,7 +366,7 @@ dependencies = [
 [[package]]
 name = "datex_macros"
 version = "0.1.1"
-source = "git+https://github.com/unyt-org/datex-core?branch=feat%2Fembedded#a9aa62cfa039903de48df3cc2b018b9ff845855d"
+source = "git+https://github.com/unyt-org/datex-core?branch=release%2F0.0.7#b894a5ebda21df92461600c69d9428301fb890a6"
 dependencies = [
  "proc-macro2",
  "quote",

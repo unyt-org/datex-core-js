@@ -11,23 +11,23 @@ import type {
 } from "../dif/definitions.ts";
 import type { Ref } from "../refs/ref.ts";
 
-// auto-generated version - do not edit:
+/** auto-generated version - do not edit: */
 const VERSION: string = "0.0.9";
 
-// debug flags for the runtime
+/** debug flags for the runtime */
 interface DebugFlags {
     allow_unsigned_blocks?: boolean;
     enable_deterministic_behavior?: boolean;
 }
 
-// configuration for the runtime
+/** configuration for the runtime  */
 export type RuntimeConfig = {
     endpoint?: string;
     interfaces?: { type: string; config: unknown }[];
     debug?: boolean;
 };
 
-// options for decompiling values to strings
+/** options for decompiling values to strings  */
 export type DecompileOptions = {
     formatted?: boolean;
     colorized?: boolean;
