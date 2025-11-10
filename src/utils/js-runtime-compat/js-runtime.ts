@@ -19,7 +19,7 @@ import type {
 
 import BrowserRuntimeInterface from "./runtimes/browser.ts";
 
-function detectRuntime(): JSRuntimeType {
+export function detectRuntime(): JSRuntimeType {
     if (globalThis.navigator?.userAgent.startsWith("Node.js")) {
         return "node";
     } else if (globalThis.navigator?.userAgent.startsWith("Deno")) {
