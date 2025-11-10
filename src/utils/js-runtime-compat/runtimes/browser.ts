@@ -1,6 +1,6 @@
 import type { JsRuntimeInterface } from "../js-runtime-interface.ts";
 
-export class BrowserRuntimeInterface implements JsRuntimeInterface {
+export default class BrowserRuntimeInterface implements JsRuntimeInterface {
     readonly type = "browser";
 
     async readTextFile(path: string | URL): Promise<string> {

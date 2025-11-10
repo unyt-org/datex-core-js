@@ -1,7 +1,7 @@
 import type { JsRuntimeInterface } from "../js-runtime-interface.ts";
 import * as fs from "node:fs/promises";
 
-export class NodeRuntimeInterface implements JsRuntimeInterface {
+export default class NodeRuntimeInterface implements JsRuntimeInterface {
     readonly type = "node";
 
     readTextFile(path: string | URL): Promise<string> {

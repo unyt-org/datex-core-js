@@ -17,6 +17,8 @@ import type {
     JSRuntimeType,
 } from "./js-runtime-interface.ts";
 
+import BrowserRuntimeInterface from "./runtimes/browser.ts";
+
 function detectRuntime(): JSRuntimeType {
     if (globalThis.navigator?.userAgent.startsWith("Node.js")) {
         return "node";
@@ -30,16 +32,10 @@ function detectRuntime(): JSRuntimeType {
 }
 
 async function getRuntimeInterface(type: JSRuntimeType) {
-    if (type === "deno") {
-        const { DenoRuntimeInterface } = await import("./runtimes/deno.ts");
-        return new DenoRuntimeInterface();
-    } else if (type === "node") {
-        const { NodeRuntimeInterface } = await import("./runtimes/node.ts");
-        return new NodeRuntimeInterface();
+    if (type == "deno" || type == "node" || type == "bun") {
+        const { default: Interface } = (await import("./runtimes/"+type+".ts")) as { default: new () => JsRuntimeInterface };
+        return new Interface();
     } else {
-        const { BrowserRuntimeInterface } = await import(
-            "./runtimes/browser.ts"
-        );
         return new BrowserRuntimeInterface();
     }
 }
