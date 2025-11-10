@@ -4,7 +4,17 @@ import type {
     BaseInterfaceSetupData,
     InterfaceDirection,
 } from "../../datex-core/datex_core_js.d.ts";
-export type { BaseInterfaceSetupData, InterfaceDirection };
+
+export type {
+    /**
+     * Direction of the communication interface (In/Out/InOut).
+     */
+    InterfaceDirection,
+    /**
+     * Setup data for the base communication interface.
+     */
+    BaseInterfaceSetupData
+};
 
 /**
  * Implementation of the base communication interface.
