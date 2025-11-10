@@ -1,3 +1,6 @@
+/**
+ * Mapping of core type names to their unique pointer addresses.
+ */
 export const CoreTypeAddress = {
     null: "010000",
     type: "020000",
@@ -24,9 +27,15 @@ export const CoreTypeAddress = {
     integer_i128: "6e0000",
     integer_big: "6f0000",
 } as const;
+/**
+ * Type representing the unique pointer addresses of core types.
+ */
 export type CoreTypeAddress =
     typeof CoreTypeAddress[keyof typeof CoreTypeAddress];
 
+/**
+ * Mapping of core type address ranges for categorization.
+ */
 export const CoreTypeAddressRanges = {
     small_unsigned_integers: new Set([
         CoreTypeAddress.integer_u8,

@@ -1,3 +1,8 @@
+/**
+ * @module
+ * @description
+ * This module contains helper functions to create DIFUpdate objects.
+ */
 import { type DIFUpdateData, DIFUpdateKind } from "./definitions.ts";
 import type { DIFHandler } from "./dif-handler.ts";
 
