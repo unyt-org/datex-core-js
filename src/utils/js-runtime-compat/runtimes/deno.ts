@@ -1,6 +1,6 @@
 import type { JsRuntimeInterface } from "../js-runtime-interface.ts";
 
-export class DenoRuntimeInterface implements JsRuntimeInterface {
+export default class DenoRuntimeInterface implements JsRuntimeInterface {
     readonly type = "deno";
 
     readTextFile(path: string | URL): Promise<string> {
