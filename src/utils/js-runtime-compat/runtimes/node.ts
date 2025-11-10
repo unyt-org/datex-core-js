@@ -16,7 +16,7 @@ export class NodeRuntimeInterface implements JsRuntimeInterface {
         path: URL,
         importObject?: WebAssembly.Imports,
     ): Promise<WebAssembly.WebAssemblyInstantiatedSource> {
-        const file = await fs.readFile(path) as Uint8Array;
+        const file = await fs.readFile(path) as BufferSource;
         return (await WebAssembly.instantiate(file, importObject));
     }
 }
