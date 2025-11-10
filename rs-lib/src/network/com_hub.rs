@@ -214,4 +214,68 @@ impl JSComHub {
             None
         }
     }
+
+    pub fn register_outgoing_block_interceptor(
+        &self,
+        callback: js_sys::Function,
+    ) {
+        self.com_hub().register_outgoing_block_interceptor(
+            move |block, socket, endpoints| {
+                let this = JsValue::NULL;
+                let block_bytes = match block.to_bytes() {
+                    Ok(bytes) => js_sys::Uint8Array::from(&bytes[..]),
+                    Err(e) => {
+                        error!("Failed to convert block to bytes: {:?}", e);
+                        return;
+                    }
+                };
+                let socket_uuid = JsValue::from_str(&socket.0.to_string());
+                let endpoints_array = js_sys::Array::new();
+                for endpoint in endpoints {
+                    endpoints_array
+                        .push(&JsValue::from_str(&endpoint.to_string()));
+                }
+                if let Err(e) = callback.call3(
+                    &this,
+                    &JsValue::from(block_bytes),
+                    &socket_uuid,
+                    &endpoints_array,
+                ) {
+                    error!(
+                        "Error in outgoing block interceptor callback: {:?}",
+                        e
+                    );
+                }
+            },
+        );
+    }
+
+    pub fn register_incoming_block_interceptor(
+        &self,
+        callback: js_sys::Function,
+    ) {
+        self.com_hub().register_incoming_block_interceptor(
+            move |block, socket| {
+                let this = JsValue::NULL;
+                let block_bytes = match block.to_bytes() {
+                    Ok(bytes) => js_sys::Uint8Array::from(&bytes[..]),
+                    Err(e) => {
+                        error!("Failed to convert block to bytes: {:?}", e);
+                        return;
+                    }
+                };
+                let socket_uuid = JsValue::from_str(&socket.0.to_string());
+                if let Err(e) = callback.call2(
+                    &this,
+                    &JsValue::from(block_bytes),
+                    &socket_uuid,
+                ) {
+                    error!(
+                        "Error in incoming block interceptor callback: {:?}",
+                        e
+                    );
+                }
+            },
+        );
+    }
 }

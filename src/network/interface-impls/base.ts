@@ -4,9 +4,18 @@ import type {
     BaseInterfaceSetupData,
     InterfaceDirection,
 } from "../../datex-core/datex_core_js.d.ts";
+export type { BaseInterfaceSetupData, InterfaceDirection };
 
+/**
+ * Implementation of the base communication interface.
+ */
 export class BaseInterfaceImpl
     extends ComInterfaceImpl<BaseInterfaceSetupData> {
+    /**
+     * Registers a socket for the communication interface.
+     * @param interfaceDirection The direction of the interface (incoming/outgoing).
+     * @returns The UUID of the registered socket.
+     */
     public registerSocket(interfaceDirection: InterfaceDirection): string {
         return this.jsComHub.base_interface_register_socket(
             this.uuid,
@@ -14,6 +23,10 @@ export class BaseInterfaceImpl
         );
     }
 
+    /**
+     * Destroys a socket for the communication interface.
+     * @param socketUUID The UUID of the socket to destroy.
+     */
     public destroySocket(socketUUID: string) {
         this.jsComHub.base_interface_destroy_socket(
             this.uuid,
@@ -21,6 +34,11 @@ export class BaseInterfaceImpl
         );
     }
 
+    /**
+     * Receives a data block for the communication interface.
+     * @param socketUUID The UUID of the socket to receive data on.
+     * @param data The data block to receive.
+     */
     public receive(socketUUID: string, data: Uint8Array) {
         this.jsComHub.base_interface_receive(
             this.uuid,
@@ -29,6 +47,12 @@ export class BaseInterfaceImpl
         );
     }
 
+    /**
+     * Tests sending a data block for the communication interface.
+     * @param socketUUID The UUID of the socket to send data on.
+     * @param data The data block to send.
+     * @returns A promise that resolves to true if the block was sent successfully, false otherwise.
+     */
     public testSendBlock(
         socketUUID: string,
         data: Uint8Array,
@@ -40,6 +64,10 @@ export class BaseInterfaceImpl
         );
     }
 
+    /**
+     * Registers a callback to handle sending data blocks.
+     * @param callback The callback to be invoked when sending data.
+     */
     public onSend(
         callback: (
             data: Uint8Array,

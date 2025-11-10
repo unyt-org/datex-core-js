@@ -11,20 +11,23 @@ import type {
 } from "../dif/definitions.ts";
 import type { Ref } from "../refs/ref.ts";
 
-// auto-generated version - do not edit:
+/** auto-generated version - do not edit: */
 const VERSION: string = "0.0.9";
 
+/** debug flags for the runtime */
 interface DebugFlags {
     allow_unsigned_blocks?: boolean;
     enable_deterministic_behavior?: boolean;
 }
 
+/** configuration for the runtime  */
 export type RuntimeConfig = {
     endpoint?: string;
     interfaces?: { type: string; config: unknown }[];
     debug?: boolean;
 };
 
+/** options for decompiling values to strings  */
 export type DecompileOptions = {
     formatted?: boolean;
     colorized?: boolean;
@@ -32,6 +35,9 @@ export type DecompileOptions = {
     json_compat?: boolean;
 };
 
+/**
+ * The main Runtime class for executing Datex scripts and managing communication interfaces.
+ */
 export class Runtime {
     public readonly js_version = VERSION;
 
@@ -45,6 +51,12 @@ export class Runtime {
         this.#difHandler = new DIFHandler(this.#runtime);
     }
 
+    /**
+     * Creates a new Runtime instance.
+     * @param config Runtime configuration
+     * @param debug_flags Debug flags for the runtime
+     * @returns A promise that resolves to the created Runtime instance
+     */
     public static async create(
         config: RuntimeConfig,
         debug_flags?: DebugFlags,
@@ -54,6 +66,10 @@ export class Runtime {
         return runtime;
     }
 
+    /**
+     * Starts the runtime.
+     * @returns A promise that resolves when the runtime has started.
+     */
     public start(): Promise<void> {
         return this.#runtime.start();
     }
@@ -63,20 +79,29 @@ export class Runtime {
     }
 
     /**
-     * properties from #runtime
+     * Gets the endpoint of the runtime.
      */
     get endpoint(): string {
         return this.#runtime.endpoint;
     }
 
+    /**
+     * Gets the version of the runtime.
+     */
     get version(): string {
         return this.#runtime.version;
     }
 
+    /**
+     * Gets the DIF handler associated with the runtime.
+     */
     get dif(): DIFHandler {
         return this.#difHandler;
     }
 
+    /**
+     * Gets the communication hub associated with the runtime.
+     */
     get comHub(): ComHub {
         return this.#comHub;
     }
@@ -88,6 +113,13 @@ export class Runtime {
         return this.#runtime;
     }
 
+    /**
+     * Executes a Datex script and returns the result as a string.
+     * @param datexScript The Datex script to execute.
+     * @param values The values to inject into the script.
+     * @param decompileOptions Options for decompiling the result.
+     * @returns A promise that resolves to the result of the script execution.
+     */
     public executeWithStringResult(
         datexScript: string,
         values: unknown[] | null = [],
@@ -100,6 +132,13 @@ export class Runtime {
         );
     }
 
+    /**
+     * Executes a Datex script synchronously and returns the result as a string.
+     * @param datexScript The Datex script to execute.
+     * @param values The values to inject into the script.
+     * @param decompileOptions Options for decompiling the result.
+     * @returns The result of the script execution.
+     */
     public executeSyncWithStringResult(
         datexScript: string,
         values: unknown[] | null = [],
@@ -140,7 +179,6 @@ export class Runtime {
         templateStrings: TemplateStringsArray,
         ...values: unknown[]
     ): Promise<T>;
-
     public execute<T = unknown>(
         datexScriptOrTemplateStrings: string | TemplateStringsArray,
         ...values: unknown[]
@@ -194,7 +232,6 @@ export class Runtime {
         templateStrings: TemplateStringsArray,
         ...values: unknown[]
     ): T;
-
     public executeSync<T = unknown>(
         datexScriptOrTemplateStrings: string | TemplateStringsArray,
         ...values: unknown[]
@@ -224,6 +261,12 @@ export class Runtime {
         return result;
     }
 
+    /**
+     * Converts a JavaScript value to a string representation.
+     * @param value The value to convert.
+     * @param decompileOptions Options for decompiling the result.
+     * @returns The string representation of the value.
+     */
     public valueToString(
         value: unknown,
         decompileOptions: DecompileOptions | null = null,
@@ -265,6 +308,10 @@ export class Runtime {
      * Creates a new pointer containg the given JS value.
      * The returned value is a proxy object that behaves like the original object,
      * but also propagates changes between JS and the DATEX runtime.
+     * @param value The JS value to store in the pointer.
+     * @param allowedType Optional DIF type container to restrict the type of the pointer.
+     * @param mutability Optional mutability of the reference (default is Mutable).
+     * @returns A proxy object representing the pointer in JS.
      */
     public createPointer<
         V,
@@ -298,11 +345,11 @@ type ContainsRef<T> = IsRef<T> extends true ? true
         : false
     : false;
 
+/** A type representing an assignable reference or a plain value **/
 export type AssignableRef<T> = Ref<T> | T & { value?: T };
 
 type Builtins =
-    // deno-lint-ignore ban-types
-    | Function
+    | ((...args: unknown[]) => unknown)
     | Date
     | RegExp
     | Map<unknown, unknown>

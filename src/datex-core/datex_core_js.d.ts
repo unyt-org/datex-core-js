@@ -6,22 +6,13 @@
  * Executes a Datex script and returns the result as a string.
  */
 export function execute(datex_script: string, formatted: boolean): string;
-export function create_runtime(config: string, debug_flags: any): JSRuntime;
 /**
  * Executes a Datex script and returns true when execution was successful.
  * Does not return the result of the script, but only indicates success or failure.
  */
 export function execute_internal(datex_script: string): boolean;
-export interface SerialInterfaceSetupData {
-    port_name: string | null;
-    baud_rate: number;
-}
-
-export interface RTCIceServer {
-    urls: string[];
-    username: string | null;
-    credential: string | null;
-}
+export function create_runtime(config: string, debug_flags: any): JSRuntime;
+export type InterfaceDirection = "In" | "Out" | "InOut";
 
 export interface InterfaceProperties {
     /**
@@ -85,8 +76,6 @@ export interface InterfaceProperties {
     reconnect_attempts: number | null;
 }
 
-export type InterfaceDirection = "In" | "Out" | "InOut";
-
 export type ReconnectionConfig = "NoReconnect" | "InstantReconnect" | {
     ReconnectWithTimeout: { timeout: { secs: number; nanos: number } };
 } | {
@@ -110,6 +99,17 @@ export interface WebSocketClientInterfaceSetupData {
 
 export type BaseInterfaceSetupData = InterfaceProperties;
 
+export interface SerialInterfaceSetupData {
+    port_name: string | null;
+    baud_rate: number;
+}
+
+export interface RTCIceServer {
+    urls: string[];
+    username: string | null;
+    credential: string | null;
+}
+
 export interface WebRTCInterfaceSetupData {
     peer_endpoint: string;
     ice_servers: RTCIceServer[] | null;
@@ -122,10 +122,6 @@ export class BaseJSInterface {
 export class JSComHub {
     private constructor();
     free(): void;
-    websocket_server_interface_add_socket(
-        interface_uuid: string,
-        websocket: WebSocket,
-    ): string;
     /**
      * Send a block to the given interface and socket
      * This does not involve the routing on the ComHub level.
@@ -142,6 +138,8 @@ export class JSComHub {
     get_trace_string(endpoint: string): Promise<string | undefined>;
     get_metadata_string(): string;
     _drain_incoming_blocks(): Uint8Array[];
+    register_incoming_block_interceptor(callback: Function): void;
+    register_outgoing_block_interceptor(callback: Function): void;
     register_default_interface_factories(): void;
     update(): Promise<void>;
     base_interface_on_send(uuid: string, func: Function): void;
@@ -175,6 +173,10 @@ export class JSComHub {
         interface_uuid: string,
         on_ice_candidate: Function,
     ): void;
+    websocket_server_interface_add_socket(
+        interface_uuid: string,
+        websocket: WebSocket,
+    ): string;
 }
 export class JSPointer {
     private constructor();

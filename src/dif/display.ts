@@ -1,3 +1,8 @@
+/**
+ * @module
+ * @description
+ * This module contains helper functions to convert DIF structures to display strings.
+ */
 import {
     type DIFReference,
     DIFReferenceMutability,
@@ -7,6 +12,9 @@ import {
 } from "./definitions.ts";
 import { CoreTypeAddress } from "./core.ts";
 
+/**
+ * Converts a DIF reference mutability to a display string.
+ */
 export function mutabilityToDisplayString(mut: DIFReferenceMutability): string {
     if (mut === DIFReferenceMutability.Mutable) {
         return "&mut ";
@@ -16,6 +24,9 @@ export function mutabilityToDisplayString(mut: DIFReferenceMutability): string {
     throw new Error("Unknown mutability: " + mut);
 }
 
+/**
+ * Converts a DIF reference to a display string.
+ */
 export function difReferenceToDisplayString(
     reference: DIFReference,
 ): string {
@@ -25,6 +36,9 @@ export function difReferenceToDisplayString(
     return `${mutString}${valueString} (allowed: ${typeString})`;
 }
 
+/**
+ * Converts a DIF value container to a display string.
+ */
 export function difValueContainerToDisplayString(
     container: DIFValueContainer,
 ): string {
@@ -45,6 +59,9 @@ export function difValueContainerToDisplayString(
     }
 }
 
+/**
+ * Converts a DIF representation value to a display string.
+ */
 export function difRepresentationValueToDisplayString(
     difRepValue: DIFRepresentationValue,
 ): string {
@@ -74,6 +91,9 @@ export function difRepresentationValueToDisplayString(
     }
 }
 
+/**
+ * Converts a DIF type container to a display string.
+ */
 export function difTypeContainerToDisplayString(
     difType: DIFTypeContainer,
 ): string {
@@ -86,6 +106,9 @@ export function difTypeContainerToDisplayString(
     }
 }
 
+/**
+ * Converts a core type address to a display string.
+ */
 export function addressToDisplayString(address: string): string {
     const found = Object.entries(CoreTypeAddress).find(([_, addr]) => {
         return addr === address;
