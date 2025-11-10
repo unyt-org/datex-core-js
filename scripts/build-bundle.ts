@@ -8,6 +8,8 @@ const command = new Deno.Command(Deno.execPath(), {
     args: [
         "bundle",
         "--minify",
+        "--import-map",
+        "./import-map.bundle.json",
         "--platform",
         "browser",
         // TODO: enable sourcemaps when deno supports them
