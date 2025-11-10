@@ -1,3 +1,4 @@
+// deno-lint-ignore-file
 import { Runtime } from "../src/mod.ts";
 import { parseStructure } from "https://cdn.jsdelivr.net/npm/@unyt/speck@0.0.10/esm/parser.js";
 import { SerialInterfaceImpl } from "../src/network/interface-impls/serial.ts";
