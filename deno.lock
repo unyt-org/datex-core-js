@@ -304,6 +304,7 @@
   },
   "remote": {
     "https://cdn.jsdelivr.net/npm/@unyt/speck@0.0.10/+esm": "9f461402ad40a66fcb8dcc157ee435525280e1e841ed09b2935fe4eedc6803e4",
+    "https://cdn.jsdelivr.net/npm/@unyt/speck@0.0.10/esm/parser.js": "e51bfefea467583c21d9d25211b8e831ac21a186d2723bebb12999780735c29a",
     "https://cdn.jsdelivr.net/npm/ansi-regex@6.0.1/+esm": "a1a796207823eaf5217e176362c0dcff2cf9211426752b2f8412c2eed0c1a5b5",
     "https://cdn.jsdelivr.net/npm/ansi-regex@6.2.2/+esm": "48a4ebacc4eb7659f48f6dab08812a59392b88db857f14181d35ae7ee5bcda0c",
     "https://cdn.jsdelivr.net/npm/ansi-styles@6.2.3/+esm": "8c059ae6e522552119a41efee695550bb2d9a384f820311f7db58ea8a7960e0d",
