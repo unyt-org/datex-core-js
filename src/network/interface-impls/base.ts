@@ -7,13 +7,13 @@ import type {
 
 export type {
     /**
+     * Setup data for the base communication interface.
+     */
+    BaseInterfaceSetupData,
+    /**
      * Direction of the communication interface (In/Out/InOut).
      */
     InterfaceDirection,
-    /**
-     * Setup data for the base communication interface.
-     */
-    BaseInterfaceSetupData
 };
 
 /**

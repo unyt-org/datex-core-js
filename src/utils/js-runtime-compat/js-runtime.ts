@@ -33,14 +33,16 @@ export function detectRuntime(): JSRuntimeType {
 
 async function getRuntimeInterface(type: JSRuntimeType) {
     if (type == "deno") {
-        const { default: Interface } = (await import("./runtimes/deno.ts")) as { default: new () => JsRuntimeInterface };
+        const { default: Interface } = (await import("./runtimes/deno.ts")) as {
+            default: new () => JsRuntimeInterface;
+        };
         return new Interface();
-    }
-    else if (type == "node" || type == "bun") {
-        const { default: Interface } = (await import("./runtimes/node.ts")) as { default: new () => JsRuntimeInterface };
+    } else if (type == "node" || type == "bun") {
+        const { default: Interface } = (await import("./runtimes/node.ts")) as {
+            default: new () => JsRuntimeInterface;
+        };
         return new Interface();
-    }
-    else {
+    } else {
         return new BrowserRuntimeInterface();
     }
 }

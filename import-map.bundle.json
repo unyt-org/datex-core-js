@@ -1,5 +1,5 @@
 {
-  "imports": {
-    "./src/utils/js-runtime-compat/js-runtime.ts": "./src/utils/js-runtime-compat/js-runtime-browser.ts"
-  }
+    "imports": {
+        "./src/utils/js-runtime-compat/js-runtime.ts": "./src/utils/js-runtime-compat/js-runtime-browser.ts"
+    }
 }

@@ -1,5 +1,8 @@
 import * as imports from "./datex_core_js.internal.js";
-import { runtimeInterface, detectRuntime } from "../utils/js-runtime-compat/js-runtime.js";
+import {
+    detectRuntime,
+    runtimeInterface,
+} from "../utils/js-runtime-compat/js-runtime.js";
 
 let wasmUrl;
 const isVite = !!import.meta.env?.MODE;
