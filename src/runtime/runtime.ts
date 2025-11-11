@@ -12,7 +12,7 @@ import type {
 import type { Ref } from "../refs/ref.ts";
 
 /** auto-generated version - do not edit: */
-const VERSION: string = "0.0.10";
+const VERSION: string = "0.0.11";
 
 /** debug flags for the runtime */
 interface DebugFlags {
