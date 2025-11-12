@@ -3,7 +3,9 @@ use crate::js_utils::{js_array, js_error};
 use crate::network::com_hub::JSComHub;
 use crate::utils::time::TimeJS;
 use datex_core::crypto::crypto::CryptoTrait;
-use datex_core::decompiler::{DecompileOptions, decompile_value, FormattingMode};
+use datex_core::decompiler::{
+    DecompileOptions, FormattingMode, decompile_value,
+};
 use datex_core::dif::interface::{
     DIFApplyError, DIFCreatePointerError, DIFInterface, DIFObserveError,
     DIFResolveReferenceError, DIFUpdateError,
@@ -18,6 +20,7 @@ use datex_core::global::protocol_structures::block_header::{
 };
 use datex_core::references::observers::{ObserveOptions, TransceiverId};
 use datex_core::references::reference::ReferenceMutability;
+use datex_core::runtime::AsyncContext;
 #[cfg(feature = "debug")]
 use datex_core::runtime::global_context::DebugFlags;
 use datex_core::runtime::global_context::GlobalContext;
@@ -26,19 +29,21 @@ use datex_core::serde::deserializer::DatexDeserializer;
 use datex_core::values::core_values::endpoint::Endpoint;
 use datex_core::values::pointer::PointerAddress;
 use datex_core::values::value_container::ValueContainer;
-use futures::FutureExt;
+use futures::{AsyncRead, AsyncWrite, FutureExt, StreamExt};
+use futures_channel::mpsc;
 use js_sys::Function;
 use log::info;
 use serde::{Deserialize, Serialize};
 use serde_wasm_bindgen::{Error, from_value};
 use std::fmt::Display;
+use std::pin::Pin;
 use std::rc::Rc;
 use std::str::FromStr;
 use std::sync::Arc;
+use std::task::{Context, Poll};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::future_to_promise;
 use web_sys::js_sys::Promise;
-use datex_core::runtime::AsyncContext;
 
 #[wasm_bindgen(getter_with_clone)]
 pub struct JSRuntime {
@@ -108,7 +113,7 @@ impl JSRuntime {
                 #[cfg(feature = "debug")]
                 debug_flags: debug_flags.unwrap_or_default().into(),
             },
-            AsyncContext::new()
+            AsyncContext::new(),
         );
         // runtime.memory.borrow_mut().store_pointer(
         //     [
@@ -128,6 +133,77 @@ impl JSRuntime {
     }
 }
 
+struct Writer {
+    tx: mpsc::UnboundedSender<Vec<u8>>,
+}
+
+impl AsyncWrite for Writer {
+    fn poll_write(
+        mut self: Pin<&mut Self>,
+        _cx: &mut Context<'_>,
+        buf: &[u8],
+    ) -> Poll<Result<usize, std::io::Error>> {
+        let _ = self.tx.unbounded_send(buf.to_vec());
+        Poll::Ready(Ok(buf.len()))
+    }
+
+    fn poll_flush(
+        self: Pin<&mut Self>,
+        _cx: &mut Context<'_>,
+    ) -> Poll<Result<(), std::io::Error>> {
+        Poll::Ready(Ok(()))
+    }
+
+    fn poll_close(
+        self: Pin<&mut Self>,
+        _cx: &mut Context<'_>,
+    ) -> Poll<Result<(), std::io::Error>> {
+        Poll::Ready(Ok(()))
+    }
+}
+
+// ---------------------------
+// 3️⃣ Implement AsyncRead for incoming messages (JS → LSP)
+// ---------------------------
+struct Reader {
+    rx: mpsc::UnboundedReceiver<Vec<u8>>,
+    buffer: Vec<u8>,
+    pos: usize,
+}
+
+impl Reader {
+    fn new(rx: mpsc::UnboundedReceiver<Vec<u8>>) -> Self {
+        Self {
+            rx,
+            buffer: Vec::new(),
+            pos: 0,
+        }
+    }
+}
+
+impl AsyncRead for Reader {
+    fn poll_read(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &mut [u8],
+    ) -> Poll<Result<usize, std::io::Error>> {
+        if self.pos >= self.buffer.len() {
+            match Pin::new(&mut self.rx).poll_next_unpin(cx) {
+                Poll::Ready(Some(vec)) => {
+                    self.buffer = vec;
+                    self.pos = 0;
+                }
+                Poll::Ready(None) => return Poll::Ready(Ok(0)),
+                Poll::Pending => return Poll::Pending,
+            }
+        }
+
+        let n = std::cmp::min(buf.len(), self.buffer.len() - self.pos);
+        buf[..n].copy_from_slice(&self.buffer[self.pos..self.pos + n]);
+        self.pos += n;
+        Poll::Ready(Ok(n))
+    }
+}
 /**
  * Exposed properties and methods for JavaScript
  */
@@ -427,6 +503,41 @@ impl JSRuntime {
         RuntimeDIFHandle {
             internal: self.runtime.internal.clone(),
         }
+    }
+
+    #[cfg(feature = "lsp")]
+    pub fn start_lsp(&self, send_to_js: js_sys::Function) -> js_sys::Function {
+        use datex_core::task::spawn_local;
+        use futures_channel::mpsc;
+        use js_sys::Uint8Array;
+
+        let (tx_to_lsp, rx_from_js) = mpsc::unbounded::<Vec<u8>>(); // JS → LSP
+        let (tx_to_js, mut rx_from_lsp) = mpsc::unbounded::<Vec<u8>>(); // LSP → JS
+
+        let reader = Reader::new(rx_from_js);
+        let writer = Writer { tx: tx_to_js };
+
+        let runtime = self.runtime.clone();
+        info!("Starting LSP...");
+        spawn_local(async move {
+            use datex_core::lsp::create_lsp;
+            create_lsp(runtime, reader, writer).await;
+        });
+
+        spawn_local(async move {
+            while let Some(bytes) = rx_from_lsp.next().await {
+                let js_array = Uint8Array::from(bytes.as_slice());
+                let _ = send_to_js.call1(&JsValue::NULL, &js_array);
+            }
+        });
+
+        let send_to_rust_closure =
+            Closure::wrap(Box::new(move |data: Uint8Array| {
+                let vec = data.to_vec();
+                let _ = tx_to_lsp.unbounded_send(vec);
+            }) as Box<dyn FnMut(Uint8Array)>);
+
+        send_to_rust_closure.into_js_value().unchecked_into()
     }
 }
 

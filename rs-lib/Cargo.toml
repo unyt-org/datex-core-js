@@ -29,11 +29,12 @@ datex-core = { version = "0.0.7", git = "https://github.com/unyt-org/datex-core"
     "com_webrtc",
     "com_serial",
     "syntax_highlighting_legacy",
+    "lsp_wasm",
 ] }
 datex_macros = { version = "0.1.1", package = "datex_macros" }
 
 async-trait = "0.1.87"
-url = "2.5.4"
+url = { version = "2.5.7" }
 wasm-bindgen = { version = "=0.2.102", features = [] }
 # FIXME make serde-wasm-bindgen optional
 serde-wasm-bindgen = "0.6"
@@ -108,9 +109,12 @@ default = [
     "wasm_websocket_server",
     "wasm_serial",
     "wasm_webrtc",
+    "lsp",                   # Make optional
 ]
 debug = ["datex-core/debug", "datex-core/wasm_runtime"]
+lsp = ["datex-core/lsp_wasm"]
+
 wasm_websocket_server = [] # only required for a backend js runtime
 wasm_websocket_client = [] # full support
-wasm_serial = [] # only required for frontend js runtime
-wasm_webrtc = ["uuid"] # only required for frontend js runtime
+wasm_serial = []           # only required for frontend js runtime
+wasm_webrtc = ["uuid"]     # only required for frontend js runtime
