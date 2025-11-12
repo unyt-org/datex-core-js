@@ -1,5 +1,5 @@
 import { build, emptyDir } from "@deno/dnt";
-import { walk } from "jsr:@std/fs@^1.0.10/walk";
+import { walk } from "@std/fs/walk";
 
 await emptyDir("./npm");
 
