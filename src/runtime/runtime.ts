@@ -329,6 +329,21 @@ export class Runtime {
             mutability,
         ) as PointerOut<V, M>;
     }
+
+    public startLSP(
+        callback: (data: string) => void,
+    ): (data: string) => void {
+        const decoder = new TextDecoder("utf-8");
+        const encoder = new TextEncoder();
+        const sendToRust = this.#runtime.start_lsp(
+            (bytes: Uint8Array) => {
+                callback(decoder.decode(bytes));
+            },
+        );
+        return (data: string) => {
+            sendToRust(encoder.encode(data));
+        };
+    }
 }
 
 type WidenLiteral<T> = T extends string ? string
