@@ -2,7 +2,6 @@
 // deno-lint-ignore-file
 // deno-fmt-ignore-file
 
-export function start_lsp(): void;
 export function create_runtime(config: string, debug_flags: any): JSRuntime;
 /**
  * Executes a Datex script and returns true when execution was successful.
@@ -186,63 +185,66 @@ export class JSPointer {
 export class JSRuntime {
     private constructor();
     free(): void;
-    start_lsp(send_to_js: Function): Function;
-    execute_sync(script: string, dif_values?: any[] | null): any;
-    crypto_test_tmp(): Promise<Promise<any>>;
-    execute(script: string, dif_values?: any[] | null): Promise<any>;
     value_to_string(dif_value: any, decompile_options: any): string;
-    start(): Promise<void>;
-    /**
-     * Get a handle to the DIF interface of the runtime
-     */
-    dif(): RuntimeDIFHandle;
+    crypto_test_tmp(): Promise<Promise<any>>;
     execute_sync_with_string_result(
         script: string,
         dif_values: any[] | null | undefined,
         decompile_options: any,
     ): string;
-    _create_block(
-        body: Uint8Array | null | undefined,
-        receivers: string[],
-    ): Uint8Array;
+    execute(script: string, dif_values?: any[] | null): Promise<any>;
+    _stop(): Promise<void>;
+    execute_sync(script: string, dif_values?: any[] | null): any;
     execute_with_string_result(
         script: string,
         dif_values: any[] | null | undefined,
         decompile_options: any,
     ): Promise<string>;
-    _stop(): Promise<void>;
+    start(): Promise<void>;
+    /**
+     * Get a handle to the DIF interface of the runtime
+     */
+    dif(): RuntimeDIFHandle;
+    _create_block(
+        body: Uint8Array | null | undefined,
+        receivers: string[],
+    ): Uint8Array;
+    /**
+     * Start the LSP server, returning a JS function to send messages to Rust
+     */
+    start_lsp(send_to_js: Function): Function;
     com_hub: JSComHub;
-    readonly version: string;
     readonly endpoint: string;
+    readonly version: string;
 }
 export class RuntimeDIFHandle {
     private constructor();
     free(): void;
     /**
-     * Resolve a pointer address, returning a Promise
-     * If the pointer is in memory, the promise resolves immediately
-     * If the pointer is not in memory, it will be loaded first
+     * Resolve a pointer address synchronously if it's in memory, otherwise return an error
      */
-    resolve_pointer_address(address: string): any;
-    apply(callee: any, value: any): any;
-    create_pointer(value: any, allowed_type: any, mutability: number): string;
-    update(transceiver_id: number, address: string, update: any): void;
-    update_observer_options(
-        address: string,
-        observer_id: number,
-        observe_options: any,
-    ): void;
+    resolve_pointer_address_sync(address: string): any;
     observe_pointer(
         transceiver_id: number,
         address: string,
         observe_options: any,
         callback: Function,
     ): number;
-    /**
-     * Resolve a pointer address synchronously if it's in memory, otherwise return an error
-     */
-    resolve_pointer_address_sync(address: string): any;
     unobserve_pointer(address: string, observer_id: number): void;
+    apply(callee: any, value: any): any;
+    create_pointer(value: any, allowed_type: any, mutability: number): string;
+    update_observer_options(
+        address: string,
+        observer_id: number,
+        observe_options: any,
+    ): void;
+    update(transceiver_id: number, address: string, update: any): void;
+    /**
+     * Resolve a pointer address, returning a Promise
+     * If the pointer is in memory, the promise resolves immediately
+     * If the pointer is not in memory, it will be loaded first
+     */
+    resolve_pointer_address(address: string): any;
 }
 export class WebSocketServerRegistry {
     private constructor();
