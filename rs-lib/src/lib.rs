@@ -25,6 +25,9 @@ pub mod js_utils;
 pub mod pointer;
 pub mod utils;
 
+#[cfg(feature = "lsp")]
+pub mod lsp;
+
 #[wasm_bindgen]
 extern "C" {
     #[wasm_bindgen(js_namespace = console, final)]

@@ -3,7 +3,9 @@ use crate::js_utils::{js_array, js_error};
 use crate::network::com_hub::JSComHub;
 use crate::utils::time::TimeJS;
 use datex_core::crypto::crypto::CryptoTrait;
-use datex_core::decompiler::{DecompileOptions, decompile_value, FormattingMode};
+use datex_core::decompiler::{
+    DecompileOptions, FormattingMode, decompile_value,
+};
 use datex_core::dif::interface::{
     DIFApplyError, DIFCreatePointerError, DIFInterface, DIFObserveError,
     DIFResolveReferenceError, DIFUpdateError,
@@ -18,6 +20,7 @@ use datex_core::global::protocol_structures::block_header::{
 };
 use datex_core::references::observers::{ObserveOptions, TransceiverId};
 use datex_core::references::reference::ReferenceMutability;
+use datex_core::runtime::AsyncContext;
 #[cfg(feature = "debug")]
 use datex_core::runtime::global_context::DebugFlags;
 use datex_core::runtime::global_context::GlobalContext;
@@ -26,9 +29,8 @@ use datex_core::serde::deserializer::DatexDeserializer;
 use datex_core::values::core_values::endpoint::Endpoint;
 use datex_core::values::pointer::PointerAddress;
 use datex_core::values::value_container::ValueContainer;
-use futures::FutureExt;
+
 use js_sys::Function;
-use log::info;
 use serde::{Deserialize, Serialize};
 use serde_wasm_bindgen::{Error, from_value};
 use std::fmt::Display;
@@ -38,7 +40,6 @@ use std::sync::Arc;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::future_to_promise;
 use web_sys::js_sys::Promise;
-use datex_core::runtime::AsyncContext;
 
 #[wasm_bindgen(getter_with_clone)]
 pub struct JSRuntime {
@@ -108,7 +109,7 @@ impl JSRuntime {
                 #[cfg(feature = "debug")]
                 debug_flags: debug_flags.unwrap_or_default().into(),
             },
-            AsyncContext::new()
+            AsyncContext::new(),
         );
         // runtime.memory.borrow_mut().store_pointer(
         //     [
@@ -149,12 +150,12 @@ impl JSRuntime {
 
             // Signature
             let sig = crypto
-                .sig_ed25519(&sig_pri, &ser_pub.to_vec())
+                .sig_ed25519(&sig_pri, ser_pub.as_ref())
                 .await
                 .unwrap();
 
             let ver = crypto
-                .ver_ed25519(&sig_pub, &sig, &ser_pub.to_vec())
+                .ver_ed25519(&sig_pub, &sig, ser_pub.as_ref())
                 .await
                 .unwrap();
 
@@ -427,6 +428,13 @@ impl JSRuntime {
         RuntimeDIFHandle {
             internal: self.runtime.internal.clone(),
         }
+    }
+
+    /// Start the LSP server, returning a JS function to send messages to Rust
+    #[cfg(feature = "lsp")]
+    pub fn start_lsp(&self, send_to_js: js_sys::Function) -> js_sys::Function {
+        use crate::lsp::start_lsp;
+        start_lsp(self.runtime.clone(), send_to_js)
     }
 }
 
