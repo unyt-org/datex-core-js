@@ -29,10 +29,9 @@ use datex_core::serde::deserializer::DatexDeserializer;
 use datex_core::values::core_values::endpoint::Endpoint;
 use datex_core::values::pointer::PointerAddress;
 use datex_core::values::value_container::ValueContainer;
-use futures::{AsyncRead, AsyncWrite, FutureExt, StreamExt};
+use futures::{AsyncRead, AsyncWrite, StreamExt};
 use futures_channel::mpsc;
 use js_sys::Function;
-use log::info;
 use serde::{Deserialize, Serialize};
 use serde_wasm_bindgen::{Error, from_value};
 use std::fmt::Display;
@@ -518,7 +517,6 @@ impl JSRuntime {
         let writer = Writer { tx: tx_to_js };
 
         let runtime = self.runtime.clone();
-        info!("Starting LSP...");
         spawn_local(async move {
             use datex_core::lsp::create_lsp;
             create_lsp(runtime, reader, writer).await;
