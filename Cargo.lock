@@ -339,6 +339,7 @@ dependencies = [
 [[package]]
 name = "datex-core"
 version = "0.0.7"
+source = "git+https://github.com/unyt-org/datex-core?branch=feat%2Flsp#c560f3172113a16fcefb25e206a929d7ce0f9be4"
 dependencies = [
  "ariadne",
  "async-trait",
@@ -349,7 +350,7 @@ dependencies = [
  "chumsky",
  "console_error_panic_hook",
  "console_log",
- "datex_macros 0.1.1",
+ "datex_macros 0.1.1 (git+https://github.com/unyt-org/datex-core?branch=feat%2Flsp)",
  "futures",
  "futures-core",
  "futures-util",
@@ -413,6 +414,8 @@ dependencies = [
 [[package]]
 name = "datex_macros"
 version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b1922189d0e176d0b815a911357b3c20fc878512496928dc13b72c281aa6ecee"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -422,8 +425,7 @@ dependencies = [
 [[package]]
 name = "datex_macros"
 version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b1922189d0e176d0b815a911357b3c20fc878512496928dc13b72c281aa6ecee"
+source = "git+https://github.com/unyt-org/datex-core?branch=feat%2Flsp#c560f3172113a16fcefb25e206a929d7ce0f9be4"
 dependencies = [
  "proc-macro2",
  "quote",
