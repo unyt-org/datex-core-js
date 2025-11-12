@@ -150,12 +150,12 @@ impl JSRuntime {
 
             // Signature
             let sig = crypto
-                .sig_ed25519(&sig_pri, &ser_pub.to_vec())
+                .sig_ed25519(&sig_pri, ser_pub.as_ref())
                 .await
                 .unwrap();
 
             let ver = crypto
-                .ver_ed25519(&sig_pub, &sig, &ser_pub.to_vec())
+                .ver_ed25519(&sig_pub, &sig, ser_pub.as_ref())
                 .await
                 .unwrap();
 
