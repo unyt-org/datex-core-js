@@ -4,8 +4,8 @@ use datex_core::crypto::crypto::{CryptoError, CryptoTrait};
 use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{
-    AesCtrParams, AesGcmParams, CryptoKey, CryptoKeyPair,
-    js_sys::{Array, ArrayBuffer, Object, Reflect, Uint8Array},
+    AesCtrParams, CryptoKey, CryptoKeyPair,
+    js_sys::{Array, ArrayBuffer, Object, Uint8Array},
 };
 
 use crate::js_utils::{AsByteSlice, TryAsByteSlice, js_array, js_object};
@@ -148,7 +148,7 @@ impl CryptoTrait for CryptoJS {
     ) -> Pin<Box<dyn Future<Output = Result<[u8; 64], CryptoError>> + 'a>> {
         Box::pin(async move {
             let key = Self::import_crypto_key(
-                &pri_key,
+                pri_key,
                 "pkcs8",
                 &js_object(vec![("name", JsValue::from_str("Ed25519"))]),
                 &["sign"],
@@ -159,7 +159,7 @@ impl CryptoTrait for CryptoJS {
                 .sign_with_object_and_u8_array(
                     &js_object(vec![("name", JsValue::from_str("Ed25519"))]),
                     &key,
-                    &data,
+                    data,
                 )
                 .map_err(|_| CryptoError::SigningError)?;
 
@@ -188,7 +188,7 @@ impl CryptoTrait for CryptoJS {
     ) -> Pin<Box<dyn Future<Output = Result<bool, CryptoError>> + 'a>> {
         Box::pin(async move {
             let key = Self::import_crypto_key(
-                &pub_key,
+                pub_key,
                 "spki",
                 &js_object(vec![("name", JsValue::from_str("Ed25519"))]),
                 &["verify"],
@@ -199,8 +199,8 @@ impl CryptoTrait for CryptoJS {
                 .verify_with_object_and_u8_array_and_u8_array(
                     &js_object(vec![("name", JsValue::from_str("Ed25519"))]),
                     &key,
-                    &sig,
-                    &data,
+                    sig,
+                    data,
                 )
                 .map_err(|_| CryptoError::VerificationError)?;
 
@@ -249,7 +249,7 @@ impl CryptoTrait for CryptoJS {
                 .map_err(|_| CryptoError::KeyImportFailed)?;
 
             let params = AesCtrParams::new(
-                &"AES-CTR",
+                "AES-CTR",
                 &Uint8Array::from(iv.as_slice()),
                 64u8,
             );
@@ -310,7 +310,7 @@ impl CryptoTrait for CryptoJS {
                 .map_err(|_| CryptoError::KeyImportFailed)?;
 
             let params = AesCtrParams::new(
-                &"AES-CTR",
+                "AES-CTR",
                 &Uint8Array::from(iv.as_slice()),
                 64u8,
             );
