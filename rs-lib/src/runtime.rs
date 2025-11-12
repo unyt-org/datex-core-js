@@ -161,9 +161,6 @@ impl AsyncWrite for Writer {
     }
 }
 
-// ---------------------------
-// 3️⃣ Implement AsyncRead for incoming messages (JS → LSP)
-// ---------------------------
 struct Reader {
     rx: mpsc::UnboundedReceiver<Vec<u8>>,
     buffer: Vec<u8>,
