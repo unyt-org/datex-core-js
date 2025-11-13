@@ -517,6 +517,21 @@ export class DIFHandler {
     }
 
     /**
+     * Resolves a DIFProperty to its corresponding JS value.
+     */
+    public resolveDIFPropertySync<T extends unknown>(
+        property: DIFProperty,
+    ): T {
+        if (property.kind === "text") {
+            return property.value as T;
+        } else if (property.kind === "index") {
+            return property.value as T;
+        } else {
+            return this.resolveDIFValueContainerSync(property.value);
+        }
+    }
+
+    /**
      * Resolves a pointer address to its corresponding JS value.
      * If the pointer address is not yet loaded in memory, it returns a Promise that resolves to the value.
      * Otherwise, it returns the resolved value directly.
@@ -604,32 +619,50 @@ export class DIFHandler {
      * adding a proxy wrapper if necessary, and setting up observation and caching on the JS side.
      */
     protected initPointer<T>(
-        ptrAddress: string,
+        pointerAddress: string,
         value: T,
         mutability: DIFReferenceMutability,
         allowedType: DIFTypeContainer | null = null,
     ): T | Ref<T> {
-        let refValue = this.wrapJSValue(
+        let wrappedValue = this.wrapJSValue(
             value,
-            ptrAddress,
+            pointerAddress,
             allowedType,
         );
 
+        let typeBinding: TypeBinding<unknown> | null = null;
+
+        // bind js value (if mutable, nominal type)
         const bindJSValue = mutability !== DIFReferenceMutability.Immutable &&
             typeof allowedType == "string";
+        if (bindJSValue && !(wrappedValue instanceof Ref)) {
+            typeBinding = this.type_registry.getTypeBinding(allowedType);
+            if (typeBinding) {
+                wrappedValue = (typeBinding as TypeBinding<T & WeakKey>)
+                    .bindValue(
+                        wrappedValue,
+                        pointerAddress,
+                    );
+            }
+        }
 
         // if not immutable, observe to keep the pointer 'live' and receive updates
         let observerId: number | null = null;
         if (mutability !== DIFReferenceMutability.Immutable) {
             observerId = this.observePointerBindDirect(
-                ptrAddress,
+                pointerAddress,
                 (update) => {
                     // if source_id is not own transceiver id, handle pointer update
                     if (update.source_id !== this.#transceiver_id) {
-                        this.handlePointerUpdate(ptrAddress, update.data);
+                        this.handlePointerUpdate(
+                            pointerAddress,
+                            wrappedValue,
+                            update.data,
+                            typeBinding,
+                        );
                     }
                     // call all local observers
-                    const observers = this.#observers.get(ptrAddress);
+                    const observers = this.#observers.get(pointerAddress);
                     if (observers) {
                         for (const cb of observers.values()) {
                             try {
@@ -647,41 +680,26 @@ export class DIFHandler {
             );
         }
 
-        // bind js value (if mutable, nominal type)
-        if (bindJSValue) {
-            refValue = this.bindJSValue(
-                refValue,
-                ptrAddress,
-                allowedType,
-            );
-        }
-
-        this.cacheWrappedPointerValue(ptrAddress, refValue, observerId);
-
-        if (bindJSValue) {
-            this.bindJSValueObservers(
-                refValue,
-                ptrAddress,
-                allowedType,
-            );
-        }
+        this.cacheWrappedPointerValue(pointerAddress, wrappedValue, observerId);
 
         // set up observers
-        return refValue as T | Ref<T>;
+        return wrappedValue as T | Ref<T>;
     }
 
     /**
      * Handles a pointer update received from the DATEX core runtime.
      * If the pointer is cached and has a dereferenceable value, it updates the value.
-     * @param address - The address of the pointer being updated.
+     * @param pointerAddress - The address of the pointer being updated.
      * @param update - The DIFUpdateData containing the update information.
      * @returns True if the pointer was found and updated, false otherwise.
      */
-    protected handlePointerUpdate(
-        address: string,
+    protected handlePointerUpdate<T>(
+        pointerAddress: string,
+        value: T,
         update: DIFUpdateData,
+        typeBinding: TypeBinding<T> | null,
     ): boolean {
-        const cached = this.#cache.get(address);
+        const cached = this.#cache.get(pointerAddress);
         if (!cached) return false;
         const deref = cached.val.deref();
         if (!deref) return false;
@@ -691,7 +709,10 @@ export class DIFHandler {
                 update.value,
             ));
         }
-        // TODO: handle generic updates for values (depending on type interface definition)
+        // handle generic updates for values (depending on type interface definition)
+        if (typeBinding) {
+            typeBinding.handleDifUpdate(value, pointerAddress, update);
+        }
 
         return true;
     }
@@ -800,78 +821,8 @@ export class DIFHandler {
         return value;
     }
 
-    /**
-     * Sets up custom JS value binding observers if registered for the type.
-     */
-    protected bindJSValueObservers<T extends WeakKey>(
-        value: T,
-        pointerAddress: string,
-        typePointerId: string,
-    ) {
-        const typeBinding = this.type_registry.getTypeBinding(typePointerId);
-        if (typeBinding) {
-            typeBinding.bindObservers(value, pointerAddress);
-        }
-    }
-
     private isRef(value: unknown): value is Ref<unknown> {
         return value instanceof Ref;
-    }
-
-    private proxifyJSMap<T extends Map<K, V>, K, V>(
-        map: T,
-        pointerAddress: string,
-    ): T {
-        const originalSet = map.set;
-        const originalDelete = map.delete;
-        const originalClear = map.clear;
-        // deno-lint-ignore no-this-alias
-        const self = this;
-        Object.defineProperties(map, {
-            set: {
-                value: function (key: K, value: V) {
-                    self.updatePointer(pointerAddress, {
-                        kind: DIFUpdateKind.Set,
-                        key: {
-                            kind: "value",
-                            value: self.convertJSValueToDIFValue(key),
-                        } as DIFProperty,
-                        value: self.convertJSValueToDIFValue(value),
-                    });
-                    return originalSet.call(this, key, value);
-                },
-                configurable: true,
-                writable: true,
-            },
-            delete: {
-                value: function (key: K) {
-                    self.updatePointer(pointerAddress, {
-                        kind: DIFUpdateKind.Delete,
-                        key: {
-                            kind: "value",
-                            value: self.convertJSValueToDIFValue(key),
-                        } as DIFProperty,
-                    });
-                    const result = originalDelete.call(this, key);
-                    return result;
-                },
-                configurable: true,
-                writable: true,
-            },
-            clear: {
-                value: function () {
-                    self.updatePointer(pointerAddress, {
-                        kind: DIFUpdateKind.Clear,
-                    });
-                    const result = originalClear.call(this);
-                    return result;
-                },
-                configurable: true,
-                writable: true,
-            },
-        });
-
-        return map;
     }
 
     private wrapJSObjectInProxy<T extends object>(
