@@ -1,6 +1,6 @@
 import type { JSRuntime, RuntimeDIFHandle } from "../datex-core.ts";
 import { Ref } from "../refs/ref.ts";
-import { Endpoint } from "../runtime/special-core-types.ts";
+import { Endpoint } from "../lib/special-core-types/endpoint.ts";
 import {
     type DIFArray,
     type DIFContainer,
@@ -20,6 +20,7 @@ import {
 } from "./definitions.ts";
 import { CoreTypeAddress, CoreTypeAddressRanges } from "./core.ts";
 import { difValueContainerToDisplayString } from "./display.ts";
+import { type TypeBinding, TypeRegistry } from "./type-registry.ts";
 
 /**
  * The DIFHandler class provides methods to interact with the DATEX Core DIF runtime,
@@ -47,6 +48,8 @@ export class DIFHandler {
         Map<number, (value: DIFUpdateData) => void>
     >();
 
+    readonly #type_registry = new TypeRegistry(this);
+
     /**
      * Internal property
      * @returns The map of observers for each pointer address.
@@ -69,6 +72,10 @@ export class DIFHandler {
      */
     get _transceiver_id(): number {
         return this.#transceiver_id;
+    }
+
+    get type_registry(): TypeRegistry {
+        return this.#type_registry;
     }
 
     /**
@@ -602,11 +609,14 @@ export class DIFHandler {
         mutability: DIFReferenceMutability,
         allowedType: DIFTypeContainer | null = null,
     ): T | Ref<T> {
-        const refValue = this.wrapJSValueInProxy(
+        let refValue = this.wrapJSValue(
             value,
             ptrAddress,
             allowedType,
         );
+
+        const bindJSValue = mutability !== DIFReferenceMutability.Immutable &&
+            typeof allowedType == "string";
 
         // if not immutable, observe to keep the pointer 'live' and receive updates
         let observerId: number | null = null;
@@ -637,7 +647,26 @@ export class DIFHandler {
             );
         }
 
+        // bind js value (if mutable, nominal type)
+        if (bindJSValue) {
+            refValue = this.bindJSValue(
+                refValue,
+                ptrAddress,
+                allowedType,
+            );
+        }
+
         this.cacheWrappedPointerValue(ptrAddress, refValue, observerId);
+
+        if (bindJSValue) {
+            this.bindJSValueObservers(
+                refValue,
+                ptrAddress,
+                allowedType,
+            );
+        }
+
+        // set up observers
         return refValue as T | Ref<T>;
     }
 
@@ -730,10 +759,13 @@ export class DIFHandler {
                 ptrAddress,
             ) as DIFReference).allowed_type;
         }
-        return this.initPointer(ptrAddress, value, mutability, allowedType); // TODO: map to correct pointer wrapper type
+        return this.initPointer(ptrAddress, value, mutability, allowedType);
     }
 
-    protected wrapJSValueInProxy<T>(
+    /**
+     * Wraps a given JS value in a Ref proxy if necessary.
+     */
+    protected wrapJSValue<T>(
         value: T,
         pointerAddress: string,
         _type: DIFTypeContainer | null = null,
@@ -746,12 +778,39 @@ export class DIFHandler {
             typeof value === "string"
         ) {
             return new Ref(value, pointerAddress, this);
-        } else if (value instanceof Map) {
-            return this.proxifyJSMap(value, pointerAddress);
-        } else if (typeof value === "object") {
-            return this.wrapJSObjectInProxy(value);
         } else {
             return value;
+        }
+    }
+
+    /**
+     * Sets up custom JS value binding if registered for the type.
+     */
+    protected bindJSValue<T extends WeakKey>(
+        value: T,
+        pointerAddress: string,
+        typePointerId: string,
+    ): T {
+        const typeBinding = this.type_registry.getTypeBinding(typePointerId);
+        value = (typeBinding as TypeBinding<T> | null)?.bindValue(
+            value,
+            pointerAddress,
+        ) ||
+            value;
+        return value;
+    }
+
+    /**
+     * Sets up custom JS value binding observers if registered for the type.
+     */
+    protected bindJSValueObservers<T extends WeakKey>(
+        value: T,
+        pointerAddress: string,
+        typePointerId: string,
+    ) {
+        const typeBinding = this.type_registry.getTypeBinding(typePointerId);
+        if (typeBinding) {
+            typeBinding.bindObservers(value, pointerAddress);
         }
     }
 
@@ -787,7 +846,7 @@ export class DIFHandler {
             delete: {
                 value: function (key: K) {
                     self.updatePointer(pointerAddress, {
-                        kind: DIFUpdateKind.Remove,
+                        kind: DIFUpdateKind.Delete,
                         key: {
                             kind: "value",
                             value: self.convertJSValueToDIFValue(key),
@@ -924,5 +983,65 @@ export class DIFHandler {
             };
         }
         throw new Error("Unsupported type for conversion to DIFValue");
+    }
+
+    /** DIF update handler utilities */
+
+    /**
+     * Triggers a 'set' update for the given pointer address, key and value.
+     */
+    public triggerSet<K, V>(
+        pointerAddress: string,
+        key: K,
+        value: V,
+    ) {
+        const difKey = this.convertJSValueToDIFValue(key);
+        const difValue = this.convertJSValueToDIFValue(value);
+        const update: DIFUpdateData = {
+            kind: DIFUpdateKind.Set,
+            key: { kind: "value", value: difKey },
+            value: difValue,
+        };
+        this.updatePointer(pointerAddress, update);
+    }
+
+    /**
+     * Triggers a 'replace' update for the given pointer address and key.
+     */
+    public triggerReplace<V>(
+        pointerAddress: string,
+        value: V,
+    ) {
+        const difValue = this.convertJSValueToDIFValue(value);
+        const update: DIFUpdateData = {
+            kind: DIFUpdateKind.Replace,
+            value: difValue,
+        };
+        this.updatePointer(pointerAddress, update);
+    }
+
+    /**
+     * Triggers a 'delete' update for the given pointer address and key.
+     */
+    public triggerDelete<K>(
+        pointerAddress: string,
+        key: K,
+    ) {
+        const difKey = this.convertJSValueToDIFValue(key);
+        const update: DIFUpdateData = {
+            kind: DIFUpdateKind.Delete,
+            key: { kind: "value", value: difKey },
+        };
+        this.updatePointer(pointerAddress, update);
+    }
+
+    /**
+     * Triggers a 'clear' update for the given pointer address.
+     */
+    public triggerClear(pointerAddress: string) {
+        const update: DIFUpdateData = {
+            kind: DIFUpdateKind.Clear,
+        };
+        this.updatePointer(pointerAddress, update);
     }
 }

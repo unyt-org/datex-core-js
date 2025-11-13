@@ -1,4 +1,3 @@
-import { DIF_Replace } from "../dif/builders.ts";
 import type { DIFHandler } from "../dif/dif-handler.ts";
 
 /**
@@ -49,10 +48,7 @@ export class Ref<T> {
         if (oldValue === newValue) return;
 
         // Try to update the pointer
-        this.#difHandler.updatePointer(
-            this.#pointerAddress,
-            DIF_Replace(this.#difHandler, newValue),
-        );
+        this.#difHandler.triggerReplace(this.#pointerAddress, newValue);
         this.#value = newValue;
     }
 }

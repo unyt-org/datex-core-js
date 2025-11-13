@@ -108,25 +108,45 @@ export type DIFProperty =
  */
 export const DIFUpdateKind = {
     Replace: "replace",
-    Push: "push",
+    Append: "append", // TODO: rename to append in datex-core
     Set: "set",
-    Remove: "remove",
+    Delete: "delete", // TODO: rename to delete in datex-core
     Clear: "clear",
 } as const;
 /** A DIF update kind. */
 export type DIFUpdateKind = typeof DIFUpdateKind[keyof typeof DIFUpdateKind];
 
 /** Different kinds of updates that can be applied to a DIF value. */
-export type DIFUpdateData =
-    | { kind: typeof DIFUpdateKind.Replace; value: DIFValueContainer }
-    | { kind: typeof DIFUpdateKind.Push; value: DIFValueContainer }
-    | { kind: typeof DIFUpdateKind.Remove; key: DIFProperty }
-    | {
-        kind: typeof DIFUpdateKind.Set;
-        key: DIFProperty;
+export type DIFUpdateBaseData<Kind extends DIFUpdateKind> = {
+    kind: Kind;
+};
+export type DIFUpdateDataReplace =
+    & DIFUpdateBaseData<typeof DIFUpdateKind.Replace>
+    & {
         value: DIFValueContainer;
-    }
-    | { kind: typeof DIFUpdateKind.Clear };
+    };
+export type DIFUpdateDataPush =
+    & DIFUpdateBaseData<typeof DIFUpdateKind.Append>
+    & {
+        value: DIFValueContainer;
+    };
+export type DIFUpdateDataDelete =
+    & DIFUpdateBaseData<typeof DIFUpdateKind.Delete>
+    & {
+        key: DIFProperty;
+    };
+export type DIFUpdateDataSet = DIFUpdateBaseData<typeof DIFUpdateKind.Set> & {
+    key: DIFProperty;
+    value: DIFValueContainer;
+};
+export type DIFUpdateDataClear = DIFUpdateBaseData<typeof DIFUpdateKind.Clear>;
+
+export type DIFUpdateData =
+    | DIFUpdateDataReplace
+    | DIFUpdateDataPush
+    | DIFUpdateDataDelete
+    | DIFUpdateDataSet
+    | DIFUpdateDataClear;
 
 /** A DIF update struct, associating a source ID with update data. */
 export type DIFUpdate = {
