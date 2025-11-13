@@ -108,9 +108,9 @@ export type DIFProperty =
  */
 export const DIFUpdateKind = {
     Replace: "replace",
-    Append: "append", // TODO: rename to append in datex-core
+    Append: "push", // TODO: rename to append in datex-core
     Set: "set",
-    Delete: "delete", // TODO: rename to delete in datex-core
+    Delete: "remove", // TODO: rename to delete in datex-core
     Clear: "clear",
 } as const;
 /** A DIF update kind. */

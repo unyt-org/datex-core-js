@@ -1,5 +1,9 @@
-import { DIFTypeContainer, DIFUpdateKind } from "./definitions.ts";
-import { DIFHandler } from "./dif-handler.ts";
+import {
+    type DIFTypeContainer,
+    type DIFUpdateData,
+    DIFUpdateKind,
+} from "./definitions.ts";
+import type { DIFHandler } from "./dif-handler.ts";
 
 // MyCustomMap
 
@@ -128,48 +132,64 @@ export class TypeBinding<T> {
     /**
      * Sets up observers for the given value and pointer address if there are update handlers defined for this type binding.
      */
-    public bindObservers(value: T, pointerAddress: string): void {
+    public handleDifUpdate(
+        value: T,
+        pointerAddress: string,
+        difUpdateData: DIFUpdateData,
+    ): void {
         const updateHandlerTypes = this.getUpdateHandlerTypes();
         // add observer if there are update handlers
         if (updateHandlerTypes.size > 0) {
-            this.#difHandler.observePointer(pointerAddress, (difUpdateData) => {
-                console.log(
-                    "got update for pointer:",
-                    pointerAddress,
-                    difUpdateData,
-                );
-                // call appropriate handler based on update kind
-                if (
-                    difUpdateData.kind === DIFUpdateKind.Set &&
-                    this.#definition.handleSet
-                ) {
-                    this.#definition.handleSet(
-                        value,
+            console.log(
+                "got update for pointer:",
+                pointerAddress,
+                difUpdateData,
+            );
+            // call appropriate handler based on update kind
+            if (
+                difUpdateData.kind === DIFUpdateKind.Set &&
+                this.#definition.handleSet
+            ) {
+                this.#definition.handleSet(
+                    value,
+                    this.#difHandler.resolveDIFPropertySync(
                         difUpdateData.key,
+                    ),
+                    this.#difHandler.resolveDIFValueContainerSync(
                         difUpdateData.value,
-                    );
-                } else if (
-                    difUpdateData.kind === DIFUpdateKind.Append &&
-                    this.#definition.handleAppend
-                ) {
-                    this.#definition.handleAppend(value, difUpdateData.value);
-                } else if (
-                    difUpdateData.kind === DIFUpdateKind.Replace &&
-                    this.#definition.handleReplace
-                ) {
-                    this.#definition.handleReplace(value, difUpdateData.value);
-                } else if (
-                    difUpdateData.kind === DIFUpdateKind.Delete &&
-                    this.#definition.handleDelete
-                ) {
-                    this.#definition.handleDelete(value, difUpdateData.key);
-                } else if (
-                    difUpdateData.kind === DIFUpdateKind.Clear &&
-                    this.#definition.handleClear
-                ) {
-                    this.#definition.handleClear(value);
-                }
-            });
+                    ),
+                );
+            } else if (
+                difUpdateData.kind === DIFUpdateKind.Append &&
+                this.#definition.handleAppend
+            ) {
+                this.#definition.handleAppend(
+                    value,
+                    this.#difHandler.resolveDIFValueContainerSync(
+                        difUpdateData.value,
+                    ),
+                );
+            } else if (
+                difUpdateData.kind === DIFUpdateKind.Replace &&
+                this.#definition.handleReplace
+            ) {
+                this.#definition.handleReplace(
+                    value,
+                    this.#difHandler.resolveDIFValueContainerSync(
+                        difUpdateData.value,
+                    ),
+                );
+            } else if (
+                difUpdateData.kind === DIFUpdateKind.Delete &&
+                this.#definition.handleDelete
+            ) {
+                this.#definition.handleDelete(value, difUpdateData.key);
+            } else if (
+                difUpdateData.kind === DIFUpdateKind.Clear &&
+                this.#definition.handleClear
+            ) {
+                this.#definition.handleClear(value);
+            }
         }
     }
 
