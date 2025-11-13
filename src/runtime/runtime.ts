@@ -322,12 +322,12 @@ export class Runtime {
         value: V & {},
         allowedType?: DIFTypeContainer | null,
         mutability?: M,
-    ): PointerOut<V, M> {
+    ): V { // TODO: PointerOut mapping
         return this.#difHandler.createPointerFromJSValue(
             value,
             allowedType,
             mutability,
-        ) as PointerOut<V, M>;
+        ) as V;
     }
 
     public startLSP(

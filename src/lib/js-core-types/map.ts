@@ -5,7 +5,7 @@ const ORIGINAL_SET = Symbol("originalSet");
 const ORIGINAL_DELETE = Symbol("originalDelete");
 const ORIGINAL_CLEAR = Symbol("originalClear");
 
-type MapWithOriginalMethods<K, V> = Map<K, V> & {
+type MapWithOriginalMethods<K = unknown, V = unknown> = Map<K, V> & {
     [ORIGINAL_SET]: Map<K, V>["set"];
     [ORIGINAL_DELETE]: Map<K, V>["delete"];
     [ORIGINAL_CLEAR]: Map<K, V>["clear"];
@@ -13,15 +13,15 @@ type MapWithOriginalMethods<K, V> = Map<K, V> & {
 
 export const mapTypeBinding: TypeBindingDefinition<Map<unknown, unknown>> = {
     typeAddress: CoreTypeAddress.map,
-    bind(value, pointerAddress, difHandler) {
-        const originalSet = value.set;
-        const originalDelete = value.delete;
-        const originalClear = value.clear;
-        Object.defineProperties(value, {
+    bind(parent, pointerAddress, difHandler) {
+        const originalSet = parent.set;
+        const originalDelete = parent.delete;
+        const originalClear = parent.clear;
+        Object.defineProperties(parent, {
             set: {
                 value: (key: unknown, value: unknown) => {
                     difHandler.triggerSet(pointerAddress, key, value);
-                    return originalSet.call(this, key, value);
+                    return originalSet.call(parent, key, value);
                 },
                 configurable: true,
                 writable: true,
@@ -29,7 +29,7 @@ export const mapTypeBinding: TypeBindingDefinition<Map<unknown, unknown>> = {
             delete: {
                 value: (key: unknown) => {
                     difHandler.triggerDelete(pointerAddress, key);
-                    return originalDelete.call(this, key);
+                    return originalDelete.call(parent, key);
                 },
                 configurable: true,
                 writable: true,
@@ -37,7 +37,7 @@ export const mapTypeBinding: TypeBindingDefinition<Map<unknown, unknown>> = {
             clear: {
                 value: () => {
                     difHandler.triggerClear(pointerAddress);
-                    return originalClear.call(this);
+                    return originalClear.call(parent);
                 },
                 configurable: true,
                 writable: true,
@@ -47,29 +47,21 @@ export const mapTypeBinding: TypeBindingDefinition<Map<unknown, unknown>> = {
             [ORIGINAL_CLEAR]: { value: originalClear },
         });
 
-        return value;
+        return parent;
     },
     handleSet(parent, key: unknown, value: unknown) {
-        console.log("handleSet called with key:", key, "value:", value);
-        const originalSet =
-            (parent as MapWithOriginalMethods<unknown, unknown>)[ORIGINAL_SET];
-        originalSet.call(parent, key, value);
+        const set = (parent as MapWithOriginalMethods)[ORIGINAL_SET];
+        set.call(parent, key, value);
     },
     handleDelete(parent, key: unknown) {
-        const originalDelete =
-            (parent as MapWithOriginalMethods<unknown, unknown>)[
-                ORIGINAL_DELETE
-            ];
-        originalDelete.call(parent, key);
+        const del = (parent as MapWithOriginalMethods)[ORIGINAL_DELETE];
+        del.call(parent, key);
     },
     handleClear(parent) {
-        const originalClear =
-            (parent as MapWithOriginalMethods<unknown, unknown>)[
-                ORIGINAL_CLEAR
-            ];
-        originalClear.call(parent);
+        const clear = (parent as MapWithOriginalMethods)[ORIGINAL_CLEAR];
+        clear.call(parent);
     },
     handleReplace(parent, newValue: unknown) {
-        // TODO
+        // TODO: replace all map entries
     },
 };
