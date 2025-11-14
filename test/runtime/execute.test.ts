@@ -1,6 +1,6 @@
 import { Runtime } from "../../src/runtime/runtime.ts";
 import { assertEquals } from "@std/assert";
-import { Endpoint } from "../../src/runtime/special-core-types.ts";
+import { Endpoint } from "../../src/lib/special-core-types/endpoint.ts";
 import { CoreTypeAddress } from "../../src/dif/core.ts";
 Deno.test("execute sync with string result", () => {
     const runtime = new Runtime({ endpoint: "@jonas" });

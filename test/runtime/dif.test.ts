@@ -276,7 +276,6 @@ Deno.test("pointer map create and cache", () => {
     assertEquals(ptrMap, val);
     ptrMap.set(5, 6);
     ptrMap satisfies Map<number, number>;
-    ptrMap.value satisfies Map<number, number>;
     assertEquals(ptrMap.get(5), 6);
 
     ptrMap.delete(1);
