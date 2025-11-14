@@ -322,12 +322,12 @@ export class Runtime {
         value: V & {},
         allowedType?: DIFTypeContainer | null,
         mutability?: M,
-    ): V { // TODO: PointerOut mapping
+    ): PointerOut<V, M> {
         return this.#difHandler.createPointerFromJSValue(
             value,
             allowedType,
             mutability,
-        ) as V;
+        ) as PointerOut<V, M>;
     }
 
     public startLSP(
@@ -345,6 +345,8 @@ export class Runtime {
         };
     }
 }
+
+type PrimitiveValue = string | number | boolean | bigint | symbol;
 
 type WidenLiteral<T> = T extends string ? string
     : T extends number ? number
@@ -399,19 +401,9 @@ type PointerOut<V, M extends DIFReferenceMutability> = V extends Ref<infer U>
                 : { [K in keyof V]: ObjectFieldOut<V[K], M> }
                 : { readonly [K in keyof V]: ObjectFieldOut<V[K], M> }
         )
-    : V extends Builtins ? Pointer<V>
-    : M extends typeof DIFReferenceMutability.Immutable ? Ref<V>
-    : Ref<WidenLiteral<V>>;
-
-type CollectionProps<T> = {
-    [K in keyof T as K extends "value" ? never : K]: T[K];
-};
-
-interface MapRef<K, V> extends Ref<Map<K, V>>, CollectionProps<Map<K, V>> {}
-interface SetRef<T> extends Ref<Set<T>>, CollectionProps<Set<T>> {}
-interface ArrayRef<T> extends Ref<T[]>, CollectionProps<T[]> {}
-
-type Pointer<T> = T extends Map<infer K, infer V> ? MapRef<K, V>
-    : T extends Set<infer U> ? SetRef<U>
-    : T extends Array<infer U> ? ArrayRef<U>
-    : Ref<T>;
+    : V extends PrimitiveValue
+        ? Ref<
+            M extends typeof DIFReferenceMutability["Immutable"] ? V
+                : WidenLiteral<V>
+        >
+    : V;
