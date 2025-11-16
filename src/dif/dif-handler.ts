@@ -654,12 +654,20 @@ export class DIFHandler {
                 (update) => {
                     // if source_id is not own transceiver id, handle pointer update
                     if (update.source_id !== this.#transceiver_id) {
-                        this.handlePointerUpdate(
-                            pointerAddress,
-                            wrappedValue,
-                            update.data,
-                            typeBinding,
-                        );
+                        try {
+                            this.handlePointerUpdate(
+                                pointerAddress,
+                                wrappedValue,
+                                update.data,
+                                typeBinding,
+                            );
+                        } catch (e) {
+                            console.error(
+                                "Error handling pointer update",
+                                e,
+                            );
+                            throw e;
+                        }
                     }
                     // call all local observers
                     const observers = this.#observers.get(pointerAddress);
@@ -804,23 +812,6 @@ export class DIFHandler {
         }
     }
 
-    /**
-     * Sets up custom JS value binding if registered for the type.
-     */
-    protected bindJSValue<T extends WeakKey>(
-        value: T,
-        pointerAddress: string,
-        typePointerId: string,
-    ): T {
-        const typeBinding = this.type_registry.getTypeBinding(typePointerId);
-        value = (typeBinding as TypeBinding<T> | null)?.bindValue(
-            value,
-            pointerAddress,
-        ) ||
-            value;
-        return value;
-    }
-
     private isRef(value: unknown): value is Ref<unknown> {
         return value instanceof Ref;
     }
@@ -951,6 +942,21 @@ export class DIFHandler {
         const update: DIFUpdateData = {
             kind: DIFUpdateKind.Set,
             key: { kind: "value", value: difKey },
+            value: difValue,
+        };
+        this.updatePointer(pointerAddress, update);
+    }
+
+    /**
+     * Triggers an 'append' update for the given pointer address and value.
+     */
+    public triggerAppend<V>(
+        pointerAddress: string,
+        value: V,
+    ) {
+        const difValue = this.convertJSValueToDIFValue(value);
+        const update: DIFUpdateData = {
+            kind: DIFUpdateKind.Append,
             value: difValue,
         };
         this.updatePointer(pointerAddress, update);

@@ -5,7 +5,7 @@ import {
 } from "./definitions.ts";
 import type { DIFHandler } from "./dif-handler.ts";
 
-// MyCustomMap
+export const ORIGINAL_VALUE = Symbol("ORIGINAL_VALUE");
 
 type ImplMethod = {
     name: string;
@@ -28,14 +28,14 @@ export type TypeDefinition = {
     interfaceImpls: InterfaceImpl[]; // e.g. impl GetProperty for CustomMap
 };
 
-export type TypeBindingDefinition<T> = {
+export type TypeBindingDefinition<T, P = T> = {
     typeAddress: string;
-    bind(value: T, pointerAddress: string, difHandler: DIFHandler): T;
-    handleSet?(parent: T, key: unknown, value: unknown): void;
-    handleAppend?(parent: T, value: unknown): void;
-    handleReplace?(parent: T, newValue: unknown): void;
-    handleDelete?(parent: T, key: unknown): void;
-    handleClear?(parent: T): void;
+    bind(value: T, pointerAddress: string, difHandler: DIFHandler): P;
+    handleSet?(parent: P, key: unknown, value: unknown): void;
+    handleAppend?(parent: P, value: unknown): void;
+    handleReplace?(parent: P, newValue: unknown): void;
+    handleDelete?(parent: P, key: unknown): void;
+    handleClear?(parent: P): void;
 };
 
 // interface GetProperty<K,V> = {
@@ -183,7 +183,10 @@ export class TypeBinding<T> {
                 difUpdateData.kind === DIFUpdateKind.Delete &&
                 this.#definition.handleDelete
             ) {
-                this.#definition.handleDelete(value, difUpdateData.key);
+                this.#definition.handleDelete(
+                    value,
+                    this.#difHandler.resolveDIFPropertySync(difUpdateData.key),
+                );
             } else if (
                 difUpdateData.kind === DIFUpdateKind.Clear &&
                 this.#definition.handleClear
