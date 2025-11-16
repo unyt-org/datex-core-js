@@ -20,7 +20,7 @@ panic = "abort"
 
 [dependencies]
 log = { version = "0.4", features = ["std", "serde"] }
-datex-core = { version = "0.0.7", git = "https://github.com/unyt-org/datex-core", branch = "release/0.0.7", default-features = false, features = [
+datex-core = { version = "0.0.7", git = "https://github.com/unyt-org/datex-core", branch = "feat/variant-access", default-features = false, features = [
     "std",
     "wasm_logger",
     "wasm_runtime",
