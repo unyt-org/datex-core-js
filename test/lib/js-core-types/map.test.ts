@@ -1,7 +1,7 @@
 import { assertEquals } from "@std/assert/equals";
-import { mapTypeBinding } from "../../src/lib/js-core-types/map.ts";
-import { Runtime } from "../../src/runtime/runtime.ts";
-import { DIFUpdateKind } from "../../src/dif/definitions.ts";
+import { mapTypeBinding } from "datex-core-js/lib/js-core-types/map.ts";
+import { Runtime } from "datex-core-js/runtime/runtime.ts";
+import { DIFUpdateKind } from "datex-core-js/dif/definitions.ts";
 
 Deno.test("map", () => {
     const runtime = new Runtime({ endpoint: "@test" });
@@ -14,12 +14,12 @@ Deno.test("map", () => {
     // create mutable pointer to map
     const mapPtr = runtime.createPointer(map);
     const address = runtime.dif.getPointerAddressForValue(mapPtr)!;
-    console.log("Map pointer created:", mapPtr, "at address:", address);
 
     // 1. external update
     // TODO: property updates are not yet implemented in DATEX Script
     // runtime.executeSync(`${mapPtr}.test = 'newValue'`);
     // fake a remote update from transceiver 42
+    // SET
     runtime.dif._handle.update(42, address, {
         key: { kind: "text", value: "externalKey" },
         value: { value: "newValue" },
@@ -27,7 +27,28 @@ Deno.test("map", () => {
     });
     assertEquals(map.get("externalKey"), "newValue");
 
+    // DELETE (no effect since map is already empty)
+    runtime.dif._handle.update(42, address, {
+        kind: DIFUpdateKind.Delete,
+        key: { kind: "text", value: "externalKey" },
+    });
+    assertEquals(map.has("externalKey"), false);
+
+    // CLEAR
+    runtime.dif._handle.update(42, address, {
+        kind: DIFUpdateKind.Clear,
+    });
+    assertEquals(map.size, 0);
+
     // 2. local update
     map.set("localKey", "localValue");
     assertEquals(map.get("localKey"), "localValue");
+    const runtimeLocalValue: Map<unknown, unknown> = runtime.dif
+        .resolveDIFValueContainerSync(
+            runtime.dif._handle.resolve_pointer_address_sync(address).value,
+        );
+    assertEquals(
+        (runtimeLocalValue as Map<unknown, unknown>).get("localKey"),
+        "localValue",
+    );
 });
