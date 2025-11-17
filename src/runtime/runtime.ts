@@ -4,13 +4,15 @@ import {
     type JSRuntime,
 } from "../datex-core.ts";
 import { ComHub } from "../network/com-hub.ts";
-import { DIFHandler } from "../dif/dif-handler.ts";
+import { DIFHandler, PointerOut } from "../dif/dif-handler.ts";
 import type {
     DIFReferenceMutability,
     DIFTypeContainer,
 } from "../dif/definitions.ts";
 import type { Ref } from "../refs/ref.ts";
+import { unimplemented } from "../utils/exceptions.ts";
 
+// TODO: move to global.ts
 /** auto-generated version - do not edit: */
 const VERSION: string = "0.0.11";
 
@@ -305,15 +307,17 @@ export class Runtime {
     }
 
     /**
-     * Creates a new pointer containg the given JS value.
-     * The returned value is a proxy object that behaves like the original object,
-     * but also propagates changes between JS and the DATEX runtime.
+     * Creates a new reference containg the given JS value.
+     * For primitive values, a Ref wrapper is returned.
+     * For other values (objects, arrays, maps), the returned value is a proxy object that behaves like the original object.
+     *
+     * If the value is already registered as a reference in the DIF handler, the existing reference is returned.
      * @param value The JS value to store in the pointer.
      * @param allowedType Optional DIF type container to restrict the type of the pointer.
      * @param mutability Optional mutability of the reference (default is Mutable).
      * @returns A proxy object representing the pointer in JS.
      */
-    public createPointer<
+    public createOrGetTransparentReference<
         V,
         M extends DIFReferenceMutability =
             typeof DIFReferenceMutability.Mutable,
@@ -323,11 +327,32 @@ export class Runtime {
         allowedType?: DIFTypeContainer | null,
         mutability?: M,
     ): PointerOut<V, M> {
-        return this.#difHandler.createReferenceFromJSValue(
+        return this.#difHandler.createOrGetTransparentReference(
             value,
             allowedType,
             mutability,
-        ) as PointerOut<V, M>;
+        );
+    }
+
+    /**
+     * Creates or retrieves a wrapped reference for the given value.
+     * If the value is already a reference, it returns the existing reference.
+     *
+     * @param value
+     * @param allowedType
+     * @param mutability
+     * @returns
+     */
+    public createOrGetWrappedReference<
+        V,
+        M extends DIFReferenceMutability =
+            typeof DIFReferenceMutability.Mutable,
+    >(
+        value: V,
+        allowedType?: DIFTypeContainer | null,
+        mutability?: M,
+    ): Ref<V> {
+        unimplemented();
     }
 
     public startLSP(
@@ -345,64 +370,3 @@ export class Runtime {
         };
     }
 }
-
-type PrimitiveValue = string | number | boolean | bigint | symbol;
-
-type WidenLiteral<T> = T extends string ? string
-    : T extends number ? number
-    : T extends boolean ? boolean
-    : T extends bigint ? bigint
-    : T extends symbol ? symbol
-    : T;
-
-type IsRef<T> = T extends Ref<unknown> ? true : false;
-type ContainsRef<T> = IsRef<T> extends true ? true
-    : T extends object
-        ? { [K in keyof T]: ContainsRef<T[K]> }[keyof T] extends true ? true
-        : false
-    : false;
-
-/** A type representing an assignable reference or a plain value **/
-export type AssignableRef<T> = Ref<T> | T & { value?: T };
-
-type Builtins =
-    | ((...args: unknown[]) => unknown)
-    | Date
-    | RegExp
-    | Map<unknown, unknown>
-    | Set<unknown>
-    | WeakMap<WeakKey, unknown>
-    | WeakSet<WeakKey>
-    | Array<unknown>;
-
-type IsPlainObject<T> = T extends Builtins ? false
-    : T extends object ? true
-    : false;
-
-type ObjectFieldOut<T, M extends DIFReferenceMutability> = T extends
-    Ref<infer U> ? M extends typeof DIFReferenceMutability.Immutable ? Ref<U>
-    : AssignableRef<U>
-    : IsPlainObject<T> extends true ? (
-            ContainsRef<T> extends true
-                ? M extends typeof DIFReferenceMutability.Immutable
-                    ? { readonly [K in keyof T]: ObjectFieldOut<T[K], M> }
-                : { [K in keyof T]: ObjectFieldOut<T[K], M> }
-                : { readonly [K in keyof T]: ObjectFieldOut<T[K], M> }
-        )
-    : T;
-
-type PointerOut<V, M extends DIFReferenceMutability> = V extends Ref<infer U>
-    ? M extends typeof DIFReferenceMutability.Immutable ? Ref<U>
-    : AssignableRef<U>
-    : IsPlainObject<V> extends true ? (
-            ContainsRef<V> extends true
-                ? M extends typeof DIFReferenceMutability.Immutable
-                    ? { readonly [K in keyof V]: ObjectFieldOut<V[K], M> }
-                : { [K in keyof V]: ObjectFieldOut<V[K], M> }
-                : { readonly [K in keyof V]: ObjectFieldOut<V[K], M> }
-        )
-    : V extends PrimitiveValue ? Ref<
-            M extends typeof DIFReferenceMutability["Immutable"] ? V
-                : WidenLiteral<V>
-        >
-    : V;

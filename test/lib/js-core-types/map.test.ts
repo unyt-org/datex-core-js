@@ -12,7 +12,7 @@ Deno.test("map", () => {
         [2, "value2"],
     ]);
     // create mutable pointer to map
-    const mapPtr = runtime.createPointer(map);
+    const mapPtr = runtime.createOrGetTransparentReference(map);
     const address = runtime.dif.getPointerAddressForValue(mapPtr)!;
 
     // 1. external update

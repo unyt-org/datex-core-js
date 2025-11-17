@@ -1,11 +1,14 @@
+import { DEBUG_MODE } from "../global.ts";
 import {
     type DIFTypeContainer,
     type DIFUpdateData,
     DIFUpdateKind,
 } from "./definitions.ts";
-import type { DIFHandler, ReferenceMetadata } from "./dif-handler.ts";
-
-export const ORIGINAL_VALUE = Symbol("ORIGINAL_VALUE");
+import {
+    type DIFHandler,
+    IS_PROXY_ACCESS,
+    type ReferenceMetadata,
+} from "./dif-handler.ts";
 
 type ImplMethod = {
     name: string;
@@ -30,9 +33,13 @@ export type TypeDefinition = {
 
 export type TypeBindingContext<M extends ReferenceMetadata> = {
     readonly difHandler: DIFHandler;
-    getReferenceMetadata<T extends WeakKey>(
-        value: T,
+    getReferenceMetadata(
+        value: WeakKey,
     ): M;
+    allowOriginalValueAccess<R>(
+        target: WeakKey,
+        callback: () => R,
+    ): R;
 };
 
 export type BindResult<T, M extends ReferenceMetadata> = {
@@ -90,7 +97,7 @@ export type TypeBindingDefinition<
 
 export class TypeRegistry {
     #difHandler: DIFHandler;
-    #typeBindings: Map<string, TypeBinding<unknown>> = new Map();
+    #typeBindings: Map<string, TypeBinding> = new Map();
 
     constructor(difHandler: DIFHandler) {
         this.#difHandler = difHandler;
@@ -115,7 +122,7 @@ export class TypeRegistry {
             typeBindingDefinition.typeAddress,
             new TypeBinding(
                 typeBindingDefinition as TypeBindingDefinition<
-                    unknown,
+                    WeakKey,
                     ReferenceMetadata
                 >,
                 this.#difHandler,
@@ -124,11 +131,21 @@ export class TypeRegistry {
     }
 
     /**
+     * @private
+     * Gets the type binding for a given type pointer address.
+     */
+    _getTypeBinding(
+        typePointerAddress: string,
+    ): TypeBinding | null {
+        return this.#typeBindings.get(typePointerAddress) || null;
+    }
+
+    /**
      * Gets the type binding for a given type pointer address.
      */
     public getTypeBinding(
         typePointerAddress: string,
-    ): TypeBinding<unknown> | null {
+    ): TypeBinding | null {
         const typeBinding = this.#typeBindings.get(typePointerAddress);
         if (typeBinding) {
             return typeBinding;
@@ -138,7 +155,10 @@ export class TypeRegistry {
     }
 }
 
-export class TypeBinding<T, M extends ReferenceMetadata = ReferenceMetadata> {
+export class TypeBinding<
+    T extends WeakKey = WeakKey,
+    M extends ReferenceMetadata = ReferenceMetadata,
+> {
     #difHandler: DIFHandler;
     #definition: TypeBindingDefinition<T, M>;
 
@@ -146,7 +166,7 @@ export class TypeBinding<T, M extends ReferenceMetadata = ReferenceMetadata> {
         return this.#difHandler;
     }
 
-    public getReferenceMetadata<T extends WeakKey>(value: T): M {
+    public getReferenceMetadata(value: T): M {
         return this.#difHandler.getReferenceMetadata<M, T>(value);
     }
 
@@ -187,58 +207,62 @@ export class TypeBinding<T, M extends ReferenceMetadata = ReferenceMetadata> {
                 pointerAddress,
                 difUpdateData,
             );
-            // call appropriate handler based on update kind
-            if (
-                difUpdateData.kind === DIFUpdateKind.Set &&
-                this.#definition.handleSet
-            ) {
-                this.#definition.handleSet.call(
-                    this,
-                    value,
-                    this.#difHandler.resolveDIFPropertySync(
-                        difUpdateData.key,
-                    ),
-                    this.#difHandler.resolveDIFValueContainerSync(
-                        difUpdateData.value,
-                    ),
-                );
-            } else if (
-                difUpdateData.kind === DIFUpdateKind.Append &&
-                this.#definition.handleAppend
-            ) {
-                this.#definition.handleAppend.call(
-                    this,
-                    value,
-                    this.#difHandler.resolveDIFValueContainerSync(
-                        difUpdateData.value,
-                    ),
-                );
-            } else if (
-                difUpdateData.kind === DIFUpdateKind.Replace &&
-                this.#definition.handleReplace
-            ) {
-                this.#definition.handleReplace.call(
-                    this,
-                    value,
-                    this.#difHandler.resolveDIFValueContainerSync(
-                        difUpdateData.value,
-                    ),
-                );
-            } else if (
-                difUpdateData.kind === DIFUpdateKind.Delete &&
-                this.#definition.handleDelete
-            ) {
-                this.#definition.handleDelete.call(
-                    this,
-                    value,
-                    this.#difHandler.resolveDIFPropertySync(difUpdateData.key),
-                );
-            } else if (
-                difUpdateData.kind === DIFUpdateKind.Clear &&
-                this.#definition.handleClear
-            ) {
-                this.#definition.handleClear.call(this, value);
-            }
+            this.allowOriginalValueAccess(value, () => {
+                // call appropriate handler based on update kind
+                if (
+                    difUpdateData.kind === DIFUpdateKind.Set &&
+                    this.#definition.handleSet
+                ) {
+                    this.#definition.handleSet.call(
+                        this,
+                        value,
+                        this.#difHandler.resolveDIFPropertySync(
+                            difUpdateData.key,
+                        ),
+                        this.#difHandler.resolveDIFValueContainerSync(
+                            difUpdateData.value,
+                        ),
+                    );
+                } else if (
+                    difUpdateData.kind === DIFUpdateKind.Append &&
+                    this.#definition.handleAppend
+                ) {
+                    this.#definition.handleAppend.call(
+                        this,
+                        value,
+                        this.#difHandler.resolveDIFValueContainerSync(
+                            difUpdateData.value,
+                        ),
+                    );
+                } else if (
+                    difUpdateData.kind === DIFUpdateKind.Replace &&
+                    this.#definition.handleReplace
+                ) {
+                    this.#definition.handleReplace.call(
+                        this,
+                        value,
+                        this.#difHandler.resolveDIFValueContainerSync(
+                            difUpdateData.value,
+                        ),
+                    );
+                } else if (
+                    difUpdateData.kind === DIFUpdateKind.Delete &&
+                    this.#definition.handleDelete
+                ) {
+                    this.#definition.handleDelete.call(
+                        this,
+                        value,
+                        this.#difHandler.resolveDIFPropertySync(
+                            difUpdateData.key,
+                        ),
+                    );
+                } else if (
+                    difUpdateData.kind === DIFUpdateKind.Clear &&
+                    this.#definition.handleClear
+                ) {
+                    this.#definition.handleClear.call(this, value);
+                }
+            });
         }
     }
 
@@ -260,5 +284,21 @@ export class TypeBinding<T, M extends ReferenceMetadata = ReferenceMetadata> {
             updateHandlerTypes.add(DIFUpdateKind.Clear);
         }
         return updateHandlerTypes;
+    }
+
+    public allowOriginalValueAccess<R>(
+        target: T,
+        callback: () => R,
+    ): R {
+        if (!DEBUG_MODE) {
+            return callback();
+        }
+        const metadata = this.getReferenceMetadata(target);
+        metadata[IS_PROXY_ACCESS] = true;
+        try {
+            return callback();
+        } finally {
+            metadata[IS_PROXY_ACCESS] = false;
+        }
     }
 }

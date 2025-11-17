@@ -1,71 +1,82 @@
 import { CoreTypeAddress } from "../../dif/core.ts";
-import type { DIFHandler } from "../../dif/dif-handler.ts";
 import {
-    ORIGINAL_VALUE,
-    type TypeBindingDefinition,
-} from "../../dif/type-registry.ts";
+    type DIFHandler,
+    IS_PROXY_ACCESS,
+    type ReferenceMetadata,
+} from "../../dif/dif-handler.ts";
+import type { TypeBindingDefinition } from "../../dif/type-registry.ts";
+import { DEBUG_MODE } from "../../global.ts";
 
 const ORIGINAL_PUSH = Symbol("ORIGINAL_PUSH");
 
 type ArrayMetadata<V = unknown> = {
-    [ORIGINAL_VALUE]: Array<V>;
     [ORIGINAL_PUSH]: Array<V>["push"];
-};
+} & ReferenceMetadata;
 
 export const arrayTypeBinding: TypeBindingDefinition<
     Array<unknown>,
     ArrayMetadata
 > = {
     typeAddress: CoreTypeAddress.list,
-    bind(parent, pointerAddress) {
+    bind(target, pointerAddress) {
         const metadata = bindArrayMethods(
-            parent,
+            target,
             pointerAddress,
             this.difHandler,
         );
-        const difHandler = this.difHandler;
-        const proxy = new Proxy(parent, {
+        if (DEBUG_MODE) {
+            invalidateOriginalValue(target, metadata);
+        }
+        // deno-lint-ignore no-this-alias
+        const self = this;
+        const proxy = new Proxy(target, {
             set(target, prop, value, receiver) {
-                console.log("SET", prop, value);
+                return self.allowOriginalValueAccess(target, () => {
+                    const index = Number(prop);
+                    if (
+                        typeof prop === "string" && !isNaN(index) && index >= 0
+                    ) {
+                        // check if out of bounds - fill with null&js.empty
+                        if (index >= target.length) {
+                            triggerArrayFillEmpty(
+                                target,
+                                target.length,
+                                index,
+                                pointerAddress,
+                                self.difHandler,
+                            );
+                        }
 
-                const index = Number(prop);
-                if (typeof prop === "string" && !isNaN(index) && index >= 0) {
-                    // check if out of bounds - fill with null&js.empty
-                    if (index >= target.length) {
-                        triggerArrayFillEmpty(
-                            target,
-                            target.length,
+                        self.difHandler.triggerSet(
+                            pointerAddress,
                             index,
-                            pointerAddress,
-                            difHandler,
+                            value,
                         );
+                    } else if (prop === "length") {
+                        // if length is reduced, trigger delete for removed items
+                        const newLength = Number(value);
+                        if (newLength < target.length) {
+                            triggerArraySplice(
+                                newLength,
+                                target.length - newLength,
+                                [],
+                                pointerAddress,
+                                self.difHandler,
+                            );
+                        } // if length is increased, trigger set for new empty items
+                        else if (newLength > target.length) {
+                            triggerArrayFillEmpty(
+                                target,
+                                target.length,
+                                newLength,
+                                pointerAddress,
+                                self.difHandler,
+                            );
+                        }
                     }
-
-                    difHandler.triggerSet(pointerAddress, index, value);
-                } else if (prop === "length") {
-                    // if length is reduced, trigger delete for removed items
-                    const newLength = Number(value);
-                    if (newLength < target.length) {
-                        triggerArraySplice(
-                            newLength,
-                            target.length - newLength,
-                            [],
-                            pointerAddress,
-                            difHandler,
-                        );
-                    } // if length is increased, trigger set for new empty items
-                    else if (newLength > target.length) {
-                        triggerArrayFillEmpty(
-                            target,
-                            target.length,
-                            newLength,
-                            pointerAddress,
-                            difHandler,
-                        );
-                    }
-                }
-                // x[1..4] = js:empty
-                return Reflect.set(target, prop, value, receiver);
+                    // x[1..4] = js:empty
+                    return Reflect.set(target, prop, value, receiver);
+                });
             },
         });
         return {
@@ -73,24 +84,23 @@ export const arrayTypeBinding: TypeBindingDefinition<
             metadata,
         };
     },
-    handleAppend(parent, value) {
-        this.getReferenceMetadata(parent)[ORIGINAL_PUSH](value);
+    handleAppend(target, value) {
+        this.getReferenceMetadata(target)[ORIGINAL_PUSH](value);
     },
-    handleSet(parent, key: unknown, value: unknown) {
-        this.getReferenceMetadata(parent)[ORIGINAL_VALUE][key as number] =
+    handleSet(target, key: unknown, value: unknown) {
+        this.difHandler.getOriginalValueFromProxy(target)![key as number] =
             value;
     },
-    handleDelete(parent, key: number) {
+    handleDelete(target, key: number) {
         // remove key (splice)
-        this.getReferenceMetadata(parent)[ORIGINAL_VALUE].splice(key, 1);
+        this.difHandler.getOriginalValueFromProxy(target)!.splice(key, 1);
     },
-    handleClear(parent) {
-        this.getReferenceMetadata(parent)[ORIGINAL_VALUE].length = 0;
+    handleClear(target) {
+        this.difHandler.getOriginalValueFromProxy(target)!.length = 0;
     },
-    handleReplace(parent, newValue: unknown[]) {
-        const metadata = this.getReferenceMetadata(parent);
-        metadata[ORIGINAL_VALUE].length = 0;
-        metadata[ORIGINAL_PUSH](...newValue);
+    handleReplace(target, newValue: unknown[]) {
+        this.difHandler.getOriginalValueFromProxy(target)!.length = 0;
+        this.getReferenceMetadata(target)[ORIGINAL_PUSH](...newValue);
     },
 };
 
@@ -112,10 +122,10 @@ function bindArrayMethods(
             );
         },
         enumerable: false,
+        configurable: true,
     });
 
     return {
-        [ORIGINAL_VALUE]: array,
         [ORIGINAL_PUSH]: originalPush,
     };
 }
@@ -169,4 +179,60 @@ function triggerArraySplice(
     for (let i = 0; i < items.length; i++) {
         difHandler.triggerSet(pointerAddress, start + i, items[i]);
     }
+}
+
+function invalidateOriginalValue(array: unknown[], metadata: ArrayMetadata) {
+    const shadowArray = [...array];
+    array.length = 0;
+
+    function getLockedPointerDefinition(
+        originalDescriptor: PropertyDescriptor | undefined,
+        key: string | symbol,
+    ) {
+        return {
+            get() {
+                if (!metadata[IS_PROXY_ACCESS]) {
+                    throw new Error(
+                        "Invalid access to original array value that was moved to a reference",
+                    );
+                }
+                return shadowArray[key as keyof typeof array];
+            },
+            set(value: unknown) {
+                if (!metadata[IS_PROXY_ACCESS]) {
+                    throw new Error(
+                        "Invalid access to original array value that was moved to a reference",
+                    );
+                }
+                shadowArray[key as unknown as number] = value;
+            },
+            enumerable: originalDescriptor?.enumerable,
+            configurable: false,
+        } as const;
+    }
+    for (const key of Reflect.ownKeys(array)) {
+        if (key == "length") {
+            continue;
+        }
+        console.log("ownkey", key);
+        const originalDescriptor = Object.getOwnPropertyDescriptor(array, key);
+        Object.defineProperty(
+            array,
+            key,
+            getLockedPointerDefinition(originalDescriptor, key),
+        );
+    }
+    for (const key of Reflect.ownKeys(Object.getPrototypeOf(array))) {
+        if (key == "length" || key == "constructor") {
+            continue;
+        }
+        // array[key as keyof typeof array] = function () {
+        // Object.defineProperty(
+        //     array,
+        //     key,
+        //     getLockedPointerDefinition(originalDescriptor, key),
+        // );
+    }
+
+    Object.seal(array);
 }

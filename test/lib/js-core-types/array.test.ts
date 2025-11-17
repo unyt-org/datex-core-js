@@ -9,7 +9,7 @@ Deno.test("array", () => {
 
     const array = new Array<string | number>("value1", "value2", 123);
     // create mutable pointer to array
-    const arrayPtr = runtime.createPointer(array);
+    const arrayPtr = runtime.createOrGetTransparentReference(array);
     const address = runtime.dif.getPointerAddressForValue(arrayPtr)!;
 
     function getCurrentRuntimeLocalValue() {

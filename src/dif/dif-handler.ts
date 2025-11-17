@@ -18,11 +18,14 @@ import {
     type ObserveOptions,
 } from "./definitions.ts";
 import { CoreTypeAddress, CoreTypeAddressRanges } from "./core.ts";
-import { difValueContainerToDisplayString } from "./display.ts";
 import { type TypeBinding, TypeRegistry } from "./type-registry.ts";
 import { panic } from "../utils/exceptions.ts";
 
-export type ReferenceMetadata = Record<string | symbol, unknown>;
+export const IS_PROXY_ACCESS = Symbol("IS_PROXY_ACCESS");
+
+export type ReferenceMetadata = Record<string | symbol, unknown> & {
+    [IS_PROXY_ACCESS]?: boolean;
+};
 
 /**
  * The DIFHandler class provides methods to interact with the DATEX Core DIF runtime,
@@ -43,9 +46,22 @@ export class DIFHandler {
      */
     readonly #cache = new Map<
         string,
-        { val: WeakRef<WeakKey>; observerId: number | null }
+        {
+            value: WeakRef<WeakKey>;
+            originalValue: WeakKey | null;
+            observerId: number | null;
+        }
     >();
 
+    /**
+     * Maps the original value to a proxy value
+     * (if the values is bound to a custom proxy wrapper)
+     */
+    readonly #proxyMapping = new WeakMap<WeakKey, WeakRef<WeakKey>>();
+
+    /**
+     * The reference metadata map, storing metadata for each cached reference.
+     */
     readonly #referenceMetadata = new WeakMap<
         WeakKey,
         { address: string; metadata: ReferenceMetadata }
@@ -133,13 +149,13 @@ export class DIFHandler {
     }
 
     /**
-     * Creates a new pointer for the specified value.
+     * Creates a new pointer for the specified DIF value.
      * @param difValueContainer - The DIFValueContainer value to create a pointer for.
      * @param allowedType - The allowed type for the pointer.
      * @param mutability - The mutability of the pointer.
      * @returns The created pointer address.
      */
-    public createReference(
+    public createReferenceFromDIFValue(
         difValueContainer: DIFValueContainer,
         allowedType: DIFTypeContainer | null = null,
         mutability: DIFReferenceMutability,
@@ -581,6 +597,17 @@ export class DIFHandler {
         return value;
     }
 
+    public getOriginalValueFromProxy<T extends WeakKey>(
+        proxy: T,
+    ): T | null {
+        const ref = this.#proxyMapping.get(proxy);
+        if (ref) {
+            return ref.deref() as T || null;
+        } else {
+            return null;
+        }
+    }
+
     /**
      * Converts an array of JS values to an array of DIFValues.
      * If the input is null, it returns null.
@@ -619,7 +646,7 @@ export class DIFHandler {
             allowedType,
         );
 
-        let typeBinding: TypeBinding<unknown> | null = null;
+        let typeBinding: TypeBinding | null = null;
         let metadata: ReferenceMetadata | undefined = undefined;
 
         // bind js value (if mutable, nominal type)
@@ -683,6 +710,7 @@ export class DIFHandler {
 
         this.cacheWrappedReferenceValue(
             pointerAddress,
+            value,
             wrappedValue,
             observerId,
             metadata,
@@ -694,6 +722,21 @@ export class DIFHandler {
 
     /**
      * Handles a pointer update received from the DATEX core runtime.
+     * for non-primitive values.
+     * If the pointer is cached and has a dereferenceable value, it updates the value.
+     * @param pointerAddress - The address of the pointer being updated.
+     * @param update - The DIFUpdateData containing the update information.
+     * @returns True if the pointer was found and updated, false otherwise.
+     */
+    protected handlePointerUpdate<T extends WeakKey>(
+        pointerAddress: string,
+        value: T,
+        update: DIFUpdateData,
+        typeBinding: TypeBinding<T> | null,
+    ): boolean;
+    /**
+     * Handles a pointer update received from the DATEX core runtime.
+     * for primitive values (typeBinding not supported).
      * If the pointer is cached and has a dereferenceable value, it updates the value.
      * @param pointerAddress - The address of the pointer being updated.
      * @param update - The DIFUpdateData containing the update information.
@@ -703,11 +746,17 @@ export class DIFHandler {
         pointerAddress: string,
         value: T,
         update: DIFUpdateData,
-        typeBinding: TypeBinding<T> | null,
+        typeBinding: null,
+    ): boolean;
+    protected handlePointerUpdate<T>(
+        pointerAddress: string,
+        value: T,
+        update: DIFUpdateData,
+        typeBinding?: TypeBinding<WeakKey & T> | null,
     ): boolean {
         const cached = this.#cache.get(pointerAddress);
         if (!cached) return false;
-        const deref = cached.val.deref();
+        const deref = cached.value.deref();
         if (!deref) return false;
 
         if (deref instanceof Ref && update.kind === DIFUpdateKind.Replace) {
@@ -717,7 +766,11 @@ export class DIFHandler {
         }
         // handle generic updates for values (depending on type interface definition)
         if (typeBinding) {
-            typeBinding.handleDifUpdate(value, pointerAddress, update);
+            typeBinding.handleDifUpdate(
+                value as WeakKey & T,
+                pointerAddress,
+                update,
+            );
         }
 
         return true;
@@ -729,22 +782,42 @@ export class DIFHandler {
      */
     protected cacheWrappedReferenceValue(
         address: string,
-        value: WeakKey,
+        originalValue: unknown,
+        proxiedValue: WeakKey,
         observerId: number | null,
         metadata: ReferenceMetadata = {},
     ): void {
+        const isProxifiedValue = this.isWeakKey(originalValue) &&
+            originalValue !== proxiedValue;
+
         this.#cache.set(address, {
-            val: new WeakRef(value),
+            value: new WeakRef(proxiedValue),
+            originalValue: isProxifiedValue ? originalValue : null,
             observerId,
         });
-        this.#referenceMetadata.set(value, {
+        this.#referenceMetadata.set(proxiedValue, {
             address,
             metadata,
         });
+
+        // store in proxy mapping if original value is not identical to proxied value
+        // and original value is a weak key
+        if (isProxifiedValue) {
+            this.#proxyMapping.set(
+                originalValue,
+                new WeakRef(proxiedValue),
+            );
+        }
+
         // register finalizer to clean up the cache and free the reference in the runtime
         // when the object is garbage collected
         const finalizationRegistry = new FinalizationRegistry(
             (address: string) => {
+                const originalValue = this.#cache.get(address)?.originalValue;
+                // remove from proxy mapping if applicable
+                if (originalValue) {
+                    this.#proxyMapping.delete(originalValue);
+                }
                 this.#cache.delete(address);
                 // remove local observers
                 this.#observers.delete(address);
@@ -754,13 +827,13 @@ export class DIFHandler {
                 }
             },
         );
-        finalizationRegistry.register(value, address);
+        finalizationRegistry.register(proxiedValue, address);
     }
 
     protected getCachedReference(address: string): WeakKey | undefined {
         const cached = this.#cache.get(address);
         if (cached) {
-            const deref = cached.val.deref();
+            const deref = cached.value.deref();
             if (deref) {
                 return deref;
             }
@@ -773,14 +846,25 @@ export class DIFHandler {
      * The returned value is a proxy object that behaves like the original object,
      * but also propagates changes between JS and the DATEX runtime.
      */
-    public createReferenceFromJSValue(
-        value: unknown,
+    public createOrGetTransparentReference<
+        V,
+        M extends DIFReferenceMutability =
+            typeof DIFReferenceMutability.Mutable,
+    >(
+        value: V,
         allowedType: DIFTypeContainer | null = null,
-        mutability: DIFReferenceMutability = DIFReferenceMutability.Mutable,
-    ): unknown | Ref<unknown> {
+        mutability: M = DIFReferenceMutability.Mutable as M,
+    ): PointerOut<V, M> {
+        // if already bound to a reference, return the existing reference proxy (or the value itself)
+        const proxy = this.isWeakKey(value)
+            ? this.getReferenceProxy(value)
+            : null;
+        if (proxy) {
+            return proxy as PointerOut<V, M>;
+        }
+
         const difValue = this.convertJSValueToDIFValue(value);
-        console.log("DIF", difValueContainerToDisplayString(difValue));
-        const ptrAddress = this.createReference(
+        const ptrAddress = this.createReferenceFromDIFValue(
             difValue,
             allowedType,
             mutability,
@@ -791,7 +875,28 @@ export class DIFHandler {
                 ptrAddress,
             ) as DIFReference).allowed_type;
         }
-        return this.initReference(ptrAddress, value, mutability, allowedType);
+        return this.initReference(
+            ptrAddress,
+            value,
+            mutability,
+            allowedType,
+        ) as PointerOut<V, M>;
+    }
+
+    protected isPrimitiveValue(
+        value: unknown,
+    ): value is null | undefined | boolean | number | bigint | string | symbol {
+        return value === null || value === undefined ||
+            typeof value === "boolean" ||
+            typeof value === "number" || typeof value === "bigint" ||
+            typeof value === "string" || typeof value === "symbol";
+    }
+    protected isWeakKey(
+        value: unknown,
+    ): value is WeakKey {
+        // non-registered symbols are valid WeakKeys
+        return (typeof value === "symbol" && !Symbol.keyFor(value)) ||
+            !this.isPrimitiveValue(value);
     }
 
     /**
@@ -803,15 +908,10 @@ export class DIFHandler {
         _type: DIFTypeContainer | null = null,
     ): (T | Ref<unknown>) & WeakKey {
         // primitive values are always wrapped in a Ref proxy
-        if (
-            value === null || value === undefined ||
-            typeof value === "boolean" ||
-            typeof value === "number" || typeof value === "bigint" ||
-            typeof value === "string"
-        ) {
-            return new Ref(value, pointerAddress, this);
-        } else {
+        if (this.isWeakKey(value)) {
             return value;
+        } else {
+            return new Ref(value, pointerAddress, this);
         }
     }
 
@@ -879,6 +979,29 @@ export class DIFHandler {
             panic("Reference metadata not found for the given value");
         }
         return metadata;
+    }
+
+    public isReference(value: WeakKey): boolean {
+        return this.#referenceMetadata.has(value) ||
+            this.#proxyMapping.has(value);
+    }
+
+    public getReferenceProxy<T extends WeakKey>(value: T): T | null {
+        const reference = this.#referenceMetadata.get(value);
+        if (reference) {
+            return value;
+        }
+        const proxyRef = this.#proxyMapping.get(value);
+        if (proxyRef) {
+            const deref = proxyRef.deref();
+            if (deref) {
+                return deref as T;
+            } else {
+                panic("Reference proxy has been garbage collected");
+            }
+        } else {
+            return null;
+        }
     }
 
     /**
@@ -1024,3 +1147,67 @@ export class DIFHandler {
         this.updateReference(pointerAddress, update);
     }
 }
+
+type PrimitiveValue = string | number | boolean | bigint | symbol;
+
+type WidenLiteral<T> = T extends string ? string
+    : T extends number ? number
+    : T extends boolean ? boolean
+    : T extends bigint ? bigint
+    : T extends symbol ? symbol
+    : T;
+
+type IsRef<T> = T extends Ref<unknown> ? true : false;
+type ContainsRef<T> = IsRef<T> extends true ? true
+    : T extends object
+        ? { [K in keyof T]: ContainsRef<T[K]> }[keyof T] extends true ? true
+        : false
+    : false;
+
+/** A type representing an assignable reference or a plain value **/
+export type AssignableRef<T> = Ref<T> | T & { value?: T };
+
+type Builtins =
+    | ((...args: unknown[]) => unknown)
+    | Date
+    | RegExp
+    | Map<unknown, unknown>
+    | Set<unknown>
+    | WeakMap<WeakKey, unknown>
+    | WeakSet<WeakKey>
+    | Array<unknown>;
+
+type IsPlainObject<T> = T extends Builtins ? false
+    : T extends object ? true
+    : false;
+
+type ObjectFieldOut<T, M extends DIFReferenceMutability> = T extends
+    Ref<infer U> ? M extends typeof DIFReferenceMutability.Immutable ? Ref<U>
+    : AssignableRef<U>
+    : IsPlainObject<T> extends true ? (
+            ContainsRef<T> extends true
+                ? M extends typeof DIFReferenceMutability.Immutable
+                    ? { readonly [K in keyof T]: ObjectFieldOut<T[K], M> }
+                : { [K in keyof T]: ObjectFieldOut<T[K], M> }
+                : { readonly [K in keyof T]: ObjectFieldOut<T[K], M> }
+        )
+    : T;
+
+export type PointerOut<V, M extends DIFReferenceMutability> = V extends
+    Ref<infer U> ? M extends typeof DIFReferenceMutability.Immutable ? Ref<U>
+    : AssignableRef<U>
+    : IsPlainObject<V> extends true ? (
+            M extends typeof DIFReferenceMutability.Immutable
+                ? { readonly [K in keyof V]: V[K] }
+                : { [K in keyof V]: V[K] }
+            // ContainsRef<V> extends true
+            //     ? M extends typeof DIFReferenceMutability.Immutable
+            //         ? { readonly [K in keyof V]: ObjectFieldOut<V[K], M> }
+            //     : { [K in keyof V]: ObjectFieldOut<V[K], M> }
+            //     : { [K in keyof V]: ObjectFieldOut<V[K], M> }
+        )
+    : V extends PrimitiveValue ? Ref<
+            M extends typeof DIFReferenceMutability["Immutable"] ? V
+                : WidenLiteral<V>
+        >
+    : V;
