@@ -3,7 +3,7 @@ import {
     type DIFUpdateData,
     DIFUpdateKind,
 } from "./definitions.ts";
-import type { DIFHandler } from "./dif-handler.ts";
+import type { DIFHandler, ReferenceMetadata } from "./dif-handler.ts";
 
 export const ORIGINAL_VALUE = Symbol("ORIGINAL_VALUE");
 
@@ -28,14 +28,42 @@ export type TypeDefinition = {
     interfaceImpls: InterfaceImpl[]; // e.g. impl GetProperty for CustomMap
 };
 
-export type TypeBindingDefinition<T, P = T> = {
+export type TypeBindingContext<M extends ReferenceMetadata> = {
+    readonly difHandler: DIFHandler;
+    getReferenceMetadata<T extends WeakKey>(
+        value: T,
+    ): M;
+};
+
+export type BindResult<T, M extends ReferenceMetadata> = {
+    value: T;
+    metadata: M;
+};
+
+export type TypeBindingDefinition<
+    T,
+    M extends ReferenceMetadata = ReferenceMetadata,
+> = {
     typeAddress: string;
-    bind(value: T, pointerAddress: string, difHandler: DIFHandler): P;
-    handleSet?(parent: P, key: unknown, value: unknown): void;
-    handleAppend?(parent: P, value: unknown): void;
-    handleReplace?(parent: P, newValue: unknown): void;
-    handleDelete?(parent: P, key: unknown): void;
-    handleClear?(parent: P): void;
+    bind(
+        this: TypeBindingContext<M>,
+        value: T,
+        pointerAddress: string,
+    ): BindResult<T, M>;
+    handleSet?(
+        this: TypeBindingContext<M>,
+        target: T,
+        key: unknown,
+        value: unknown,
+    ): void;
+    handleAppend?(this: TypeBindingContext<M>, target: T, value: unknown): void;
+    handleReplace?(
+        this: TypeBindingContext<M>,
+        parent: T,
+        newValue: unknown,
+    ): void;
+    handleDelete?(this: TypeBindingContext<M>, target: T, key: unknown): void;
+    handleClear?(this: TypeBindingContext<M>, target: T): void;
 };
 
 // interface GetProperty<K,V> = {
@@ -86,7 +114,10 @@ export class TypeRegistry {
         this.#typeBindings.set(
             typeBindingDefinition.typeAddress,
             new TypeBinding(
-                typeBindingDefinition as TypeBindingDefinition<unknown>,
+                typeBindingDefinition as TypeBindingDefinition<
+                    unknown,
+                    ReferenceMetadata
+                >,
                 this.#difHandler,
             ),
         );
@@ -107,11 +138,22 @@ export class TypeRegistry {
     }
 }
 
-export class TypeBinding<T> {
+export class TypeBinding<T, M extends ReferenceMetadata = ReferenceMetadata> {
     #difHandler: DIFHandler;
-    #definition: TypeBindingDefinition<T>;
+    #definition: TypeBindingDefinition<T, M>;
 
-    constructor(definition: TypeBindingDefinition<T>, difHandler: DIFHandler) {
+    get difHandler() {
+        return this.#difHandler;
+    }
+
+    public getReferenceMetadata<T extends WeakKey>(value: T): M {
+        return this.#difHandler.getReferenceMetadata<M, T>(value);
+    }
+
+    constructor(
+        definition: TypeBindingDefinition<T, M>,
+        difHandler: DIFHandler,
+    ) {
         this.#definition = definition;
         this.#difHandler = difHandler;
     }
@@ -120,11 +162,11 @@ export class TypeBinding<T> {
      * Binds a new JS value to this type binding.
      * @returns
      */
-    public bindValue(value: T, pointerAddress: string): T {
-        const newValue = this.#definition.bind(
+    public bindValue(value: T, pointerAddress: string): BindResult<T, M> {
+        const newValue = this.#definition.bind.call(
+            this,
             value,
             pointerAddress,
-            this.#difHandler,
         );
         return newValue;
     }
@@ -150,7 +192,8 @@ export class TypeBinding<T> {
                 difUpdateData.kind === DIFUpdateKind.Set &&
                 this.#definition.handleSet
             ) {
-                this.#definition.handleSet(
+                this.#definition.handleSet.call(
+                    this,
                     value,
                     this.#difHandler.resolveDIFPropertySync(
                         difUpdateData.key,
@@ -163,7 +206,8 @@ export class TypeBinding<T> {
                 difUpdateData.kind === DIFUpdateKind.Append &&
                 this.#definition.handleAppend
             ) {
-                this.#definition.handleAppend(
+                this.#definition.handleAppend.call(
+                    this,
                     value,
                     this.#difHandler.resolveDIFValueContainerSync(
                         difUpdateData.value,
@@ -173,7 +217,8 @@ export class TypeBinding<T> {
                 difUpdateData.kind === DIFUpdateKind.Replace &&
                 this.#definition.handleReplace
             ) {
-                this.#definition.handleReplace(
+                this.#definition.handleReplace.call(
+                    this,
                     value,
                     this.#difHandler.resolveDIFValueContainerSync(
                         difUpdateData.value,
@@ -183,7 +228,8 @@ export class TypeBinding<T> {
                 difUpdateData.kind === DIFUpdateKind.Delete &&
                 this.#definition.handleDelete
             ) {
-                this.#definition.handleDelete(
+                this.#definition.handleDelete.call(
+                    this,
                     value,
                     this.#difHandler.resolveDIFPropertySync(difUpdateData.key),
                 );
@@ -191,7 +237,7 @@ export class TypeBinding<T> {
                 difUpdateData.kind === DIFUpdateKind.Clear &&
                 this.#definition.handleClear
             ) {
-                this.#definition.handleClear(value);
+                this.#definition.handleClear.call(this, value);
             }
         }
     }

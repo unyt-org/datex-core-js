@@ -3,7 +3,6 @@ import { Ref } from "../refs/ref.ts";
 import { Endpoint } from "../lib/special-core-types/endpoint.ts";
 import {
     type DIFArray,
-    type DIFContainer,
     type DIFMap,
     type DIFObject,
     type DIFPointerAddress,
@@ -21,11 +20,14 @@ import {
 import { CoreTypeAddress, CoreTypeAddressRanges } from "./core.ts";
 import { difValueContainerToDisplayString } from "./display.ts";
 import { type TypeBinding, TypeRegistry } from "./type-registry.ts";
+import { panic } from "../utils/exceptions.ts";
+
+export type ReferenceMetadata = Record<string | symbol, unknown>;
 
 /**
  * The DIFHandler class provides methods to interact with the DATEX Core DIF runtime,
- * including executing Datex scripts, creating and managing pointers, and observing changes.
- * It includes a local pointer cache to optimize performance and reduce cross-language calls.
+ * including executing Datex scripts, creating and managing references, and observing changes.
+ * It includes a local reference cache to optimize performance and reduce cross-language calls.
  */
 export class DIFHandler {
     /** The JSRuntime interface for the underlying Datex Core runtime */
@@ -35,12 +37,18 @@ export class DIFHandler {
     // always 0 for now - potentially used for multi DIF transceivers using the same underlying runtime
     readonly #transceiver_id = 0;
 
-    /** The pointer cache for storing and reusing object instances on the JS side
-     * The observerId is only set if the pointer is being observed (if not final).
+    /**
+     * The reference cache for storing and reusing object instances on the JS side
+     * The observerId is only set if the reference is being observed (if not final).
      */
     readonly #cache = new Map<
         string,
         { val: WeakRef<WeakKey>; observerId: number | null }
+    >();
+
+    readonly #referenceMetadata = new WeakMap<
+        WeakKey,
+        { address: string; metadata: ReferenceMetadata }
     >();
 
     readonly #observers = new Map<
@@ -100,7 +108,7 @@ export class DIFHandler {
     public executeDIF(
         datexScript: string,
         values: unknown[] | null = [],
-    ): Promise<DIFContainer> {
+    ): Promise<DIFValueContainer> {
         return this.#runtime.execute(
             datexScript,
             this.convertToDIFValues(values),
@@ -117,7 +125,7 @@ export class DIFHandler {
     public executeSyncDIF(
         datexScript: string,
         values: unknown[] | null = [],
-    ): DIFContainer {
+    ): DIFValueContainer {
         return this.#runtime.execute_sync(
             datexScript,
             this.convertToDIFValues(values),
@@ -126,37 +134,18 @@ export class DIFHandler {
 
     /**
      * Creates a new pointer for the specified value.
-     * @param difValue - The DIFValue value to create a pointer for.
+     * @param difValueContainer - The DIFValueContainer value to create a pointer for.
      * @param allowedType - The allowed type for the pointer.
      * @param mutability - The mutability of the pointer.
      * @returns The created pointer address.
      */
-    public createPointer(
-        difValue: DIFValue,
+    public createReference(
+        difValueContainer: DIFValueContainer,
         allowedType: DIFTypeContainer | null = null,
         mutability: DIFReferenceMutability,
     ): string {
         return this.#handle.create_pointer(
-            difValue,
-            allowedType,
-            mutability,
-        );
-    }
-
-    /**
-     * Creates a new pointer that points to an existing address.
-     * @param address - The address to create a reference pointer for.
-     * @param allowedType - The allowed type for the pointer.
-     * @param mutability - The mutability of the pointer.
-     * @returns A Promise that resolves to the created pointer address.
-     */
-    public createRefPointer(
-        address: string,
-        allowedType: DIFTypeContainer | null = null,
-        mutability: DIFReferenceMutability,
-    ): string {
-        return this.#handle.create_pointer(
-            address,
+            difValueContainer,
             allowedType,
             mutability,
         );
@@ -167,7 +156,7 @@ export class DIFHandler {
      * @param address - The address of the DIF value to update.
      * @param dif - The DIFUpdate object containing the update information.
      */
-    public updatePointer(address: string, dif: DIFUpdateData) {
+    public updateReference(address: string, dif: DIFUpdateData) {
         this.#handle.update(this.#transceiver_id, address, dif);
     }
 
@@ -248,7 +237,7 @@ export class DIFHandler {
      * @param address - The address of the DIF value being observed.
      * @param observerId - The observer ID returned by the observePointer method.
      */
-    public unobservePointerBindDirect(address: string, observerId: number) {
+    public unobserveReferenceBindDirect(address: string, observerId: number) {
         this.#runtime.dif().unobserve_pointer(address, observerId);
     }
 
@@ -542,7 +531,7 @@ export class DIFHandler {
         address: string,
     ): Promise<T> | T {
         // check cache first
-        const cached = this.getCachedPointer(address);
+        const cached = this.getCachedReference(address);
         if (cached) {
             return cached as T;
         }
@@ -555,7 +544,7 @@ export class DIFHandler {
             );
             return this.mapPromise(value, (v) => {
                 // init pointer
-                this.initPointer(
+                this.initReference(
                     address,
                     v,
                     reference.mut,
@@ -578,7 +567,7 @@ export class DIFHandler {
         address: string,
     ): T {
         // check cache first
-        const cached = this.getCachedPointer(address);
+        const cached = this.getCachedReference(address);
         if (cached) {
             return cached as T;
         }
@@ -588,7 +577,7 @@ export class DIFHandler {
         const value: T = this.resolveDIFValueContainerSync(
             entry.value,
         );
-        this.initPointer(address, value, entry.mut, entry.allowed_type);
+        this.initReference(address, value, entry.mut, entry.allowed_type);
         return value;
     }
 
@@ -599,7 +588,7 @@ export class DIFHandler {
      */
     public convertToDIFValues<T extends unknown[]>(
         values: T | null,
-    ): DIFValue[] | null {
+    ): DIFValueContainer[] | null {
         return values?.map((value) => this.convertJSValueToDIFValue(value)) ||
             null;
     }
@@ -615,10 +604,10 @@ export class DIFHandler {
     }
 
     /**
-     * Initializes a pointer with the given value and mutability, by
+     * Initializes a reference with the given value and mutability, by
      * adding a proxy wrapper if necessary, and setting up observation and caching on the JS side.
      */
-    protected initPointer<T>(
+    protected initReference<T>(
         pointerAddress: string,
         value: T,
         mutability: DIFReferenceMutability,
@@ -631,6 +620,7 @@ export class DIFHandler {
         );
 
         let typeBinding: TypeBinding<unknown> | null = null;
+        let metadata: ReferenceMetadata | undefined = undefined;
 
         // bind js value (if mutable, nominal type)
         const bindJSValue = mutability !== DIFReferenceMutability.Immutable &&
@@ -638,11 +628,14 @@ export class DIFHandler {
         if (bindJSValue && !(wrappedValue instanceof Ref)) {
             typeBinding = this.type_registry.getTypeBinding(allowedType);
             if (typeBinding) {
-                wrappedValue = (typeBinding as TypeBinding<T & WeakKey>)
-                    .bindValue(
-                        wrappedValue,
-                        pointerAddress,
-                    );
+                const { value, metadata: newMetadata } =
+                    (typeBinding as TypeBinding<T & WeakKey>)
+                        .bindValue(
+                            wrappedValue,
+                            pointerAddress,
+                        );
+                metadata = newMetadata;
+                wrappedValue = value;
             }
         }
 
@@ -688,7 +681,12 @@ export class DIFHandler {
             );
         }
 
-        this.cacheWrappedPointerValue(pointerAddress, wrappedValue, observerId);
+        this.cacheWrappedReferenceValue(
+            pointerAddress,
+            wrappedValue,
+            observerId,
+            metadata,
+        );
 
         // set up observers
         return wrappedValue as T | Ref<T>;
@@ -726,19 +724,24 @@ export class DIFHandler {
     }
 
     /**
-     * Caches the given pointer value with the given address in the JS side cache.
-     * The pointer must already be wrapped if necessary.
+     * Caches the given reference value with the given address in the JS side cache.
+     * The reference must already be wrapped if necessary.
      */
-    protected cacheWrappedPointerValue(
+    protected cacheWrappedReferenceValue(
         address: string,
         value: WeakKey,
         observerId: number | null,
+        metadata: ReferenceMetadata = {},
     ): void {
         this.#cache.set(address, {
             val: new WeakRef(value),
             observerId,
         });
-        // register finalizer to clean up the cache and free the pointer in the runtime
+        this.#referenceMetadata.set(value, {
+            address,
+            metadata,
+        });
+        // register finalizer to clean up the cache and free the reference in the runtime
         // when the object is garbage collected
         const finalizationRegistry = new FinalizationRegistry(
             (address: string) => {
@@ -747,14 +750,14 @@ export class DIFHandler {
                 this.#observers.delete(address);
                 // if observer is active, unregister it
                 if (observerId !== null) {
-                    this.unobservePointerBindDirect(address, observerId);
+                    this.unobserveReferenceBindDirect(address, observerId);
                 }
             },
         );
         finalizationRegistry.register(value, address);
     }
 
-    protected getCachedPointer(address: string): WeakKey | undefined {
+    protected getCachedReference(address: string): WeakKey | undefined {
         const cached = this.#cache.get(address);
         if (cached) {
             const deref = cached.val.deref();
@@ -766,18 +769,18 @@ export class DIFHandler {
     }
 
     /**
-     * Creates a new pointer containg the given JS value.
+     * Creates a new reference containg the given JS value.
      * The returned value is a proxy object that behaves like the original object,
      * but also propagates changes between JS and the DATEX runtime.
      */
-    public createPointerFromJSValue(
+    public createReferenceFromJSValue(
         value: unknown,
         allowedType: DIFTypeContainer | null = null,
         mutability: DIFReferenceMutability = DIFReferenceMutability.Mutable,
     ): unknown | Ref<unknown> {
         const difValue = this.convertJSValueToDIFValue(value);
         console.log("DIF", difValueContainerToDisplayString(difValue));
-        const ptrAddress = this.createPointer(
+        const ptrAddress = this.createReference(
             difValue,
             allowedType,
             mutability,
@@ -788,7 +791,7 @@ export class DIFHandler {
                 ptrAddress,
             ) as DIFReference).allowed_type;
         }
-        return this.initPointer(ptrAddress, value, mutability, allowedType);
+        return this.initReference(ptrAddress, value, mutability, allowedType);
     }
 
     /**
@@ -852,17 +855,30 @@ export class DIFHandler {
         });
     }
 
-    /// Returns the pointer address for the given value if it is already cached, or null otherwise.
-    /// TODO: optimize by using a reverse map or direct Symbols on the objects
-    /// But this is probably not important for normal use cases
-    public getPointerAddressForValue<T>(value: T): string | null {
-        for (const [address, entry] of this.#cache) {
-            const deref = entry.val.deref();
-            if (deref === value) {
-                return address;
-            }
+    /**
+     * Returns the pointer address for the given value if it is already cached, or null otherwise.
+     */
+    public getPointerAddressForValue<T extends WeakKey>(
+        value: T,
+    ): string | null {
+        return this.#referenceMetadata.get(value)?.address || null;
+    }
+
+    /**
+     * Returns the reference metadata for the given value if it is already cached, or null otherwise.
+     * The caller must ensure that the correct type M is used and the reference is already registered.
+     * If the reference is not found, an error is thrown.
+     */
+    public getReferenceMetadata<M extends ReferenceMetadata, T extends WeakKey>(
+        value: T,
+    ): M {
+        const metadata = this.#referenceMetadata.get(value)?.metadata as
+            | M
+            | null;
+        if (!metadata) {
+            panic("Reference metadata not found for the given value");
         }
-        return null;
+        return metadata;
     }
 
     /**
@@ -870,7 +886,12 @@ export class DIFHandler {
      */
     public convertJSValueToDIFValue<T extends unknown>(
         value: T,
-    ): DIFValue {
+    ): DIFValueContainer {
+        // if the value is a registered reference, return its address
+        const existingReference = this.#referenceMetadata.get(value as WeakKey);
+        if (existingReference) {
+            return existingReference.address;
+        }
         // assuming core values
         // TODO: handle custom types
         if (value === null) {
@@ -904,18 +925,19 @@ export class DIFHandler {
                 value: value.map((v) => this.convertJSValueToDIFValue(v)),
             };
         } else if (value instanceof Map) {
-            const map: [DIFValue, DIFValue][] = value.entries().map((
-                [k, v],
-            ) => [
-                this.convertJSValueToDIFValue(k),
-                this.convertJSValueToDIFValue(v),
-            ] as [DIFValue, DIFValue]).toArray();
+            const map: [DIFValueContainer, DIFValueContainer][] = value
+                .entries().map((
+                    [k, v],
+                ) => [
+                    this.convertJSValueToDIFValue(k),
+                    this.convertJSValueToDIFValue(v),
+                ] satisfies [DIFValueContainer, DIFValueContainer]).toArray();
             return {
                 type: CoreTypeAddress.map,
                 value: map,
             };
         } else if (typeof value === "object") {
-            const map: Record<string, DIFValue> = {};
+            const map: Record<string, DIFValueContainer> = {};
             for (const [key, val] of Object.entries(value)) {
                 map[key] = this.convertJSValueToDIFValue(val);
             }
@@ -944,7 +966,7 @@ export class DIFHandler {
             key: { kind: "value", value: difKey },
             value: difValue,
         };
-        this.updatePointer(pointerAddress, update);
+        this.updateReference(pointerAddress, update);
     }
 
     /**
@@ -959,7 +981,7 @@ export class DIFHandler {
             kind: DIFUpdateKind.Append,
             value: difValue,
         };
-        this.updatePointer(pointerAddress, update);
+        this.updateReference(pointerAddress, update);
     }
 
     /**
@@ -974,7 +996,7 @@ export class DIFHandler {
             kind: DIFUpdateKind.Replace,
             value: difValue,
         };
-        this.updatePointer(pointerAddress, update);
+        this.updateReference(pointerAddress, update);
     }
 
     /**
@@ -989,7 +1011,7 @@ export class DIFHandler {
             kind: DIFUpdateKind.Delete,
             key: { kind: "value", value: difKey },
         };
-        this.updatePointer(pointerAddress, update);
+        this.updateReference(pointerAddress, update);
     }
 
     /**
@@ -999,6 +1021,6 @@ export class DIFHandler {
         const update: DIFUpdateData = {
             kind: DIFUpdateKind.Clear,
         };
-        this.updatePointer(pointerAddress, update);
+        this.updateReference(pointerAddress, update);
     }
 }
