@@ -16,10 +16,13 @@ import {
     difReferenceToDisplayString,
     difValueContainerToDisplayString,
 } from "../../src/dif/display.ts";
+import { arrayTypeBinding } from "datex-core-js/lib/js-core-types/array.ts";
 
 const runtime = new Runtime({ endpoint: "@jonas", debug: true });
+runtime.dif.type_registry.registerTypeBinding(arrayTypeBinding);
+
 Deno.test("pointer create with observe", () => {
-    const ref = runtime.dif.createReference(
+    const ref = runtime.dif.createReferenceFromDIFValue(
         {
             value: "Hello, Datex!",
         },
@@ -53,7 +56,7 @@ Deno.test("pointer create with observe", () => {
 });
 
 Deno.test("pointer create without observe", () => {
-    const ref = runtime.dif.createReference(
+    const ref = runtime.dif.createReferenceFromDIFValue(
         {
             value: "Hello, Datex!",
         },
@@ -79,37 +82,37 @@ Deno.test("pointer create without observe", () => {
 });
 
 Deno.test("pointer create primitive", () => {
-    runtime.createPointer(
+    runtime.createOrGetTransparentReference(
         42,
         undefined,
         DIFReferenceMutability.Immutable,
     ) satisfies Ref<42>;
 
-    runtime.createPointer(
+    runtime.createOrGetTransparentReference(
         42,
         undefined,
         DIFReferenceMutability.Mutable,
     ) satisfies Ref<number>;
 
-    runtime.createPointer(
+    runtime.createOrGetTransparentReference(
         "hello world",
         undefined,
         DIFReferenceMutability.Immutable,
     ) satisfies Ref<"hello world">;
 
-    runtime.createPointer(
+    runtime.createOrGetTransparentReference(
         "hello world",
         undefined,
         DIFReferenceMutability.Mutable,
     ) satisfies Ref<string>;
 
-    runtime.createPointer(
+    runtime.createOrGetTransparentReference(
         true,
         undefined,
         DIFReferenceMutability.Immutable,
     ) satisfies Ref<true>;
 
-    runtime.createPointer(
+    runtime.createOrGetTransparentReference(
         { x: true } as const,
         undefined,
         DIFReferenceMutability.Immutable,
@@ -117,24 +120,40 @@ Deno.test("pointer create primitive", () => {
         readonly x: true;
     };
 
-    const a = runtime.createPointer(
+    const a = runtime.createOrGetTransparentReference(
         5,
         undefined,
         DIFReferenceMutability.Immutable,
     );
-    const b = runtime.createPointer(
+    const b = runtime.createOrGetTransparentReference(
         { x: a },
         undefined,
         DIFReferenceMutability.Mutable,
     ) satisfies {
-        x: Ref<5> | 5;
+        x: Ref<5>;
     };
-    b.x satisfies Ref<5> | 5;
-    b.x = 5;
+    b.x satisfies Ref<5>;
+    b.x.value = 5;
+});
+
+Deno.test("detect illegal use of moved original value", () => {
+    const arrayTypeBindingInstance = runtime.dif.type_registry.getTypeBinding(
+        arrayTypeBinding.typeAddress,
+    )!;
+
+    const original = [1, 2];
+    // original is "moved" to reference
+    const reference = runtime.createOrGetTransparentReference(original);
+
+    // reference.push(4);
+
+    assertThrows(
+        () => original.push(3), // should not be allowed
+    );
 });
 
 Deno.test("pointer create struct", () => {
-    const innerPtr = runtime.createPointer(
+    const innerPtr = runtime.createOrGetTransparentReference(
         3,
         undefined,
         DIFReferenceMutability.Mutable,
@@ -142,15 +161,15 @@ Deno.test("pointer create struct", () => {
     const struct = { a: 1.0, b: "text", c: { d: true }, e: { f: innerPtr } };
 
     { // can not assign to ptrObjFinal.e.f
-        const ptrObjFinal = runtime.createPointer(
+        const ptrObjFinal = runtime.createOrGetTransparentReference(
             struct,
             undefined,
             DIFReferenceMutability.Immutable,
         );
-        ptrObjFinal.e satisfies { readonly f: Ref<number> | number };
+        ptrObjFinal.e satisfies { readonly f: Ref<number> };
     }
 
-    const ptrObj = runtime.createPointer(
+    const ptrObj = runtime.createOrGetTransparentReference(
         struct,
         undefined,
         DIFReferenceMutability.Mutable,
@@ -158,7 +177,6 @@ Deno.test("pointer create struct", () => {
 
     assertThrows(
         () => {
-            // @ts-ignore: Property 'a' is read-only
             ptrObj.a = 2;
         },
         Error,
@@ -174,7 +192,6 @@ Deno.test("pointer create struct", () => {
     );
     assertThrows(
         () => {
-            // @ts-ignore: Property 'd' is read-only
             ptrObj.c.d = false;
         },
         Error,
@@ -187,7 +204,7 @@ Deno.test("pointer create struct", () => {
     assertEquals(ptrObj.e.f.value, 7);
     assertEquals(innerPtr.value, 7);
 
-    ptrObj.e.f = 10;
+    ptrObj.e.f.value = 10;
 });
 
 Deno.test("pointer create and resolve", () => {
@@ -200,7 +217,7 @@ Deno.test("pointer create and resolve", () => {
     //     `Invalid`,
     // );
 
-    const ptr = runtime.dif.createReference(
+    const ptr = runtime.dif.createReferenceFromDIFValue(
         { value: "unyt.org" },
         undefined,
         DIFReferenceMutability.Mutable,
@@ -216,7 +233,7 @@ Deno.test("pointer object create and resolve", () => {
         [{ value: "a" }, { value: 123 }],
         [{ value: "b" }, { value: 456 }],
     ];
-    const ptr = runtime.dif.createReference(
+    const ptr = runtime.dif.createReferenceFromDIFValue(
         {
             value: initialDIFValue,
         },
@@ -243,7 +260,7 @@ Deno.test("pointer object create and resolve", () => {
 
 Deno.test("pointer object create and cache", () => {
     const val = { a: 123, b: 456 };
-    const ptrObj = runtime.createPointer(val);
+    const ptrObj = runtime.createOrGetTransparentReference(val);
     console.log("ptrObj", ptrObj);
     assertEquals(
         ptrObj,
@@ -272,7 +289,7 @@ Deno.test("pointer object create and cache", () => {
 
 Deno.test("pointer map create and cache", () => {
     const val = new Map([[1, 2], [3, 4]]);
-    const ptrMap = runtime.createPointer(val);
+    const ptrMap = runtime.createOrGetTransparentReference(val);
     assertEquals(ptrMap, val);
     ptrMap.set(5, 6);
     ptrMap satisfies Map<number, number>;
@@ -306,7 +323,7 @@ Deno.test("pointer map create and cache", () => {
 
 Deno.test("pointer primitive ref create and cache", () => {
     const val = 123;
-    const ptrObj = runtime.createPointer(val);
+    const ptrObj = runtime.createOrGetTransparentReference(val);
     if (!(ptrObj instanceof Ref)) {
         throw new Error("Pointer object is not a Ref");
     }
@@ -324,7 +341,7 @@ Deno.test("pointer primitive ref create and cache", () => {
 
 Deno.test("pointer primitive ref update", () => {
     const val = 123;
-    const ptrObj = runtime.createPointer(val as number);
+    const ptrObj = runtime.createOrGetTransparentReference(val as number);
     if (!(ptrObj instanceof Ref)) {
         throw new Error("Pointer object is not a Ref");
     }
@@ -348,7 +365,7 @@ Deno.test("pointer primitive ref update", () => {
 
 Deno.test("immutable pointer primitive ref update", () => {
     const val = 123;
-    const ptrObj = runtime.createPointer(
+    const ptrObj = runtime.createOrGetTransparentReference(
         val as number,
         undefined,
         DIFReferenceMutability.Immutable,
@@ -376,7 +393,7 @@ Deno.test("immutable pointer primitive ref update", () => {
 
 Deno.test("immutable pointer primitive ref update", () => {
     const val = 123;
-    const ptrObj = runtime.createPointer(
+    const ptrObj = runtime.createOrGetTransparentReference(
         val as number,
         undefined,
         DIFReferenceMutability.Immutable,
@@ -404,7 +421,11 @@ Deno.test("immutable pointer primitive ref update", () => {
 
 Deno.test("pointer primitive ref update and observe", () => {
     const val = 123;
-    const ptrObj = runtime.createPointer(val as number) as Ref<number>;
+    const ptrObj = runtime.createOrGetTransparentReference(
+        val as number,
+    ) as Ref<
+        number
+    >;
     assertEquals(ptrObj.value, val);
 
     let observedUpdate: DIFUpdate | null = null;
@@ -430,7 +451,11 @@ Deno.test("pointer primitive ref update and observe", () => {
 
 Deno.test("pointer primitive ref update and observe local", () => {
     const val = 123;
-    const ptrObj = runtime.createPointer(val as number) as Ref<number>;
+    const ptrObj = runtime.createOrGetTransparentReference(
+        val as number,
+    ) as Ref<
+        number
+    >;
     assertEquals(ptrObj.value, val);
 
     let observedUpdate: DIFUpdateData | null = null;
@@ -476,7 +501,11 @@ Deno.test("pointer primitive ref update and observe local", () => {
 
 Deno.test("pointer primitive ref remote update and observe bind direct", () => {
     const val = 123;
-    const ptrObj = runtime.createPointer(val as number) as Ref<number>;
+    const ptrObj = runtime.createOrGetTransparentReference(
+        val as number,
+    ) as Ref<
+        number
+    >;
     assertEquals(ptrObj.value, val);
 
     let observedUpdate: DIFUpdate | null = null;
@@ -510,7 +539,11 @@ Deno.test("pointer primitive ref remote update and observe bind direct", () => {
 
 Deno.test("pointer primitive ref remote update and observe local", () => {
     const val = 123;
-    const ptrObj = runtime.createPointer(val as number) as Ref<number>;
+    const ptrObj = runtime.createOrGetTransparentReference(
+        val as number,
+    ) as Ref<
+        number
+    >;
     assertEquals(ptrObj.value, val);
 
     let observedUpdate: DIFUpdateData | null = null;
@@ -563,7 +596,7 @@ Deno.test("pointer primitive ref remote update and observe local", () => {
 });
 
 Deno.test("observer immutable", () => {
-    const ref = runtime.dif.createReference(
+    const ref = runtime.dif.createReferenceFromDIFValue(
         { value: "Immutable" },
         undefined,
         DIFReferenceMutability.Immutable,
@@ -578,7 +611,7 @@ Deno.test("observer immutable", () => {
 });
 
 Deno.test("pointer observe unobserve", () => {
-    const ref = runtime.dif.createReference(
+    const ref = runtime.dif.createReferenceFromDIFValue(
         { value: "42" },
         undefined,
         DIFReferenceMutability.Mutable,
