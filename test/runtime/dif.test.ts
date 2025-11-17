@@ -19,7 +19,7 @@ import {
 
 const runtime = new Runtime({ endpoint: "@jonas", debug: true });
 Deno.test("pointer create with observe", () => {
-    const ref = runtime.dif.createPointer(
+    const ref = runtime.dif.createReference(
         {
             value: "Hello, Datex!",
         },
@@ -31,13 +31,13 @@ Deno.test("pointer create with observe", () => {
     let observed: DIFUpdate | null = null;
     const observerId = runtime.dif.observePointerBindDirect(ref, (value) => {
         runtime.executeSync("'xy'");
-        runtime.dif.unobservePointerBindDirect(ref, observerId);
+        runtime.dif.unobserveReferenceBindDirect(ref, observerId);
         observed = value;
         // TODO: print error message somewhere (don't throw)
         throw new Error("Should not be called again");
     }, { relay_own_updates: true });
 
-    runtime.dif.updatePointer(ref, {
+    runtime.dif.updateReference(ref, {
         value: { value: "Hello, Datex 2" },
         kind: DIFUpdateKind.Replace,
     });
@@ -53,7 +53,7 @@ Deno.test("pointer create with observe", () => {
 });
 
 Deno.test("pointer create without observe", () => {
-    const ref = runtime.dif.createPointer(
+    const ref = runtime.dif.createReference(
         {
             value: "Hello, Datex!",
         },
@@ -65,11 +65,11 @@ Deno.test("pointer create without observe", () => {
     let observed: DIFUpdate | null = null;
     const observerId = runtime.dif.observePointerBindDirect(ref, (value) => {
         runtime.executeSync("'xy'");
-        runtime.dif.unobservePointerBindDirect(ref, observerId);
+        runtime.dif.unobserveReferenceBindDirect(ref, observerId);
         observed = value;
     });
 
-    runtime.dif.updatePointer(ref, {
+    runtime.dif.updateReference(ref, {
         value: { value: "Hello, Datex 2" },
         kind: DIFUpdateKind.Replace,
     });
@@ -200,7 +200,7 @@ Deno.test("pointer create and resolve", () => {
     //     `Invalid`,
     // );
 
-    const ptr = runtime.dif.createPointer(
+    const ptr = runtime.dif.createReference(
         { value: "unyt.org" },
         undefined,
         DIFReferenceMutability.Mutable,
@@ -216,7 +216,7 @@ Deno.test("pointer object create and resolve", () => {
         [{ value: "a" }, { value: 123 }],
         [{ value: "b" }, { value: 456 }],
     ];
-    const ptr = runtime.dif.createPointer(
+    const ptr = runtime.dif.createReference(
         {
             value: initialDIFValue,
         },
@@ -563,7 +563,7 @@ Deno.test("pointer primitive ref remote update and observe local", () => {
 });
 
 Deno.test("observer immutable", () => {
-    const ref = runtime.dif.createPointer(
+    const ref = runtime.dif.createReference(
         { value: "Immutable" },
         undefined,
         DIFReferenceMutability.Immutable,
@@ -578,14 +578,14 @@ Deno.test("observer immutable", () => {
 });
 
 Deno.test("pointer observe unobserve", () => {
-    const ref = runtime.dif.createPointer(
+    const ref = runtime.dif.createReference(
         { value: "42" },
         undefined,
         DIFReferenceMutability.Mutable,
     );
     assertThrows(
         () => {
-            runtime.dif.unobservePointerBindDirect(ref, 42);
+            runtime.dif.unobserveReferenceBindDirect(ref, 42);
         },
         Error,
         `not found`,
@@ -593,13 +593,13 @@ Deno.test("pointer observe unobserve", () => {
 
     const observerId = runtime.dif.observePointerBindDirect(ref, (value) => {
         console.log("Observed pointer value:", value);
-        runtime.dif.unobservePointerBindDirect(ref, observerId);
+        runtime.dif.unobserveReferenceBindDirect(ref, observerId);
     });
     assertEquals(observerId, 0);
-    runtime.dif.unobservePointerBindDirect(ref, observerId);
+    runtime.dif.unobserveReferenceBindDirect(ref, observerId);
     assertThrows(
         () => {
-            runtime.dif.unobservePointerBindDirect(ref, observerId);
+            runtime.dif.unobserveReferenceBindDirect(ref, observerId);
         },
         Error,
         `not found`,
