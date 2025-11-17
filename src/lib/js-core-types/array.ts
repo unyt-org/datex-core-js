@@ -7,23 +7,23 @@ import {
 
 const ORIGINAL_PUSH = Symbol("ORIGINAL_PUSH");
 
-type ProxifiedArray<V = unknown> = Array<V> & {
+type ArrayMetadata<V = unknown> = {
     [ORIGINAL_VALUE]: Array<V>;
     [ORIGINAL_PUSH]: Array<V>["push"];
 };
 
 export const arrayTypeBinding: TypeBindingDefinition<
     Array<unknown>,
-    ProxifiedArray
+    ArrayMetadata
 > = {
     typeAddress: CoreTypeAddress.list,
-    bind(parent, pointerAddress, difHandler) {
-        bindArrayMethods(parent, pointerAddress, difHandler);
-        Object.defineProperty(parent, ORIGINAL_VALUE, {
-            value: parent,
-            writable: false,
-            enumerable: false,
-        });
+    bind(parent, pointerAddress) {
+        const metadata = bindArrayMethods(
+            parent,
+            pointerAddress,
+            this.difHandler,
+        );
+        const difHandler = this.difHandler;
         const proxy = new Proxy(parent, {
             set(target, prop, value, receiver) {
                 console.log("SET", prop, value);
@@ -68,24 +68,29 @@ export const arrayTypeBinding: TypeBindingDefinition<
                 return Reflect.set(target, prop, value, receiver);
             },
         });
-        return proxy as ProxifiedArray;
+        return {
+            value: proxy,
+            metadata,
+        };
     },
     handleAppend(parent, value) {
-        parent[ORIGINAL_PUSH](value);
+        this.getReferenceMetadata(parent)[ORIGINAL_PUSH](value);
     },
-    handleSet(parent: ProxifiedArray, key: unknown, value: unknown) {
-        parent[ORIGINAL_VALUE][key as number] = value;
+    handleSet(parent, key: unknown, value: unknown) {
+        this.getReferenceMetadata(parent)[ORIGINAL_VALUE][key as number] =
+            value;
     },
-    handleDelete(parent: ProxifiedArray, key: number) {
+    handleDelete(parent, key: number) {
         // remove key (splice)
-        parent[ORIGINAL_VALUE].splice(key, 1);
+        this.getReferenceMetadata(parent)[ORIGINAL_VALUE].splice(key, 1);
     },
     handleClear(parent) {
-        parent[ORIGINAL_VALUE].length = 0;
+        this.getReferenceMetadata(parent)[ORIGINAL_VALUE].length = 0;
     },
     handleReplace(parent, newValue: unknown[]) {
-        parent[ORIGINAL_VALUE].length = 0;
-        parent[ORIGINAL_PUSH](...newValue);
+        const metadata = this.getReferenceMetadata(parent);
+        metadata[ORIGINAL_VALUE].length = 0;
+        metadata[ORIGINAL_PUSH](...newValue);
     },
 };
 
@@ -93,7 +98,7 @@ function bindArrayMethods(
     array: unknown[],
     pointerAddress: string,
     difHandler: DIFHandler,
-) {
+): ArrayMetadata {
     const originalPush = array.push.bind(array);
 
     Object.defineProperty(array, "push", {
@@ -109,11 +114,10 @@ function bindArrayMethods(
         enumerable: false,
     });
 
-    Object.defineProperty(array, ORIGINAL_PUSH, {
-        value: originalPush,
-        enumerable: false,
-        writable: false,
-    });
+    return {
+        [ORIGINAL_VALUE]: array,
+        [ORIGINAL_PUSH]: originalPush,
+    };
 }
 
 function handleArrayPush(

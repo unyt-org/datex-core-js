@@ -17,10 +17,6 @@ export type DIFValue = {
     type?: DIFTypeContainer;
     value: DIFRepresentationValue;
 };
-/**
- * A DATEX value or pointer address representation in the DIF format.
- */
-export type DIFContainer = DIFValue | DIFPointerAddress;
 
 /**
  * Mapping of DIF type kinds.

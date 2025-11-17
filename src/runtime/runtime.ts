@@ -323,7 +323,7 @@ export class Runtime {
         allowedType?: DIFTypeContainer | null,
         mutability?: M,
     ): PointerOut<V, M> {
-        return this.#difHandler.createPointerFromJSValue(
+        return this.#difHandler.createReferenceFromJSValue(
             value,
             allowedType,
             mutability,
@@ -401,8 +401,7 @@ type PointerOut<V, M extends DIFReferenceMutability> = V extends Ref<infer U>
                 : { [K in keyof V]: ObjectFieldOut<V[K], M> }
                 : { readonly [K in keyof V]: ObjectFieldOut<V[K], M> }
         )
-    : V extends PrimitiveValue
-        ? Ref<
+    : V extends PrimitiveValue ? Ref<
             M extends typeof DIFReferenceMutability["Immutable"] ? V
                 : WidenLiteral<V>
         >

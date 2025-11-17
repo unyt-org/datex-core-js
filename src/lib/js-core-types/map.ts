@@ -5,7 +5,7 @@ const ORIGINAL_SET = Symbol("ORIGINAL_SET");
 const ORIGINAL_DELETE = Symbol("ORIGINAL_DELETE");
 const ORIGINAL_CLEAR = Symbol("ORIGINAL_CLEAR");
 
-type ProxifiedMap<K = unknown, V = unknown> = Map<K, V> & {
+type MapMetadata<K = unknown, V = unknown> = {
     [ORIGINAL_SET]: Map<K, V>["set"];
     [ORIGINAL_DELETE]: Map<K, V>["delete"];
     [ORIGINAL_CLEAR]: Map<K, V>["clear"];
@@ -13,58 +13,62 @@ type ProxifiedMap<K = unknown, V = unknown> = Map<K, V> & {
 
 export const mapTypeBinding: TypeBindingDefinition<
     Map<unknown, unknown>,
-    ProxifiedMap
+    MapMetadata
 > = {
     typeAddress: CoreTypeAddress.map,
-    bind(parent, pointerAddress, difHandler) {
-        const originalSet = parent.set;
-        const originalDelete = parent.delete;
-        const originalClear = parent.clear;
-        Object.defineProperties(parent, {
+    bind(value, pointerAddress) {
+        const originalSet = value.set;
+        const originalDelete = value.delete;
+        const originalClear = value.clear;
+        Object.defineProperties(value, {
             set: {
                 value: (key: unknown, value: unknown) => {
-                    difHandler.triggerSet(pointerAddress, key, value);
-                    return originalSet.call(parent, key, value);
+                    this.difHandler.triggerSet(pointerAddress, key, value);
+                    return originalSet.call(value, key, value);
                 },
                 configurable: true,
                 writable: true,
             },
             delete: {
                 value: (key: unknown) => {
-                    difHandler.triggerDelete(pointerAddress, key);
-                    return originalDelete.call(parent, key);
+                    this.difHandler.triggerDelete(pointerAddress, key);
+                    return originalDelete.call(value, key);
                 },
                 configurable: true,
                 writable: true,
             },
             clear: {
                 value: () => {
-                    difHandler.triggerClear(pointerAddress);
-                    return originalClear.call(parent);
+                    this.difHandler.triggerClear(pointerAddress);
+                    return originalClear.call(value);
                 },
                 configurable: true,
                 writable: true,
             },
-            [ORIGINAL_SET]: { value: originalSet },
-            [ORIGINAL_DELETE]: { value: originalDelete },
-            [ORIGINAL_CLEAR]: { value: originalClear },
         });
 
-        return parent as ProxifiedMap;
+        return {
+            value,
+            metadata: {
+                [ORIGINAL_SET]: originalSet,
+                [ORIGINAL_DELETE]: originalDelete,
+                [ORIGINAL_CLEAR]: originalClear,
+            },
+        };
     },
-    handleSet(parent, key: unknown, value: unknown) {
-        const set = parent[ORIGINAL_SET];
-        set.call(parent, key, value);
+    handleSet(target, key: unknown, value: unknown) {
+        const set = this.getReferenceMetadata(target)[ORIGINAL_SET];
+        set.call(target, key, value);
     },
-    handleDelete(parent, key: unknown) {
-        const del = parent[ORIGINAL_DELETE];
-        del.call(parent, key);
+    handleDelete(target, key: unknown) {
+        const del = this.getReferenceMetadata(target)[ORIGINAL_DELETE];
+        del.call(target, key);
     },
-    handleClear(parent) {
-        const clear = parent[ORIGINAL_CLEAR];
-        clear.call(parent);
+    handleClear(target) {
+        const clear = this.getReferenceMetadata(target)[ORIGINAL_CLEAR];
+        clear.call(target);
     },
-    handleReplace(parent, newValue: unknown) {
+    handleReplace(target, newValue: unknown) {
         // TODO: replace all map entries
     },
 };
