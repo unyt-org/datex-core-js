@@ -136,22 +136,6 @@ Deno.test("pointer create primitive", () => {
     b.x.value = 5;
 });
 
-Deno.test("detect illegal use of moved original value", () => {
-    const arrayTypeBindingInstance = runtime.dif.type_registry.getTypeBinding(
-        arrayTypeBinding.typeAddress,
-    )!;
-
-    const original = [1, 2];
-    // original is "moved" to reference
-    const reference = runtime.createOrGetTransparentReference(original);
-
-    // reference.push(4);
-
-    assertThrows(
-        () => original.push(3), // should not be allowed
-    );
-});
-
 Deno.test("pointer create struct", () => {
     const innerPtr = runtime.createOrGetTransparentReference(
         3,

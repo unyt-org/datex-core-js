@@ -5,33 +5,54 @@ import {
     type ReferenceMetadata,
 } from "../../dif/dif-handler.ts";
 import type { TypeBindingDefinition } from "../../dif/type-registry.ts";
+import { interceptAccessors } from "../../dif/utils.ts";
 import { DEBUG_MODE } from "../../global.ts";
+import { Option } from "../../utils/option.ts";
 
-const ORIGINAL_PUSH = Symbol("ORIGINAL_PUSH");
+type ArrayMethods<V> = {
+    push: Array<V>["push"];
+};
 
-type ArrayMetadata<V = unknown> = {
-    [ORIGINAL_PUSH]: Array<V>["push"];
-} & ReferenceMetadata;
-
-export const arrayTypeBinding: TypeBindingDefinition<
-    Array<unknown>,
-    ArrayMetadata
-> = {
+export const arrayTypeBinding: TypeBindingDefinition<Array<unknown>> = {
     typeAddress: CoreTypeAddress.list,
     bind(target, pointerAddress) {
-        const metadata = bindArrayMethods(
+        const metadata: ReferenceMetadata = {};
+        const arrayMethods = getArrayMethods(
             target,
             pointerAddress,
             this.difHandler,
         );
         if (DEBUG_MODE) {
-            invalidateOriginalValue(target, metadata);
+            interceptAccessors(
+                target,
+                () => {
+                    if (!metadata[IS_PROXY_ACCESS]) {
+                        throw new Error(
+                            "Invalid access to original array value that was moved to a reference",
+                        );
+                    }
+                    return Option.None();
+                },
+                () => {
+                    if (!metadata[IS_PROXY_ACCESS]) {
+                        throw new Error(
+                            "Invalid access to original array value that was moved to a reference",
+                        );
+                    }
+                },
+            );
         }
         // deno-lint-ignore no-this-alias
         const self = this;
-        const proxy = new Proxy(target, {
-            set(target, prop, value, receiver) {
-                return self.allowOriginalValueAccess(target, () => {
+        const proxy: unknown[] = new Proxy(target, {
+            get(_target, key) {
+                return self.allowOriginalValueAccess(proxy, () => {
+                    return arrayMethods[key as keyof ArrayMethods<unknown>] ??
+                        Reflect.get(target, key);
+                });
+            },
+            set(_target, prop, value, receiver) {
+                return self.allowOriginalValueAccess(proxy, () => {
                     const index = Number(prop);
                     if (
                         typeof prop === "string" && !isNaN(index) && index >= 0
@@ -47,7 +68,7 @@ export const arrayTypeBinding: TypeBindingDefinition<
                             );
                         }
 
-                        self.difHandler.triggerSet(
+                        self.difHandler.triggerIndexSet(
                             pointerAddress,
                             index,
                             value,
@@ -85,7 +106,7 @@ export const arrayTypeBinding: TypeBindingDefinition<
         };
     },
     handleAppend(target, value) {
-        this.getReferenceMetadata(target)[ORIGINAL_PUSH](value);
+        target.push(value);
     },
     handleSet(target, key: unknown, value: unknown) {
         this.difHandler.getOriginalValueFromProxy(target)![key as number] =
@@ -100,48 +121,40 @@ export const arrayTypeBinding: TypeBindingDefinition<
     },
     handleReplace(target, newValue: unknown[]) {
         this.difHandler.getOriginalValueFromProxy(target)!.length = 0;
-        this.getReferenceMetadata(target)[ORIGINAL_PUSH](...newValue);
+        target.push(...newValue);
     },
 };
 
-function bindArrayMethods(
-    array: unknown[],
+function getArrayMethods<V>(
+    array: V[],
     pointerAddress: string,
     difHandler: DIFHandler,
-): ArrayMetadata {
+): ArrayMethods<V> {
     const originalPush = array.push.bind(array);
 
-    Object.defineProperty(array, "push", {
-        value: (...items: unknown[]) => {
-            return handleArrayPush(
-                array,
-                items,
-                originalPush,
-                pointerAddress,
-                difHandler,
-            );
-        },
-        enumerable: false,
-        configurable: true,
-    });
-
     return {
-        [ORIGINAL_PUSH]: originalPush,
+        push: generateInterceptedArrayPush(
+            array,
+            originalPush,
+            pointerAddress,
+            difHandler,
+        ),
     };
 }
 
-function handleArrayPush(
-    array: unknown[],
-    items: unknown[],
-    originalPush: (...items: unknown[]) => number,
+function generateInterceptedArrayPush<V>(
+    array: V[],
+    originalPush: (...items: V[]) => number,
     pointerAddress: string,
     difHandler: DIFHandler,
 ) {
-    for (const item of items) {
-        difHandler.triggerAppend(pointerAddress, item);
-        originalPush(item);
-    }
-    return array.length;
+    return (...items: V[]) => {
+        for (const item of items) {
+            difHandler.triggerAppend(pointerAddress, item);
+            originalPush(item);
+        }
+        return array.length;
+    };
 }
 
 /**
@@ -179,60 +192,4 @@ function triggerArraySplice(
     for (let i = 0; i < items.length; i++) {
         difHandler.triggerSet(pointerAddress, start + i, items[i]);
     }
-}
-
-function invalidateOriginalValue(array: unknown[], metadata: ArrayMetadata) {
-    const shadowArray = [...array];
-    array.length = 0;
-
-    function getLockedPointerDefinition(
-        originalDescriptor: PropertyDescriptor | undefined,
-        key: string | symbol,
-    ) {
-        return {
-            get() {
-                if (!metadata[IS_PROXY_ACCESS]) {
-                    throw new Error(
-                        "Invalid access to original array value that was moved to a reference",
-                    );
-                }
-                return shadowArray[key as keyof typeof array];
-            },
-            set(value: unknown) {
-                if (!metadata[IS_PROXY_ACCESS]) {
-                    throw new Error(
-                        "Invalid access to original array value that was moved to a reference",
-                    );
-                }
-                shadowArray[key as unknown as number] = value;
-            },
-            enumerable: originalDescriptor?.enumerable,
-            configurable: false,
-        } as const;
-    }
-    for (const key of Reflect.ownKeys(array)) {
-        if (key == "length") {
-            continue;
-        }
-        console.log("ownkey", key);
-        const originalDescriptor = Object.getOwnPropertyDescriptor(array, key);
-        Object.defineProperty(
-            array,
-            key,
-            getLockedPointerDefinition(originalDescriptor, key),
-        );
-    }
-    for (const key of Reflect.ownKeys(Object.getPrototypeOf(array))) {
-        if (key == "length" || key == "constructor") {
-            continue;
-        }
-        // array[key as keyof typeof array] = function () {
-        // Object.defineProperty(
-        //     array,
-        //     key,
-        //     getLockedPointerDefinition(originalDescriptor, key),
-        // );
-    }
-
-    Object.seal(array);
 }

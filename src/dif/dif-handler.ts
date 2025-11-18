@@ -795,6 +795,7 @@ export class DIFHandler {
             originalValue: isProxifiedValue ? originalValue : null,
             observerId,
         });
+
         this.#referenceMetadata.set(proxiedValue, {
             address,
             metadata,
@@ -1089,6 +1090,28 @@ export class DIFHandler {
             key: { kind: "value", value: difKey },
             value: difValue,
         };
+        console.log("Triggering set update", update);
+        this.updateReference(pointerAddress, update);
+    }
+
+    /**
+     * Triggers a 'set' update for the given pointer address, index and value.
+     */
+    public triggerIndexSet<V>(
+        pointerAddress: string,
+        index: number | bigint,
+        value: V,
+    ) {
+        if (typeof index !== "bigint" && !Number.isInteger(index)) {
+            throw new Error("Index must be a non-negative integer");
+        }
+        const difValue = this.convertJSValueToDIFValue(value);
+        const update: DIFUpdateData = {
+            kind: DIFUpdateKind.Set,
+            key: { kind: "index", value: Number(index) },
+            value: difValue,
+        };
+        console.log("Triggering set update", update);
         this.updateReference(pointerAddress, update);
     }
 
