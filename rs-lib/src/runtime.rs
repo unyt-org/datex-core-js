@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use crate::crypto::crypto_js::CryptoJS;
 use crate::js_utils::{js_array, js_error};
 use crate::network::com_hub::JSComHub;
@@ -468,8 +469,11 @@ impl RuntimeDIFHandle {
         let cb = callback.clone();
         let observe_options: ObserveOptions =
             from_value(observe_options).map_err(js_error)?;
-        let observer = move |update: &DIFUpdate| {
-            let js_value = to_js_value(update).unwrap();
+        let observer = move |update_data: &DIFUpdateData, source_id: TransceiverId| {
+            let js_value = to_js_value(&DIFUpdate {
+                source_id,
+                data: Cow::Borrowed(update_data),
+            }).unwrap();
             let _ = cb.call1(&JsValue::NULL, &js_value);
         };
         self.internal
@@ -514,7 +518,7 @@ impl RuntimeDIFHandle {
         let address = Self::js_value_to_pointer_address(address)?;
         let dif_update_data: DIFUpdateData =
             from_value(update).map_err(js_error)?;
-        DIFInterface::update(self, transceiver_id, address, dif_update_data)
+        DIFInterface::update(self, transceiver_id, address, &dif_update_data)
             .map_err(js_error)
     }
 
@@ -598,7 +602,7 @@ impl DIFInterface for RuntimeDIFHandle {
         &self,
         source_id: TransceiverId,
         address: PointerAddress,
-        update: DIFUpdateData,
+        update: &DIFUpdateData,
     ) -> Result<(), DIFUpdateError> {
         self.internal.update(source_id, address, update)
     }
@@ -637,12 +641,12 @@ impl DIFInterface for RuntimeDIFHandle {
             .create_pointer(value, allowed_type, mutability)
     }
 
-    fn observe_pointer<F: Fn(&DIFUpdate) + 'static>(
+    fn observe_pointer(
         &self,
         transceiver_id: TransceiverId,
         address: PointerAddress,
         options: ObserveOptions,
-        observer: F,
+        observer: impl Fn(&DIFUpdateData, TransceiverId) + 'static,
     ) -> Result<u32, DIFObserveError> {
         self.internal.observe_pointer(
             transceiver_id,
