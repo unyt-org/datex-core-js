@@ -23,8 +23,13 @@ import { panic } from "../utils/exceptions.ts";
 
 export const IS_PROXY_ACCESS = Symbol("IS_PROXY_ACCESS");
 
-export type ReferenceMetadata = Record<string | symbol, unknown> & {
+export type CustomReferenceMetadata = Record<string | symbol, unknown> & {
     [IS_PROXY_ACCESS]?: boolean;
+};
+
+export type ReferenceMetadata<M extends CustomReferenceMetadata> = {
+    address: string;
+    customMetadata: M;
 };
 
 /**
@@ -64,7 +69,7 @@ export class DIFHandler {
      */
     readonly #referenceMetadata = new WeakMap<
         WeakKey,
-        { address: string; metadata: ReferenceMetadata }
+        ReferenceMetadata<CustomReferenceMetadata>
     >();
 
     readonly #observers = new Map<
@@ -616,7 +621,9 @@ export class DIFHandler {
     public convertToDIFValues<T extends unknown[]>(
         values: T | null,
     ): DIFValueContainer[] | null {
-        return values?.map((value) => this.convertJSValueToDIFValue(value)) ||
+        return values?.map((value) =>
+            this.convertJSValueToDIFValueContainer(value)
+        ) ||
             null;
     }
 
@@ -647,7 +654,7 @@ export class DIFHandler {
         );
 
         let typeBinding: TypeBinding | null = null;
-        let metadata: ReferenceMetadata | undefined = undefined;
+        let metadata: CustomReferenceMetadata | undefined = undefined;
 
         // bind js value (if mutable, nominal type)
         const bindJSValue = mutability !== DIFReferenceMutability.Immutable &&
@@ -785,7 +792,7 @@ export class DIFHandler {
         originalValue: unknown,
         proxiedValue: WeakKey,
         observerId: number | null,
-        metadata: ReferenceMetadata = {},
+        metadata: CustomReferenceMetadata = {},
     ): void {
         const isProxifiedValue = this.isWeakKey(originalValue) &&
             originalValue !== proxiedValue;
@@ -798,7 +805,7 @@ export class DIFHandler {
 
         this.#referenceMetadata.set(proxiedValue, {
             address,
-            metadata,
+            customMetadata: metadata,
         });
 
         // store in proxy mapping if original value is not identical to proxied value
@@ -846,8 +853,9 @@ export class DIFHandler {
      * Creates a new reference containg the given JS value.
      * The returned value is a proxy object that behaves like the original object,
      * but also propagates changes between JS and the DATEX runtime.
+     * If a reference for the given value already exists, an error is thrown.
      */
-    public createOrGetTransparentReference<
+    public createTransparentReference<
         V,
         M extends DIFReferenceMutability =
             typeof DIFReferenceMutability.Mutable,
@@ -857,14 +865,14 @@ export class DIFHandler {
         mutability: M = DIFReferenceMutability.Mutable as M,
     ): PointerOut<V, M> {
         // if already bound to a reference, return the existing reference proxy (or the value itself)
-        const proxy = this.isWeakKey(value)
-            ? this.getReferenceProxy(value)
-            : null;
-        if (proxy) {
-            return proxy as PointerOut<V, M>;
+        const pointerAddress = this.getPointerAddressForValue(value as WeakKey);
+        if (pointerAddress) {
+            throw new Error(
+                `Value is already bound to a reference ($${pointerAddress}). Cannot create a new reference for the same value.`,
+            );
         }
 
-        const difValue = this.convertJSValueToDIFValue(value);
+        const difValue = this.convertJSValueToDIFValueContainer(value);
         const ptrAddress = this.createReferenceFromDIFValue(
             difValue,
             allowedType,
@@ -966,20 +974,39 @@ export class DIFHandler {
     }
 
     /**
-     * Returns the reference metadata for the given value if it is already cached, or null otherwise.
+     * Returns the reference metadata for the given value if it is registered.
      * The caller must ensure that the correct type M is used and the reference is already registered.
      * If the reference is not found, an error is thrown.
      */
-    public getReferenceMetadata<M extends ReferenceMetadata, T extends WeakKey>(
+    public getReferenceMetadataUnsafe<
+        M extends CustomReferenceMetadata,
+        T extends WeakKey,
+    >(
         value: T,
-    ): M {
-        const metadata = this.#referenceMetadata.get(value)?.metadata as
-            | M
-            | null;
+    ): ReferenceMetadata<M> {
+        const metadata = this.tryGetReferenceMetadata<M, T>(value);
         if (!metadata) {
             panic("Reference metadata not found for the given value");
         }
         return metadata;
+    }
+
+    /**
+     * Returns the reference metadata for the given value if it is registered, or null otherwise.
+     */
+    public tryGetReferenceMetadata<
+        M extends CustomReferenceMetadata,
+        T extends WeakKey,
+    >(
+        value: T,
+    ): ReferenceMetadata<M> | null {
+        return (
+            this.#referenceMetadata.get(value) ??
+                this.#referenceMetadata.get(
+                    this.#proxyMapping.get(value)?.deref() as WeakKey,
+                ) ??
+                null
+        ) as ReferenceMetadata<M> | null;
     }
 
     public isReference(value: WeakKey): boolean {
@@ -1006,13 +1033,15 @@ export class DIFHandler {
     }
 
     /**
-     * Converts a given JS value to its DIFValue representation.
+     * Converts a given JS value to its DIFValueContainer representation.
      */
-    public convertJSValueToDIFValue<T extends unknown>(
+    public convertJSValueToDIFValueContainer<T extends unknown>(
         value: T,
     ): DIFValueContainer {
         // if the value is a registered reference, return its address
-        const existingReference = this.#referenceMetadata.get(value as WeakKey);
+        const existingReference = this.tryGetReferenceMetadata(
+            value as WeakKey,
+        );
         if (existingReference) {
             return existingReference.address;
         }
@@ -1046,15 +1075,17 @@ export class DIFHandler {
             };
         } else if (Array.isArray(value)) {
             return {
-                value: value.map((v) => this.convertJSValueToDIFValue(v)),
+                value: value.map((v) =>
+                    this.convertJSValueToDIFValueContainer(v)
+                ),
             };
         } else if (value instanceof Map) {
             const map: [DIFValueContainer, DIFValueContainer][] = value
                 .entries().map((
                     [k, v],
                 ) => [
-                    this.convertJSValueToDIFValue(k),
-                    this.convertJSValueToDIFValue(v),
+                    this.convertJSValueToDIFValueContainer(k),
+                    this.convertJSValueToDIFValueContainer(v),
                 ] satisfies [DIFValueContainer, DIFValueContainer]).toArray();
             return {
                 type: CoreTypeAddress.map,
@@ -1063,7 +1094,7 @@ export class DIFHandler {
         } else if (typeof value === "object") {
             const map: Record<string, DIFValueContainer> = {};
             for (const [key, val] of Object.entries(value)) {
-                map[key] = this.convertJSValueToDIFValue(val);
+                map[key] = this.convertJSValueToDIFValueContainer(val);
             }
             return {
                 type: CoreTypeAddress.map,
@@ -1083,8 +1114,8 @@ export class DIFHandler {
         key: K,
         value: V,
     ) {
-        const difKey = this.convertJSValueToDIFValue(key);
-        const difValue = this.convertJSValueToDIFValue(value);
+        const difKey = this.convertJSValueToDIFValueContainer(key);
+        const difValue = this.convertJSValueToDIFValueContainer(value);
         const update: DIFUpdateData = {
             kind: DIFUpdateKind.Set,
             key: { kind: "value", value: difKey },
@@ -1105,7 +1136,7 @@ export class DIFHandler {
         if (typeof index !== "bigint" && !Number.isInteger(index)) {
             throw new Error("Index must be a non-negative integer");
         }
-        const difValue = this.convertJSValueToDIFValue(value);
+        const difValue = this.convertJSValueToDIFValueContainer(value);
         const update: DIFUpdateData = {
             kind: DIFUpdateKind.Set,
             key: { kind: "index", value: Number(index) },
@@ -1122,7 +1153,7 @@ export class DIFHandler {
         pointerAddress: string,
         value: V,
     ) {
-        const difValue = this.convertJSValueToDIFValue(value);
+        const difValue = this.convertJSValueToDIFValueContainer(value);
         const update: DIFUpdateData = {
             kind: DIFUpdateKind.Append,
             value: difValue,
@@ -1137,7 +1168,7 @@ export class DIFHandler {
         pointerAddress: string,
         value: V,
     ) {
-        const difValue = this.convertJSValueToDIFValue(value);
+        const difValue = this.convertJSValueToDIFValueContainer(value);
         const update: DIFUpdateData = {
             kind: DIFUpdateKind.Replace,
             value: difValue,
@@ -1152,7 +1183,7 @@ export class DIFHandler {
         pointerAddress: string,
         key: K,
     ) {
-        const difKey = this.convertJSValueToDIFValue(key);
+        const difKey = this.convertJSValueToDIFValueContainer(key);
         const update: DIFUpdateData = {
             kind: DIFUpdateKind.Delete,
             key: { kind: "value", value: difKey },
@@ -1166,6 +1197,27 @@ export class DIFHandler {
     public triggerClear(pointerAddress: string) {
         const update: DIFUpdateData = {
             kind: DIFUpdateKind.Clear,
+        };
+        this.updateReference(pointerAddress, update);
+    }
+
+    /**
+     * Triggers a 'list splice' update for the given pointer address.
+     */
+    public triggerListSplice<V>(
+        pointerAddress: string,
+        start: number,
+        deleteCount: number,
+        items: V[],
+    ) {
+        const difItems = items.map((item) =>
+            this.convertJSValueToDIFValueContainer(item)
+        );
+        const update: DIFUpdateData = {
+            kind: DIFUpdateKind.ListSplice,
+            start,
+            delete_count: deleteCount,
+            items: difItems,
         };
         this.updateReference(pointerAddress, update);
     }
