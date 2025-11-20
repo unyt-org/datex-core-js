@@ -67,6 +67,33 @@ Deno.test("map clear external", () => {
     assertEquals(map.size, 0);
 });
 
+Deno.test("map replace external", () => {
+    // create mutable ref to map
+    const [map, address] = createMapReference(
+        new Map<string | number, string>([
+            ["key1", "value1"],
+            [2, "value2"],
+        ]),
+    );
+
+    runtime._runtime.dif().update(42, address, {
+        kind: DIFUpdateKind.Replace,
+        value: runtime.dif.convertJSValueToDIFValueContainer(
+            new Map<string, string>([
+                ["a", "valueA"],
+                ["b", "valueB"],
+            ]),
+        ),
+    });
+    assertEquals(
+        map,
+        new Map<string, string>([
+            ["a", "valueA"],
+            ["b", "valueB"],
+        ]),
+    );
+});
+
 Deno.test("map set local", () => {
     // create mutable ref to map
     const [map, address] = createMapReference(

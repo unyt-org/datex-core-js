@@ -339,7 +339,6 @@ export class DIFHandler {
     public resolveDIFValue<T extends unknown>(
         value: DIFValue,
     ): T | Promise<T> {
-        console.log("RESOLVE", value);
         let type = value.type;
         if (type === undefined) {
             if (Array.isArray(value.value)) {
@@ -352,7 +351,6 @@ export class DIFHandler {
                 return value.value as T;
             }
         }
-        console.log(type, value);
 
         // null, boolean and text types values are just returned as is
         if (
@@ -1167,7 +1165,7 @@ export class DIFHandler {
             key: { kind: "index", value: Number(index) },
             value: difValue,
         };
-        console.log("Triggering set update", update);
+        console.log("Triggering index set update", update);
         this.updateReference(pointerAddress, update);
     }
 
@@ -1183,6 +1181,7 @@ export class DIFHandler {
             kind: DIFUpdateKind.Append,
             value: difValue,
         };
+        console.log("Triggering append update", update);
         this.updateReference(pointerAddress, update);
     }
 
@@ -1198,6 +1197,7 @@ export class DIFHandler {
             kind: DIFUpdateKind.Replace,
             value: difValue,
         };
+        console.log("Triggering replace update", update);
         this.updateReference(pointerAddress, update);
     }
 
@@ -1213,6 +1213,7 @@ export class DIFHandler {
             kind: DIFUpdateKind.Delete,
             key: { kind: "value", value: difKey },
         };
+        console.log("Triggering delete update", update);
         this.updateReference(pointerAddress, update);
     }
 
@@ -1223,6 +1224,7 @@ export class DIFHandler {
         const update: DIFUpdateData = {
             kind: DIFUpdateKind.Clear,
         };
+        console.log("Triggering clear update", update);
         this.updateReference(pointerAddress, update);
     }
 
@@ -1244,6 +1246,7 @@ export class DIFHandler {
             delete_count: deleteCount,
             items: difItems,
         };
+        console.log("Triggering list splice update", update);
         this.updateReference(pointerAddress, update);
     }
 }

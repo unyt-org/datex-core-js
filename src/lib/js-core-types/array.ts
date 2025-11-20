@@ -11,6 +11,9 @@ import { Option } from "../../utils/option.ts";
 
 type ArrayMethods<V> = {
     push: Array<V>["push"];
+    unshift: Array<V>["unshift"];
+    splice: Array<V>["splice"];
+    fill: Array<V>["fill"];
 };
 
 export const arrayTypeBinding: TypeBindingDefinition<Array<unknown>> = {
@@ -21,7 +24,9 @@ export const arrayTypeBinding: TypeBindingDefinition<Array<unknown>> = {
             target,
             pointerAddress,
             this.difHandler,
+            metadata,
         );
+        // catch acccess (get or set) to original array value, not via proxy - this check is only active in debug mode
         if (DEBUG_MODE) {
             interceptAccessors(
                 target,
@@ -52,6 +57,7 @@ export const arrayTypeBinding: TypeBindingDefinition<Array<unknown>> = {
                 });
             },
             set(_target, prop, value, receiver) {
+                console.log("=> array." + String(prop) + " =", value);
                 return self.allowOriginalValueAccess(proxy, () => {
                     const index = Number(prop);
                     if (
@@ -122,14 +128,32 @@ export const arrayTypeBinding: TypeBindingDefinition<Array<unknown>> = {
         this.difHandler.getOriginalValueFromProxy(target)!.length = 0;
         target.push(...newValue);
     },
+    handleListSplice(
+        target,
+        start: number,
+        deleteCount: number,
+        items: unknown[],
+    ) {
+        this.difHandler
+            .getOriginalValueFromProxy(target)!
+            .splice(start, deleteCount, ...items);
+    },
 };
 
+/**
+ * Implementes optimized array methods that send DIF updates on mutation.
+ * @returns
+ */
 function getArrayMethods<V>(
     array: V[],
     pointerAddress: string,
     difHandler: DIFHandler,
+    metadata: CustomReferenceMetadata,
 ): ArrayMethods<V> {
     const originalPush = array.push.bind(array);
+    const originalUnshift = array.unshift.bind(array);
+    const originalSplice = array.splice.bind(array);
+    const originalFill = array.fill.bind(array);
 
     return {
         push: generateInterceptedArrayPush(
@@ -138,21 +162,125 @@ function getArrayMethods<V>(
             pointerAddress,
             difHandler,
         ),
+        unshift: generateInterceptedArrayUnshift(
+            originalUnshift,
+            pointerAddress,
+            difHandler,
+            metadata,
+        ),
+        splice: generateInterceptedArraySplice(
+            array,
+            originalSplice,
+            pointerAddress,
+            difHandler,
+            metadata,
+        ),
+        fill: generateInterceptedArrayFill(
+            array,
+            originalFill,
+            pointerAddress,
+            difHandler,
+            metadata,
+        ),
     };
 }
 
 function generateInterceptedArrayPush<V>(
     array: V[],
-    originalPush: (...items: V[]) => number,
+    originalPush: Array<V>["push"],
     pointerAddress: string,
     difHandler: DIFHandler,
 ) {
     return (...items: V[]) => {
-        for (const item of items) {
-            difHandler.triggerAppend(pointerAddress, item);
-            originalPush(item);
+        difHandler.triggerListSplice(
+            pointerAddress,
+            array.length,
+            0,
+            items,
+        );
+        return originalPush(...items);
+    };
+}
+
+function generateInterceptedArrayUnshift<V>(
+    originalUnshift: Array<V>["unshift"],
+    pointerAddress: string,
+    difHandler: DIFHandler,
+    metadata: CustomReferenceMetadata,
+) {
+    return (...items: V[]) => {
+        difHandler.triggerListSplice(
+            pointerAddress,
+            0,
+            0,
+            items,
+        );
+        try {
+            metadata[IS_PROXY_ACCESS] = true;
+            return originalUnshift(...items);
+        } finally {
+            metadata[IS_PROXY_ACCESS] = false;
         }
-        return array.length;
+    };
+}
+
+function generateInterceptedArraySplice<V>(
+    array: V[],
+    originalSplice: Array<V>["splice"],
+    pointerAddress: string,
+    difHandler: DIFHandler,
+    metadata: CustomReferenceMetadata,
+) {
+    return (start: number, deleteCount?: number, ...items: V[]) => {
+        difHandler.triggerListSplice(
+            pointerAddress,
+            start,
+            deleteCount ?? (array.length - start),
+            items,
+        );
+        try {
+            metadata[IS_PROXY_ACCESS] = true;
+            return originalSplice(start, deleteCount!, ...items);
+        } finally {
+            metadata[IS_PROXY_ACCESS] = false;
+        }
+    };
+}
+
+function generateInterceptedArrayFill<V>(
+    array: V[],
+    originalFill: Array<V>["fill"],
+    pointerAddress: string,
+    difHandler: DIFHandler,
+    metadata: CustomReferenceMetadata,
+) {
+    return (value: V, start?: number, end?: number) => {
+        const actualStart = start !== undefined
+            ? (start < 0
+                ? Math.max(array.length + start, 0)
+                : Math.min(start, array.length))
+            : 0;
+        const actualEnd = end !== undefined
+            ? (end < 0
+                ? Math.max(array.length + end, 0)
+                : Math.min(end, array.length))
+            : array.length;
+        const itemCount = actualEnd - actualStart;
+        // splice to replace the filled range
+        if (itemCount > 0) {
+            difHandler.triggerListSplice(
+                pointerAddress,
+                actualStart,
+                actualEnd - actualStart,
+                new Array(itemCount).fill(value),
+            );
+        }
+        try {
+            metadata[IS_PROXY_ACCESS] = true;
+            return originalFill(value, start, end);
+        } finally {
+            metadata[IS_PROXY_ACCESS] = false;
+        }
     };
 }
 
@@ -169,7 +297,6 @@ function triggerArrayFillEmpty(
 ) {
     const originalLength = array.length;
     for (let i = from; i < to; i++) {
-        console.log(i, originalLength);
         if (i < originalLength) {
             difHandler.triggerSet(pointerAddress, i, null); // TODO: special js empty value
         } else {
