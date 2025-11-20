@@ -12,11 +12,6 @@ export function execute(datex_script: string, formatted: boolean): string;
  * Does not return the result of the script, but only indicates success or failure.
  */
 export function execute_internal(datex_script: string): boolean;
-export interface WebRTCInterfaceSetupData {
-    peer_endpoint: string;
-    ice_servers: RTCIceServer[] | null;
-}
-
 export interface WebSocketClientInterfaceSetupData {
     address: string;
 }
@@ -33,6 +28,11 @@ export interface RTCIceServer {
     urls: string[];
     username: string | null;
     credential: string | null;
+}
+
+export interface WebRTCInterfaceSetupData {
+    peer_endpoint: string;
+    ice_servers: RTCIceServer[] | null;
 }
 
 export type BaseInterfaceSetupData = InterfaceProperties;

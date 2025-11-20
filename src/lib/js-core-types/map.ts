@@ -17,9 +17,9 @@ export const mapTypeBinding: TypeBindingDefinition<
 > = {
     typeAddress: CoreTypeAddress.map,
     bind(value, pointerAddress) {
-        const originalSet = value.set;
-        const originalDelete = value.delete;
-        const originalClear = value.clear;
+        const originalSet = value.set.bind(value);
+        const originalDelete = value.delete.bind(value);
+        const originalClear = value.clear.bind(value);
         Object.defineProperties(value, {
             set: {
                 value: (key: unknown, value: unknown) => {
