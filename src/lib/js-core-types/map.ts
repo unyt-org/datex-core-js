@@ -57,15 +57,15 @@ export const mapTypeBinding: TypeBindingDefinition<
         };
     },
     handleSet(target, key: unknown, value: unknown) {
-        const set = this.getReferenceMetadata(target)[ORIGINAL_SET];
+        const set = this.getCustomReferenceMetadata(target)[ORIGINAL_SET];
         set.call(target, key, value);
     },
     handleDelete(target, key: unknown) {
-        const del = this.getReferenceMetadata(target)[ORIGINAL_DELETE];
+        const del = this.getCustomReferenceMetadata(target)[ORIGINAL_DELETE];
         del.call(target, key);
     },
     handleClear(target) {
-        const clear = this.getReferenceMetadata(target)[ORIGINAL_CLEAR];
+        const clear = this.getCustomReferenceMetadata(target)[ORIGINAL_CLEAR];
         clear.call(target);
     },
     handleReplace(target, newValue: unknown) {

@@ -5,9 +5,9 @@ import {
     DIFUpdateKind,
 } from "./definitions.ts";
 import {
+    type CustomReferenceMetadata,
     type DIFHandler,
     IS_PROXY_ACCESS,
-    type ReferenceMetadata,
 } from "./dif-handler.ts";
 
 type ImplMethod = {
@@ -31,9 +31,9 @@ export type TypeDefinition = {
     interfaceImpls: InterfaceImpl[]; // e.g. impl GetProperty for CustomMap
 };
 
-export type TypeBindingContext<M extends ReferenceMetadata> = {
+export type TypeBindingContext<M extends CustomReferenceMetadata> = {
     readonly difHandler: DIFHandler;
-    getReferenceMetadata(
+    getCustomReferenceMetadata(
         value: WeakKey,
     ): M;
     allowOriginalValueAccess<R>(
@@ -42,14 +42,14 @@ export type TypeBindingContext<M extends ReferenceMetadata> = {
     ): R;
 };
 
-export type BindResult<T, M extends ReferenceMetadata> = {
+export type BindResult<T, M extends CustomReferenceMetadata> = {
     value: T;
     metadata: M;
 };
 
 export type TypeBindingDefinition<
     T,
-    M extends ReferenceMetadata = ReferenceMetadata,
+    M extends CustomReferenceMetadata = CustomReferenceMetadata,
 > = {
     typeAddress: string;
     bind(
@@ -123,7 +123,7 @@ export class TypeRegistry {
             new TypeBinding(
                 typeBindingDefinition as TypeBindingDefinition<
                     WeakKey,
-                    ReferenceMetadata
+                    CustomReferenceMetadata
                 >,
                 this.#difHandler,
             ),
@@ -157,7 +157,7 @@ export class TypeRegistry {
 
 export class TypeBinding<
     T extends WeakKey = WeakKey,
-    M extends ReferenceMetadata = ReferenceMetadata,
+    M extends CustomReferenceMetadata = CustomReferenceMetadata,
 > {
     #difHandler: DIFHandler;
     #definition: TypeBindingDefinition<T, M>;
@@ -166,8 +166,9 @@ export class TypeBinding<
         return this.#difHandler;
     }
 
-    public getReferenceMetadata(value: T): M {
-        return this.#difHandler.getReferenceMetadata<M, T>(value);
+    public getCustomReferenceMetadata(value: T): M {
+        return this.#difHandler.getReferenceMetadataUnsafe<M, T>(value)
+            .customMetadata;
     }
 
     constructor(
@@ -293,7 +294,7 @@ export class TypeBinding<
         if (!DEBUG_MODE) {
             return callback();
         }
-        const metadata = this.getReferenceMetadata(target);
+        const metadata = this.getCustomReferenceMetadata(target);
         metadata[IS_PROXY_ACCESS] = true;
         try {
             return callback();
