@@ -602,15 +602,40 @@ export class DIFHandler {
         return value;
     }
 
+    /**
+     * Retrieves the original value from a proxy value if available
+     * @param proxy
+     * @returns
+     */
     public getOriginalValueFromProxy<T extends WeakKey>(
         proxy: T,
     ): T | null {
-        const ref = this.#proxyMapping.get(proxy);
-        if (ref) {
-            return ref.deref() as T || null;
-        } else {
-            return null;
+        const address = this.getPointerAddressForValue(proxy);
+        if (address) {
+            const cached = this.#cache.get(address);
+            if (cached && cached.originalValue) {
+                return cached.originalValue as T;
+            }
         }
+        return null;
+    }
+
+    /**
+     * Retrieves the proxy value for a given original value if available
+     * @param original
+     * @returns
+     */
+    public getProxyValueFromOriginal<T extends WeakKey>(
+        original: T,
+    ): T | null {
+        const ref = this.#proxyMapping.get(original);
+        if (ref) {
+            const proxied = ref.deref();
+            if (proxied) {
+                return proxied as T;
+            }
+        }
+        return null;
     }
 
     /**
