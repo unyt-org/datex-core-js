@@ -27,8 +27,7 @@ Deno.test("array set external", () => {
     // TODO: property updates are not yet implemented in DATEX Script
     // runtime.executeSync(`${mapPtr}.test = 'newValue'`);
     // fake a remote update from transceiver 42
-    // SET inner
-    runtime.dif._handle.update(42, address, {
+    runtime._runtime.dif().update(42, address, {
         key: { kind: "index", value: 0 },
         value: { value: "newValue" },
         kind: DIFUpdateKind.Set,
@@ -41,7 +40,7 @@ Deno.test("array append external", () => {
     const array = ["value1", "value2", 123];
     const [arrayPtr, address] = createArrayReference(array);
 
-    runtime.dif._handle.update(42, address, {
+    runtime._runtime.dif().update(42, address, {
         value: { value: "newValueEnd" },
         kind: DIFUpdateKind.Append,
     });
@@ -53,7 +52,7 @@ Deno.test("array delete external", () => {
     const array = ["value1", "value2", 123];
     const [arrayPtr, address] = createArrayReference(array);
 
-    runtime.dif._handle.update(42, address, {
+    runtime._runtime.dif().update(42, address, {
         kind: DIFUpdateKind.Delete,
         key: { kind: "index", value: 0 },
     });
@@ -77,7 +76,7 @@ Deno.test("array replace external", () => {
     const [arrayPtr, address] = createArrayReference(array);
 
     arrayPtr.push("toBeRemoved");
-    runtime.dif._handle.update(42, address, {
+    runtime._runtime.dif().update(42, address, {
         value: runtime.dif.convertJSValueToDIFValueContainer(["a", "b", "c"]),
         kind: DIFUpdateKind.Replace,
     });
