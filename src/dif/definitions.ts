@@ -104,10 +104,11 @@ export type DIFProperty =
  */
 export const DIFUpdateKind = {
     Replace: "replace",
-    Append: "append", // TODO: rename to append in datex-core
+    Append: "append",
     Set: "set",
-    Delete: "delete", // TODO: rename to delete in datex-core
+    Delete: "delete",
     Clear: "clear",
+    ListSplice: "list_splice",
 } as const;
 /** A DIF update kind. */
 export type DIFUpdateKind = typeof DIFUpdateKind[keyof typeof DIFUpdateKind];
@@ -136,13 +137,21 @@ export type DIFUpdateDataSet = DIFUpdateBaseData<typeof DIFUpdateKind.Set> & {
     value: DIFValueContainer;
 };
 export type DIFUpdateDataClear = DIFUpdateBaseData<typeof DIFUpdateKind.Clear>;
+export type DIFUpdateDataListSplice =
+    & DIFUpdateBaseData<typeof DIFUpdateKind.ListSplice>
+    & {
+        start: number;
+        delete_count: number;
+        items: DIFValueContainer[];
+    };
 
 export type DIFUpdateData =
     | DIFUpdateDataReplace
     | DIFUpdateDataPush
     | DIFUpdateDataDelete
     | DIFUpdateDataSet
-    | DIFUpdateDataClear;
+    | DIFUpdateDataClear
+    | DIFUpdateDataListSplice;
 
 /** A DIF update struct, associating a source ID with update data. */
 export type DIFUpdate = {

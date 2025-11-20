@@ -9,7 +9,7 @@ Deno.test("array", () => {
 
     const array = new Array<string | number>("value1", "value2", 123);
     // create mutable pointer to array
-    const arrayPtr = runtime.createOrGetTransparentReference(array);
+    const arrayPtr = runtime.createTransparentReference(array);
     const address = runtime.dif.getPointerAddressForValue(arrayPtr)!;
 
     function getCurrentRuntimeLocalValue() {
@@ -54,7 +54,7 @@ Deno.test("array", () => {
     // REPLACE
     arrayPtr.push("toBeRemoved");
     runtime.dif._handle.update(42, address, {
-        value: runtime.dif.convertJSValueToDIFValue(["a", "b", "c"]),
+        value: runtime.dif.convertJSValueToDIFValueContainer(["a", "b", "c"]),
         kind: DIFUpdateKind.Replace,
     });
     assertEquals(arrayPtr, ["a", "b", "c"]);

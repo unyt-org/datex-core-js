@@ -1,8 +1,8 @@
 import { CoreTypeAddress } from "../../dif/core.ts";
 import {
+    type CustomReferenceMetadata,
     type DIFHandler,
     IS_PROXY_ACCESS,
-    type ReferenceMetadata,
 } from "../../dif/dif-handler.ts";
 import type { TypeBindingDefinition } from "../../dif/type-registry.ts";
 import { interceptAccessors } from "../../dif/utils.ts";
@@ -16,7 +16,7 @@ type ArrayMethods<V> = {
 export const arrayTypeBinding: TypeBindingDefinition<Array<unknown>> = {
     typeAddress: CoreTypeAddress.list,
     bind(target, pointerAddress) {
-        const metadata: ReferenceMetadata = {};
+        const metadata: CustomReferenceMetadata = {};
         const arrayMethods = getArrayMethods(
             target,
             pointerAddress,
@@ -77,12 +77,11 @@ export const arrayTypeBinding: TypeBindingDefinition<Array<unknown>> = {
                         // if length is reduced, trigger delete for removed items
                         const newLength = Number(value);
                         if (newLength < target.length) {
-                            triggerArraySplice(
+                            self.difHandler.triggerListSplice(
+                                pointerAddress,
                                 newLength,
                                 target.length - newLength,
                                 [],
-                                pointerAddress,
-                                self.difHandler,
                             );
                         } // if length is increased, trigger set for new empty items
                         else if (newLength > target.length) {
@@ -176,20 +175,5 @@ function triggerArrayFillEmpty(
         } else {
             difHandler.triggerAppend(pointerAddress, null); // TODO: special js empty value
         }
-    }
-}
-
-function triggerArraySplice(
-    start: number,
-    deleteCount: number,
-    items: unknown[],
-    pointerAddress: string,
-    difHandler: DIFHandler,
-) {
-    for (let i = 0; i < deleteCount; i++) {
-        difHandler.triggerDelete(pointerAddress, start + i);
-    }
-    for (let i = 0; i < items.length; i++) {
-        difHandler.triggerSet(pointerAddress, start + i, items[i]);
     }
 }

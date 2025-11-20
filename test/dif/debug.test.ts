@@ -8,7 +8,7 @@ runtime.dif.type_registry.registerTypeBinding(arrayTypeBinding);
 Deno.test("detect illegal use of moved original value", () => {
     const original = [1, 2];
     // original is "moved" to reference
-    const reference = runtime.createOrGetTransparentReference(original);
+    const reference = runtime.createTransparentReference(original);
     assertNotStrictEquals(original, reference);
 
     // should be allowed

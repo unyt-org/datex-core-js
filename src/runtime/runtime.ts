@@ -274,7 +274,7 @@ export class Runtime {
         decompileOptions: DecompileOptions | null = null,
     ): string {
         return this.#runtime.value_to_string(
-            this.#difHandler.convertJSValueToDIFValue(value),
+            this.#difHandler.convertJSValueToDIFValueContainer(value),
             decompileOptions,
         );
     }
@@ -311,13 +311,12 @@ export class Runtime {
      * For primitive values, a Ref wrapper is returned.
      * For other values (objects, arrays, maps), the returned value is a proxy object that behaves like the original object.
      *
-     * If the value is already registered as a reference in the DIF handler, the existing reference is returned.
      * @param value The JS value to store in the pointer.
      * @param allowedType Optional DIF type container to restrict the type of the pointer.
      * @param mutability Optional mutability of the reference (default is Mutable).
      * @returns A proxy object representing the pointer in JS.
      */
-    public createOrGetTransparentReference<
+    public createTransparentReference<
         V,
         M extends DIFReferenceMutability =
             typeof DIFReferenceMutability.Mutable,
@@ -327,7 +326,7 @@ export class Runtime {
         allowedType?: DIFTypeContainer | null,
         mutability?: M,
     ): PointerOut<V, M> {
-        return this.#difHandler.createOrGetTransparentReference(
+        return this.#difHandler.createTransparentReference(
             value,
             allowedType,
             mutability,
