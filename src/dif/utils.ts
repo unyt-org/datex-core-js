@@ -65,7 +65,7 @@ export function interceptAccessors(
                 ] = value;
             },
             enumerable: originalDescriptor?.enumerable,
-            configurable: false,
+            configurable: true,
         } as const;
     }
     for (const key of keys) {
