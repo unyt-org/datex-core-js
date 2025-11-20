@@ -69,6 +69,16 @@ export const mapTypeBinding: TypeBindingDefinition<
         clear.call(target);
     },
     handleReplace(target, newValue: unknown) {
-        // TODO: replace all map entries
+        const metadata = this.getCustomReferenceMetadata(target);
+        metadata[ORIGINAL_CLEAR].call(target);
+        for (
+            const [key, value] of (newValue as Map<unknown, unknown>).entries()
+        ) {
+            metadata[ORIGINAL_SET].call(
+                target,
+                key,
+                value,
+            );
+        }
     },
 };

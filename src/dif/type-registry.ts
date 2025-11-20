@@ -71,6 +71,13 @@ export type TypeBindingDefinition<
     ): void;
     handleDelete?(this: TypeBindingContext<M>, target: T, key: unknown): void;
     handleClear?(this: TypeBindingContext<M>, target: T): void;
+    handleListSplice?(
+        this: TypeBindingContext<M>,
+        target: T,
+        start: number,
+        deleteCount: number,
+        items: unknown[],
+    ): void;
 };
 
 // interface GetProperty<K,V> = {
@@ -262,6 +269,19 @@ export class TypeBinding<
                     this.#definition.handleClear
                 ) {
                     this.#definition.handleClear.call(this, value);
+                } else if (
+                    difUpdateData.kind === DIFUpdateKind.ListSplice &&
+                    this.#definition.handleListSplice
+                ) {
+                    this.#definition.handleListSplice.call(
+                        this,
+                        value,
+                        difUpdateData.start,
+                        difUpdateData.delete_count,
+                        difUpdateData.items.map((item) =>
+                            this.#difHandler.resolveDIFValueContainerSync(item)
+                        ),
+                    );
                 }
             });
         }
