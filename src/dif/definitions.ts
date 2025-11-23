@@ -21,16 +21,17 @@ export type DIFValue = {
 /**
  * Mapping of DIF type kinds.
  */
-export const DIFTypeKinds = {
-    Structural: 0,
-    Reference: 1,
-    Intersection: 2,
-    Union: 3,
-    Unit: 4,
-    Function: 5,
+export const DIFTypeKind = {
+    Structural: "structural",
+    Reference: "reference",
+    Intersection: "intersection",
+    Union: "union",
+    Unit: "unit",
+    Function: "function",
+    Marker: "marker",
 } as const;
 /** A DIF type kind. */
-export type DIFTypeKind = typeof DIFTypeKinds[keyof typeof DIFTypeKinds];
+export type DIFTypeKind = typeof DIFTypeKind[keyof typeof DIFTypeKind];
 
 /**
  * Representation of reference mutability (mutable or immutable) in DIF.
@@ -45,13 +46,12 @@ export type DIFReferenceMutability =
 
 /** A DIF type definition based on its kind. */
 export type DIFTypeDefinition<Kind extends DIFTypeKind = DIFTypeKind> =
-    Kind extends typeof DIFTypeKinds.Structural ? DIFValue
-        : Kind extends typeof DIFTypeKinds.Reference ? DIFPointerAddress
-        : Kind extends typeof DIFTypeKinds.Intersection
-            ? Array<DIFTypeContainer>
-        : Kind extends typeof DIFTypeKinds.Union ? Array<DIFTypeContainer>
-        : Kind extends typeof DIFTypeKinds.Unit ? null
-        : Kind extends typeof DIFTypeKinds.Function ? unknown // TODO
+    Kind extends typeof DIFTypeKind.Structural ? DIFValue
+        : Kind extends typeof DIFTypeKind.Reference ? DIFPointerAddress
+        : Kind extends typeof DIFTypeKind.Intersection ? Array<DIFTypeContainer>
+        : Kind extends typeof DIFTypeKind.Union ? Array<DIFTypeContainer>
+        : Kind extends typeof DIFTypeKind.Unit ? null
+        : Kind extends typeof DIFTypeKind.Function ? unknown // TODO
         : never;
 
 /** A DIF type representation. */
