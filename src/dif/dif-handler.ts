@@ -10,6 +10,7 @@ import {
     type DIFReference,
     DIFReferenceMutability,
     type DIFTypeContainer,
+    DIFTypeKind,
     type DIFUpdate,
     type DIFUpdateData,
     DIFUpdateKind,
@@ -20,6 +21,7 @@ import {
 import { CoreTypeAddress, CoreTypeAddressRanges } from "./core.ts";
 import { type TypeBinding, TypeRegistry } from "./type-registry.ts";
 import { panic } from "../utils/exceptions.ts";
+import { JsLibTypeAddress } from "./js-lib.ts";
 
 export const IS_PROXY_ACCESS = Symbol("IS_PROXY_ACCESS");
 
@@ -1072,6 +1074,20 @@ export class DIFHandler {
         // TODO: handle custom types
         if (value === null) {
             return {
+                value: null,
+            };
+        } else if (value === undefined) {
+            return {
+                type: {
+                    kind: DIFTypeKind.Intersection,
+                    def: [
+                        CoreTypeAddress.null,
+                        {
+                            kind: DIFTypeKind.Marker,
+                            def: JsLibTypeAddress.undefined,
+                        },
+                    ],
+                },
                 value: null,
             };
         } else if (typeof value === "boolean") {
