@@ -25,14 +25,16 @@ pub fn start_lsp(
     spawn_local(async move {
         while let Some(bytes) = rx_from_lsp.next().await {
             let js_array = Uint8Array::from(bytes.as_slice());
-            let _ = send_to_js.call1(&JsValue::NULL, &js_array);
+            if let Err(err) = send_to_js.call1(&JsValue::NULL, &js_array) {
+                log::error!("Error sending data to JS: {:?}", err);
+            }
         }
     });
 
     let send_to_rust_closure =
         Closure::wrap(Box::new(move |data: Uint8Array| {
             let vec = data.to_vec();
-            let _ = tx_to_lsp.unbounded_send(vec);
+            tx_to_lsp.unbounded_send(vec).unwrap();
         }) as Box<dyn FnMut(Uint8Array)>);
 
     send_to_rust_closure.into_js_value().unchecked_into()
