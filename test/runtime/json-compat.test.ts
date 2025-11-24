@@ -1,5 +1,6 @@
 /**
- * This test suite is used to ensure that Datex.executeSync produces the exact same results as JSON.parse for the same inputs.
+ * This test suite is used to ensure that runtime.executeSync produces the exact same results as JSON.parse for the same inputs.
+ * Additionally, it verifies that runtime.valueToString with json_compat enabled produces the same results as JSON.stringify for the same JSON-compatible inputs.
  */
 
 /**
@@ -25,9 +26,23 @@ import { assertEquals } from "@std/assert";
 const runtime = new Runtime({ endpoint: "@jonas" });
 
 for (const input of TEXT_INPUTS) {
-    Deno.test(`JSON compatibility test for input: ${input}`, () => {
+    Deno.test(`JSON parse compatibility for input: ${input}`, () => {
         const resultFromRuntime = runtime.executeSync(input);
         const resultFromJSON = JSON.parse(input);
         assertEquals(resultFromRuntime, resultFromJSON);
+    });
+
+    Deno.test(`JSON stringify compatibility for input : ${input}`, () => {
+        // FIXME: use new DATEX decompiler
+        const value = JSON.parse(input);
+        const stringFromRuntime = runtime.valueToString(value, {
+            json_compat: true,
+            formatted: false,
+        });
+        const stringFromJSON = JSON.stringify(value, null, 1).replaceAll(
+            /\n/g,
+            "",
+        );
+        assertEquals(stringFromRuntime, stringFromJSON);
     });
 }

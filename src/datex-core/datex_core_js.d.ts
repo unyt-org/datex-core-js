@@ -12,6 +12,22 @@ export function execute(datex_script: string, formatted: boolean): string;
  * Does not return the result of the script, but only indicates success or failure.
  */
 export function execute_internal(datex_script: string): boolean;
+export interface SerialInterfaceSetupData {
+    port_name: string | null;
+    baud_rate: number;
+}
+
+export interface WebRTCInterfaceSetupData {
+    peer_endpoint: string;
+    ice_servers: RTCIceServer[] | null;
+}
+
+export interface RTCIceServer {
+    urls: string[];
+    username: string | null;
+    credential: string | null;
+}
+
 export interface WebSocketClientInterfaceSetupData {
     address: string;
 }
@@ -22,17 +38,6 @@ export interface WebSocketServerInterfaceSetupData {
      * if true, the server will use wss (secure WebSocket). Defaults to true.
      */
     secure: boolean | null;
-}
-
-export interface RTCIceServer {
-    urls: string[];
-    username: string | null;
-    credential: string | null;
-}
-
-export interface WebRTCInterfaceSetupData {
-    peer_endpoint: string;
-    ice_servers: RTCIceServer[] | null;
 }
 
 export type BaseInterfaceSetupData = InterfaceProperties;
@@ -109,11 +114,6 @@ export type ReconnectionConfig = "NoReconnect" | "InstantReconnect" | {
         attempts: number;
     };
 };
-
-export interface SerialInterfaceSetupData {
-    port_name: string | null;
-    baud_rate: number;
-}
 
 export class BaseJSInterface {
     private constructor();
