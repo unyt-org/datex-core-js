@@ -35,8 +35,8 @@ const config: BaseInterfaceSetupData = {
     allow_redirects: true,
     is_secure_channel: true,
     reconnection_config: "NoReconnect",
-    reconnect_attempts: null,
-    close_timestamp: null,
+    reconnect_attempts: undefined,
+    close_timestamp: undefined,
 };
 
 // @ts-ignore global variable for debugging
@@ -73,7 +73,7 @@ Datex.comHub.registerIncomingBlockInterceptor(
 document.getElementById("serial")!.addEventListener("click", async () => {
     const serial = await Datex.comHub.createInterface(
         SerialInterfaceImpl,
-        { baud_rate: 19200, port_name: null },
+        { baud_rate: 19200, port_name: undefined },
     );
     console.log(serial);
 });
@@ -83,7 +83,7 @@ document.getElementById("webrtc")!.addEventListener("click", async () => {
         WebRTCInterfaceImpl,
         {
             peer_endpoint: "@jonas",
-            ice_servers: null,
+            ice_servers: undefined,
         },
     );
 
@@ -91,7 +91,7 @@ document.getElementById("webrtc")!.addEventListener("click", async () => {
         WebRTCInterfaceImpl,
         {
             peer_endpoint: "@ben",
-            ice_servers: null,
+            ice_servers: undefined,
         },
     );
     console.log("Interface A:", interface_a);
