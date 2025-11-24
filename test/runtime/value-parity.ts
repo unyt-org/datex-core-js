@@ -22,8 +22,19 @@ const TEST_VALUES = [
     true,
     false,
     null,
+    0,
+    // arrays and objects
     [1, 2, 3],
+    [],
     { a: 1, b: "test" },
+    {},
+    // non-JSON values
+    new Map([["key", "value"]]),
+    new Map(),
+    undefined,
+    NaN,
+    Infinity,
+    -Infinity,
 ];
 
 // initialization of the test cases
