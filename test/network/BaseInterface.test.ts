@@ -21,8 +21,8 @@ const config: BaseInterfaceSetupData = {
     allow_redirects: true,
     is_secure_channel: true,
     reconnection_config: "NoReconnect",
-    reconnect_attempts: null,
-    close_timestamp: null,
+    reconnect_attempts: undefined,
+    close_timestamp: undefined,
 };
 
 Deno.test("custom properties no reconnect", async () => {
