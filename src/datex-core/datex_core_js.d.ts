@@ -2,7 +2,6 @@
 // deno-lint-ignore-file
 // deno-fmt-ignore-file
 
-export function create_runtime(config: string, debug_flags: any): JSRuntime;
 /**
  * Executes a Datex script and returns the result as a string.
  */
@@ -12,37 +11,21 @@ export function execute(datex_script: string, formatted: boolean): string;
  * Does not return the result of the script, but only indicates success or failure.
  */
 export function execute_internal(datex_script: string): boolean;
-export interface SerialInterfaceSetupData {
-    port_name: string | null;
-    baud_rate: number;
-}
-
-export interface WebRTCInterfaceSetupData {
-    peer_endpoint: string;
-    ice_servers: RTCIceServer[] | null;
-}
-
+export function create_runtime(config: string, debug_flags: any): JSRuntime;
 export interface RTCIceServer {
     urls: string[];
-    username: string | null;
-    credential: string | null;
+    username: string | undefined;
+    credential: string | undefined;
 }
 
-export interface WebSocketClientInterfaceSetupData {
-    address: string;
-}
-
-export interface WebSocketServerInterfaceSetupData {
-    port: number;
-    /**
-     * if true, the server will use wss (secure WebSocket). Defaults to true.
-     */
-    secure: boolean | null;
-}
-
-export type BaseInterfaceSetupData = InterfaceProperties;
-
-export type InterfaceDirection = "In" | "Out" | "InOut";
+export type ReconnectionConfig = "NoReconnect" | "InstantReconnect" | {
+    ReconnectWithTimeout: { timeout: { secs: number; nanos: number } };
+} | {
+    ReconnectWithTimeoutAndAttempts: {
+        timeout: { secs: number; nanos: number };
+        attempts: number;
+    };
+};
 
 export interface InterfaceProperties {
     /**
@@ -62,7 +45,7 @@ export interface InterfaceProperties {
      * a unique name that further identifies an interface instance
      * e.g. \"wss://example.com:443\
      */
-    name: string | null;
+    name: string | undefined;
     /**
      * The support message direction of the interface
      */
@@ -97,35 +80,50 @@ export interface InterfaceProperties {
      * Timestamp of the interface close event
      * This is used to determine if the interface shall be reopened
      */
-    close_timestamp: number | null;
+    close_timestamp: number | undefined;
     /**
      * Number of reconnection attempts already made
      * This is used to determine if the interface shall be reopened
      * and if the interface shall be destroyed
      */
-    reconnect_attempts: number | null;
+    reconnect_attempts: number | undefined;
 }
 
-export type ReconnectionConfig = "NoReconnect" | "InstantReconnect" | {
-    ReconnectWithTimeout: { timeout: { secs: number; nanos: number } };
-} | {
-    ReconnectWithTimeoutAndAttempts: {
-        timeout: { secs: number; nanos: number };
-        attempts: number;
-    };
-};
+export type InterfaceDirection = "In" | "Out" | "InOut";
+
+export type BaseInterfaceSetupData = InterfaceProperties;
+
+export interface WebSocketServerInterfaceSetupData {
+    port: number;
+    /**
+     * if true, the server will use wss (secure WebSocket). Defaults to true.
+     */
+    secure: boolean | undefined;
+}
+
+export interface WebSocketClientInterfaceSetupData {
+    address: string;
+}
+
+export interface SerialInterfaceSetupData {
+    port_name: string | undefined;
+    baud_rate: number;
+}
+
+export interface WebRTCInterfaceSetupData {
+    peer_endpoint: string;
+    ice_servers: RTCIceServer[] | undefined;
+}
 
 export class BaseJSInterface {
     private constructor();
     free(): void;
+    [Symbol.dispose](): void;
 }
 export class JSComHub {
     private constructor();
     free(): void;
-    websocket_server_interface_add_socket(
-        interface_uuid: string,
-        websocket: WebSocket,
-    ): string;
+    [Symbol.dispose](): void;
     /**
      * Send a block to the given interface and socket
      * This does not involve the routing on the ComHub level.
@@ -146,19 +144,10 @@ export class JSComHub {
     register_outgoing_block_interceptor(callback: Function): void;
     register_default_interface_factories(): void;
     update(): Promise<void>;
-    base_interface_on_send(uuid: string, func: Function): void;
-    base_interface_receive(
-        uuid: string,
-        socket_uuid: string,
-        data: Uint8Array,
-    ): void;
-    base_interface_destroy_socket(uuid: string, socket_uuid: string): void;
-    base_interface_register_socket(uuid: string, direction: string): string;
-    base_interface_test_send_block(
-        uuid: string,
-        socket_uuid: string,
-        data: Uint8Array,
-    ): Promise<boolean>;
+    websocket_server_interface_add_socket(
+        interface_uuid: string,
+        websocket: WebSocket,
+    ): string;
     webrtc_interface_set_answer(
         interface_uuid: string,
         answer: Uint8Array,
@@ -177,14 +166,29 @@ export class JSComHub {
         interface_uuid: string,
         on_ice_candidate: Function,
     ): void;
+    base_interface_on_send(uuid: string, func: Function): void;
+    base_interface_receive(
+        uuid: string,
+        socket_uuid: string,
+        data: Uint8Array,
+    ): void;
+    base_interface_destroy_socket(uuid: string, socket_uuid: string): void;
+    base_interface_register_socket(uuid: string, direction: string): string;
+    base_interface_test_send_block(
+        uuid: string,
+        socket_uuid: string,
+        data: Uint8Array,
+    ): Promise<boolean>;
 }
 export class JSPointer {
     private constructor();
     free(): void;
+    [Symbol.dispose](): void;
 }
 export class JSRuntime {
     private constructor();
     free(): void;
+    [Symbol.dispose](): void;
     execute_sync(script: string, dif_values?: any[] | null): any;
     _create_block(
         body: Uint8Array | null | undefined,
@@ -209,6 +213,10 @@ export class JSRuntime {
     _stop(): Promise<void>;
     start(): Promise<void>;
     execute(script: string, dif_values?: any[] | null): Promise<any>;
+    /**
+     * Start the LSP server, returning a JS function to send messages to Rust
+     */
+    start_lsp(send_to_js: Function): Function;
     com_hub: JSComHub;
     readonly version: string;
     readonly endpoint: string;
@@ -216,6 +224,7 @@ export class JSRuntime {
 export class RuntimeDIFHandle {
     private constructor();
     free(): void;
+    [Symbol.dispose](): void;
     create_pointer(value: any, allowed_type: any, mutability: number): string;
     observe_pointer(
         transceiver_id: number,
@@ -245,5 +254,6 @@ export class RuntimeDIFHandle {
 export class WebSocketServerRegistry {
     private constructor();
     free(): void;
+    [Symbol.dispose](): void;
     close(interface_uuid: string): Promise<any>;
 }
