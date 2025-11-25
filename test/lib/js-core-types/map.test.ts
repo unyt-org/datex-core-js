@@ -2,7 +2,7 @@ import { assertEquals } from "@std/assert/equals";
 import { mapTypeBinding } from "datex-core-js/lib/js-core-types/map.ts";
 import { Runtime } from "datex-core-js/runtime/runtime.ts";
 import { DIFUpdateKind } from "datex-core-js/dif/definitions.ts";
-
+import { CoreTypeAddress } from "datex-core-js/dif/core.ts";
 const runtime = new Runtime({ endpoint: "@test" });
 runtime.dif.type_registry.registerTypeBinding(mapTypeBinding);
 
@@ -151,4 +151,13 @@ Deno.test("map clear local", () => {
         getCurrentRuntimeLocalValue<Map<unknown, unknown>>(address).size,
         0,
     );
+});
+
+Deno.test("map from datex", () => {
+    const mapDif = runtime.dif.executeSyncDIF("{}");
+    const map = runtime.executeSync<Map<unknown, unknown>>("{}", []);
+
+    assertEquals(mapDif, { value: [], type: CoreTypeAddress.map });
+    assertEquals(map instanceof Map, true);
+    assertEquals(map.size, 0);
 });
