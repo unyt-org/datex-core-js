@@ -1079,13 +1079,10 @@ export class DIFHandler {
         } else if (value === undefined) {
             return {
                 type: {
-                    kind: DIFTypeKind.Intersection,
+                    kind: DIFTypeKind.MarkedType,
                     def: [
                         CoreTypeAddress.null,
-                        {
-                            kind: DIFTypeKind.Marker,
-                            def: JsLibTypeAddress.undefined,
-                        },
+                        [JsLibTypeAddress.undefined],
                     ],
                 },
                 value: null,

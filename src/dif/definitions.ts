@@ -28,7 +28,7 @@ export const DIFTypeKind = {
     Union: "union",
     Unit: "unit",
     Function: "function",
-    Marker: "marker",
+    MarkedType: "marked-type",
 } as const;
 /** A DIF type kind. */
 export type DIFTypeKind = typeof DIFTypeKind[keyof typeof DIFTypeKind];
