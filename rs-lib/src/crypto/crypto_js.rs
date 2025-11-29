@@ -113,13 +113,25 @@ impl CryptoTrait for CryptoJS {
     // Signature and Verification
     fn gen_ed25519(
         &self,
-    ) -> Pin<
-        Box<
-            dyn Future<Output = Result<(Vec<u8>, Vec<u8>), CryptoError>>
-                + 'static,
-        >,
+    ) -> Result<
+        (
+            Option<Result<(Vec<u8>, Vec<u8>), CryptoError>>,
+            Option<
+                Pin<
+                    Box<
+                        dyn Future<
+                                Output = Result<
+                                    (Vec<u8>, Vec<u8>),
+                                    CryptoError,
+                                >,
+                            > + 'static,
+                    >,
+                >,
+            >,
+        ),
+        CryptoError,
     > {
-        Box::pin(async move {
+        let future = Box::pin(async move {
             let algorithm =
                 js_object(vec![("name", JsValue::from_str("Ed25519"))]);
             let key_pair: CryptoKeyPair = Self::generate_crypto_key(
@@ -138,7 +150,8 @@ impl CryptoTrait for CryptoJS {
                     .await?;
 
             Ok((pub_key, pri_key))
-        })
+        });
+        Ok((None, Some(future)))
     }
 
     fn sig_ed25519<'a>(
