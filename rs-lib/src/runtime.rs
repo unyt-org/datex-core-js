@@ -150,16 +150,26 @@ impl JSRuntime {
             assert_eq!(ser_pri.len(), 48_usize);
 
             // Signature
-            let sig = crypto
-                .sig_ed25519(&sig_pri, ser_pub.as_ref())
-                .await
-                .unwrap();
+            let (a, b) =
+                crypto.sig_ed25519(&sig_pri, ser_pub.as_ref()).unwrap();
+            let sig = if a.is_some() {
+                a.unwrap().unwrap()
+            } else if b.is_some() {
+                b.unwrap().await.unwrap()
+            } else {
+                todo!()
+            };
 
-            let ver = crypto
+            let (a, b) = crypto
                 .ver_ed25519(&sig_pub, &sig, ser_pub.as_ref())
-                .await
                 .unwrap();
-
+            let ver = if a.is_some() {
+                a.unwrap().unwrap()
+            } else if b.is_some() {
+                b.unwrap().await.unwrap()
+            } else {
+                todo!()
+            };
             assert_eq!(sig.len(), 64);
             assert!(ver);
 
