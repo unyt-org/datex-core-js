@@ -133,7 +133,14 @@ impl JSRuntime {
             let crypto = CryptoJS {};
 
             // ed25519 and x25519 generation
-            let (sig_pub, sig_pri) = crypto.gen_ed25519().await.unwrap();
+            let (a, b) = crypto.gen_ed25519().unwrap();
+            let (sig_pub, sig_pri) = if a.is_some() {
+                a.unwrap().unwrap()
+            } else if b.is_some() {
+                b.unwrap().await.unwrap()
+            } else {
+                todo!()
+            };
             assert_eq!(sig_pub.len(), 44_usize);
             assert_eq!(sig_pri.len(), 48_usize);
 
