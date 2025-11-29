@@ -158,8 +158,20 @@ impl CryptoTrait for CryptoJS {
         &self,
         pri_key: &'a [u8],
         data: &'a [u8],
-    ) -> Pin<Box<dyn Future<Output = Result<[u8; 64], CryptoError>> + 'a>> {
-        Box::pin(async move {
+    ) -> Result<
+        (
+            Option<Result<[u8; 64], CryptoError>>,
+            Option<
+                Pin<
+                    Box<
+                        dyn Future<Output = Result<[u8; 64], CryptoError>> + 'a,
+                    >,
+                >,
+            >,
+        ),
+        CryptoError,
+    > {
+        let future = Box::pin(async move {
             let key = Self::import_crypto_key(
                 pri_key,
                 "pkcs8",
@@ -190,7 +202,8 @@ impl CryptoTrait for CryptoJS {
                 .expect("Signature length incorrect");
 
             Ok(sig)
-        })
+        });
+        Ok((None, Some(future)))
     }
 
     fn ver_ed25519<'a>(
@@ -198,8 +211,16 @@ impl CryptoTrait for CryptoJS {
         pub_key: &'a [u8],
         sig: &'a [u8],
         data: &'a [u8],
-    ) -> Pin<Box<dyn Future<Output = Result<bool, CryptoError>> + 'a>> {
-        Box::pin(async move {
+    ) -> Result<
+        (
+            Option<Result<bool, CryptoError>>,
+            Option<
+                Pin<Box<dyn Future<Output = Result<bool, CryptoError>> + 'a>>,
+            >,
+        ),
+        CryptoError,
+    > {
+        let future = Box::pin(async move {
             let key = Self::import_crypto_key(
                 pub_key,
                 "spki",
@@ -224,7 +245,8 @@ impl CryptoTrait for CryptoJS {
                 .ok_or(CryptoError::VerificationError)?;
 
             Ok(result)
-        })
+        });
+        Ok((None, Some(future)))
     }
 
     // aes ctr
