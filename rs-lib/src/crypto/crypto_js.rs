@@ -1,6 +1,6 @@
 use datex_core::stdlib::{future::Future, pin::Pin};
 
-use datex_core::crypto::crypto::{CryptoError, CryptoTrait};
+use datex_core::crypto::crypto::{CryptoError, CryptoTrait, MaybeAsync};
 use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{
@@ -111,26 +111,9 @@ impl CryptoTrait for CryptoJS {
     }
 
     // Signature and Verification
-    fn gen_ed25519(
-        &self,
-    ) -> Result<
-        (
-            Option<Result<(Vec<u8>, Vec<u8>), CryptoError>>,
-            Option<
-                Pin<
-                    Box<
-                        dyn Future<
-                                Output = Result<
-                                    (Vec<u8>, Vec<u8>),
-                                    CryptoError,
-                                >,
-                            > + 'static,
-                    >,
-                >,
-            >,
-        ),
-        CryptoError,
-    > {
+    fn gen_ed25519<'a>(
+        &'a self,
+    ) -> Result<MaybeAsync<'a, (Vec<u8>, Vec<u8>)>, CryptoError> {
         let future = Box::pin(async move {
             let algorithm =
                 js_object(vec![("name", JsValue::from_str("Ed25519"))]);
@@ -151,26 +134,14 @@ impl CryptoTrait for CryptoJS {
 
             Ok((pub_key, pri_key))
         });
-        Ok((None, Some(future)))
+        Ok(MaybeAsync::Asy(future))
     }
 
     fn sig_ed25519<'a>(
         &self,
         pri_key: &'a [u8],
         data: &'a [u8],
-    ) -> Result<
-        (
-            Option<Result<[u8; 64], CryptoError>>,
-            Option<
-                Pin<
-                    Box<
-                        dyn Future<Output = Result<[u8; 64], CryptoError>> + 'a,
-                    >,
-                >,
-            >,
-        ),
-        CryptoError,
-    > {
+    ) -> Result<MaybeAsync<'a, [u8; 64]>, CryptoError> {
         let future = Box::pin(async move {
             let key = Self::import_crypto_key(
                 pri_key,
@@ -203,7 +174,7 @@ impl CryptoTrait for CryptoJS {
 
             Ok(sig)
         });
-        Ok((None, Some(future)))
+        Ok(MaybeAsync::Asy(future))
     }
 
     fn ver_ed25519<'a>(
@@ -211,15 +182,7 @@ impl CryptoTrait for CryptoJS {
         pub_key: &'a [u8],
         sig: &'a [u8],
         data: &'a [u8],
-    ) -> Result<
-        (
-            Option<Result<bool, CryptoError>>,
-            Option<
-                Pin<Box<dyn Future<Output = Result<bool, CryptoError>> + 'a>>,
-            >,
-        ),
-        CryptoError,
-    > {
+    ) -> Result<MaybeAsync<'a, bool>, CryptoError> {
         let future = Box::pin(async move {
             let key = Self::import_crypto_key(
                 pub_key,
@@ -246,7 +209,7 @@ impl CryptoTrait for CryptoJS {
 
             Ok(result)
         });
-        Ok((None, Some(future)))
+        Ok(MaybeAsync::Asy(future))
     }
 
     // aes ctr
