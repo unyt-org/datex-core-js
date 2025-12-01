@@ -2,7 +2,7 @@ use crate::crypto::crypto_js::CryptoJS;
 use crate::js_utils::{js_array, js_error};
 use crate::network::com_hub::JSComHub;
 use crate::utils::time::TimeJS;
-use datex_core::crypto::crypto::{CryptoTrait, MaybeAsync};
+use datex_core::crypto::crypto::CryptoTrait;
 use datex_core::decompiler::{
     DecompileOptions, FormattingMode, FormattingOptions, IndentType,
     decompile_value,
@@ -133,10 +133,8 @@ impl JSRuntime {
             let crypto = CryptoJS {};
 
             // ed25519 and x25519 generation
-            let (sig_pub, sig_pri) = match crypto.gen_ed25519().unwrap() {
-                MaybeAsync::Syn(res) => res.unwrap(),
-                MaybeAsync::Asy(fut) => fut.await.unwrap(),
-            };
+            let (sig_pub, sig_pri) =
+                crypto.gen_ed25519().unwrap().asy_resolve().await.unwrap();
             assert_eq!(sig_pub.len(), 44_usize);
             assert_eq!(sig_pri.len(), 48_usize);
 
@@ -146,19 +144,19 @@ impl JSRuntime {
             assert_eq!(ser_pri.len(), 48_usize);
 
             // Signature
-            let sig =
-                match crypto.sig_ed25519(&sig_pri, ser_pub.as_ref()).unwrap() {
-                    MaybeAsync::Syn(res) => res.unwrap(),
-                    MaybeAsync::Asy(fut) => fut.await.unwrap(),
-                };
+            let sig = crypto
+                .sig_ed25519(&sig_pri, ser_pub.as_ref())
+                .unwrap()
+                .asy_resolve()
+                .await
+                .unwrap();
 
-            let ver = match crypto
+            let ver = crypto
                 .ver_ed25519(&sig_pub, &sig, ser_pub.as_ref())
                 .unwrap()
-            {
-                MaybeAsync::Syn(res) => res.unwrap(),
-                MaybeAsync::Asy(fut) => fut.await.unwrap(),
-            };
+                .asy_resolve()
+                .await
+                .unwrap();
             assert_eq!(sig.len(), 64);
             assert!(ver);
 
