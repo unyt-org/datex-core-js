@@ -138,8 +138,10 @@ impl JSRuntime {
             assert_eq!(sig_pub.len(), 44_usize);
             assert_eq!(sig_pri.len(), 48_usize);
 
-            let (ser_pub, ser_pri) = crypto.gen_x25519().await.unwrap();
-            let (cli_pub, cli_pri) = crypto.gen_x25519().await.unwrap();
+            let (ser_pub, ser_pri) =
+                crypto.gen_x25519().unwrap().asy_resolve().await.unwrap();
+            let (cli_pub, cli_pri) =
+                crypto.gen_x25519().unwrap().asy_resolve().await.unwrap();
             assert_eq!(ser_pub.len(), 44_usize);
             assert_eq!(ser_pri.len(), 48_usize);
 
@@ -161,10 +163,18 @@ impl JSRuntime {
             assert!(ver);
 
             // Derivation
-            let cli_sec =
-                crypto.derive_x25519(&cli_pri, &ser_pub).await.unwrap();
-            let ser_sec =
-                crypto.derive_x25519(&ser_pri, &cli_pub).await.unwrap();
+            let cli_sec = crypto
+                .derive_x25519(&cli_pri, &ser_pub)
+                .unwrap()
+                .asy_resolve()
+                .await
+                .unwrap();
+            let ser_sec = crypto
+                .derive_x25519(&ser_pri, &cli_pub)
+                .unwrap()
+                .asy_resolve()
+                .await
+                .unwrap();
 
             assert_eq!(cli_sec, ser_sec);
             assert_eq!(cli_sec.len(), 32_usize);
@@ -176,19 +186,35 @@ impl JSRuntime {
             let ctr_iv: [u8; 16] = [0u8; 16];
 
             // ctr
-            let ctr_ciphered =
-                crypto.aes_ctr_encrypt(&hash, &ctr_iv, &msg).await.unwrap();
+            let ctr_ciphered = crypto
+                .aes_ctr_encrypt(&hash, &ctr_iv, &msg)
+                .unwrap()
+                .asy_resolve()
+                .await
+                .unwrap();
 
             let ctr_deciphered = crypto
                 .aes_ctr_decrypt(&hash, &ctr_iv, &ctr_ciphered)
+                .unwrap()
+                .asy_resolve()
                 .await
                 .unwrap();
 
             assert_eq!(msg, ctr_deciphered);
             assert_ne!(msg, ctr_ciphered);
 
-            let wrapped = crypto.key_upwrap(&hash, &hash).await.unwrap();
-            let unwrapped = crypto.key_unwrap(&hash, &wrapped).await.unwrap();
+            let wrapped = crypto
+                .key_upwrap(&hash, &hash)
+                .unwrap()
+                .asy_resolve()
+                .await
+                .unwrap();
+            let unwrapped = crypto
+                .key_unwrap(&hash, &wrapped)
+                .unwrap()
+                .asy_resolve()
+                .await
+                .unwrap();
 
             assert_eq!(hash.to_vec(), unwrapped);
             // assert_ne!(wrapped, unwrapped);
