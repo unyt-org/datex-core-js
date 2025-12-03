@@ -218,8 +218,8 @@ impl CryptoTrait for CryptoJS {
         hash: &'a [u8; 32],
         iv: &'a [u8; 16],
         plaintext: &'a [u8],
-    ) -> Pin<Box<dyn Future<Output = Result<Vec<u8>, CryptoError>> + 'a>> {
-        Box::pin(async move {
+    ) -> Result<MaybeAsync<'a, Vec<u8>>, CryptoError> {
+        let future = Box::pin(async move {
             let subtle = Self::crypto_subtle();
 
             let usages = Array::of1(
@@ -270,7 +270,8 @@ impl CryptoTrait for CryptoJS {
             let ct_bytes = Uint8Array::new(&ct_buf).to_vec();
 
             Ok(ct_bytes)
-        })
+        });
+        Ok(MaybeAsync::Asy(future))
     }
 
     fn aes_ctr_decrypt<'a>(
@@ -278,8 +279,8 @@ impl CryptoTrait for CryptoJS {
         hash: &'a [u8; 32],
         iv: &'a [u8; 16],
         ciphertext: &'a [u8],
-    ) -> Pin<Box<dyn Future<Output = Result<Vec<u8>, CryptoError>> + 'a>> {
-        Box::pin(async move {
+    ) -> Result<MaybeAsync<'a, Vec<u8>>, CryptoError> {
+        let future = Box::pin(async move {
             let subtle = CryptoJS::crypto_subtle();
 
             let usages = Array::of1(
@@ -330,7 +331,8 @@ impl CryptoTrait for CryptoJS {
             let pt_bytes = Uint8Array::new(&pt_buf).to_vec();
 
             Ok(pt_bytes)
-        })
+        });
+        Ok(MaybeAsync::Asy(future))
     }
 
     fn key_upwrap<'a>(
@@ -339,8 +341,8 @@ impl CryptoTrait for CryptoJS {
         kek_bytes: &'a [u8; 32],
         // The AES-CTR key to wrap
         key_to_wrap_bytes: &'a [u8; 32],
-    ) -> Pin<Box<dyn Future<Output = Result<[u8; 40], CryptoError>> + 'a>> {
-        Box::pin(async move {
+    ) -> Result<MaybeAsync<'a, [u8; 40]>, CryptoError> {
+        let future = Box::pin(async move {
             let subtle = Self::crypto_subtle();
 
             // Import the Key Encryption Key (KEK)
@@ -410,15 +412,16 @@ impl CryptoTrait for CryptoJS {
             uint8_array.copy_to(&mut result);
 
             Ok(result)
-        })
+        });
+        Ok(MaybeAsync::Asy(future))
     }
 
     fn key_unwrap<'a>(
         &'a self,
         kek_bytes: &'a [u8; 32], // Key Encryption Key (same as used for wrapping)
         wrapped_key: &'a [u8; 40], // The wrapped key data
-    ) -> Pin<Box<dyn Future<Output = Result<[u8; 32], CryptoError>> + 'a>> {
-        Box::pin(async move {
+    ) -> Result<MaybeAsync<'a, [u8; 32]>, CryptoError> {
+        let future = Box::pin(async move {
             let subtle = CryptoJS::crypto_subtle();
 
             // Import the Key Encryption Key (KEK)
@@ -489,15 +492,15 @@ impl CryptoTrait for CryptoJS {
             uint8_array.copy_to(&mut result);
 
             Ok(result)
-        })
+        });
+        Ok(MaybeAsync::Asy(future))
     }
 
     // x25519 key gen
-    fn gen_x25519(
-        &self,
-    ) -> Pin<Box<dyn Future<Output = Result<([u8; 44], [u8; 48]), CryptoError>>>>
-    {
-        Box::pin(async move {
+    fn gen_x25519<'a>(
+        &'a self,
+    ) -> Result<MaybeAsync<'a, ([u8; 44], [u8; 48])>, CryptoError> {
+        let future = Box::pin(async move {
             let algorithm =
                 js_object(vec![("name", JsValue::from_str("X25519"))]);
 
@@ -523,15 +526,16 @@ impl CryptoTrait for CryptoJS {
                     .map_err(|_| CryptoError::KeyGenerationError)?;
 
             Ok((pub_key, pri_key))
-        })
+        });
+        Ok(MaybeAsync::Asy(future))
     }
 
     fn derive_x25519<'a>(
         &'a self,
         my_raw: &'a [u8; 48],
         peer_pub: &'a [u8; 44],
-    ) -> Pin<Box<dyn Future<Output = Result<Vec<u8>, CryptoError>> + 'a>> {
-        Box::pin(async move {
+    ) -> Result<MaybeAsync<'a, Vec<u8>>, CryptoError> {
+        let future = Box::pin(async move {
             let subtle = Self::crypto_subtle();
 
             // Private Key
@@ -593,6 +597,7 @@ impl CryptoTrait for CryptoJS {
             uint8_array.copy_to(&mut result);
 
             Ok(result)
-        })
+        });
+        Ok(MaybeAsync::Asy(future))
     }
 }
