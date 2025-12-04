@@ -116,6 +116,7 @@ impl CryptoTrait for CryptoJS {
         salt: &'a [u8],
     ) -> Result<MaybeAsync<'a, [u8; 32]>, CryptoError> {
         let future = Box::pin(async move {
+            let info = b"".to_vec();
             let subtle = CryptoJS::crypto_subtle();
 
             let usages = Array::of1(&JsValue::from_str("deriveBits"));
@@ -137,7 +138,6 @@ impl CryptoTrait for CryptoJS {
             let base_key: CryptoKey =
                 key_js.dyn_into().map_err(|_| CryptoError::KeyImportError)?;
 
-            let info = b"dxb".to_vec();
             let params = Object::new();
             Reflect::set(&params, &"name".into(), &"HKDF".into())
                 .map_err(|_| CryptoError::KeyImportError)?;
