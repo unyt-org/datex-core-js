@@ -133,6 +133,15 @@ impl JSRuntime {
             let crypto = CryptoJS {};
 
             let mut ikm = Vec::from([0u8; 32]);
+            let hash = crypto.hash(&ikm).unwrap().asy_resolve().await.unwrap();
+            assert_eq!(
+                hash,
+                [
+                    102, 104, 122, 173, 248, 98, 189, 119, 108, 143, 193, 139,
+                    142, 159, 142, 32, 8, 151, 20, 133, 110, 226, 51, 179, 144,
+                    42, 89, 29, 13, 95, 41, 37
+                ]
+            );
             let salt = Vec::from([0u8; 16]);
             let hash_a = crypto
                 .hkdf(&ikm, &salt)
@@ -247,6 +256,7 @@ impl JSRuntime {
             // assert_ne!(wrapped, unwrapped);
 
             let js_array = js_array(&[
+                hash.to_vec(),
                 hash_a.to_vec(),
                 hash_b.to_vec(),
                 ser_pub.to_vec(),
