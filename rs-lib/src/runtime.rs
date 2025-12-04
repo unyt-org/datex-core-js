@@ -155,6 +155,14 @@ impl JSRuntime {
                 .unwrap();
             assert_ne!(hash_a, hash_b);
             assert_ne!(hash_a.to_vec(), ikm);
+            assert_eq!(
+                hash_a,
+                [
+                    223, 114, 4, 84, 111, 27, 238, 120, 184, 83, 36, 167, 137,
+                    140, 161, 25, 179, 135, 224, 19, 134, 209, 174, 240, 55,
+                    120, 29, 74, 138, 3, 106, 238
+                ]
+            );
 
             // ed25519 and x25519 generation
             let (sig_pub, sig_pri) =
