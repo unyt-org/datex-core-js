@@ -5,7 +5,7 @@ use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{
     AesCtrParams, CryptoKey, CryptoKeyPair,
-    js_sys::{Array, ArrayBuffer, Object, Uint8Array},
+    js_sys::{Array, ArrayBuffer, Object, Reflect, Uint8Array},
 };
 
 use crate::js_utils::{AsByteSlice, TryAsByteSlice, js_array, js_object};
@@ -108,6 +108,67 @@ impl CryptoTrait for CryptoJS {
             .get_random_values_with_u8_array(buffer)
             .unwrap();
         buffer.to_vec()
+    }
+    // hkdf
+    fn hkdf<'a>(
+        &self,
+        ikm: &'a [u8],
+        salt: &'a [u8],
+    ) -> Result<MaybeAsync<'a, [u8; 32]>, CryptoError> {
+        let future = Box::pin(async move {
+            let subtle = CryptoJS::crypto_subtle();
+
+            let usages = Array::of1(&JsValue::from_str("deriveBits"));
+            let ikm_buf = Uint8Array::from(ikm).buffer();
+
+            let key_js = JsFuture::from(
+                subtle
+                    .import_key_with_object(
+                        "raw",
+                        &ikm_buf.into(),
+                        &js_object(vec![("name", "HKDF")]),
+                        false,
+                        &usages,
+                    )
+                    .map_err(|_| CryptoError::KeyImportError)?,
+            )
+            .await
+            .map_err(|_| CryptoError::KeyImportError)?;
+            let base_key: CryptoKey =
+                key_js.dyn_into().map_err(|_| CryptoError::KeyImportError)?;
+
+            let info = b"dxb".to_vec();
+            let params = Object::new();
+            Reflect::set(&params, &"name".into(), &"HKDF".into())
+                .map_err(|_| CryptoError::KeyImportError)?;
+            Reflect::set(&params, &"hash".into(), &"SHA-256".into())
+                .map_err(|_| CryptoError::KeyImportError)?;
+            Reflect::set(&params, &"salt".into(), &Uint8Array::from(salt))
+                .map_err(|_| CryptoError::KeyImportError)?;
+            Reflect::set(
+                &params,
+                &"info".into(),
+                &Uint8Array::from(info.as_slice()),
+            )
+            .map_err(|_| CryptoError::KeyImportError)?;
+
+            let bit_len: u32 = (32 as u32) * 8;
+            let bits = JsFuture::from(
+                subtle
+                    .derive_bits_with_object(&params.into(), &base_key, bit_len)
+                    .map_err(|_| CryptoError::KeyGenerationError)?,
+            )
+            .await
+            .map_err(|_| CryptoError::KeyGenerationError)?;
+
+            let okm: [u8; 32] =
+                Uint8Array::new(&bits).to_vec().try_into().unwrap();
+            if okm.len() != 32 {
+                return Err(CryptoError::KeyExportError);
+            }
+            Ok(okm)
+        });
+        Ok(MaybeAsync::Asy(future))
     }
 
     // Signature and Verification
