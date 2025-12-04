@@ -109,6 +109,30 @@ impl CryptoTrait for CryptoJS {
             .unwrap();
         buffer.to_vec()
     }
+
+    fn hash<'a>(
+        &'a self,
+        ikm: &'a [u8],
+    ) -> Result<MaybeAsync<'a, [u8; 32]>, CryptoError> {
+        let future = Box::pin(async move {
+            let subtle = CryptoJS::crypto_subtle();
+
+            let bits = JsFuture::from(
+                subtle
+                    .digest_with_object_and_u8_array(
+                        &js_object(vec![("name", "SHA-256")]),
+                        &ikm,
+                    )
+                    .map_err(|_| CryptoError::KeyImportError)?,
+            )
+            .await
+            .map_err(|_| CryptoError::KeyImportError)?;
+
+            let okm = Uint8Array::new(&bits).to_vec().try_into().unwrap();
+            Ok(okm)
+        });
+        Ok(MaybeAsync::Asy(future))
+    }
     // hkdf
     fn hkdf<'a>(
         &self,
