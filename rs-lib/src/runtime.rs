@@ -132,6 +132,24 @@ impl JSRuntime {
         future_to_promise(async move {
             let crypto = CryptoJS {};
 
+            let mut ikm = Vec::from([0u8; 32]);
+            let salt = Vec::from([0u8; 16]);
+            let hash_a = crypto
+                .hkdf(&ikm, &salt)
+                .unwrap()
+                .asy_resolve()
+                .await
+                .unwrap();
+            ikm[0] = 1u8;
+            let hash_b = crypto
+                .hkdf(&ikm, &salt)
+                .unwrap()
+                .asy_resolve()
+                .await
+                .unwrap();
+            assert_ne!(hash_a, hash_b);
+            assert_ne!(hash_a.to_vec(), ikm);
+
             // ed25519 and x25519 generation
             let (sig_pub, sig_pri) =
                 crypto.gen_ed25519().unwrap().asy_resolve().await.unwrap();
@@ -179,7 +197,8 @@ impl JSRuntime {
             assert_eq!(cli_sec, ser_sec);
             assert_eq!(cli_sec.len(), 32_usize);
 
-            let hash: [u8; 32] = crypto.random_bytes(32).try_into().unwrap();
+            let random_bytes: [u8; 32] =
+                crypto.random_bytes(32).try_into().unwrap();
 
             // aes entailing hkdf
             let msg: Vec<u8> = b"Some message".to_vec();
@@ -187,14 +206,14 @@ impl JSRuntime {
 
             // ctr
             let ctr_ciphered = crypto
-                .aes_ctr_encrypt(&hash, &ctr_iv, &msg)
+                .aes_ctr_encrypt(&random_bytes, &ctr_iv, &msg)
                 .unwrap()
                 .asy_resolve()
                 .await
                 .unwrap();
 
             let ctr_deciphered = crypto
-                .aes_ctr_decrypt(&hash, &ctr_iv, &ctr_ciphered)
+                .aes_ctr_decrypt(&random_bytes, &ctr_iv, &ctr_ciphered)
                 .unwrap()
                 .asy_resolve()
                 .await
@@ -204,29 +223,29 @@ impl JSRuntime {
             assert_ne!(msg, ctr_ciphered);
 
             let wrapped = crypto
-                .key_upwrap(&hash, &hash)
+                .key_upwrap(&random_bytes, &random_bytes)
                 .unwrap()
                 .asy_resolve()
                 .await
                 .unwrap();
             let unwrapped = crypto
-                .key_unwrap(&hash, &wrapped)
+                .key_unwrap(&random_bytes, &wrapped)
                 .unwrap()
                 .asy_resolve()
                 .await
                 .unwrap();
 
-            assert_eq!(hash.to_vec(), unwrapped);
+            assert_eq!(random_bytes.to_vec(), unwrapped);
             // assert_ne!(wrapped, unwrapped);
 
             let js_array = js_array(&[
+                hash_a.to_vec(),
+                hash_b.to_vec(),
                 ser_pub.to_vec(),
-                ser_pri.to_vec(),
                 sig_pub.to_vec(),
-                sig_pri.to_vec(),
                 cli_sec.to_vec(),
                 ser_sec.to_vec(),
-                hash.to_vec(),
+                random_bytes.to_vec(),
                 wrapped.to_vec(),
                 unwrapped.to_vec(),
             ]);
