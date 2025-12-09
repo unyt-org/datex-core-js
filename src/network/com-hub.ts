@@ -66,7 +66,8 @@ export class ComHub {
             : ComHub.#interfaceImplsByClass.get(interfaceType);
         if (type === undefined) {
             throw new Error(
-                `Interface implementation for ${(interfaceType as typeof ComInterfaceImpl).name
+                `Interface implementation for ${
+                    (interfaceType as typeof ComInterfaceImpl).name
                 } not registered.`,
             );
         }
