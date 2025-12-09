@@ -1,6 +1,6 @@
 import { DEBUG_MODE } from "../global.ts";
 import {
-    type DIFTypeContainer,
+    type DIFTypeDefinition,
     type DIFUpdateData,
     DIFUpdateKind,
 } from "./definitions.ts";
@@ -26,7 +26,7 @@ type InterfaceImpl = {
 
 export type TypeDefinition = {
     name: string;
-    structuralDefinition: DIFTypeContainer; // TODO: generic definition
+    structuralDefinition: DIFTypeDefinition; // TODO: generic definition
     ownImpls?: OwnImpl[]; // e.g. impl CustomMapMap
     interfaceImpls: InterfaceImpl[]; // e.g. impl GetProperty for CustomMap
 };

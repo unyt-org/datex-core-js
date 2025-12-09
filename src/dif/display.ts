@@ -7,7 +7,7 @@ import {
     type DIFReference,
     DIFReferenceMutability,
     type DIFRepresentationValue,
-    type DIFTypeContainer,
+    type DIFTypeDefinition,
     type DIFValueContainer,
 } from "./definitions.ts";
 import { CoreTypeAddress } from "./core.ts";
@@ -30,7 +30,7 @@ export function mutabilityToDisplayString(mut: DIFReferenceMutability): string {
 export function difReferenceToDisplayString(
     reference: DIFReference,
 ): string {
-    const typeString = difTypeContainerToDisplayString(reference.allowed_type);
+    const typeString = difTypeDefinitionToDisplayString(reference.allowed_type);
     const valueString = difValueContainerToDisplayString(reference.value);
     const mutString = mutabilityToDisplayString(reference.mut);
     return `${mutString}${valueString} (allowed: ${typeString})`;
@@ -46,7 +46,7 @@ export function difValueContainerToDisplayString(
         return addressToDisplayString(container);
     } else {
         const typeString = container.type
-            ? difTypeContainerToDisplayString(container.type)
+            ? difTypeDefinitionToDisplayString(container.type)
             : null;
         const valueString = difRepresentationValueToDisplayString(
             container.value,
@@ -92,17 +92,15 @@ export function difRepresentationValueToDisplayString(
 }
 
 /**
- * Converts a DIF type container to a display string.
+ * Converts a DIF type definition to a display string.
  */
-export function difTypeContainerToDisplayString(
-    difType: DIFTypeContainer,
+export function difTypeDefinitionToDisplayString(
+    difType: DIFTypeDefinition,
 ): string {
     if (typeof difType === "string") {
         return addressToDisplayString(difType);
     } else {
-        return `{ name: ${difType.name}, kind: ${difType.kind}, def: ${
-            JSON.stringify(difType.def)
-        }, mut: ${difType.mut} }`;
+        return `{ kind: ${difType.kind}, def: ${JSON.stringify(difType.def)} }`;
     }
 }
 

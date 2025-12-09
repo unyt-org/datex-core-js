@@ -4,10 +4,10 @@ import {
     type JSRuntime,
 } from "../datex-core.ts";
 import { ComHub } from "../network/com-hub.ts";
-import { DIFHandler, PointerOut } from "../dif/dif-handler.ts";
+import { DIFHandler, type PointerOut } from "../dif/dif-handler.ts";
 import type {
     DIFReferenceMutability,
-    DIFTypeContainer,
+    DIFTypeDefinition,
 } from "../dif/definitions.ts";
 import type { Ref } from "../refs/ref.ts";
 import { unimplemented } from "../utils/exceptions.ts";
@@ -323,7 +323,7 @@ export class Runtime {
     >(
         // deno-lint-ignore ban-types
         value: V & {},
-        allowedType?: DIFTypeContainer | null,
+        allowedType?: DIFTypeDefinition | null,
         mutability?: M,
     ): PointerOut<V, M> {
         return this.#difHandler.createTransparentReference(
@@ -348,7 +348,7 @@ export class Runtime {
             typeof DIFReferenceMutability.Mutable,
     >(
         value: V,
-        allowedType?: DIFTypeContainer | null,
+        allowedType?: DIFTypeDefinition | null,
         mutability?: M,
     ): Ref<V> {
         unimplemented();
