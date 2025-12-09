@@ -66,8 +66,7 @@ export class ComHub {
             : ComHub.#interfaceImplsByClass.get(interfaceType);
         if (type === undefined) {
             throw new Error(
-                `Interface implementation for ${
-                    (interfaceType as typeof ComInterfaceImpl).name
+                `Interface implementation for ${(interfaceType as typeof ComInterfaceImpl).name
                 } not registered.`,
             );
         }
@@ -101,10 +100,10 @@ export class ComHub {
     /**
      * Prints the metadata of the ComHub. Only available in debug builds.
      */
-    public printMetadata(): void {
+    public async printMetadata(): Promise<void> {
         // as any required because get_metadata_string only exists in debug builds
         // deno-lint-ignore no-explicit-any
-        const metadata = (this.#jsComHub as any).get_metadata_string();
+        const metadata = await (this.#jsComHub as any).get_metadata_string();
         console.log(metadata);
     }
 
