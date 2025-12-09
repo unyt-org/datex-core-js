@@ -198,8 +198,8 @@ impl JSComHub {
     }
 
     #[cfg(feature = "debug")]
-    pub fn get_metadata_string(&self) -> String {
-        let metadata = self.com_hub().get_metadata();
+    pub async fn get_metadata_string(&self) -> String {
+        let metadata = self.com_hub().get_metadata().await;
         metadata.to_string()
     }
 
