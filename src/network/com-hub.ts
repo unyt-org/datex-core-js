@@ -100,10 +100,10 @@ export class ComHub {
     /**
      * Prints the metadata of the ComHub. Only available in debug builds.
      */
-    public async printMetadata(): Promise<void> {
+    public printMetadata(): void {
         // as any required because get_metadata_string only exists in debug builds
         // deno-lint-ignore no-explicit-any
-        const metadata = await (this.#jsComHub as any).get_metadata_string();
+        const metadata = (this.#jsComHub as any).get_metadata_string();
         console.log(metadata);
     }
 
