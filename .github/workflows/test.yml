@@ -3,13 +3,10 @@ name: Test
 on:
     pull_request:
         types: [opened, synchronize]
-    workflow_dispatch:
-    
 jobs:
     build:
         name: Build
         runs-on: ubuntu-latest
-        if: github.event_name == 'pull_request'
         steps:
             - uses: actions/checkout@v4
               with:
@@ -28,30 +25,8 @@ jobs:
                       ./src/datex-core/datex_core_js.wasm
                   retention-days: 5
 
-    dev-test:
-        name: Dev-test
-        if: github.event_name == 'pull_request'
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v4
-              with:
-                  submodules: "true"
-            - uses: denoland/setup-deno@v2
-              with:
-                  deno-version: v2.x
-            - name: Dev-build
-              run: |
-                BRANCH="${{ github.head_ref }}"
-                git clone --branch "$BRANCH" "https://github.com/unyt-org/datex-core.git" --single-branch
-                git clone --branch "$BRANCH" "https://github.com/unyt-org/datex-core-js.git" --single-branch
-                cd datex-core-js
-                mv .cargo/config.template.toml .cargo/config.toml
-                deno task build --no-opt
-                deno task test-no-build
-
     test:
         runs-on: ubuntu-latest
-        if: github.event_name == 'pull_request'
         name: Test
         needs: build
         steps:
@@ -82,7 +57,6 @@ jobs:
 
     publish-jsr-dry-run:
         runs-on: ubuntu-latest
-        if: github.event_name == 'pull_request'
         needs: build
         name: Publish to JSR (Dry Run)
         permissions:
@@ -102,7 +76,6 @@ jobs:
 
     publish-npm-dry-run:
         runs-on: ubuntu-latest
-        if: github.event_name == 'pull_request'
         needs: build
         name: Publish to NPM (Dry Run)
         permissions:
