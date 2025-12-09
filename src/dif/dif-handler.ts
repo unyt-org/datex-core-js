@@ -9,8 +9,8 @@ import {
     type DIFProperty,
     type DIFReference,
     DIFReferenceMutability,
-    type DIFTypeContainer,
-    DIFTypeKind,
+    DIFTypeDefinition,
+    DIFTypeDefinitionKind,
     type DIFUpdate,
     type DIFUpdateData,
     DIFUpdateKind,
@@ -164,7 +164,7 @@ export class DIFHandler {
      */
     public createReferenceFromDIFValue(
         difValueContainer: DIFValueContainer,
-        allowedType: DIFTypeContainer | null = null,
+        allowedType: DIFTypeDefinition | null = null,
         mutability: DIFReferenceMutability,
     ): string {
         return this.#handle.create_pointer(
@@ -670,7 +670,7 @@ export class DIFHandler {
         pointerAddress: string,
         value: T,
         mutability: DIFReferenceMutability,
-        allowedType: DIFTypeContainer | null = null,
+        allowedType: DIFTypeDefinition | null = null,
     ): T | Ref<T> {
         let wrappedValue = this.wrapJSValue(
             value,
@@ -886,7 +886,7 @@ export class DIFHandler {
             typeof DIFReferenceMutability.Mutable,
     >(
         value: V,
-        allowedType: DIFTypeContainer | null = null,
+        allowedType: DIFTypeDefinition | null = null,
         mutability: M = DIFReferenceMutability.Mutable as M,
     ): PointerOut<V, M> {
         // if already bound to a reference, return the existing reference proxy (or the value itself)
@@ -939,7 +939,7 @@ export class DIFHandler {
     protected wrapJSValue<T>(
         value: T,
         pointerAddress: string,
-        _type: DIFTypeContainer | null = null,
+        _type: DIFTypeDefinition | null = null,
     ): (T | Ref<unknown>) & WeakKey {
         // primitive values are always wrapped in a Ref proxy
         if (this.isWeakKey(value)) {
@@ -1079,7 +1079,7 @@ export class DIFHandler {
         } else if (value === undefined) {
             return {
                 type: {
-                    kind: DIFTypeKind.MarkedType,
+                    kind: DIFTypeDefinitionKind.ImplType,
                     def: [
                         CoreTypeAddress.null,
                         [JsLibTypeAddress.undefined],

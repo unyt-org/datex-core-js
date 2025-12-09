@@ -14,24 +14,28 @@ export type DIFPointerAddress = string;
  * which may optionally include type information.
  */
 export type DIFValue = {
-    type?: DIFTypeContainer;
+    type?: DIFTypeDefinition;
     value: DIFRepresentationValue;
 };
 
 /**
  * Mapping of DIF type kinds.
  */
-export const DIFTypeKind = {
-    Structural: "structural",
-    Reference: "reference",
-    Intersection: "intersection",
-    Union: "union",
-    Unit: "unit",
-    Function: "function",
-    MarkedType: "marked-type",
+export const DIFTypeDefinitionKind = {
+    Structural: 1,
+    Reference: 2,
+    Type: 3,
+    Intersection: 4,
+    Union: 5,
+    ImplType: 6,
+    Unit: 7,
+    Never: 8,
+    Unknown: 9,
+    Function: 10,
 } as const;
 /** A DIF type kind. */
-export type DIFTypeKind = typeof DIFTypeKind[keyof typeof DIFTypeKind];
+export type DIFTypeDefinitionKind =
+    typeof DIFTypeDefinitionKind[keyof typeof DIFTypeDefinitionKind];
 
 /**
  * Representation of reference mutability (mutable or immutable) in DIF.
@@ -45,34 +49,37 @@ export type DIFReferenceMutability =
     typeof DIFReferenceMutability[keyof typeof DIFReferenceMutability];
 
 /** A DIF type definition based on its kind. */
-export type DIFTypeDefinition<Kind extends DIFTypeKind = DIFTypeKind> =
-    Kind extends typeof DIFTypeKind.Structural ? DIFValue
-        : Kind extends typeof DIFTypeKind.Reference ? DIFPointerAddress
-        : Kind extends typeof DIFTypeKind.Intersection ? Array<DIFTypeContainer>
-        : Kind extends typeof DIFTypeKind.Union ? Array<DIFTypeContainer>
-        : Kind extends typeof DIFTypeKind.Unit ? null
-        : Kind extends typeof DIFTypeKind.Function ? unknown // TODO
-        : never;
+export type DIFTypeDefinitionInner<
+    Kind extends DIFTypeDefinitionKind = DIFTypeDefinitionKind,
+> = Kind extends typeof DIFTypeDefinitionKind.Structural ? DIFValue
+    : Kind extends typeof DIFTypeDefinitionKind.Reference ? DIFPointerAddress
+    : Kind extends typeof DIFTypeDefinitionKind.Intersection
+        ? Array<DIFTypeDefinition>
+    : Kind extends typeof DIFTypeDefinitionKind.Union ? Array<DIFTypeDefinition>
+    : Kind extends typeof DIFTypeDefinitionKind.Unit ? null
+    : Kind extends typeof DIFTypeDefinitionKind.Function ? unknown // TODO
+    : Kind extends typeof DIFTypeDefinitionKind.ImplType
+        ? [DIFTypeDefinition, Array<DIFPointerAddress>]
+    : never;
 
 /** A DIF type representation. */
-export type DIFType<Kind extends DIFTypeKind = DIFTypeKind> = {
-    name?: string;
-    kind: Kind;
-    def: DIFTypeDefinition<Kind>;
-    mut?: DIFReferenceMutability;
-};
+export type DIFTypeDefinition<
+    Kind extends DIFTypeDefinitionKind = DIFTypeDefinitionKind,
+> = Kind extends typeof DIFTypeDefinitionKind.Reference ? DIFPointerAddress
+    : {
+        kind: Kind;
+        def: DIFTypeDefinitionInner<Kind>;
+    };
 
 /** A representation of a reference in DIF. */
 export type DIFReference = {
     value: DIFValueContainer;
-    allowed_type: DIFTypeContainer;
+    allowed_type: DIFTypeDefinition;
     mut: DIFReferenceMutability;
 };
 
 /** A representation of a value or pointer address in DIF. */
 export type DIFValueContainer = DIFValue | DIFPointerAddress;
-/** A representation of a type or type pointer address in DIF. */
-export type DIFTypeContainer = DIFType | DIFPointerAddress;
 
 /** A DIF object, mapping string keys to DIF value containers. */
 export type DIFObject = Record<string, DIFValueContainer>;
