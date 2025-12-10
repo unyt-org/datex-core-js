@@ -1,5 +1,3 @@
-use datex_core::stdlib::{future::Future, pin::Pin};
-
 use datex_core::crypto::crypto::{CryptoError, CryptoResult, CryptoTrait};
 use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_futures::JsFuture;

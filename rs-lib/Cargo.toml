@@ -62,7 +62,6 @@ version = "0.3.82"
 features = [
     "Window",
     "AesCtrParams",
-    "AesGcmParams",
     "BinaryType",
     "Blob",
     "ErrorEvent",
@@ -74,8 +73,6 @@ features = [
     "SubtleCrypto",
     "CryptoKey",
     "CryptoKeyPair",
-    "RsaOaepParams",
-    "EcdsaParams",
     "Serial",
     "SerialPort",
     "Navigator",
