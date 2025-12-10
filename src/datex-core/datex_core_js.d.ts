@@ -12,6 +12,8 @@ export function execute(datex_script: string, formatted: boolean): string;
  */
 export function execute_internal(datex_script: string): boolean;
 export function create_runtime(config: string, debug_flags: any): JSRuntime;
+export type BaseInterfaceSetupData = InterfaceProperties;
+
 export interface RTCIceServer {
     urls: string[];
     username: string | undefined;
@@ -91,7 +93,15 @@ export interface InterfaceProperties {
 
 export type InterfaceDirection = "In" | "Out" | "InOut";
 
-export type BaseInterfaceSetupData = InterfaceProperties;
+export interface SerialInterfaceSetupData {
+    port_name: string | undefined;
+    baud_rate: number;
+}
+
+export interface WebRTCInterfaceSetupData {
+    peer_endpoint: string;
+    ice_servers: RTCIceServer[] | undefined;
+}
 
 export interface WebSocketServerInterfaceSetupData {
     port: number;
@@ -103,16 +113,6 @@ export interface WebSocketServerInterfaceSetupData {
 
 export interface WebSocketClientInterfaceSetupData {
     address: string;
-}
-
-export interface SerialInterfaceSetupData {
-    port_name: string | undefined;
-    baud_rate: number;
-}
-
-export interface WebRTCInterfaceSetupData {
-    peer_endpoint: string;
-    ice_servers: RTCIceServer[] | undefined;
 }
 
 export class BaseJSInterface {

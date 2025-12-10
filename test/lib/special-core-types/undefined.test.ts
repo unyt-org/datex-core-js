@@ -17,13 +17,14 @@ Deno.test("undefined", () => {
     assertEquals(
         undefinedDifValue.type,
         {
+            kind: DIFTypeDefinitionKind.ImplType,
             def: [
                 CoreTypeAddress.null,
                 [JsLibTypeAddress.undefined],
             ],
-            kind: DIFTypeDefinitionKind.ImplType,
         },
     );
+    console.log(undefinedDifValue);
 
     // pass undefined to runtime and return value
     const executionResult = runtime._runtime.execute_sync("?", [
