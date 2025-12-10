@@ -138,8 +138,9 @@ impl JSRuntime {
         future_to_promise(async move {
             let crypto = CryptoJS {};
 
+            // Hashes
             let mut ikm = Vec::from([0u8; 32]);
-            let hash = crypto.hash(&ikm).await.unwrap();
+            let hash = crypto.hash_sha256(&ikm).await.unwrap();
             assert_eq!(
                 hash,
                 [
@@ -149,9 +150,9 @@ impl JSRuntime {
                 ]
             );
             let salt = Vec::from([0u8; 16]);
-            let hash_a = crypto.hkdf(&ikm, &salt).await.unwrap();
+            let hash_a = crypto.hkdf_sha256(&ikm, &salt).await.unwrap();
             ikm[0] = 1u8;
-            let hash_b = crypto.hkdf(&ikm, &salt).await.unwrap();
+            let hash_b = crypto.hkdf_sha256(&ikm, &salt).await.unwrap();
             assert_ne!(hash_a, hash_b);
             assert_ne!(hash_a.to_vec(), ikm);
             assert_eq!(
@@ -163,30 +164,53 @@ impl JSRuntime {
                 ]
             );
 
-            // ed25519 and x25519 generation
-            let (sig_pub, sig_pri) = crypto.gen_ed25519().await.unwrap();
-            assert_eq!(sig_pub.len(), 44_usize);
-            assert_eq!(sig_pri.len(), 48_usize);
+            // Checks gen_ed25519, sig_ed25519, ver_ed25519 against itself
+            let data = b"Some message to  sign".to_vec();
+            let other_data = b"Some message to sign".to_vec();
 
+            // Generate key and signature
+            let (pub_key, pri_key) = crypto.gen_ed25519().await.unwrap();
+            assert_eq!(pub_key.len(), 44_usize);
+            assert_eq!(pri_key.len(), 48_usize);
+
+            let sig = crypto.sig_ed25519(&pri_key, &data).await.unwrap();
+            assert_eq!(sig.len(), 64_usize);
+
+            // Verify key, signature and data
+            let ver = crypto.ver_ed25519(&pub_key, &sig, &data).await.unwrap();
+            assert!(ver);
+
+            // Falsify other data
+            let ver = crypto
+                .ver_ed25519(&pub_key, &sig, &other_data)
+                .await
+                .unwrap();
+            assert!(!ver);
+
+            // Falsify other key
+            let (other_pub_key, other_pri_key) =
+                crypto.gen_ed25519().await.unwrap();
+            let ver = crypto
+                .ver_ed25519(&other_pub_key, &sig, &data)
+                .await
+                .unwrap();
+            assert!(!ver);
+
+            // Falsify other signature
+            let other_sig =
+                crypto.sig_ed25519(&other_pri_key, &data).await.unwrap();
+            let ver = crypto
+                .ver_ed25519(&pub_key, &other_sig, &data)
+                .await
+                .unwrap();
+            assert!(!ver);
+
+            // ECDH derivation
             let (ser_pub, ser_pri) = crypto.gen_x25519().await.unwrap();
             let (cli_pub, cli_pri) = crypto.gen_x25519().await.unwrap();
             assert_eq!(ser_pub.len(), 44_usize);
             assert_eq!(ser_pri.len(), 48_usize);
 
-            // Signature
-            let sig = crypto
-                .sig_ed25519(&sig_pri, ser_pub.as_ref())
-                .await
-                .unwrap();
-
-            let ver = crypto
-                .ver_ed25519(&sig_pub, &sig, ser_pub.as_ref())
-                .await
-                .unwrap();
-            assert_eq!(sig.len(), 64);
-            assert!(ver);
-
-            // Derivation
             let cli_sec =
                 crypto.derive_x25519(&cli_pri, &ser_pub).await.unwrap();
             let ser_sec =
@@ -195,14 +219,13 @@ impl JSRuntime {
             assert_eq!(cli_sec, ser_sec);
             assert_eq!(cli_sec.len(), 32_usize);
 
+            // AES CTR with random key
             let random_bytes: [u8; 32] =
                 crypto.random_bytes(32).try_into().unwrap();
 
-            // aes entailing hkdf
             let msg: Vec<u8> = b"Some message".to_vec();
             let ctr_iv: [u8; 16] = [0u8; 16];
 
-            // ctr
             let ctr_ciphered = crypto
                 .aes_ctr_encrypt(&random_bytes, &ctr_iv, &msg)
                 .await
@@ -216,6 +239,7 @@ impl JSRuntime {
             assert_eq!(msg, ctr_deciphered);
             assert_ne!(msg, ctr_ciphered);
 
+            // AES key wrapping
             let wrapped = crypto
                 .key_upwrap(&random_bytes, &random_bytes)
                 .await
@@ -231,7 +255,7 @@ impl JSRuntime {
                 hash_a.to_vec(),
                 hash_b.to_vec(),
                 ser_pub.to_vec(),
-                sig_pub.to_vec(),
+                pub_key.to_vec(),
                 cli_sec.to_vec(),
                 ser_sec.to_vec(),
                 random_bytes.to_vec(),
