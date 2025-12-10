@@ -48,28 +48,39 @@ export const DIFReferenceMutability = {
 export type DIFReferenceMutability =
     typeof DIFReferenceMutability[keyof typeof DIFReferenceMutability];
 
+export type DIFType =
+    | DIFPointerAddress // shorthand for DIFType with DIFTypeDefinitionKind.Reference
+    | {
+        name?: string;
+        mut?: DIFReferenceMutability;
+        def: DIFTypeDefinition;
+    };
+
 /** A DIF type definition based on its kind. */
 export type DIFTypeDefinitionInner<
     Kind extends DIFTypeDefinitionKind = DIFTypeDefinitionKind,
 > = Kind extends typeof DIFTypeDefinitionKind.Structural ? DIFValue
     : Kind extends typeof DIFTypeDefinitionKind.Reference ? DIFPointerAddress
-    : Kind extends typeof DIFTypeDefinitionKind.Intersection
-        ? Array<DIFTypeDefinition>
-    : Kind extends typeof DIFTypeDefinitionKind.Union ? Array<DIFTypeDefinition>
+    : Kind extends typeof DIFTypeDefinitionKind.Intersection ? Array<DIFType>
+    : Kind extends typeof DIFTypeDefinitionKind.Union ? Array<DIFType>
     : Kind extends typeof DIFTypeDefinitionKind.Unit ? null
     : Kind extends typeof DIFTypeDefinitionKind.Function ? unknown // TODO
     : Kind extends typeof DIFTypeDefinitionKind.ImplType
-        ? [DIFTypeDefinition, Array<DIFPointerAddress>]
+        ? [DIFType, Array<DIFPointerAddress>]
     : never;
 
-/** A DIF type representation. */
+/** A DIF type definition representation. */
 export type DIFTypeDefinition<
     Kind extends DIFTypeDefinitionKind = DIFTypeDefinitionKind,
 > = Kind extends typeof DIFTypeDefinitionKind.Reference ? DIFPointerAddress
-    : {
-        kind: Kind;
-        def: DIFTypeDefinitionInner<Kind>;
-    };
+    : VerboseDIFTypeDefinition<Kind>;
+
+type VerboseDIFTypeDefinition<
+    Kind extends DIFTypeDefinitionKind = DIFTypeDefinitionKind,
+> = {
+    kind: Kind;
+    def: DIFTypeDefinitionInner<Kind>;
+};
 
 /** A representation of a reference in DIF. */
 export type DIFReference = {

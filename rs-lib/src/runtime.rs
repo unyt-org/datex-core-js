@@ -1,4 +1,3 @@
-use std::borrow::Cow;
 use crate::crypto::crypto_js::CryptoJS;
 use crate::js_utils::{js_array, js_error};
 use crate::network::com_hub::JSComHub;
@@ -12,7 +11,7 @@ use datex_core::dif::interface::{
     DIFResolveReferenceError, DIFUpdateError,
 };
 use datex_core::dif::reference::DIFReference;
-use datex_core::dif::r#type::DIFTypeContainer;
+use datex_core::dif::r#type::DIFTypeDefinition;
 use datex_core::dif::update::{DIFUpdate, DIFUpdateData};
 use datex_core::dif::value::DIFValueContainer;
 use datex_core::global::dxb_block::DXBBlock;
@@ -30,6 +29,7 @@ use datex_core::serde::deserializer::DatexDeserializer;
 use datex_core::values::core_values::endpoint::Endpoint;
 use datex_core::values::pointer::PointerAddress;
 use datex_core::values::value_container::ValueContainer;
+use std::borrow::Cow;
 
 use js_sys::Function;
 use serde::{Deserialize, Serialize};
@@ -469,11 +469,13 @@ impl RuntimeDIFHandle {
         let cb = callback.clone();
         let observe_options: ObserveOptions =
             from_value(observe_options).map_err(js_error)?;
-        let observer = move |update_data: &DIFUpdateData, source_id: TransceiverId| {
+        let observer = move |update_data: &DIFUpdateData,
+                             source_id: TransceiverId| {
             let js_value = to_js_value(&DIFUpdate {
                 source_id,
                 data: Cow::Borrowed(update_data),
-            }).unwrap();
+            })
+            .unwrap();
             let _ = cb.call1(&JsValue::NULL, &js_value);
         };
         self.internal
@@ -544,7 +546,7 @@ impl RuntimeDIFHandle {
     ) -> Result<String, JsError> {
         let dif_value: DIFValueContainer =
             from_value(value).map_err(js_error)?;
-        let dif_allowed_type: Option<DIFTypeContainer> =
+        let dif_allowed_type: Option<DIFTypeDefinition> =
             if allowed_type.is_null() || allowed_type.is_undefined() {
                 None
             } else {
@@ -634,7 +636,7 @@ impl DIFInterface for RuntimeDIFHandle {
     fn create_pointer(
         &self,
         value: DIFValueContainer,
-        allowed_type: Option<DIFTypeContainer>,
+        allowed_type: Option<DIFTypeDefinition>,
         mutability: ReferenceMutability,
     ) -> Result<PointerAddress, DIFCreatePointerError> {
         self.internal
