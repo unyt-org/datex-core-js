@@ -435,10 +435,23 @@ export class DIFHandler {
                     | T
                     | Promise<T>;
             }
-        } else {
-            // custom types not implemented yet
-            throw new Error("Custom type resolution not implemented yet");
+        } // impl types
+        else if (
+            typeof type == "object" &&
+            type.kind === DIFTypeDefinitionKind.ImplType
+        ) {
+            // undefined (null + js.undefined)
+            if (
+                type.def[0] === CoreTypeAddress.null &&
+                type.def[1].length === 1 &&
+                type.def[1][0] == JsLibTypeAddress.undefined
+            ) {
+                return undefined as T;
+            }
         }
+
+        // custom types not implemented yet
+        throw new Error("Custom type resolution not implemented yet");
     }
 
     /**
