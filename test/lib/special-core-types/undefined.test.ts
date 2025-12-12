@@ -30,8 +30,12 @@ Deno.test("undefined", () => {
     const executionResult = runtime._runtime.execute_sync("?", [
         undefinedDifValue,
     ]) as DIFValue;
+
     assertEquals(executionResult, {
         value: null,
         type: undefinedDifValue.type,
     });
+
+    const executionResult2 = runtime.executeSync<undefined>("?", [undefined]);
+    assertEquals(executionResult2, undefined);
 });
