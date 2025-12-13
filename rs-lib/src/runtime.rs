@@ -164,6 +164,22 @@ impl JSRuntime {
                 ]
             );
 
+            let hex_from_hash = crypto.hash_make_hex(&hash.into()).unwrap();
+            let hash_from_hex = crypto.hash_from_hex(&hex_from_hash).unwrap();
+            assert_eq!(hash, hash_from_hex);
+
+            let mut some_hex = [0u8; 32];
+            some_hex[0] = 16u8;
+            some_hex[31] = 255u8;
+            assert_eq!(
+                String::from(
+                    "10000000000000000000000000000000000000000000000000000000000000ff"
+                ),
+                crypto.hash_make_hex(&some_hex).unwrap()
+            );
+            assert!(crypto.hash_from_hex(&String::from("10000000000000000000000000000000000000000000000000000000000000ff0")).is_err());
+            assert!(crypto.hash_from_hex(&String::from("10000000000000000000000000000000000000000000000000000000000000f")).is_err());
+
             // Checks gen_ed25519, sig_ed25519, ver_ed25519 against itself
             let data = b"Some message to  sign".to_vec();
             let other_data = b"Some message to sign".to_vec();

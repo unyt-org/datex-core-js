@@ -187,6 +187,35 @@ impl CryptoTrait for CryptoJS {
         })
     }
 
+    // hex representation of 32bytes (64 character string)
+    fn hash_make_hex<'a>(
+        &'a self,
+        hash: &'a [u8; 32],
+    ) -> Result<String, CryptoError> {
+        let hex_string = hash
+            .iter()
+            .map(|byte| format!("{:02x}", byte))
+            .collect::<String>();
+        Ok(hex_string)
+    }
+    // Expexts a 64 character string hex representation of 32 bytes
+    fn hash_from_hex<'a>(
+        &'a self,
+        fp: &'a str,
+    ) -> Result<[u8; 32], CryptoError> {
+        if fp.len() != 64 {
+            return Err(CryptoError::Decryption);
+        }
+        let bytes_result: Result<Vec<u8>, _> = (0..fp.len())
+            .step_by(2)
+            .map(|i| u8::from_str_radix(&fp[i..i + 2], 16))
+            .collect();
+        let bytes = bytes_result.map_err(|_| CryptoError::Decryption)?;
+        let hash: [u8; 32] =
+            bytes.try_into().map_err(|_| CryptoError::Decryption)?;
+        Ok(hash)
+    }
+
     // Signature and Verification
     fn gen_ed25519<'a>(&'a self) -> CryptoResult<'a, (Vec<u8>, Vec<u8>)> {
         Box::pin(async move {
