@@ -132,10 +132,14 @@ impl JSRuntime {
         future_to_promise(async move {
             let crypto = CryptoJS {};
 
-            let something = b"Something".to_vec();
+            let something = b"yellow submarineyellow submarine".to_owned();
+            let some_check =
+                b"9At2nzU19GjL8F4WFRyB7RZSGLemMGUMVBZAMChfndF2".to_owned();
+
             let based = crypto.enc_b58(&something).unwrap();
-            let unbased = crypto.dec_b58(&based).unwrap();
+            let unbased = crypto.dec_b58(&some_check).unwrap();
             assert_eq!(something, unbased);
+            assert_eq!(some_check, based);
 
             // Hashes
             let mut ikm = Vec::from([0u8; 32]);
