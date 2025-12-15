@@ -132,6 +132,11 @@ impl JSRuntime {
         future_to_promise(async move {
             let crypto = CryptoJS {};
 
+            let something = b"Something".to_vec();
+            let based = crypto.enc_b58(&something).unwrap();
+            let unbased = crypto.dec_b58(&based).unwrap();
+            assert_eq!(something, unbased);
+
             // Hashes
             let mut ikm = Vec::from([0u8; 32]);
             let hash = crypto.hash_sha256(&ikm).await.unwrap();
