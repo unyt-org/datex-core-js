@@ -46,12 +46,13 @@ pub fn create_runtime(config: &str, debug_flags: JsValue) -> JSRuntime {
 pub fn execute(datex_script: &str, formatted: bool) -> String {
     let result = compile_script(datex_script, CompileOptions::default());
     if let Ok((dxb, _)) = result {
-        let input = ExecutionInput::new_with_dxb_and_options(
+        let input = ExecutionInput::new(
             &dxb,
             ExecutionOptions {
                 verbose: true,
                 ..ExecutionOptions::default()
             },
+            None,
         );
         let result = execute_dxb_sync(input).unwrap_or_else(|err| {
             panic!("Failed to execute script: {err:?}");
@@ -84,12 +85,13 @@ pub fn execute(datex_script: &str, formatted: bool) -> String {
 pub fn execute_internal(datex_script: &str) -> bool {
     let result = compile_script(datex_script, CompileOptions::default());
     if let Ok((dxb, _)) = result {
-        let input = ExecutionInput::new_with_dxb_and_options(
+        let input = ExecutionInput::new(
             &dxb,
             ExecutionOptions {
                 verbose: true,
                 ..ExecutionOptions::default()
             },
+            None,
         );
         let result = execute_dxb_sync(input).unwrap_or_else(|err| {
             panic!("Failed to execute script: {err:?}");
