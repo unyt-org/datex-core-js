@@ -4,7 +4,8 @@ use crate::network::com_hub::JSComHub;
 use crate::utils::time::TimeJS;
 use datex_core::crypto::crypto::CryptoTrait;
 use datex_core::decompiler::{
-    DecompileOptions, FormattingMode, decompile_value,
+    DecompileOptions, FormattingMode, FormattingOptions, IndentType,
+    decompile_value,
 };
 use datex_core::dif::interface::{
     DIFApplyError, DIFCreatePointerError, DIFInterface, DIFObserveError,
@@ -64,14 +65,6 @@ impl From<JSDebugFlags> for DebugFlags {
                 .unwrap_or(false),
         }
     }
-}
-
-#[derive(Serialize, Deserialize, Default)]
-struct JSDecompileOptions {
-    pub formatted: Option<bool>,
-    pub colorized: Option<bool>,
-    pub resolve_slots: Option<bool>,
-    pub json_compat: Option<bool>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -274,7 +267,7 @@ impl JSRuntime {
             None => Ok("".to_string()),
             Some(result) => Ok(decompile_value(
                 &result,
-                Self::decompile_options_from_js_value(decompile_options),
+                from_value(decompile_options).unwrap_or_default(),
             )),
         }
     }
@@ -318,7 +311,7 @@ impl JSRuntime {
             None => Ok("".to_string()),
             Some(result) => Ok(decompile_value(
                 &result,
-                Self::decompile_options_from_js_value(decompile_options),
+                from_value(decompile_options).unwrap_or_default(),
             )),
         }
     }
@@ -351,7 +344,7 @@ impl JSRuntime {
             .map_err(js_error)?;
         Ok(decompile_value(
             &value_container,
-            Self::decompile_options_from_js_value(decompile_options),
+            from_value(decompile_options).unwrap_or_default(),
         ))
     }
 
@@ -402,28 +395,6 @@ impl JSRuntime {
         }
     }
 
-    fn decompile_options_from_js_value(
-        decompile_options: JsValue,
-    ) -> DecompileOptions {
-        // if null, return default options
-        if decompile_options.is_null() {
-            DecompileOptions::default()
-        }
-        // if not null, try to deserialize
-        else {
-            let js_decompile_options: JSDecompileOptions =
-                from_value(decompile_options).unwrap_or_default();
-            DecompileOptions {
-                formatting: Default::default(),
-                formatting_mode: FormattingMode::Pretty,
-                colorized: js_decompile_options.colorized.unwrap_or(false),
-                resolve_slots: js_decompile_options
-                    .resolve_slots
-                    .unwrap_or(false),
-                json_compat: js_decompile_options.json_compat.unwrap_or(false),
-            }
-        }
-    }
     /// Get a handle to the DIF interface of the runtime
     pub fn dif(&self) -> RuntimeDIFHandle {
         RuntimeDIFHandle {

@@ -43,7 +43,7 @@ pub fn create_runtime(config: &str, debug_flags: JsValue) -> JSRuntime {
 
 /// Executes a Datex script and returns the result as a string.
 #[wasm_bindgen]
-pub fn execute(datex_script: &str, formatted: bool) -> String {
+pub fn execute(datex_script: &str, decompile_options: JsValue) -> String {
     let result = compile_script(datex_script, CompileOptions::default());
     if let Ok((dxb, _)) = result {
         let input = ExecutionInput::new(
@@ -64,12 +64,7 @@ pub fn execute(datex_script: &str, formatted: bool) -> String {
 
         decompile_body(
             &result_dxb,
-            DecompileOptions {
-                colorized: formatted,
-                formatting: Default::default(),
-                json_compat: true,
-                ..DecompileOptions::default()
-            },
+            from_value(decompile_options).unwrap_or_default(),
         )
         .unwrap_or_else(|err| {
             panic!("Failed to decompile result: {err:?}");

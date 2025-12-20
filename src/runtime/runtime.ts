@@ -1,5 +1,6 @@
 import {
     create_runtime,
+    DecompileOptions,
     execute_internal,
     type JSRuntime,
 } from "../datex-core.ts";
@@ -27,14 +28,6 @@ export type RuntimeConfig = {
     endpoint?: string;
     interfaces?: { type: string; config: unknown }[];
     debug?: boolean;
-};
-
-/** options for decompiling values to strings  */
-export type DecompileOptions = {
-    formatted?: boolean;
-    colorized?: boolean;
-    resolve_slots?: boolean;
-    json_compat?: boolean;
 };
 
 /**

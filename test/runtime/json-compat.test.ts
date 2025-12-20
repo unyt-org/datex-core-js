@@ -36,13 +36,10 @@ for (const input of TEXT_INPUTS) {
         // FIXME: use new DATEX decompiler
         const value = JSON.parse(input);
         const stringFromRuntime = runtime.valueToString(value, {
-            json_compat: true,
-            formatted: false,
+            formatting_options: { json_compat: true },
+            resolve_slots: false,
         });
-        const stringFromJSON = JSON.stringify(value, null, 1).replaceAll(
-            /\n/g,
-            "",
-        );
+        const stringFromJSON = JSON.stringify(value);
         assertEquals(stringFromRuntime, stringFromJSON);
     });
 }
