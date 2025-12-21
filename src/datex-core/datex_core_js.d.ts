@@ -12,18 +12,6 @@ export function execute(datex_script: string, decompile_options: any): string;
  * Does not return the result of the script, but only indicates success or failure.
  */
 export function execute_internal(datex_script: string): boolean;
-export interface WebSocketClientInterfaceSetupData {
-    address: string;
-}
-
-export interface WebSocketServerInterfaceSetupData {
-    port: number;
-    /**
-     * if true, the server will use wss (secure WebSocket). Defaults to true.
-     */
-    secure: boolean | undefined;
-}
-
 export type BaseInterfaceSetupData = InterfaceProperties;
 
 export interface DecompileOptions {
@@ -47,6 +35,29 @@ export interface FormattingOptions {
     json_compat?: boolean;
     colorized?: boolean;
     add_variant_suffix?: boolean;
+}
+
+export interface WebSocketClientInterfaceSetupData {
+    address: string;
+}
+
+export interface WebSocketServerInterfaceSetupData {
+    port: number;
+    /**
+     * if true, the server will use wss (secure WebSocket). Defaults to true.
+     */
+    secure: boolean | undefined;
+}
+
+export interface RTCIceServer {
+    urls: string[];
+    username: string | undefined;
+    credential: string | undefined;
+}
+
+export interface WebRTCInterfaceSetupData {
+    peer_endpoint: string;
+    ice_servers: RTCIceServer[] | undefined;
 }
 
 export type InterfaceDirection = "In" | "Out" | "InOut";
@@ -125,17 +136,6 @@ export type ReconnectionConfig = "NoReconnect" | "InstantReconnect" | {
 export interface SerialInterfaceSetupData {
     port_name: string | undefined;
     baud_rate: number;
-}
-
-export interface RTCIceServer {
-    urls: string[];
-    username: string | undefined;
-    credential: string | undefined;
-}
-
-export interface WebRTCInterfaceSetupData {
-    peer_endpoint: string;
-    ice_servers: RTCIceServer[] | undefined;
 }
 
 export class BaseJSInterface {
