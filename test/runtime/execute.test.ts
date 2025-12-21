@@ -97,12 +97,12 @@ Deno.test("execute sync none", () => {
 
 Deno.test("execute sync object", () => {
     const runtime = new Runtime({ endpoint: "@jonas" });
-    const result = runtime.executeSync<Map<string, number | string>>(
+    const result = runtime.executeSync<Record<string, number | string>>(
         "{ a: 1, b: 'test' }",
     );
     assertEquals(
         result,
-        new Map<string, number | string>([["a", 1], ["b", "test"]]),
+        { a: 1, b: "test" },
     );
 });
 

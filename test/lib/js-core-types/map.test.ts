@@ -143,7 +143,6 @@ Deno.test("map clear local", () => {
             [2, "value2"],
         ]),
     );
-
     // 2. local update
     map.clear();
     assertEquals(map.size, 0);
@@ -153,11 +152,29 @@ Deno.test("map clear local", () => {
     );
 });
 
-Deno.test("map from datex", () => {
+Deno.test("structural map from datex", () => {
     const mapDif = runtime.dif.executeSyncDIF("{}");
-    const map = runtime.executeSync<Map<unknown, unknown>>("{}", []);
+    assertEquals(mapDif, { value: {} });
 
-    assertEquals(mapDif, { value: [], type: CoreTypeAddress.map });
+    const map = runtime.executeSync<Record<string, unknown>>("{}", []);
+    assertEquals(map instanceof Map, false);
+    assertEquals(Object.keys(map).length, 0);
+});
+
+Deno.test("map from datex", () => {
+    const mapDif = runtime.dif.executeSyncDIF("{(1): 2}");
+    assertEquals(mapDif, {
+        value: [
+            [
+                { type: CoreTypeAddress.integer, value: "1" },
+                { type: CoreTypeAddress.integer, value: "2" },
+            ],
+        ],
+    });
+
+    const map = runtime.executeSync<Map<number, number>>("{(1): 2}", []);
+
     assertEquals(map instanceof Map, true);
-    assertEquals(map.size, 0);
+    assertEquals(map.size, 1);
+    assertEquals(map.get(1), 2);
 });

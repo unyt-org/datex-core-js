@@ -342,14 +342,26 @@ export class DIFHandler {
         value: DIFValue,
     ): T | Promise<T> {
         let type = value.type;
+
+        let convertMapToJSObject = false;
+
+        // no type specified since it is inferable from the value
         if (type === undefined) {
             if (Array.isArray(value.value)) {
+                // [[x,y,]] -> map
                 if (Array.isArray(value.value[0])) {
                     type = CoreTypeAddress.map;
-                } else {
+                } // [x,y] or [] -> list
+                else {
                     type = CoreTypeAddress.list;
                 }
-            } else {
+            } else if (
+                typeof value.value === "object" && value.value !== null
+            ) {
+                type = CoreTypeAddress.map;
+                convertMapToJSObject = true;
+            } // primitive JS value, no type specified
+            else {
                 return value.value as T;
             }
         }
@@ -413,7 +425,6 @@ export class DIFHandler {
             if (Array.isArray(value.value)) {
                 const resolvedMap = new Map<unknown, unknown>();
                 for (const [key, val] of (value.value as DIFMap)) {
-                    // TODO: currently always converting to an object here, but this should be a Map per default
                     resolvedMap.set(
                         this.resolveDIFValueContainer(key),
                         this.resolveDIFValueContainer(val),
@@ -422,18 +433,32 @@ export class DIFHandler {
                 // TODO: map promises
                 return resolvedMap as unknown as T | Promise<T>;
             } else {
-                const resolvedObj: { [key: string]: unknown } = {};
-                for (
-                    const [key, val] of Object.entries(value.value as DIFObject)
-                ) {
-                    // TODO: currently always converting to an object here, but this should be a Map per default
-                    resolvedObj[key as string] = this.resolveDIFValueContainer(
-                        val,
-                    );
+                if (convertMapToJSObject) {
+                    const resolvedObj: { [key: string]: unknown } = {};
+                    for (
+                        const [key, val] of Object.entries(
+                            value.value as DIFObject,
+                        )
+                    ) {
+                        resolvedObj[key] = this.resolveDIFValueContainer(val);
+                    }
+                    return resolvedObj as unknown as T | Promise<T>;
+                } else {
+                    const resolvedMap = new Map<string, unknown>();
+                    for (
+                        const [key, val] of Object.entries(
+                            value.value as DIFObject,
+                        )
+                    ) {
+                        resolvedMap.set(
+                            key,
+                            this.resolveDIFValueContainer(val),
+                        );
+                    }
+                    return resolvedMap as
+                        | T
+                        | Promise<T>;
                 }
-                return this.promiseFromObjectOrSync(resolvedObj) as
-                    | T
-                    | Promise<T>;
             }
         } // impl types
         else if (
@@ -1146,7 +1171,6 @@ export class DIFHandler {
                 map[key] = this.convertJSValueToDIFValueContainer(val);
             }
             return {
-                type: CoreTypeAddress.map,
                 value: map,
             };
         }
