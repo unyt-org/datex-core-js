@@ -24,31 +24,6 @@ export interface WebSocketServerInterfaceSetupData {
     secure: boolean | undefined;
 }
 
-export type BaseInterfaceSetupData = InterfaceProperties;
-
-export interface DecompileOptions {
-    formatting_options?: FormattingOptions;
-    /**
-     * display slots with generated variable names
-     */
-    resolve_slots?: boolean;
-}
-
-export type IndentType = "Spaces" | "Tabs";
-
-export type FormattingMode = { type: "Compact" } | {
-    type: "Pretty";
-    indent: number;
-    indent_type?: IndentType;
-};
-
-export interface FormattingOptions {
-    mode?: FormattingMode;
-    json_compat?: boolean;
-    colorized?: boolean;
-    add_variant_suffix?: boolean;
-}
-
 export type InterfaceDirection = "In" | "Out" | "InOut";
 
 export interface InterfaceProperties {
@@ -122,9 +97,9 @@ export type ReconnectionConfig = "NoReconnect" | "InstantReconnect" | {
     };
 };
 
-export interface SerialInterfaceSetupData {
-    port_name: string | undefined;
-    baud_rate: number;
+export interface WebRTCInterfaceSetupData {
+    peer_endpoint: string;
+    ice_servers: RTCIceServer[] | undefined;
 }
 
 export interface RTCIceServer {
@@ -133,10 +108,35 @@ export interface RTCIceServer {
     credential: string | undefined;
 }
 
-export interface WebRTCInterfaceSetupData {
-    peer_endpoint: string;
-    ice_servers: RTCIceServer[] | undefined;
+export interface SerialInterfaceSetupData {
+    port_name: string | undefined;
+    baud_rate: number;
 }
+
+export interface DecompileOptions {
+    formatting_options?: FormattingOptions;
+    /**
+     * display slots with generated variable names
+     */
+    resolve_slots?: boolean;
+}
+
+export type IndentType = "Spaces" | "Tabs";
+
+export type FormattingMode = { type: "Compact" } | {
+    type: "Pretty";
+    indent: number;
+    indent_type?: IndentType;
+};
+
+export interface FormattingOptions {
+    mode?: FormattingMode;
+    json_compat?: boolean;
+    colorized?: boolean;
+    add_variant_suffix?: boolean;
+}
+
+export type BaseInterfaceSetupData = InterfaceProperties;
 
 export class BaseJSInterface {
     private constructor();
@@ -147,24 +147,6 @@ export class JSComHub {
     private constructor();
     free(): void;
     [Symbol.dispose](): void;
-    webrtc_interface_set_answer(
-        interface_uuid: string,
-        answer: Uint8Array,
-    ): Promise<void>;
-    webrtc_interface_create_offer(interface_uuid: string): Promise<Uint8Array>;
-    webrtc_interface_create_answer(
-        interface_uuid: string,
-        offer: Uint8Array,
-    ): Promise<Uint8Array>;
-    webrtc_interface_add_ice_candidate(
-        interface_uuid: string,
-        candidate: Uint8Array,
-    ): Promise<void>;
-    webrtc_interface_wait_for_connection(interface_uuid: string): Promise<void>;
-    webrtc_interface_set_on_ice_candidate(
-        interface_uuid: string,
-        on_ice_candidate: Function,
-    ): void;
     base_interface_test_send_block(
         uuid: string,
         socket_uuid: string,
@@ -198,6 +180,24 @@ export class JSComHub {
     register_incoming_block_interceptor(callback: Function): void;
     register_outgoing_block_interceptor(callback: Function): void;
     register_default_interface_factories(): void;
+    webrtc_interface_set_answer(
+        interface_uuid: string,
+        answer: Uint8Array,
+    ): Promise<void>;
+    webrtc_interface_create_offer(interface_uuid: string): Promise<Uint8Array>;
+    webrtc_interface_create_answer(
+        interface_uuid: string,
+        offer: Uint8Array,
+    ): Promise<Uint8Array>;
+    webrtc_interface_add_ice_candidate(
+        interface_uuid: string,
+        candidate: Uint8Array,
+    ): Promise<void>;
+    webrtc_interface_wait_for_connection(interface_uuid: string): Promise<void>;
+    webrtc_interface_set_on_ice_candidate(
+        interface_uuid: string,
+        on_ice_candidate: Function,
+    ): void;
     websocket_server_interface_add_socket(
         interface_uuid: string,
         websocket: WebSocket,
