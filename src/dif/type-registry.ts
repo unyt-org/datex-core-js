@@ -12,7 +12,7 @@ import {
 
 type ImplMethod = {
     name: string;
-    implementation: Function;
+    implementation: (...args: unknown[]) => unknown;
 };
 
 type OwnImpl = {
@@ -114,7 +114,7 @@ export class TypeRegistry {
      * Defines a completely new nominal type with optional implementations that can be bound to JS native functions.
      * @param definition
      */
-    public registerTypeDefinition(definition: TypeDefinition) {
+    public registerTypeDefinition(_definition: TypeDefinition) {
         // TODO
     }
 
@@ -169,7 +169,7 @@ export class TypeBinding<
     #difHandler: DIFHandler;
     #definition: TypeBindingDefinition<T, M>;
 
-    get difHandler() {
+    get difHandler(): DIFHandler {
         return this.#difHandler;
     }
 

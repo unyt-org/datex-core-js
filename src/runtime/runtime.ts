@@ -1,6 +1,6 @@
 import {
     create_runtime,
-    DecompileOptions,
+    type DecompileOptions,
     execute_internal,
     type JSRuntime,
 } from "../datex-core.ts";
@@ -340,9 +340,9 @@ export class Runtime {
         M extends DIFReferenceMutability =
             typeof DIFReferenceMutability.Mutable,
     >(
-        value: V,
-        allowedType?: DIFTypeDefinition | null,
-        mutability?: M,
+        _value: V,
+        _allowedType?: DIFTypeDefinition | null,
+        _mutability?: M,
     ): Ref<V> {
         unimplemented();
     }
