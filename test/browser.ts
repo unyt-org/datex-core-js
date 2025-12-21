@@ -19,7 +19,7 @@ const definition = await (await fetch(
  */
 export const Datex: Runtime = await Runtime.create({
     interfaces: [],
-    debug: false,
+    debug: true,
 }, {
     allow_unsigned_blocks: true,
 });
