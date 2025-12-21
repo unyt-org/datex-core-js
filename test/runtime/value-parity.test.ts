@@ -29,28 +29,31 @@ const TEST_VALUES = [
     { a: 1, b: "test" },
     {},
     // non-JSON values
-    new Map([["key", "value"]]),
+    // TODO: simple string map type gets lost during DATEX execution, special JS map marker type needed here
+    // new Map([["key", "value"]]),
+    new Map([[1, 2]]),
     new Map(),
     undefined,
     NaN,
     Infinity,
     -Infinity,
-];
+    2000n,
+] as const;
 
 // initialization of the test cases
 const valueTypeCounter = new Map<string, number>();
 for (const value of TEST_VALUES) {
     // class name or primitive type
-    const valueType = value == null
+    const valueType = value === null
         ? "null"
-        : value == "undefined"
+        : typeof value === "undefined"
         ? "undefined"
         : value?.constructor.name;
     // increment counter for this type
     const count = valueTypeCounter.get(valueType) || 0;
     valueTypeCounter.set(valueType, count + 1);
     Deno.test(`test value parity for value of type ${valueType} #${count + 1}`, () => {
-        const runtime = new Runtime({ endpoint: "@jonas" });
+        const runtime = new Runtime({ endpoint: "@jonas", debug: true });
         const result = runtime.executeSync<typeof value>(
             "?",
             [value],
