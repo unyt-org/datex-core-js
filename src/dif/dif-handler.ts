@@ -9,7 +9,7 @@ import {
     type DIFProperty,
     type DIFReference,
     DIFReferenceMutability,
-    DIFTypeDefinition,
+    type DIFTypeDefinition,
     DIFTypeDefinitionKind,
     type DIFUpdate,
     type DIFUpdateData,
