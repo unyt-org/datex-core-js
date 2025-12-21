@@ -33,7 +33,6 @@ for (const input of TEXT_INPUTS) {
     });
 
     Deno.test(`JSON stringify compatibility for input : ${input}`, () => {
-        // FIXME: use new DATEX decompiler
         const value = JSON.parse(input);
         const stringFromRuntime = runtime.valueToString(value, {
             formatting_options: { json_compat: true },
