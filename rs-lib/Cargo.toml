@@ -25,6 +25,7 @@ datex-core = { version = "0.0.7", git = "https://github.com/unyt-org/datex-core"
     "wasm_logger",
     "wasm_runtime",
     "compiler",
+    "decompiler",
     "com_websocket",
     "com_webrtc",
     "com_serial",
