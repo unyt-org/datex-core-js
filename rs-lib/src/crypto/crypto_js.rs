@@ -1,11 +1,9 @@
-use datex_core::stdlib::{future::Future, pin::Pin};
-
-use datex_core::crypto::crypto::{CryptoError, CryptoTrait};
+use datex_core::crypto::crypto::{CryptoError, CryptoResult, CryptoTrait};
 use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{
     AesCtrParams, CryptoKey, CryptoKeyPair,
-    js_sys::{Array, ArrayBuffer, Object, Uint8Array},
+    js_sys::{Array, ArrayBuffer, Object, Reflect, Uint8Array},
 };
 
 use crate::js_utils::{AsByteSlice, TryAsByteSlice, js_array, js_object};
@@ -35,13 +33,12 @@ impl CryptoJS {
     ) -> Result<Vec<u8>, CryptoError> {
         let export_key_promise = Self::crypto_subtle()
             .export_key(format, key)
-            .map_err(|_| CryptoError::KeyExportFailed)?;
+            .map_err(|_| CryptoError::KeyExport)?;
         let key: JsValue = JsFuture::from(export_key_promise)
             .await
-            .map_err(|_| CryptoError::KeyExportFailed)?;
-        let bytes = key
-            .try_as_u8_slice()
-            .map_err(|_| CryptoError::KeyExportFailed)?;
+            .map_err(|_| CryptoError::KeyExport)?;
+        let bytes =
+            key.try_as_u8_slice().map_err(|_| CryptoError::KeyExport)?;
         Ok(bytes)
     }
 
@@ -60,12 +57,12 @@ impl CryptoJS {
                 true,
                 &js_array(key_usages),
             )
-            .map_err(|_| CryptoError::KeyImportFailed)?;
+            .map_err(|_| CryptoError::KeyImport)?;
         let key: JsValue = JsFuture::from(import_key_promise)
             .await
-            .map_err(|_| CryptoError::KeyImportFailed)?;
+            .map_err(|_| CryptoError::KeyImport)?;
         let key: CryptoKey =
-            key.dyn_into().map_err(|_| CryptoError::KeyImportFailed)?;
+            key.dyn_into().map_err(|_| CryptoError::KeyImport)?;
         Ok(key)
     }
 
@@ -87,11 +84,11 @@ impl CryptoJS {
             .map_err(|e| CryptoError::Other(format!("{e:?}")))?;
         let result: JsValue = JsFuture::from(key_generator_promise)
             .await
-            .map_err(|_| CryptoError::KeyGeneratorFailed)?;
+            .map_err(|_| CryptoError::KeyGeneration)?;
 
         let key_or_pair: T =
             result.try_into().map_err(|_: std::convert::Infallible| {
-                CryptoError::KeyGeneratorFailed
+                CryptoError::KeyGeneration
             })?;
         Ok(key_or_pair)
     }
@@ -110,15 +107,88 @@ impl CryptoTrait for CryptoJS {
         buffer.to_vec()
     }
 
-    // Signature and Verification
-    fn gen_ed25519(
+    fn hash_sha256<'a>(&'a self, ikm: &'a [u8]) -> CryptoResult<'a, [u8; 32]> {
+        Box::pin(async move {
+            let subtle = CryptoJS::crypto_subtle();
+
+            let bits = JsFuture::from(
+                subtle
+                    .digest_with_object_and_u8_array(
+                        &js_object(vec![("name", "SHA-256")]),
+                        &ikm,
+                    )
+                    .map_err(|_| CryptoError::KeyImport)?,
+            )
+            .await
+            .map_err(|_| CryptoError::KeyImport)?;
+
+            let okm = Uint8Array::new(&bits).to_vec().try_into().unwrap();
+            Ok(okm)
+        })
+    }
+    // hkdf
+    fn hkdf_sha256<'a>(
         &self,
-    ) -> Pin<
-        Box<
-            dyn Future<Output = Result<(Vec<u8>, Vec<u8>), CryptoError>>
-                + 'static,
-        >,
-    > {
+        ikm: &'a [u8],
+        salt: &'a [u8],
+    ) -> CryptoResult<'a, [u8; 32]> {
+        Box::pin(async move {
+            let info = b"".to_vec();
+            let subtle = CryptoJS::crypto_subtle();
+
+            let usages = Array::of1(&JsValue::from_str("deriveBits"));
+            let ikm_buf = Uint8Array::from(ikm).buffer();
+
+            let key_js = JsFuture::from(
+                subtle
+                    .import_key_with_object(
+                        "raw",
+                        &ikm_buf.into(),
+                        &js_object(vec![("name", "HKDF")]),
+                        false,
+                        &usages,
+                    )
+                    .map_err(|_| CryptoError::KeyImport)?,
+            )
+            .await
+            .map_err(|_| CryptoError::KeyImport)?;
+            let base_key: CryptoKey =
+                key_js.dyn_into().map_err(|_| CryptoError::KeyImport)?;
+
+            let params = Object::new();
+            Reflect::set(&params, &"name".into(), &"HKDF".into())
+                .map_err(|_| CryptoError::KeyImport)?;
+            Reflect::set(&params, &"hash".into(), &"SHA-256".into())
+                .map_err(|_| CryptoError::KeyImport)?;
+            Reflect::set(&params, &"salt".into(), &Uint8Array::from(salt))
+                .map_err(|_| CryptoError::KeyImport)?;
+            Reflect::set(
+                &params,
+                &"info".into(),
+                &Uint8Array::from(info.as_slice()),
+            )
+            .map_err(|_| CryptoError::KeyImport)?;
+
+            let bit_len: u32 = (32 as u32) * 8;
+            let bits = JsFuture::from(
+                subtle
+                    .derive_bits_with_object(&params.into(), &base_key, bit_len)
+                    .map_err(|_| CryptoError::KeyGeneration)?,
+            )
+            .await
+            .map_err(|_| CryptoError::KeyGeneration)?;
+
+            let okm: [u8; 32] =
+                Uint8Array::new(&bits).to_vec().try_into().unwrap();
+            if okm.len() != 32 {
+                return Err(CryptoError::KeyExport);
+            }
+            Ok(okm)
+        })
+    }
+
+    // Signature and Verification
+    fn gen_ed25519<'a>(&'a self) -> CryptoResult<'a, (Vec<u8>, Vec<u8>)> {
         Box::pin(async move {
             let algorithm =
                 js_object(vec![("name", JsValue::from_str("Ed25519"))]);
@@ -128,7 +198,7 @@ impl CryptoTrait for CryptoJS {
                 &["sign", "verify"],
             )
             .await
-            .map_err(|_| CryptoError::KeyGeneratorFailed)?;
+            .map_err(|_| CryptoError::KeyGeneration)?;
 
             let pub_key =
                 Self::export_crypto_key(&key_pair.get_public_key(), "spki")
@@ -145,7 +215,7 @@ impl CryptoTrait for CryptoJS {
         &self,
         pri_key: &'a [u8],
         data: &'a [u8],
-    ) -> Pin<Box<dyn Future<Output = Result<[u8; 64], CryptoError>> + 'a>> {
+    ) -> CryptoResult<'a, [u8; 64]> {
         Box::pin(async move {
             let key = Self::import_crypto_key(
                 pri_key,
@@ -161,15 +231,13 @@ impl CryptoTrait for CryptoJS {
                     &key,
                     data,
                 )
-                .map_err(|_| CryptoError::SigningError)?;
+                .map_err(|_| CryptoError::Signing)?;
 
             let result: ArrayBuffer = JsFuture::from(sig_prom)
                 .await
-                .map_err(|_| CryptoError::SigningError)?
+                .map_err(|_| CryptoError::Signing)?
                 .try_into()
-                .map_err(|_: std::convert::Infallible| {
-                    CryptoError::SigningError
-                })?;
+                .map_err(|_: std::convert::Infallible| CryptoError::Signing)?;
 
             let sig: [u8; 64] = result
                 .as_u8_slice()
@@ -185,7 +253,7 @@ impl CryptoTrait for CryptoJS {
         pub_key: &'a [u8],
         sig: &'a [u8],
         data: &'a [u8],
-    ) -> Pin<Box<dyn Future<Output = Result<bool, CryptoError>> + 'a>> {
+    ) -> CryptoResult<'a, bool> {
         Box::pin(async move {
             let key = Self::import_crypto_key(
                 pub_key,
@@ -202,13 +270,13 @@ impl CryptoTrait for CryptoJS {
                     sig,
                     data,
                 )
-                .map_err(|_| CryptoError::VerificationError)?;
+                .map_err(|_| CryptoError::Verification)?;
 
             let result: bool = JsFuture::from(verified_promise)
                 .await
-                .map_err(|_| CryptoError::VerificationError)?
+                .map_err(|_| CryptoError::Verification)?
                 .as_bool()
-                .ok_or(CryptoError::VerificationError)?;
+                .ok_or(CryptoError::Verification)?;
 
             Ok(result)
         })
@@ -220,7 +288,7 @@ impl CryptoTrait for CryptoJS {
         hash: &'a [u8; 32],
         iv: &'a [u8; 16],
         plaintext: &'a [u8],
-    ) -> Pin<Box<dyn Future<Output = Result<Vec<u8>, CryptoError>> + 'a>> {
+    ) -> CryptoResult<'a, Vec<u8>> {
         Box::pin(async move {
             let subtle = Self::crypto_subtle();
 
@@ -240,13 +308,12 @@ impl CryptoTrait for CryptoJS {
                         false,
                         &usages,
                     )
-                    .map_err(|_| CryptoError::KeyImportFailed)?,
+                    .map_err(|_| CryptoError::KeyImport)?,
             )
             .await
-            .map_err(|_| CryptoError::KeyImportFailed)?;
-            let base_key: CryptoKey = key_js
-                .dyn_into()
-                .map_err(|_| CryptoError::KeyImportFailed)?;
+            .map_err(|_| CryptoError::KeyImport)?;
+            let base_key: CryptoKey =
+                key_js.dyn_into().map_err(|_| CryptoError::KeyImport)?;
 
             let params = AesCtrParams::new(
                 "AES-CTR",
@@ -263,13 +330,13 @@ impl CryptoTrait for CryptoJS {
                         &base_key,
                         &pt,
                     )
-                    .map_err(|_| CryptoError::EncryptionError)?,
+                    .map_err(|_| CryptoError::Encryption)?,
             )
             .await
-            .map_err(|_| CryptoError::EncryptionError)?;
+            .map_err(|_| CryptoError::Encryption)?;
 
             let ct_buf: ArrayBuffer =
-                ct.dyn_into().map_err(|_| CryptoError::EncryptionError)?;
+                ct.dyn_into().map_err(|_| CryptoError::Encryption)?;
             let ct_bytes = Uint8Array::new(&ct_buf).to_vec();
 
             Ok(ct_bytes)
@@ -281,7 +348,7 @@ impl CryptoTrait for CryptoJS {
         hash: &'a [u8; 32],
         iv: &'a [u8; 16],
         ciphertext: &'a [u8],
-    ) -> Pin<Box<dyn Future<Output = Result<Vec<u8>, CryptoError>> + 'a>> {
+    ) -> CryptoResult<'a, Vec<u8>> {
         Box::pin(async move {
             let subtle = CryptoJS::crypto_subtle();
 
@@ -301,13 +368,12 @@ impl CryptoTrait for CryptoJS {
                         false,
                         &usages,
                     )
-                    .map_err(|_| CryptoError::KeyImportFailed)?,
+                    .map_err(|_| CryptoError::KeyImport)?,
             )
             .await
-            .map_err(|_| CryptoError::KeyImportFailed)?;
-            let base_key: CryptoKey = key_js
-                .dyn_into()
-                .map_err(|_| CryptoError::KeyImportFailed)?;
+            .map_err(|_| CryptoError::KeyImport)?;
+            let base_key: CryptoKey =
+                key_js.dyn_into().map_err(|_| CryptoError::KeyImport)?;
 
             let params = AesCtrParams::new(
                 "AES-CTR",
@@ -324,13 +390,13 @@ impl CryptoTrait for CryptoJS {
                         &base_key,
                         &ct,
                     )
-                    .map_err(|_| CryptoError::DecryptionError)?,
+                    .map_err(|_| CryptoError::Decryption)?,
             )
             .await
-            .map_err(|_| CryptoError::DecryptionError)?;
+            .map_err(|_| CryptoError::Decryption)?;
 
             let pt_buf: ArrayBuffer =
-                pt.dyn_into().map_err(|_| CryptoError::DecryptionError)?;
+                pt.dyn_into().map_err(|_| CryptoError::Decryption)?;
             let pt_bytes = Uint8Array::new(&pt_buf).to_vec();
 
             Ok(pt_bytes)
@@ -343,7 +409,7 @@ impl CryptoTrait for CryptoJS {
         kek_bytes: &'a [u8; 32],
         // The AES-CTR key to wrap
         key_to_wrap_bytes: &'a [u8; 32],
-    ) -> Pin<Box<dyn Future<Output = Result<[u8; 40], CryptoError>> + 'a>> {
+    ) -> CryptoResult<'a, [u8; 40]> {
         Box::pin(async move {
             let subtle = Self::crypto_subtle();
 
@@ -363,12 +429,12 @@ impl CryptoTrait for CryptoJS {
             );
 
             let kek: CryptoKey = JsFuture::from(
-                kek_promise.map_err(|_| CryptoError::KeyImportFailed)?,
+                kek_promise.map_err(|_| CryptoError::KeyImport)?,
             )
             .await
-            .map_err(|_| CryptoError::KeyImportFailed)?
+            .map_err(|_| CryptoError::KeyImport)?
             .dyn_into()
-            .map_err(|_| CryptoError::KeyImportFailed)?;
+            .map_err(|_| CryptoError::KeyImport)?;
 
             // Import the key to be wrapped (AES-CTR key)
             let key_algorithm =
@@ -386,12 +452,12 @@ impl CryptoTrait for CryptoJS {
             );
 
             let key_to_wrap: CryptoKey = JsFuture::from(
-                key_promise.map_err(|_| CryptoError::KeyImportFailed)?,
+                key_promise.map_err(|_| CryptoError::KeyImport)?,
             )
             .await
-            .map_err(|_| CryptoError::KeyImportFailed)?
+            .map_err(|_| CryptoError::KeyImport)?
             .dyn_into()
-            .map_err(|_| CryptoError::KeyImportFailed)?;
+            .map_err(|_| CryptoError::KeyImport)?;
 
             // Wrap the key
             let wrap_promise = subtle.wrap_key_with_str(
@@ -402,15 +468,15 @@ impl CryptoTrait for CryptoJS {
             );
 
             let wrapped_buffer = JsFuture::from(
-                wrap_promise.map_err(|_| CryptoError::KeyImportFailed)?,
+                wrap_promise.map_err(|_| CryptoError::KeyImport)?,
             )
             .await
-            .map_err(|_| CryptoError::KeyImportFailed)?;
+            .map_err(|_| CryptoError::KeyImport)?;
 
             let uint8_array = Uint8Array::new(&wrapped_buffer);
             let mut result: [u8; 40] = vec![0u8; uint8_array.length() as usize]
                 .try_into()
-                .map_err(|_| CryptoError::KeyImportFailed)?;
+                .map_err(|_| CryptoError::KeyImport)?;
             uint8_array.copy_to(&mut result);
 
             Ok(result)
@@ -421,7 +487,7 @@ impl CryptoTrait for CryptoJS {
         &'a self,
         kek_bytes: &'a [u8; 32], // Key Encryption Key (same as used for wrapping)
         wrapped_key: &'a [u8; 40], // The wrapped key data
-    ) -> Pin<Box<dyn Future<Output = Result<[u8; 32], CryptoError>> + 'a>> {
+    ) -> CryptoResult<'a, [u8; 32]> {
         Box::pin(async move {
             let subtle = CryptoJS::crypto_subtle();
 
@@ -441,12 +507,12 @@ impl CryptoTrait for CryptoJS {
             );
 
             let kek: CryptoKey = JsFuture::from(
-                kek_promise.map_err(|_| CryptoError::KeyImportFailed)?,
+                kek_promise.map_err(|_| CryptoError::KeyImport)?,
             )
             .await
-            .map_err(|_| CryptoError::KeyImportFailed)?
+            .map_err(|_| CryptoError::KeyImport)?
             .dyn_into()
-            .map_err(|_| CryptoError::KeyImportFailed)?;
+            .map_err(|_| CryptoError::KeyImport)?;
 
             // Unwrap the key
             let unwrapped_algorithm =
@@ -470,26 +536,26 @@ impl CryptoTrait for CryptoJS {
                 );
 
             let unwrapped_key: CryptoKey = JsFuture::from(
-                unwrap_promise.map_err(|_| CryptoError::KeyExportFailed)?,
+                unwrap_promise.map_err(|_| CryptoError::KeyExport)?,
             )
             .await
-            .map_err(|_| CryptoError::KeyExportFailed)?
+            .map_err(|_| CryptoError::KeyExport)?
             .dyn_into()
-            .map_err(|_| CryptoError::KeyExportFailed)?;
+            .map_err(|_| CryptoError::KeyExport)?;
 
             // Export the unwrapped key as raw bytes
             let export_promise = subtle
                 .export_key("raw", &unwrapped_key)
-                .map_err(|_| CryptoError::KeyExportFailed)?;
+                .map_err(|_| CryptoError::KeyExport)?;
 
             let exported_buffer = JsFuture::from(export_promise)
                 .await
-                .map_err(|_| CryptoError::KeyExportFailed)?;
+                .map_err(|_| CryptoError::KeyExport)?;
 
             let uint8_array = Uint8Array::new(&exported_buffer);
             let mut result: [u8; 32] = vec![0u8; uint8_array.length() as usize]
                 .try_into()
-                .map_err(|_| CryptoError::KeyExportFailed)?;
+                .map_err(|_| CryptoError::KeyExport)?;
             uint8_array.copy_to(&mut result);
 
             Ok(result)
@@ -497,10 +563,7 @@ impl CryptoTrait for CryptoJS {
     }
 
     // x25519 key gen
-    fn gen_x25519(
-        &self,
-    ) -> Pin<Box<dyn Future<Output = Result<([u8; 44], [u8; 48]), CryptoError>>>>
-    {
+    fn gen_x25519<'a>(&'a self) -> CryptoResult<'a, ([u8; 44], [u8; 48])> {
         Box::pin(async move {
             let algorithm =
                 js_object(vec![("name", JsValue::from_str("X25519"))]);
@@ -511,20 +574,20 @@ impl CryptoTrait for CryptoJS {
                 &["deriveKey", "deriveBits"],
             )
             .await
-            .map_err(|_| CryptoError::KeyGeneratorFailed)?;
+            .map_err(|_| CryptoError::KeyGeneration)?;
 
             let pub_key: [u8; 44] =
                 Self::export_crypto_key(&key_pair.get_public_key(), "spki")
                     .await
-                    .map_err(|_| CryptoError::KeyGeneratorFailed)?
+                    .map_err(|_| CryptoError::KeyGeneration)?
                     .try_into()
-                    .map_err(|_| CryptoError::KeyGeneratorFailed)?;
+                    .map_err(|_| CryptoError::KeyGeneration)?;
             let pri_key: [u8; 48] =
                 Self::export_crypto_key(&key_pair.get_private_key(), "pkcs8")
                     .await
-                    .map_err(|_| CryptoError::KeyGeneratorFailed)?
+                    .map_err(|_| CryptoError::KeyGeneration)?
                     .try_into()
-                    .map_err(|_| CryptoError::KeyGeneratorFailed)?;
+                    .map_err(|_| CryptoError::KeyGeneration)?;
 
             Ok((pub_key, pri_key))
         })
@@ -534,7 +597,7 @@ impl CryptoTrait for CryptoJS {
         &'a self,
         my_raw: &'a [u8; 48],
         peer_pub: &'a [u8; 44],
-    ) -> Pin<Box<dyn Future<Output = Result<Vec<u8>, CryptoError>> + 'a>> {
+    ) -> CryptoResult<'a, Vec<u8>> {
         Box::pin(async move {
             let subtle = Self::crypto_subtle();
 
@@ -553,13 +616,13 @@ impl CryptoTrait for CryptoJS {
                         &JsValue::from_str("deriveBits"),
                     ),
                 )
-                .map_err(|_| CryptoError::KeyImportFailed)?;
+                .map_err(|_| CryptoError::KeyImport)?;
 
             let pri_key: CryptoKey = JsFuture::from(pri_key_promise)
                 .await
-                .map_err(|_| CryptoError::KeyImportFailed)?
+                .map_err(|_| CryptoError::KeyImport)?
                 .dyn_into()
-                .map_err(|_| CryptoError::KeyImportFailed)?;
+                .map_err(|_| CryptoError::KeyImport)?;
 
             // Public Key
             let pub_key_promise = subtle
@@ -570,13 +633,13 @@ impl CryptoTrait for CryptoJS {
                     false,              // not extractable
                     &Array::new(),      // no usage for public key
                 )
-                .map_err(|_| CryptoError::KeyImportFailed)?;
+                .map_err(|_| CryptoError::KeyImport)?;
 
             let pub_key: CryptoKey = JsFuture::from(pub_key_promise)
                 .await
-                .map_err(|_| CryptoError::KeyImportFailed)?
+                .map_err(|_| CryptoError::KeyImport)?
                 .dyn_into()
-                .map_err(|_| CryptoError::KeyImportFailed)?;
+                .map_err(|_| CryptoError::KeyImport)?;
 
             let derive_algorithm = js_object(vec![
                 ("name", JsValue::from_str("X25519")),
@@ -586,11 +649,11 @@ impl CryptoTrait for CryptoJS {
             // Derive bits
             let derive_promise = subtle
                 .derive_bits_with_object(&derive_algorithm, &pri_key, 256u32)
-                .map_err(|_| CryptoError::KeyGeneratorFailed)?;
+                .map_err(|_| CryptoError::KeyGeneration)?;
 
             let derived_buffer = JsFuture::from(derive_promise)
                 .await
-                .map_err(|_| CryptoError::KeyExportFailed)?;
+                .map_err(|_| CryptoError::KeyExport)?;
 
             let uint8_array = Uint8Array::new(&derived_buffer);
             let mut result = vec![0u8; uint8_array.length() as usize];
