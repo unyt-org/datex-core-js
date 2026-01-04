@@ -19,11 +19,11 @@ use datex_core::task::spawn_with_panic_notify_default;
 use log::{debug, error};
 use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::JsFuture;
-use web_sys::js_sys::Uint8Array;
 use web_sys::SerialPort;
+use web_sys::js_sys::Uint8Array;
 use web_sys::{
-    js_sys, ReadableStreamDefaultReader, SerialOptions,
-    WritableStreamDefaultWriter,
+    ReadableStreamDefaultReader, SerialOptions, WritableStreamDefaultWriter,
+    js_sys,
 };
 
 pub struct SerialJSInterface {

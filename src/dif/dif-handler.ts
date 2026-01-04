@@ -394,10 +394,6 @@ export class DIFHandler {
                 this.isPointerAddressInAdresses(
                     type,
                     CoreTypeAddressRanges.big_signed_integers,
-                ) ||
-                this.isPointerAddressInAdresses(
-                    type,
-                    CoreTypeAddressRanges.big_unsigned_integers,
                 )
             )
         ) {
@@ -1135,7 +1131,7 @@ export class DIFHandler {
             };
         } else if (typeof value === "bigint") {
             return {
-                type: CoreTypeAddress.integer_big,
+                type: CoreTypeAddress.integer_ibig,
                 value: value.toString(), // convert bigint to string for DIFValue
             };
         } else if (typeof value === "string") {

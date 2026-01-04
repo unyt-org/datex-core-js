@@ -1,5 +1,5 @@
-use wasm_bindgen::prelude::*;
 use datex_core::references::reference::Reference;
+use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 pub struct JSPointer {
