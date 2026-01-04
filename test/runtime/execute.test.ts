@@ -56,7 +56,7 @@ Deno.test("execute sync normal integer", () => {
 Deno.test("execute sync bigint", () => {
     const runtime = new Runtime({ endpoint: "@jonas" });
     const result = runtime.executeSync<bigint>(
-        "123456781234567891234567812345678big",
+        "123456781234567891234567812345678ibig",
     );
     assertEquals(typeof result, "bigint");
     assertEquals(
