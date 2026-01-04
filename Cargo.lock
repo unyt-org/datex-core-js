@@ -195,6 +195,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "812e12b5285cc515a9c72a5c1d3b6d46a19dac5acfef5265968c166106e31dd3"
 
 [[package]]
+name = "bs58"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bf88ba1141d185c399bee5288d850d63b8369520c1eafc32a0430b5b6c287bf4"
+
+[[package]]
 name = "bumpalo"
 version = "3.19.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -326,17 +332,18 @@ dependencies = [
 [[package]]
 name = "datex-core"
 version = "0.0.7"
-source = "git+https://github.com/unyt-org/datex-core?branch=release%2F0.0.7#d05f4bafe0d39e9cbbf691b4946d2ed91dbae50f"
+source = "git+https://github.com/unyt-org/datex-core?branch=feat%2Fsignatures#d1d1eadf42b4b9c468814d3591ad0d525ba4cd56"
 dependencies = [
  "ariadne",
  "async-trait",
  "bigdecimal",
  "binrw",
+ "bs58",
  "bytes",
  "cfg-if",
  "console_error_panic_hook",
  "console_log",
- "datex_macros 0.1.1 (git+https://github.com/unyt-org/datex-core?branch=release%2F0.0.7)",
+ "datex_macros 0.1.1 (git+https://github.com/unyt-org/datex-core?branch=feat%2Fsignatures)",
  "embedded-time",
  "futures",
  "futures-core",
@@ -413,7 +420,7 @@ dependencies = [
 [[package]]
 name = "datex_macros"
 version = "0.1.1"
-source = "git+https://github.com/unyt-org/datex-core?branch=release%2F0.0.7#d05f4bafe0d39e9cbbf691b4946d2ed91dbae50f"
+source = "git+https://github.com/unyt-org/datex-core?branch=feat%2Fsignatures#d1d1eadf42b4b9c468814d3591ad0d525ba4cd56"
 dependencies = [
  "proc-macro2",
  "quote",
