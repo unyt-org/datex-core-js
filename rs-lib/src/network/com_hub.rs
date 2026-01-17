@@ -31,20 +31,6 @@ impl JSComHub {
     pub fn com_hub(&self) -> Rc<ComHub> {
         self.runtime.com_hub()
     }
-
-    // pub fn get_interface_for_uuid<T: ComInterface>(
-    //     &self,
-    //     uuid: String,
-    // ) -> Result<Rc<RefCell<T>>, ComHubError> {
-    //     let base_interface = self
-    //         .com_hub()
-    //         .get_interface_by_uuid::<T>(&ComInterfaceUUID::from_string(uuid));
-    //     if let Some(base_interface) = base_interface {
-    //         Ok(base_interface)
-    //     } else {
-    //         Err(ComHubError::InterfaceDoesNotExist)
-    //     }
-    // }
 }
 
 /**
@@ -53,36 +39,17 @@ impl JSComHub {
 #[wasm_bindgen]
 impl JSComHub {
     pub fn register_default_interface_factories(&self) {
-        self.com_hub().register_interface_factory(
-            "base".to_string(),
-            crate::network::com_interfaces::base_interface::BaseJSInterface::factory
-        );
-
         #[cfg(feature = "wasm_websocket_client")]
-        self.com_hub().register_interface_factory(
-            "websocket-client".to_string(),
-            crate::network::com_interfaces::websocket_client_js_interface::WebSocketClientJSInterface::factory
-        );
+        self.com_hub().register_async_interface_factory::<crate::network::com_interfaces::websocket_client_js_interface::WebSocketClientInterfaceSetupDataJS>();
 
         #[cfg(feature = "wasm_websocket_server")]
-        self.com_hub().register_interface_factory(
-            "websocket-server".to_string(),
-            crate::network::com_interfaces::websocket_server_js_interface::WebSocketServerJSInterface::factory
-        );
+        self.com_hub().register_async_interface_factory::<crate::network::com_interfaces::websocket_server_js_interface::WebSocketServerInterfaceSetupDataJS>();
 
-        //wasm_serial
         #[cfg(feature = "wasm_serial")]
-        self.com_hub().register_interface_factory(
-            "serial".to_string(),
-            crate::network::com_interfaces::serial_js_interface::SerialJSInterface::factory
-        );
+        self.com_hub().register_async_interface_factory::<crate::network::com_interfaces::serial_js_interface::SerialInterfaceSetupDataJS>();
 
-        //wasm_webrtc
         #[cfg(feature = "wasm_webrtc")]
-        self.com_hub().register_interface_factory(
-            "webrtc".to_string(),
-            crate::network::com_interfaces::webrtc_js_interface::WebRTCJSInterface::factory
-        );
+        self.com_hub().register_async_interface_factory::<crate::network::com_interfaces::webrtc_js_interface::WebRTCJSInterface>();
     }
 
     pub fn create_interface(
@@ -93,15 +60,16 @@ impl JSComHub {
         let runtime = self.runtime.clone();
         future_to_promise(async move {
             let com_hub = runtime.com_hub();
-            let properties = runtime
+            let setup_data = runtime
                 .execute_sync(&properties, &[], None)
                 .map_err(|e| JsError::new(&format!("{e:?}")))?;
-            if let Some(properties) = properties {
+            if let Some(setup_data) = setup_data {
                 let interface = com_hub
                     .create_interface(
                         &interface_type,
-                        properties,
+                        setup_data,
                         InterfacePriority::default(),
+                        com_hub.async_context.clone(),
                     )
                     .await
                     .map_err(|e| JsError::new(&format!("{e:?}")))?;
@@ -135,10 +103,6 @@ impl JSComHub {
                 Err(JsError::new("Failed to find interface").into())
             }
         })
-    }
-
-    pub async fn update(&self) {
-        self.com_hub().update_async().await;
     }
 
     /// Send a block to the given interface and socket

@@ -2,6 +2,8 @@ import { ComInterfaceImpl } from "../com-interface.ts";
 import { ComHub } from "../com-hub.ts";
 import type { WebSocketServerInterfaceSetupData } from "../../datex-core/datex_core_js.d.ts";
 
+// TODO: deprecate this class, not needed anymore - only write interfaces for custom implementations like websocket-server-deno
+
 /**
  * Implementation of the WebSocket server communication interface for Deno.
  */

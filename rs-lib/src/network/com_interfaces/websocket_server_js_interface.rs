@@ -28,7 +28,7 @@ use datex_macros::{com_interface, create_opener};
 wrap_error_for_js!(JSWebSocketServerError, datex_core::network::com_interfaces::default_com_interfaces::websocket::websocket_common::WebSocketServerError);
 
 
-struct WebSocketServerInterfaceSetupDataJS(WebSocketServerInterfaceSetupData);
+pub struct WebSocketServerInterfaceSetupDataJS(WebSocketServerInterfaceSetupData);
 impl Deref for WebSocketServerInterfaceSetupDataJS {
     type Target = WebSocketServerInterfaceSetupData;
 
@@ -173,11 +173,7 @@ impl ComInterface for WebSocketServerJSInterface {
         }
         Box::pin(async move { true })
     }
-    delegate_com_interface_info!();
-    set_sync_opener!(open);
 }
-
-define_registry!(WebSocketServerRegistry, WebSocketServerJSInterface);
 
 #[wasm_bindgen]
 impl JSComHub {

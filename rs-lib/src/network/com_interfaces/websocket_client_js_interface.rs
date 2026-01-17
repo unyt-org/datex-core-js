@@ -28,7 +28,7 @@ use web_sys::{ErrorEvent, MessageEvent, js_sys};
 wrap_error_for_js!(JSWebSocketError, datex_core::network::com_interfaces::default_com_interfaces::websocket::websocket_common::WebSocketError);
 use datex_macros::{com_interface, create_opener};
 
-struct WebSocketClientInterfaceSetupDataJS(WebSocketClientInterfaceSetupData);
+pub struct WebSocketClientInterfaceSetupDataJS(WebSocketClientInterfaceSetupData);
 impl Deref for WebSocketClientInterfaceSetupDataJS {
     type Target = WebSocketClientInterfaceSetupData;
 
