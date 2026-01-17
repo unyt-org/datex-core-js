@@ -4,7 +4,7 @@ import { format } from "@std/fmt/bytes";
 import { parseArgs } from "@std/cli/parse-args";
 import { dedent } from "@qnighy/dedent";
 
-const RUST_FLAGS = ["--cfg=web_sys_unstable_apis"];
+const RUST_FLAGS = ["--cfg=web_sys_unstable_apis", "-Awarnings"];
 const PREVIOUS_RUSTFLAGS = Deno.env.has("RUSTFLAGS")
     ? Deno.env.get("RUSTFLAGS")
     : null;

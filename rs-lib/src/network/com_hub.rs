@@ -1,9 +1,8 @@
 use datex_core::global::dxb_block::IncomingSection;
-use datex_core::network::com_hub::{ComHubError, InterfacePriority};
+use datex_core::network::com_hub::{InterfacePriority};
 use datex_core::network::com_interfaces::com_interface::{
-    ComInterface, ComInterfaceFactory, ComInterfaceUUID,
+    ComInterface, ComInterfaceUUID,
 };
-use datex_core::network::com_interfaces::com_interface_socket::ComInterfaceSocketUUID;
 use datex_core::runtime::Runtime;
 use datex_core::stdlib::{cell::RefCell, rc::Rc};
 use datex_core::values::core_values::endpoint::Endpoint;
@@ -29,23 +28,23 @@ impl JSComHub {
         JSComHub { runtime }
     }
 
-    pub fn com_hub(&self) -> &ComHub {
+    pub fn com_hub(&self) -> Rc<ComHub> {
         self.runtime.com_hub()
     }
 
-    pub fn get_interface_for_uuid<T: ComInterface>(
-        &self,
-        uuid: String,
-    ) -> Result<Rc<RefCell<T>>, ComHubError> {
-        let base_interface = self
-            .com_hub()
-            .get_interface_by_uuid::<T>(&ComInterfaceUUID::from_string(uuid));
-        if let Some(base_interface) = base_interface {
-            Ok(base_interface)
-        } else {
-            Err(ComHubError::InterfaceDoesNotExist)
-        }
-    }
+    // pub fn get_interface_for_uuid<T: ComInterface>(
+    //     &self,
+    //     uuid: String,
+    // ) -> Result<Rc<RefCell<T>>, ComHubError> {
+    //     let base_interface = self
+    //         .com_hub()
+    //         .get_interface_by_uuid::<T>(&ComInterfaceUUID::from_string(uuid));
+    //     if let Some(base_interface) = base_interface {
+    //         Ok(base_interface)
+    //     } else {
+    //         Err(ComHubError::InterfaceDoesNotExist)
+    //     }
+    // }
 }
 
 /**

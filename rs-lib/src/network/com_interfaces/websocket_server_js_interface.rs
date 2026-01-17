@@ -1,67 +1,44 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::future::Future;
+use std::ops::Deref;
 use std::pin::Pin;
 use std::rc::Rc;
 use std::sync::Mutex;
-use std::time::Duration; // FIXME no-std
+use std::time::Duration;
+use datex_core::network::com_hub::managers::interface_manager::ComInterfaceAsyncFactoryResult;
+use datex_core::network::com_interfaces::com_interface::ComInterfaceProxy;
+use datex_core::network::com_interfaces::com_interface::implementation::ComInterfaceAsyncFactory;
+use datex_core::network::com_interfaces::com_interface::properties::InterfaceProperties;
+// FIXME no-std
 
-use datex_core::{ delegate_com_interface_info, set_sync_opener};
-use datex_core::network::com_interfaces::com_interface::{ComInterface, ComInterfaceError, ComInterfaceFactory, ComInterfaceInfo, ComInterfaceSockets, ComInterfaceUUID};
-use datex_core::network::com_interfaces::com_interface_properties::{
-    InterfaceDirection, InterfaceProperties,
-};
-use datex_core::network::com_interfaces::com_interface_socket::{
-    ComInterfaceSocket, ComInterfaceSocketUUID,
-};
-use datex_core::network::com_interfaces::default_com_interfaces::websocket::websocket_common::{WebSocketError, WebSocketServerError, WebSocketServerInterfaceSetupData};
-use datex_core::network::com_interfaces::socket_provider::MultipleSocketProvider;
+
+use datex_core::network::com_interfaces::default_com_interfaces::websocket::websocket_common::{WebSocketClientInterfaceSetupData, WebSocketError, WebSocketServerError, WebSocketServerInterfaceSetupData};
 use datex_core::stdlib::sync::Arc;
 
 use crate::{define_registry, wrap_error_for_js};
-use datex_core::network::com_hub::ComHubError;
-use datex_core::network::com_interfaces::com_interface::ComInterfaceState;
 use log::{debug, error, info};
 use wasm_bindgen::prelude::wasm_bindgen;
 use wasm_bindgen::{JsCast, prelude::Closure};
 use wasm_bindgen::{JsError, JsValue};
 use web_sys::{ErrorEvent, MessageEvent, js_sys};
-
-pub struct WebSocketServerJSInterface {
-    sockets: HashMap<ComInterfaceSocketUUID, web_sys::WebSocket>,
-    info: ComInterfaceInfo,
-    port: u16,
-}
-impl MultipleSocketProvider for WebSocketServerJSInterface {
-    fn provide_sockets(&self) -> Arc<Mutex<ComInterfaceSockets>> {
-        self.get_sockets().clone()
-    }
-}
-
-wrap_error_for_js!(JSWebSocketServerError, datex_core::network::com_interfaces::default_com_interfaces::websocket::websocket_common::WebSocketServerError);
-
-impl From<ComHubError> for JSWebSocketServerError {
-    fn from(err: ComHubError) -> Self {
-        WebSocketServerError::ComHubError(err).into()
-    }
-}
-
 use crate::network::com_hub::JSComHub;
 use datex_macros::{com_interface, create_opener};
 
-#[com_interface]
-impl WebSocketServerJSInterface {
-    pub fn new(
-        setup_data: WebSocketServerInterfaceSetupData,
-    ) -> WebSocketServerJSInterface {
-        WebSocketServerJSInterface {
-            info: ComInterfaceInfo::default(),
-            sockets: HashMap::new(),
-            port: setup_data.port,
-        }
-    }
+wrap_error_for_js!(JSWebSocketServerError, datex_core::network::com_interfaces::default_com_interfaces::websocket::websocket_common::WebSocketServerError);
 
-    #[create_opener]
+
+struct WebSocketServerInterfaceSetupDataJS(WebSocketServerInterfaceSetupData);
+impl Deref for WebSocketServerInterfaceSetupDataJS {
+    type Target = WebSocketServerInterfaceSetupData;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl WebSocketServerInterfaceSetupDataJS {
+
     fn open(&mut self) -> Result<(), ()> {
         Ok(())
     }
@@ -137,14 +114,10 @@ impl WebSocketServerJSInterface {
     }
 }
 
-impl ComInterfaceFactory<WebSocketServerInterfaceSetupData>
-    for WebSocketServerJSInterface
-{
+impl ComInterfaceAsyncFactory for WebSocketServerInterfaceSetupDataJS {
     // TODO: how to handle create and bind to Deno.serve?
-    fn create(
-        setup_data: WebSocketServerInterfaceSetupData,
-    ) -> Result<WebSocketServerJSInterface, ComInterfaceError> {
-        Ok(WebSocketServerJSInterface::new(setup_data))
+    fn create_interface(self, com_interface_proxy: ComInterfaceProxy) -> ComInterfaceAsyncFactoryResult {
+        todo!()
     }
 
     fn get_default_properties() -> InterfaceProperties {
