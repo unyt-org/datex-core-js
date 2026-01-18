@@ -42,7 +42,7 @@ export class Runtime {
 
     constructor(config: RuntimeConfig, debug_flags?: DebugFlags) {
         this.#runtime = create_runtime(JSON.stringify(config), debug_flags);
-        this.#comHub = new ComHub(this.#runtime.com_hub);
+        this.#comHub = new ComHub(this.#runtime.com_hub, this);
         this.#difHandler = new DIFHandler(this.#runtime);
     }
 
@@ -67,10 +67,6 @@ export class Runtime {
      */
     public start(): Promise<void> {
         return this.#runtime.start();
-    }
-
-    public _stop(): Promise<void> {
-        return this.#runtime._stop();
     }
 
     /**

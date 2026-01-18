@@ -50,32 +50,6 @@ impl JSComHub {
         self.runtime.com_hub()
     }
 
-    pub fn register_interface_factory(
-        &mut self,
-        interface_type: String,
-        factory: js_sys::Function,
-    ) {
-        self.registered_interface_factories
-            .insert(interface_type.clone(), factory.clone());
-        self.com_hub().register_dyn_interface_factory(
-            interface_type,
-            Rc::new(move |setup_data, proxy| {
-                let factory = factory.clone();
-                Box::pin(async move {
-                    let base_interface_holder =
-                        BaseInterfaceHandle::create_interface(
-                            setup_data, proxy,
-                        )
-                        .await;
-                    let result =
-                        factory.call0(&JsValue::from(base_interface_holder));
-
-                    Err(InterfaceCreateError::InterfaceOpenFailed)
-                })
-            }),
-        );
-    }
-
     pub(crate) async fn create_interface_internal(
         &self,
         interface_type: String,
@@ -124,6 +98,32 @@ impl JSComHub {
 
         // #[cfg(feature = "wasm_webrtc")]
         // self.com_hub().register_async_interface_factory::<crate::network::com_interfaces::webrtc_js_interface::WebRTCJSInterface>();
+    }
+
+    pub fn register_interface_factory(
+        &mut self,
+        interface_type: String,
+        factory: js_sys::Function,
+    ) {
+        self.registered_interface_factories
+            .insert(interface_type.clone(), factory.clone());
+        self.com_hub().register_dyn_interface_factory(
+            interface_type,
+            Rc::new(move |setup_data, proxy| {
+                let factory = factory.clone();
+                Box::pin(async move {
+                    let base_interface_holder =
+                        BaseInterfaceHandle::create_interface(
+                            setup_data, proxy,
+                        )
+                        .await;
+                    let result =
+                        factory.call0(&JsValue::from(base_interface_holder));
+
+                    Err(InterfaceCreateError::InterfaceOpenFailed)
+                })
+            }),
+        );
     }
 
     pub async fn create_interface(

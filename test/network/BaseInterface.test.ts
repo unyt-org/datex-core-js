@@ -6,11 +6,11 @@ import { assertFalse } from "@std/assert/false";
 import { assertEquals } from "@std/assert/equals";
 import { assertThrows } from "@std/assert/throws";
 import { isNodeOrBun } from "../is-node.ts";
-import type { BaseInterfaceSetupData } from "../../src/datex-core/datex_core_js.d.ts";
 import "../../src/network/interface-impls/base.ts";
 import type { BaseInterfaceImpl } from "../../src/network/interface-impls/base.ts";
+import type { InterfaceProperties } from "../../src/datex-core.ts";
 
-const config: BaseInterfaceSetupData = {
+const config: InterfaceProperties = {
     name: "base",
     interface_type: "base",
     channel: "test",
@@ -23,7 +23,19 @@ const config: BaseInterfaceSetupData = {
     reconnection_config: "NoReconnect",
     reconnect_attempts: undefined,
     close_timestamp: undefined,
+    auto_identify: false,
 };
+
+Deno.test("construct custom factory", () => {
+    const runtime = new Runtime({ endpoint: "@unyt" });
+    runtime.comHub.registerInterfaceFactory<InterfaceProperties>(
+        "test",
+        (config) => config,
+    );
+    runtime.comHub.createInterface;
+});
+
+// FIXME rest
 
 Deno.test("custom properties no reconnect", async () => {
     const runtime = new Runtime({ endpoint: "@unyt" });

@@ -14,6 +14,23 @@ export function create_runtime(config: string, debug_flags: any): JSRuntime;
 export function execute(datex_script: string, decompile_options: any): string;
 export type SerialInterfaceSetupDataJS = SerialInterfaceSetupData;
 
+export interface WebSocketServerInterfaceSetupData {
+    port: number;
+    /**
+     * if true, the server will use wss (secure WebSocket). Defaults to true.
+     */
+    secure: boolean | undefined;
+}
+
+export interface WebSocketClientInterfaceSetupData {
+    address: string;
+}
+
+export interface WebRTCInterfaceSetupData {
+    peer_endpoint: string;
+    ice_servers: RTCIceServer[] | undefined;
+}
+
 export interface FormattingOptions {
     mode?: FormattingMode;
     json_compat?: boolean;
@@ -37,27 +54,10 @@ export interface DecompileOptions {
     resolve_slots?: boolean;
 }
 
-export interface WebRTCInterfaceSetupData {
-    peer_endpoint: string;
-    ice_servers: RTCIceServer[] | undefined;
-}
-
 export interface RTCIceServer {
     urls: string[];
     username: string | undefined;
     credential: string | undefined;
-}
-
-export interface WebSocketServerInterfaceSetupData {
-    port: number;
-    /**
-     * if true, the server will use wss (secure WebSocket). Defaults to true.
-     */
-    secure: boolean | undefined;
-}
-
-export interface WebSocketClientInterfaceSetupData {
-    address: string;
 }
 
 export type InterfaceDirection = "In" | "Out" | "InOut";
@@ -138,13 +138,16 @@ export class BaseInterfaceHandle {
     private constructor();
     free(): void;
     [Symbol.dispose](): void;
-    onClosed(cb: Function): void;
-    registerSocketWithEndpoint(endpoint: string): void;
     sendBlock(socket_uuid: string, data: Uint8Array): void;
-    destroy(): void;
     onReceive(cb: Function): void;
-    registerSocket(): void;
     removeSocket(socket_uuid: string): void;
+    onClosed(cb: Function): void;
+    destroy(): void;
+    registerSocket(
+        direction: string,
+        channel_factor: number,
+        direct_endpoint?: string | null,
+    ): string;
 }
 export class BaseJSInterfaceSetupData {
     private constructor();
@@ -155,22 +158,6 @@ export class JSComHub {
     private constructor();
     free(): void;
     [Symbol.dispose](): void;
-    /**
-     * Registers a new socket on the base interface with an optional endpoint.
-     */
-    base_interface_register_socket_with_endpoint(
-        uuid: string,
-        direction: string,
-        endpoint?: string | null,
-    ): string;
-    create_base_interface(
-        setup_data: string,
-        priority?: number | null,
-    ): Promise<BaseInterfaceHandle>;
-    /**
-     * Registers a new socket on the base interface.
-     */
-    base_interface_register_socket(uuid: string, direction: string): string;
     get_trace_string(endpoint: string): Promise<string | undefined>;
     close_interface(interface_uuid: string): any;
     /**
@@ -192,6 +179,7 @@ export class JSComHub {
         priority?: number | null,
     ): Promise<string>;
     register_default_interface_factories(): void;
+    register_interface_factory(interface_type: string, factory: Function): void;
     get_metadata_string(): string;
 }
 export class JSPointer {

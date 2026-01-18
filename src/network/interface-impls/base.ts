@@ -1,26 +1,25 @@
 import { ComInterfaceImpl } from "../com-interface.ts";
 import { ComHub } from "../com-hub.ts";
 import type {
-    BaseInterfaceSetupData,
     InterfaceDirection,
-} from "../../datex-core/datex_core_js.d.ts";
+    InterfaceProperties,
+} from "../../datex-core.ts";
 
 export type {
-    /**
-     * Setup data for the base communication interface.
-     */
-    BaseInterfaceSetupData,
     /**
      * Direction of the communication interface (In/Out/InOut).
      */
     InterfaceDirection,
+    /**
+     * Setup data for the base communication interface.
+     */
+    InterfaceProperties,
 };
 
 /**
  * Implementation of the base communication interface.
  */
-export class BaseInterfaceImpl
-    extends ComInterfaceImpl<BaseInterfaceSetupData> {
+export class BaseInterfaceImpl extends ComInterfaceImpl<InterfaceProperties> {
     /**
      * Registers a socket for the communication interface.
      * @param interfaceDirection The direction of the interface (incoming/outgoing).
