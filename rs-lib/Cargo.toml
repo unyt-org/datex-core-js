@@ -54,6 +54,7 @@ futures-channel = "0.3.31"
 specta-typescript = "0.0.9"
 specta = "1.0.5"
 tsify = "0.5.5"
+gloo-timers = "0.3.0"
 
 # webrtc
 # tokio = { version = "1.43.0", default-features = false, features = [] }

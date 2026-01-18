@@ -1,26 +1,37 @@
-use std::future::Future;
-use std::pin::Pin;
-use std::sync::Mutex;
-use std::time::Duration; // FIXME no-std
+use futures_channel::oneshot;
+use gloo_timers::future::TimeoutFuture;
+use std::{
+    cell::RefCell, future::Future, pin::Pin, rc::Rc, sync::Mutex,
+    time::Duration,
+}; // FIXME no-std
 
-use datex_core::network::com_hub::errors::InterfaceCreateError;
-use datex_core::network::com_hub::managers::interface_manager::ComInterfaceAsyncFactoryResult;
-use datex_core::network::com_interfaces::com_interface::implementation::ComInterfaceAsyncFactory;
-use datex_core::network::com_interfaces::com_interface::properties::{
-    InterfaceDirection, InterfaceProperties,
-};
-use datex_core::network::com_interfaces::com_interface::{
-    ComInterface, ComInterfaceProxy,
+use datex_core::network::{
+    com_hub::{
+        errors::InterfaceCreateError,
+        managers::interface_manager::ComInterfaceAsyncFactoryResult,
+    },
+    com_interfaces::com_interface::{
+        ComInterface, ComInterfaceProxy,
+        error::ComInterfaceError,
+        implementation::ComInterfaceAsyncFactory,
+        properties::{InterfaceDirection, InterfaceProperties},
+    },
 };
 
-use datex_core::network::com_interfaces::com_interface::socket::{
-    ComInterfaceSocket, ComInterfaceSocketUUID,
+use datex_core::{
+    network::com_interfaces::{
+        com_interface::socket::{ComInterfaceSocket, ComInterfaceSocketUUID},
+        default_com_interfaces::websocket::websocket_common::{
+            WebSocketClientInterfaceSetupData, WebSocketError,
+        },
+    },
+    stdlib::sync::Arc,
 };
-use datex_core::network::com_interfaces::default_com_interfaces::websocket::websocket_common::{WebSocketClientInterfaceSetupData, WebSocketError};
-use datex_core::stdlib::sync::Arc;
 
-use datex_core::network::com_interfaces::com_interface::state::ComInterfaceState;
-use datex_core::network::com_interfaces::default_com_interfaces::websocket::websocket_common::parse_url;
+use datex_core::network::com_interfaces::{
+    com_interface::state::ComInterfaceState,
+    default_com_interfaces::websocket::websocket_common::parse_url,
+};
 use serde::{Deserialize, Serialize};
 
 use crate::wrap_error_for_js;
@@ -29,8 +40,7 @@ use datex_core::task::{
     create_unbounded_channel, spawn_with_panic_notify,
     spawn_with_panic_notify_default,
 };
-use futures::channel::mpsc;
-use futures::{SinkExt, StreamExt};
+use futures::{SinkExt, StreamExt, channel::mpsc};
 use log::{error, info, warn};
 use url::Url;
 use wasm_bindgen::{JsCast, prelude::Closure};
@@ -44,12 +54,15 @@ pub struct WebSocketClientJSInterfaceSetupData(
 );
 
 impl WebSocketClientJSInterfaceSetupData {
+    const OPEN_TIMEOUT_MS: Duration = Duration::from_secs(15);
     async fn create_interface(
         self,
         com_interface_proxy: ComInterfaceProxy,
     ) -> Result<InterfaceProperties, InterfaceCreateError> {
-        let (address, write, read) =
-            self.create_websocket_client_connection().await?;
+        let address = parse_url(&self.0.address).map_err(|e| {
+            InterfaceCreateError::InvalidSetupData(e.to_string())
+        })?;
+        let ws = self.create_websocket_client_connection(address).await?;
 
         todo!(); // TODO: Implement the interface creation logic
         // let (_, sender) = com_interface_proxy
@@ -74,57 +87,85 @@ impl WebSocketClientJSInterfaceSetupData {
 
     async fn create_websocket_client_connection(
         &self,
-    ) -> Result<
-        (Url, UnboundedSender<Vec<u8>>, UnboundedReceiver<Vec<u8>>),
-        InterfaceCreateError,
-    > {
-        let address = parse_url(&self.0.address).map_err(|e| {
-            InterfaceCreateError::InvalidSetupData(e.to_string())
-        })?;
+        address: Url,
+    ) -> Result<web_sys::WebSocket, InterfaceCreateError> {
         let ws = web_sys::WebSocket::new(address.as_ref()).map_err(
             |_: wasm_bindgen::JsValue| {
                 InterfaceCreateError::InterfaceOpenFailed
             },
         )?;
         ws.set_binary_type(web_sys::BinaryType::Arraybuffer);
-        let (mut write_sender, write_receiver) =
-            create_unbounded_channel::<Vec<u8>>();
-        let (mut read_sender, read_receiver) =
-            create_unbounded_channel::<Vec<u8>>();
-        todo!(); // TODO: Implement the WebSocket event handlers
-        // let onmessage_callback = Closure::new(move |e: MessageEvent| {
-        //     if let Ok(abuf) = e.data().dyn_into::<js_sys::ArrayBuffer>() {
-        //         let array = js_sys::Uint8Array::new(&abuf);
-        //         let mut data = vec![0; array.byte_length() as usize];
-        //         array.copy_to(&mut data[..]);
-        //         let mut read_sender = read_sender.clone();
-        //         read_sender
-        //             .start_send(data)
-        //             .expect("Failed to send received data");
-        //     }
-        // });
-        // ws.set_onmessage(Some(onmessage_callback.as_ref().unchecked_ref()));
-        // onmessage_callback.forget();
-        // let onerror_callback = Closure::new(move |e: ErrorEvent| {
-        //     error!("WebSocket error event: {:?}", e.message());
-        // });
-        // ws.set_onerror(Some(onerror_callback.as_ref().unchecked_ref()));
-        // onerror_callback.forget();
-        // let onopen_callback = Closure::once(move |_: MessageEvent| {
-        //     info!("WebSocket connection opened successfully");
-        // });
-        // ws.set_onopen(Some(onopen_callback.as_ref().unchecked_ref()));
-        // onopen_callback.forget();
-        // let ws_clone = ws.clone();
-        // spawn_with_panic_notify_default(async move {
-        //     let mut write_receiver = write_receiver;
-        //     while let Some(data) = write_receiver.next().await {
-        //         if let Err(e) = ws_clone.send_with_u8_array(&data) {
-        //             error!("Error sending WebSocket message: {e:?}");
-        //         }
-        //     }
-        // });
-        // Ok((address, write_sender, read_receiver))
+        let (open_tx, open_rx) = oneshot::channel::<()>();
+        let (fail_tx, fail_rx) = oneshot::channel::<InterfaceCreateError>();
+
+        let open_cell: Rc<RefCell<Option<oneshot::Sender<()>>>> =
+            Rc::new(RefCell::new(Some(open_tx)));
+        let fail_cell: Rc<
+            RefCell<Option<oneshot::Sender<InterfaceCreateError>>>,
+        > = Rc::new(RefCell::new(Some(fail_tx)));
+
+        {
+            let open_cell = Rc::clone(&open_cell);
+            let onopen = Closure::once(move |_e: web_sys::Event| {
+                if let Some(tx) = open_cell.borrow_mut().take() {
+                    let _ = tx.send(());
+                }
+            });
+            ws.set_onopen(Some(onopen.as_ref().unchecked_ref()));
+            onopen.forget();
+        }
+
+        // onerror
+        {
+            let fail_cell = Rc::clone(&fail_cell);
+            let onerror = Closure::once(move |e: web_sys::ErrorEvent| {
+                if let Some(tx) = fail_cell.borrow_mut().take() {
+                    let _ = tx.send(
+                        ComInterfaceError::connection_error_with_details(
+                            e.to_string(),
+                        )
+                        .into(),
+                    );
+                }
+            });
+            ws.set_onerror(Some(onerror.as_ref().unchecked_ref()));
+            onerror.forget();
+        }
+
+        // onclose (before open)
+        {
+            let fail_cell = Rc::clone(&fail_cell);
+            let onclose = Closure::once(move |_e: web_sys::Event| {
+                if let Some(tx) = fail_cell.borrow_mut().take() {
+                    let _ = tx.send(
+                        ComInterfaceError::connection_error_with_details(
+                            "Closed before open",
+                        )
+                        .into(),
+                    );
+                }
+            });
+            ws.set_onclose(Some(onclose.as_ref().unchecked_ref()));
+            onclose.forget();
+        }
+
+        futures::pin_mut!(open_rx);
+        futures::pin_mut!(fail_rx);
+        let timeout =
+            TimeoutFuture::new(Self::OPEN_TIMEOUT_MS.as_millis() as u32);
+        futures::pin_mut!(timeout);
+
+        use futures::{FutureExt, select};
+
+        select! {
+            _ = open_rx.fuse() => Ok(ws),
+            err = fail_rx.fuse() => Err(err.unwrap_or(ComInterfaceError::connection_error().into())),
+            _ = timeout.fuse() => {
+                // Close the socket to avoid dangling connection attempt
+                let _ = ws.close();
+                Err(InterfaceCreateError::Timeout)
+            }
+        }
     }
 }
 
