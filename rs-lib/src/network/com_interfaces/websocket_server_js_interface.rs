@@ -1,34 +1,35 @@
-use std::cell::RefCell;
-use std::collections::HashMap;
-use std::future::Future;
-use std::ops::Deref;
-use std::pin::Pin;
-use std::rc::Rc;
-use std::sync::Mutex;
-use std::time::Duration;
-use datex_core::network::com_hub::managers::interface_manager::ComInterfaceAsyncFactoryResult;
-use datex_core::network::com_interfaces::com_interface::ComInterfaceProxy;
-use datex_core::network::com_interfaces::com_interface::implementation::ComInterfaceAsyncFactory;
-use datex_core::network::com_interfaces::com_interface::properties::InterfaceProperties;
+use datex_core::network::{
+    com_hub::managers::interface_manager::ComInterfaceAsyncFactoryResult,
+    com_interfaces::com_interface::{
+        ComInterfaceProxy, implementation::ComInterfaceAsyncFactory,
+        properties::InterfaceProperties,
+    },
+};
+use serde::{Deserialize, Serialize};
+use std::{
+    cell::RefCell, collections::HashMap, future::Future, ops::Deref, pin::Pin,
+    rc::Rc, sync::Mutex, time::Duration,
+};
 // FIXME no-std
-
 
 use datex_core::network::com_interfaces::default_com_interfaces::websocket::websocket_common::{WebSocketClientInterfaceSetupData, WebSocketError, WebSocketServerError, WebSocketServerInterfaceSetupData};
 use datex_core::stdlib::sync::Arc;
 
-use crate::{define_registry, wrap_error_for_js};
-use log::{debug, error, info};
-use wasm_bindgen::prelude::wasm_bindgen;
-use wasm_bindgen::{JsCast, prelude::Closure};
-use wasm_bindgen::{JsError, JsValue};
-use web_sys::{ErrorEvent, MessageEvent, js_sys};
-use crate::network::com_hub::JSComHub;
+use crate::{define_registry, network::com_hub::JSComHub, wrap_error_for_js};
 use datex_macros::{com_interface, create_opener};
+use log::{debug, error, info};
+use wasm_bindgen::{
+    JsCast, JsError, JsValue,
+    prelude::{Closure, wasm_bindgen},
+};
+use web_sys::{ErrorEvent, MessageEvent, js_sys};
 
 wrap_error_for_js!(JSWebSocketServerError, datex_core::network::com_interfaces::default_com_interfaces::websocket::websocket_common::WebSocketServerError);
 
-
-pub struct WebSocketServerInterfaceSetupDataJS(WebSocketServerInterfaceSetupData);
+#[Derive(Serialize, Deserialize)]
+pub struct WebSocketServerInterfaceSetupDataJS(
+    WebSocketServerInterfaceSetupData,
+);
 impl Deref for WebSocketServerInterfaceSetupDataJS {
     type Target = WebSocketServerInterfaceSetupData;
 
@@ -38,7 +39,6 @@ impl Deref for WebSocketServerInterfaceSetupDataJS {
 }
 
 impl WebSocketServerInterfaceSetupDataJS {
-
     fn open(&mut self) -> Result<(), ()> {
         Ok(())
     }
@@ -116,7 +116,10 @@ impl WebSocketServerInterfaceSetupDataJS {
 
 impl ComInterfaceAsyncFactory for WebSocketServerInterfaceSetupDataJS {
     // TODO: how to handle create and bind to Deno.serve?
-    fn create_interface(self, com_interface_proxy: ComInterfaceProxy) -> ComInterfaceAsyncFactoryResult {
+    fn create_interface(
+        self,
+        com_interface_proxy: ComInterfaceProxy,
+    ) -> ComInterfaceAsyncFactoryResult {
         todo!()
     }
 

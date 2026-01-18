@@ -1,34 +1,40 @@
 use datex_core::network::com_hub::errors::InterfaceCreateError;
-use std::cell::RefCell;
-use std::future::Future;
-use std::ops::Deref;
-use std::pin::Pin;
-use std::rc::Rc;
-use std::sync::Mutex;
-use std::time::Duration;
+use serde::{Deserialize, Serialize};
+use std::{
+    cell::RefCell, future::Future, ops::Deref, pin::Pin, rc::Rc, sync::Mutex,
+    time::Duration,
+};
 
-use datex_core::network::com_interfaces::com_interface::{ComInterface, ComInterfaceEvent, ComInterfaceProxy};
-use datex_core::network::com_interfaces::com_interface::error::ComInterfaceError;
-use datex_core::network::com_interfaces::com_interface::implementation::{ComInterfaceAsyncFactory, ComInterfaceSyncFactory};
-use datex_core::network::com_interfaces::com_interface::properties::{InterfaceDirection, InterfaceProperties};
-use datex_core::network::com_interfaces::default_com_interfaces::serial::serial_common::{SerialError, SerialInterfaceSetupData};
-use datex_core::stdlib::sync::Arc;
+use datex_core::{
+    network::com_interfaces::{
+        com_interface::{
+            ComInterface, ComInterfaceEvent, ComInterfaceProxy,
+            error::ComInterfaceError,
+            implementation::{
+                ComInterfaceAsyncFactory, ComInterfaceSyncFactory,
+            },
+            properties::{InterfaceDirection, InterfaceProperties},
+        },
+        default_com_interfaces::serial::serial_common::{
+            SerialError, SerialInterfaceSetupData,
+        },
+    },
+    stdlib::sync::Arc,
+};
 
 use crate::wrap_error_for_js;
 use datex_core::task::spawn_with_panic_notify_default;
 use log::{debug, error};
 use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::JsFuture;
-use web_sys::SerialPort;
-use web_sys::js_sys::Uint8Array;
 use web_sys::{
-    ReadableStreamDefaultReader, SerialOptions, WritableStreamDefaultWriter,
-    js_sys,
+    ReadableStreamDefaultReader, SerialOptions, SerialPort,
+    WritableStreamDefaultWriter, js_sys, js_sys::Uint8Array,
 };
 
 wrap_error_for_js!(JsSerialError, datex_core::network::com_interfaces::default_com_interfaces::serial::serial_common::SerialError);
 
-#[derive(tsify::Tsify)]
+#[derive(tsify::Tsify, Serialize, Deserialize)]
 pub struct SerialInterfaceSetupDataJS(SerialInterfaceSetupData);
 impl Deref for SerialInterfaceSetupDataJS {
     type Target = SerialInterfaceSetupData;
@@ -170,4 +176,3 @@ impl ComInterfaceAsyncFactory for SerialInterfaceSetupDataJS {
         }
     }
 }
-

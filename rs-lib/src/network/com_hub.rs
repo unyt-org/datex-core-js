@@ -44,17 +44,17 @@ impl JSComHub {
 #[wasm_bindgen]
 impl JSComHub {
     pub fn register_default_interface_factories(&self) {
-        #[cfg(feature = "wasm_websocket_client")]
-        self.com_hub().register_async_interface_factory::<crate::network::com_interfaces::websocket_client_js_interface::WebSocketClientInterfaceSetupDataJS>();
+        // #[cfg(feature = "wasm_websocket_client")]
+        // self.com_hub().register_async_interface_factory::<crate::network::com_interfaces::websocket_client_js_interface::WebSocketClientJSInterfaceSetupData>();
 
-        #[cfg(feature = "wasm_websocket_server")]
-        self.com_hub().register_async_interface_factory::<crate::network::com_interfaces::websocket_server_js_interface::WebSocketServerInterfaceSetupDataJS>();
+        // #[cfg(feature = "wasm_websocket_server")]
+        // self.com_hub().register_async_interface_factory::<crate::network::com_interfaces::websocket_server_js_interface::WebSocketServerInterfaceSetupDataJS>();
 
-        #[cfg(feature = "wasm_serial")]
-        self.com_hub().register_async_interface_factory::<crate::network::com_interfaces::serial_js_interface::SerialInterfaceSetupDataJS>();
+        // #[cfg(feature = "wasm_serial")]
+        // self.com_hub().register_async_interface_factory::<crate::network::com_interfaces::serial_js_interface::SerialInterfaceSetupDataJS>();
 
-        #[cfg(feature = "wasm_webrtc")]
-        self.com_hub().register_async_interface_factory::<crate::network::com_interfaces::webrtc_js_interface::WebRTCJSInterface>();
+        // #[cfg(feature = "wasm_webrtc")]
+        // self.com_hub().register_async_interface_factory::<crate::network::com_interfaces::webrtc_js_interface::WebRTCJSInterface>();
     }
 
     pub fn create_interface(
