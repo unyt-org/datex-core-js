@@ -1,4 +1,7 @@
-use datex_core::network::com_hub::errors::InterfaceCreateError;
+use datex_core::network::com_hub::{
+    errors::InterfaceCreateError,
+    managers::interface_manager::ComInterfaceAsyncFactoryResult,
+};
 use serde::{Deserialize, Serialize};
 use std::{
     cell::RefCell, future::Future, ops::Deref, pin::Pin, rc::Rc, sync::Mutex,
@@ -132,9 +135,9 @@ impl SerialInterfaceSetupDataJS {
             {
                 match event {
                     ComInterfaceEvent::SendBlock(block, _) => {
-                        let js_array = Uint8Array::from(block.to_bytes());
-                        let promise =
-                            writer.borrow().write_with_chunk(&js_array);
+                        let js_array =
+                            Uint8Array::from(block.to_bytes().as_slice());
+                        let promise = writer.write_with_chunk(&js_array);
                         debug!("Sending block: {block:?}");
                         JsFuture::from(promise).await.unwrap();
                     }
@@ -154,16 +157,12 @@ impl SerialInterfaceSetupDataJS {
 
 impl ComInterfaceAsyncFactory for SerialInterfaceSetupDataJS {
     fn create_interface(
-        &self,
+        self,
         com_interface_proxy: ComInterfaceProxy,
-    ) -> Pin<
-        Box<
-            dyn Future<
-                Output = Result<InterfaceProperties, InterfaceCreateError>,
-            >,
-        >,
-    > {
-        Box::pin(self.create_interface(com_interface_proxy))
+    ) -> ComInterfaceAsyncFactoryResult {
+        Box::pin(
+            async move { self.create_interface(com_interface_proxy).await },
+        )
     }
 
     fn get_default_properties() -> InterfaceProperties {
