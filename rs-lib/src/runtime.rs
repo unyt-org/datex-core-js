@@ -303,15 +303,11 @@ impl JSRuntime {
                 .collect::<Result<Vec<Endpoint>, _>>()
                 .unwrap(),
         );
-        block.to_bytes().unwrap()
+        block.to_bytes()
     }
 
     pub async fn start(&self) {
         self.runtime.start().await;
-    }
-
-    pub async fn _stop(&self) {
-        RuntimeInternal::stop_update_loop(self.runtime.internal.clone()).await
     }
 
     pub async fn execute_with_string_result(
