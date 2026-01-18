@@ -4,7 +4,7 @@ use datex_core::network::com_interfaces::com_interface::{
     ComInterface, ComInterfaceFactory, ComInterfaceUUID,
 };
 use datex_core::network::com_interfaces::com_interface_socket::ComInterfaceSocketUUID;
-use datex_core::runtime::Runtime;
+use datex_core::runtime::{AsyncContext, Runtime};
 use datex_core::stdlib::{cell::RefCell, rc::Rc};
 use datex_core::values::core_values::endpoint::Endpoint;
 use datex_core::{network::com_hub::ComHub, utils::uuid::UUID};
@@ -54,36 +54,21 @@ impl JSComHub {
 #[wasm_bindgen]
 impl JSComHub {
     pub fn register_default_interface_factories(&self) {
-        self.com_hub().register_interface_factory(
-            "base".to_string(),
-            crate::network::com_interfaces::base_interface::BaseJSInterface::factory
-        );
+        self.com_hub().register_sync_interface_factory::<crate::network::com_interfaces::base_interface::BaseJSInterface>();
 
         #[cfg(feature = "wasm_websocket_client")]
-        self.com_hub().register_interface_factory(
-            "websocket-client".to_string(),
-            crate::network::com_interfaces::websocket_client_js_interface::WebSocketClientJSInterface::factory
-        );
+        self.com_hub().register_sync_interface_factory::<crate::network::com_interfaces::websocket_client_js_interface::WebSocketClientJSInterface>();
 
         #[cfg(feature = "wasm_websocket_server")]
-        self.com_hub().register_interface_factory(
-            "websocket-server".to_string(),
-            crate::network::com_interfaces::websocket_server_js_interface::WebSocketServerJSInterface::factory
-        );
+        self.com_hub().register_sync_interface_factory::<crate::network::com_interfaces::websocket_server_js_interface::WebSocketServerJSInterface>();
 
         //wasm_serial
         #[cfg(feature = "wasm_serial")]
-        self.com_hub().register_interface_factory(
-            "serial".to_string(),
-            crate::network::com_interfaces::serial_js_interface::SerialJSInterface::factory
-        );
+        self.com_hub().register_sync_interface_factory::<crate::network::com_interfaces::serial_js_interface::SerialJSInterface>();
 
         //wasm_webrtc
         #[cfg(feature = "wasm_webrtc")]
-        self.com_hub().register_interface_factory(
-            "webrtc".to_string(),
-            crate::network::com_interfaces::webrtc_js_interface::WebRTCJSInterface::factory
-        );
+        self.com_hub().register_sync_interface_factory::<crate::network::com_interfaces::webrtc_js_interface::WebRTCJSInterface>();
     }
 
     pub fn create_interface(
@@ -103,6 +88,7 @@ impl JSComHub {
                         &interface_type,
                         properties,
                         InterfacePriority::default(),
+                        AsyncContext::default(),
                     )
                     .await
                     .map_err(|e| JsError::new(&format!("{e:?}")))?;
