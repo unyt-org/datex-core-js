@@ -44,6 +44,10 @@ impl JSComHub {
 #[wasm_bindgen]
 impl JSComHub {
     pub fn register_default_interface_factories(&self) {
+        self.com_hub().register_sync_interface_factory::<
+            crate::network::com_interfaces::base_interface::BaseJSInterfaceSetupData,
+        >();
+
         #[cfg(feature = "wasm_websocket_client")]
         self.com_hub().register_async_interface_factory::<crate::network::com_interfaces::websocket_client_js_interface::WebSocketClientJSInterfaceSetupData>();
 
@@ -61,6 +65,7 @@ impl JSComHub {
         &self,
         interface_type: String,
         properties: String,
+        priority: Option<u16>,
     ) -> Promise {
         let runtime = self.runtime.clone();
         future_to_promise(async move {
@@ -73,7 +78,7 @@ impl JSComHub {
                     .create_interface(
                         &interface_type,
                         setup_data,
-                        InterfacePriority::default(),
+                        InterfacePriority::from(priority),
                         com_hub.async_context.clone(),
                     )
                     .await
