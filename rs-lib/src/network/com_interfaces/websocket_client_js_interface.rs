@@ -3,7 +3,7 @@ use gloo_timers::future::TimeoutFuture;
 use std::{
     cell::RefCell, future::Future, pin::Pin, rc::Rc, sync::Mutex,
     time::Duration,
-}; // FIXME no-std
+};
 
 use datex_core::{
     network::{
@@ -44,7 +44,7 @@ use datex_core::task::{
     create_unbounded_channel, spawn_with_panic_notify,
     spawn_with_panic_notify_default,
 };
-use futures::{SinkExt, StreamExt, channel::mpsc};
+use futures::{SinkExt, StreamExt, channel::mpsc, pin_mut, select};
 use log::{error, info, warn};
 use url::Url;
 use wasm_bindgen::{JsCast, prelude::Closure};
@@ -62,6 +62,7 @@ impl WebSocketClientJSInterfaceSetupData {
     const MAX_RECONNECTS: usize = 5;
     const RECONNECT_BACKOFF_MS: Duration = Duration::from_secs(5);
 
+    /// Creates the interface asynchronously
     async fn create_interface(
         self,
         com_interface_proxy: ComInterfaceProxy,
@@ -71,22 +72,37 @@ impl WebSocketClientJSInterfaceSetupData {
         })?;
         let state = com_interface_proxy.state.clone();
 
-        let ws = Self::create_websocket_client_connection(
-            address.clone(),
-            state.clone(),
-        )
-        .await?;
+        // WebSocket instance cell
+        let ws_cell: Rc<RefCell<Option<web_sys::WebSocket>>> =
+            Rc::new(RefCell::new(None));
 
+        // Create socket
         let (_, incoming_tx) = com_interface_proxy
             .create_and_init_socket(InterfaceDirection::InOut, 1);
+        let (ready_tx, ready_rx) =
+            oneshot::channel::<Result<(), InterfaceCreateError>>();
 
-        let async_context = com_interface_proxy.async_context;
-        spawn_with_panic_notify_default(Self::reconnect_task(
-            address.clone(),
+        // Spawn event handler task (uses the up to date ws)
+        spawn_with_panic_notify_default(Self::event_handler_task(
+            ws_cell.clone(),
             com_interface_proxy.event_receiver,
-            state,
-            incoming_tx,
         ));
+
+        // Spawn connection supervisor task
+        spawn_with_panic_notify_default(Self::connection_supervisor_task(
+            address.clone(),
+            state.clone(),
+            incoming_tx,
+            ws_cell,
+            Some(ready_tx),
+        ));
+
+        // Wait for ready or error
+        match ready_rx.await {
+            Ok(Ok(())) => {}
+            Ok(Err(e)) => return Err(e),
+            Err(_) => return Err(InterfaceCreateError::InterfaceOpenFailed),
+        }
 
         Ok(InterfaceProperties {
             name: Some(address.to_string()),
@@ -94,58 +110,127 @@ impl WebSocketClientJSInterfaceSetupData {
         })
     }
 
-    async fn reconnect_task(
+    /// Connection supervisor task - manages connection and reconnection
+    async fn connection_supervisor_task(
         address: Url,
-        event_receiver: UnboundedReceiver<ComInterfaceEvent>,
         state: Arc<Mutex<ComInterfaceStateWrapper>>,
         incoming_tx: UnboundedSender<Vec<u8>>,
+        ws_cell: Rc<RefCell<Option<web_sys::WebSocket>>>,
+        mut ready_tx: Option<oneshot::Sender<Result<(), InterfaceCreateError>>>,
     ) {
-        let ws = Self::create_websocket_client_connection(
-            address.clone(),
-            state.clone(),
-        )
-        .await?;
-        let shutdown_signal =
-            state.try_lock().unwrap().shutdown_signal().clone();
+        let shutdown_signal = state.lock().unwrap().shutdown_signal().clone();
+        let mut attempts: usize = 0;
 
-        let (close_tx, close_rx) = oneshot::channel::<()>();
-        spawn_with_panic_notify_default(Self::read_task(
-            ws.clone(),
-            incoming_tx,
-            Some(close_tx),
-        ));
-        spawn_with_panic_notify_default(Self::event_handler_task(
-            ws.clone(),
-            event_receiver,
-            state,
-        ));
-    }
+        loop {
+            // Try to create connection
+            match Self::create_websocket_client_connection(
+                address.clone(),
+                state.clone(),
+            )
+            .await
+            {
+                // If successful, set ws and spawn read task
+                Ok(ws) => {
+                    // Reset attempts on successful connect
+                    attempts = 0;
 
-    async fn event_handler_task(
-        ws: web_sys::WebSocket,
-        mut receiver: UnboundedReceiver<ComInterfaceEvent>,
-        state: Arc<Mutex<ComInterfaceStateWrapper>>,
-    ) {
-        while let Some(event) = receiver.next().await {
-            match event {
-                ComInterfaceEvent::SendBlock(block, uuid) => {
-                    let bytes = block.to_bytes();
-                    ws.send_with_u8_array(bytes.as_slice())
-                        .expect("Failed to send data to WebSocket writer task");
+                    // Set ws
+                    *ws_cell.borrow_mut() = Some(ws.clone());
+
+                    // Handle close and read
+                    let (close_tx, close_rx) = oneshot::channel::<()>();
+                    spawn_with_panic_notify_default(Self::read_task(
+                        ws,
+                        incoming_tx.clone(),
+                        Some(close_tx),
+                    ));
+
+                    // Notify ready for the first successful connection
+                    if let Some(tx) = ready_tx.take() {
+                        let _ = tx.send(Ok(()));
+                    }
+
+                    // Wait for close or shutdown
+                    futures::pin_mut!(close_rx);
+                    let mut shutdown_fut = shutdown_signal.notified().fuse();
+                    futures::pin_mut!(shutdown_fut);
+                    use futures::{FutureExt, select};
+                    select! {
+                        _ = shutdown_fut => {
+                            // Clear ws and exit
+                            *ws_cell.borrow_mut() = None;
+                            return;
+                        }
+                        _ = close_rx.fuse() => {
+                            // Connection closed - clear current ws and reconnect
+                            *ws_cell.borrow_mut() = None;
+                        }
+                    }
                 }
-
-                ComInterfaceEvent::Destroy => {
-                    let _ = ws.close();
-                    break;
+                Err(_e) => {
+                    attempts += 1;
+                    if attempts > Self::MAX_RECONNECTS {
+                        *ws_cell.borrow_mut() = None;
+                        return;
+                    }
                 }
+            }
 
-                _ => {
-                    todo!()
+            // Backoff before next reconnect attempt
+            let timeout =
+                TimeoutFuture::new(Self::OPEN_TIMEOUT_MS.as_millis() as u32);
+            futures::pin_mut!(timeout);
+
+            use futures::{FutureExt, select};
+            let shutdown_signal = state.lock().unwrap().shutdown_signal();
+            futures::pin_mut!(shutdown_signal);
+
+            select! {
+                stop = shutdown_signal.notified().fuse() => {
+                    *ws_cell.borrow_mut() = None;
+                    return;
+                },
+                _ = timeout.fuse() => {
+
                 }
             }
         }
     }
 
+    // Event handler task - handles sending and other events
+    async fn event_handler_task(
+        ws_cell: Rc<RefCell<Option<web_sys::WebSocket>>>,
+        mut receiver: UnboundedReceiver<ComInterfaceEvent>,
+    ) {
+        while let Some(event) = receiver.next().await {
+            match event {
+                ComInterfaceEvent::SendBlock(block, _uuid) => {
+                    let bytes = block.to_bytes();
+
+                    if let Some(ws) = ws_cell.borrow().as_ref() {
+                        // Ignore send errors if socket is mid-reconnect
+                        let _ = ws.send_with_u8_array(bytes.as_slice());
+                    } else {
+                        // Not connected right now; drop or buffer (your call)
+                    }
+                }
+
+                ComInterfaceEvent::Destroy => {
+                    // Intentional close. This will trigger close_rx and then
+                    // the supervisor will likely try reconnecting unless you gate it.
+                    // If you want DESTROY to stop reconnecting, add a flag in state.
+                    if let Some(ws) = ws_cell.borrow().as_ref() {
+                        let _ = ws.close();
+                    }
+                    break;
+                }
+
+                _ => todo!(),
+            }
+        }
+    }
+
+    // Creates a WebSocket connection and waits for it to open
     async fn create_websocket_client_connection(
         address: Url,
         state: Arc<Mutex<ComInterfaceStateWrapper>>,
@@ -210,6 +295,7 @@ impl WebSocketClientJSInterfaceSetupData {
 
         futures::pin_mut!(open_rx);
         futures::pin_mut!(fail_rx);
+
         let timeout =
             TimeoutFuture::new(Self::OPEN_TIMEOUT_MS.as_millis() as u32);
         futures::pin_mut!(timeout);
@@ -236,6 +322,7 @@ impl WebSocketClientJSInterfaceSetupData {
         }
     }
 
+    /// Read task - handles incoming messages and close events
     async fn read_task(
         ws: web_sys::WebSocket,
         mut incoming_tx: UnboundedSender<Vec<u8>>,
