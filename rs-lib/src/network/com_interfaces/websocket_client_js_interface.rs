@@ -1,32 +1,56 @@
-use std::future::Future;
-use std::ops::Deref;
-use std::pin::Pin;
-use std::sync::Mutex;
-use std::time::Duration; // FIXME no-std
+use futures_channel::oneshot;
+use gloo_timers::future::TimeoutFuture;
+use std::{
+    cell::RefCell, future::Future, pin::Pin, rc::Rc, sync::Mutex,
+    time::Duration,
+};
 
-use datex_core::network::com_hub::errors::InterfaceCreateError;
-use datex_core::network::com_interfaces::com_interface::ComInterfaceProxy;
-use datex_core::network::com_interfaces::com_interface::error::ComInterfaceError;
-use datex_core::network::com_interfaces::com_interface::implementation::{ComInterfaceAsyncFactory, ComInterfaceSyncFactory};
-use datex_core::network::com_interfaces::com_interface::properties::{InterfaceDirection, InterfaceProperties};
-use datex_core::network::com_interfaces::com_interface::socket::ComInterfaceSocketUUID;
-use datex_core::network::com_interfaces::com_interface::state::{ComInterfaceState, ComInterfaceStateWrapper};
-use datex_core::network::com_interfaces::default_com_interfaces::websocket::websocket_common::{WebSocketClientInterfaceSetupData, WebSocketError};
-use datex_core::stdlib::sync::Arc;
+use datex_core::{
+    network::{
+        com_hub::{
+            errors::InterfaceCreateError,
+            managers::interface_manager::ComInterfaceAsyncFactoryResult,
+        },
+        com_interfaces::com_interface::{
+            ComInterface, ComInterfaceEvent, ComInterfaceProxy,
+            error::ComInterfaceError,
+            implementation::ComInterfaceAsyncFactory,
+            properties::{InterfaceDirection, InterfaceProperties},
+            state::ComInterfaceStateWrapper,
+        },
+    },
+    runtime::AsyncContext,
+};
 
-use datex_core::network::com_interfaces::default_com_interfaces::websocket::websocket_common::parse_url;
+use datex_core::{
+    network::com_interfaces::{
+        com_interface::socket::{ComInterfaceSocket, ComInterfaceSocketUUID},
+        default_com_interfaces::websocket::websocket_common::{
+            WebSocketClientInterfaceSetupData, WebSocketError,
+        },
+    },
+    stdlib::sync::Arc,
+};
+
+use datex_core::network::com_interfaces::{
+    com_interface::state::ComInterfaceState,
+    default_com_interfaces::websocket::websocket_common::parse_url,
+};
+use serde::{Deserialize, Serialize};
 
 use crate::wrap_error_for_js;
-use datex_core::task::{spawn_with_panic_notify_default, UnboundedSender};
-use futures::channel::mpsc;
-use futures::{Sink, SinkExt, StreamExt};
+use datex_core::task::{
+    UnboundedReceiver, UnboundedSender, create_bounded_channel,
+    create_unbounded_channel, spawn_with_panic_notify,
+    spawn_with_panic_notify_default,
+};
+use futures::{SinkExt, StreamExt, channel::mpsc, pin_mut, select};
 use log::{error, info, warn};
 use url::Url;
 use wasm_bindgen::{JsCast, prelude::Closure};
 use web_sys::{ErrorEvent, MessageEvent, js_sys};
 
 wrap_error_for_js!(JSWebSocketError, datex_core::network::com_interfaces::default_com_interfaces::websocket::websocket_common::WebSocketError);
-use datex_macros::{com_interface, create_opener};
 
 pub struct WebSocketClientInterfaceSetupDataJS(WebSocketClientInterfaceSetupData);
 impl Deref for WebSocketClientInterfaceSetupDataJS {
@@ -110,7 +134,26 @@ impl WebSocketClientInterfaceSetupDataJS {
                 let array = js_sys::Uint8Array::new(&abuf);
                 sender.start_send(array.to_vec()).unwrap()
             }
-        })
+
+            // Backoff before next reconnect attempt
+            let timeout =
+                TimeoutFuture::new(Self::OPEN_TIMEOUT_MS.as_millis() as u32);
+            futures::pin_mut!(timeout);
+
+            use futures::{FutureExt, select};
+            let shutdown_signal = state.lock().unwrap().shutdown_signal();
+            futures::pin_mut!(shutdown_signal);
+
+            select! {
+                stop = shutdown_signal.notified().fuse() => {
+                    *ws_cell.borrow_mut() = None;
+                    return;
+                },
+                _ = timeout.fuse() => {
+
+                }
+            }
+        }
     }
 
     fn create_onclose_callback(
