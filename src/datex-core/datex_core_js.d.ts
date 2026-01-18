@@ -12,8 +12,6 @@ export function create_runtime(config: string, debug_flags: any): JSRuntime;
  * Executes a Datex script and returns the result as a string.
  */
 export function execute(datex_script: string, decompile_options: any): string;
-export type BaseJSInterfaceSetupData = InterfaceProperties;
-
 export type SerialInterfaceSetupDataJS = SerialInterfaceSetupData;
 
 export interface FormattingOptions {
@@ -136,6 +134,18 @@ export type ReconnectionConfig = "NoReconnect" | "InstantReconnect" | {
     };
 };
 
+export class BaseInterfaceHandle {
+    private constructor();
+    free(): void;
+    [Symbol.dispose](): void;
+    onClosed(cb: Function): void;
+    registerSocketWithEndpoint(endpoint: string): void;
+    sendBlock(socket_uuid: string, data: Uint8Array): void;
+    destroy(): void;
+    onReceive(cb: Function): void;
+    registerSocket(): void;
+    removeSocket(socket_uuid: string): void;
+}
 export class BaseJSInterfaceSetupData {
     private constructor();
     free(): void;
@@ -145,7 +155,9 @@ export class JSComHub {
     private constructor();
     free(): void;
     [Symbol.dispose](): void;
-    base_interface_register_socket(uuid: string, direction: string): string;
+    /**
+     * Registers a new socket on the base interface with an optional endpoint.
+     */
     base_interface_register_socket_with_endpoint(
         uuid: string,
         direction: string,
@@ -154,13 +166,12 @@ export class JSComHub {
     create_base_interface(
         setup_data: string,
         priority?: number | null,
-    ): Promise<Promise<any>>;
+    ): Promise<BaseInterfaceHandle>;
+    /**
+     * Registers a new socket on the base interface.
+     */
+    base_interface_register_socket(uuid: string, direction: string): string;
     get_trace_string(endpoint: string): Promise<string | undefined>;
-    create_interface(
-        interface_type: string,
-        properties: string,
-        priority?: number | null,
-    ): Promise<any>;
     close_interface(interface_uuid: string): any;
     /**
      * Send a block to the given interface and socket
@@ -175,6 +186,11 @@ export class JSComHub {
     ): Promise<void>;
     register_outgoing_block_interceptor(callback: Function): void;
     register_incoming_block_interceptor(callback: Function): void;
+    create_interface(
+        interface_type: string,
+        properties: string,
+        priority?: number | null,
+    ): Promise<string>;
     register_default_interface_factories(): void;
     get_metadata_string(): string;
 }
