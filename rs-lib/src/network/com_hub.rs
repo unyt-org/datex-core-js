@@ -1,7 +1,14 @@
 use datex_core::{
     global::dxb_block::DXBBlock,
     network::{
-        com_hub::{ComHub, InterfacePriority, errors::InterfaceCreateError},
+        com_hub::{
+            ComHub, InterfacePriority,
+            errors::InterfaceCreateError,
+            managers::interface_manager::{
+                AsyncComInterfaceImplementationFactoryFn,
+                ComInterfaceAsyncFactoryResult,
+            },
+        },
         com_interfaces::com_interface::{
             ComInterfaceUUID, socket::ComInterfaceSocketUUID,
         },
@@ -13,16 +20,19 @@ use datex_core::{
 };
 use js_sys::Uint8Array;
 use log::error;
-use std::str::FromStr;
+use std::{collections::HashMap, str::FromStr};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::future_to_promise;
 use web_sys::js_sys::{self, Promise};
+
+use crate::network::com_interfaces::base_interface::BaseInterfaceHandle;
 
 #[wasm_bindgen]
 #[derive(Clone)]
 pub struct JSComHub {
     // ignore for wasm bindgen
     pub(crate) runtime: Runtime,
+    registered_interface_factories: HashMap<String, js_sys::Function>,
 }
 
 /**
@@ -30,11 +40,40 @@ pub struct JSComHub {
  */
 impl JSComHub {
     pub fn new(runtime: Runtime) -> JSComHub {
-        JSComHub { runtime }
+        JSComHub {
+            runtime,
+            registered_interface_factories: HashMap::new(),
+        }
     }
 
     pub fn com_hub(&self) -> Rc<ComHub> {
         self.runtime.com_hub()
+    }
+
+    pub fn register_interface_factory(
+        &mut self,
+        interface_type: String,
+        factory: js_sys::Function,
+    ) {
+        self.registered_interface_factories
+            .insert(interface_type.clone(), factory.clone());
+        self.com_hub().register_dyn_interface_factory(
+            interface_type,
+            Rc::new(move |setup_data, proxy| {
+                let factory = factory.clone();
+                Box::pin(async move {
+                    let base_interface_holder =
+                        BaseInterfaceHandle::create_interface(
+                            setup_data, proxy,
+                        )
+                        .await;
+                    let result =
+                        factory.call0(&JsValue::from(base_interface_holder));
+
+                    Err(InterfaceCreateError::InterfaceOpenFailed)
+                })
+            }),
+        );
     }
 
     pub(crate) async fn create_interface_internal(
