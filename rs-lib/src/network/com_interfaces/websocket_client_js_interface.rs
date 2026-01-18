@@ -5,18 +5,21 @@ use std::{
     time::Duration,
 }; // FIXME no-std
 
-use datex_core::network::{
-    com_hub::{
-        errors::InterfaceCreateError,
-        managers::interface_manager::ComInterfaceAsyncFactoryResult,
+use datex_core::{
+    network::{
+        com_hub::{
+            errors::InterfaceCreateError,
+            managers::interface_manager::ComInterfaceAsyncFactoryResult,
+        },
+        com_interfaces::com_interface::{
+            ComInterface, ComInterfaceEvent, ComInterfaceProxy,
+            error::ComInterfaceError,
+            implementation::ComInterfaceAsyncFactory,
+            properties::{InterfaceDirection, InterfaceProperties},
+            state::ComInterfaceStateWrapper,
+        },
     },
-    com_interfaces::com_interface::{
-        ComInterface, ComInterfaceEvent, ComInterfaceProxy,
-        error::ComInterfaceError,
-        implementation::ComInterfaceAsyncFactory,
-        properties::{InterfaceDirection, InterfaceProperties},
-        state::ComInterfaceStateWrapper,
-    },
+    runtime::AsyncContext,
 };
 
 use datex_core::{
@@ -66,35 +69,56 @@ impl WebSocketClientJSInterfaceSetupData {
         let address = parse_url(&self.0.address).map_err(|e| {
             InterfaceCreateError::InvalidSetupData(e.to_string())
         })?;
-        let ws = self
-            .create_websocket_client_connection(address.clone())
-            .await?;
+        let state = com_interface_proxy.state.clone();
+
+        let ws = Self::create_websocket_client_connection(
+            address.clone(),
+            state.clone(),
+        )
+        .await?;
 
         let (_, incoming_tx) = com_interface_proxy
             .create_and_init_socket(InterfaceDirection::InOut, 1);
-        let state = com_interface_proxy.state.clone();
 
-        let shutdown_signal =
-            state.try_lock().unwrap().shutdown_signal().clone();
-
-        let (close_tx, close_rx) = oneshot::channel::<()>();
-        spawn_with_panic_notify(
-            &com_interface_proxy.async_context,
-            Self::read_task(ws.clone(), incoming_tx, Some(close_tx)),
-        );
-        spawn_with_panic_notify(
-            &com_interface_proxy.async_context,
-            Self::event_handler_task(
-                ws.clone(),
-                com_interface_proxy.event_receiver,
-                state,
-            ),
-        );
+        let async_context = com_interface_proxy.async_context;
+        spawn_with_panic_notify_default(Self::reconnect_task(
+            address.clone(),
+            com_interface_proxy.event_receiver,
+            state,
+            incoming_tx,
+        ));
 
         Ok(InterfaceProperties {
             name: Some(address.to_string()),
             ..Self::get_default_properties()
         })
+    }
+
+    async fn reconnect_task(
+        address: Url,
+        event_receiver: UnboundedReceiver<ComInterfaceEvent>,
+        state: Arc<Mutex<ComInterfaceStateWrapper>>,
+        incoming_tx: UnboundedSender<Vec<u8>>,
+    ) {
+        let ws = Self::create_websocket_client_connection(
+            address.clone(),
+            state.clone(),
+        )
+        .await?;
+        let shutdown_signal =
+            state.try_lock().unwrap().shutdown_signal().clone();
+
+        let (close_tx, close_rx) = oneshot::channel::<()>();
+        spawn_with_panic_notify_default(Self::read_task(
+            ws.clone(),
+            incoming_tx,
+            Some(close_tx),
+        ));
+        spawn_with_panic_notify_default(Self::event_handler_task(
+            ws.clone(),
+            event_receiver,
+            state,
+        ));
     }
 
     async fn event_handler_task(
@@ -111,6 +135,7 @@ impl WebSocketClientJSInterfaceSetupData {
                 }
 
                 ComInterfaceEvent::Destroy => {
+                    let _ = ws.close();
                     break;
                 }
 
@@ -122,8 +147,8 @@ impl WebSocketClientJSInterfaceSetupData {
     }
 
     async fn create_websocket_client_connection(
-        &self,
         address: Url,
+        state: Arc<Mutex<ComInterfaceStateWrapper>>,
     ) -> Result<web_sys::WebSocket, InterfaceCreateError> {
         let ws = web_sys::WebSocket::new(address.as_ref()).map_err(
             |_: wasm_bindgen::JsValue| {
@@ -190,9 +215,18 @@ impl WebSocketClientJSInterfaceSetupData {
         futures::pin_mut!(timeout);
 
         use futures::{FutureExt, select};
+        let shutdown_signal = state.lock().unwrap().shutdown_signal();
+        futures::pin_mut!(shutdown_signal);
 
         select! {
             _ = open_rx.fuse() => Ok(ws),
+            stop = shutdown_signal.notified().fuse() => {
+                // Close the socket to avoid dangling connection attempt
+                let _ = ws.close();
+                Err(InterfaceCreateError::InterfaceError(ComInterfaceError::connection_error_with_details(
+                    "Creation cancelled due to shutdown",
+                ).into()))
+            },
             err = fail_rx.fuse() => Err(err.unwrap_or(ComInterfaceError::connection_error().into())),
             _ = timeout.fuse() => {
                 // Close the socket to avoid dangling connection attempt
@@ -220,21 +254,27 @@ impl WebSocketClientJSInterfaceSetupData {
         ws.set_onmessage(Some(onmessage.as_ref().unchecked_ref()));
         onmessage.forget();
 
-        // onclose
-        let onclose = Closure::once(move |_: web_sys::Event| {
-            if let Some(close_tx) = close_tx.take() {
-                let _ = close_tx.send(());
-            }
-        });
-        ws.set_onclose(Some(onclose.as_ref().unchecked_ref()));
-        onclose.forget();
-
         // onerror
         let onerror = Closure::once(move |_: web_sys::ErrorEvent| {
             // pass
         });
         ws.set_onerror(Some(onerror.as_ref().unchecked_ref()));
         onerror.forget();
+
+        let ws_clone = ws.clone();
+        // onclose
+        let onclose = Closure::once(move |e: web_sys::Event| {
+            if let Some(close_tx) = close_tx.take() {
+                let _ = close_tx.send(());
+                // clear event handlers
+                ws_clone.set_onmessage(None);
+                ws_clone.set_onopen(None);
+                ws_clone.set_onerror(None);
+                ws_clone.set_onclose(None);
+            }
+        });
+        ws.set_onclose(Some(onclose.as_ref().unchecked_ref()));
+        onclose.forget();
     }
 }
 
