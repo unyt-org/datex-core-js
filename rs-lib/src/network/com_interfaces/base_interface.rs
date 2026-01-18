@@ -7,17 +7,21 @@ use datex_core::{
             ComInterfaceEvent, ComInterfaceProxy, ComInterfaceUUID,
             implementation::ComInterfaceSyncFactory,
             properties::{InterfaceDirection, InterfaceProperties},
+            socket::ComInterfaceSocketUUID,
         },
     },
     runtime::AsyncContext,
     serde::deserializer::from_value_container,
-    task::{create_unbounded_channel, spawn_with_panic_notify_default},
+    task::{
+        UnboundedSender, create_unbounded_channel,
+        spawn_with_panic_notify_default,
+    },
     values::core_values::endpoint::Endpoint,
 };
 use futures::FutureExt;
 use js_sys::{Function, Reflect, Uint8Array};
 use serde::{Deserialize, Serialize};
-use std::{str::FromStr, time::Duration};
+use std::{cell::RefCell, rc::Rc, str::FromStr, time::Duration};
 use wasm_bindgen::{JsCast, JsError, JsValue, prelude::wasm_bindgen};
 use web_sys::js_sys::Promise;
 
@@ -29,20 +33,6 @@ impl ComInterfaceSyncFactory for BaseJSInterfaceSetupData {
         self,
         com_interface_proxy: ComInterfaceProxy,
     ) -> Result<InterfaceProperties, InterfaceCreateError> {
-        // spawn_with_panic_notify_default(async move {
-        //     while let Some(event) =
-        //         com_interface_proxy.event_receiver.next().await
-        //     {
-        //         match event {
-        //             ComInterfaceEvent::SendBlock(_, socket_uuid) => {}
-        //             ComInterfaceEvent::Destroy => {
-        //                 break;
-        //             }
-        //             _ => todo!(),
-        //         }
-        //     }
-        // });
-
         Ok(self.0)
     }
 
@@ -76,14 +66,52 @@ impl From<JsBaseInterfaceError> for JsValue {
     }
 }
 
+#[derive(Default)]
+struct BaseInterfaceState {
+    on_receive: Option<js_sys::Function>,
+    on_closed: Option<js_sys::Function>,
+}
+
+pub enum BaseInterfaceEvent {
+    SendBlock(ComInterfaceSocketUUID, Vec<u8>),
+    AddSocket(ComInterfaceSocketUUID),
+    RemoveSocket(ComInterfaceSocketUUID),
+}
+
+#[wasm_bindgen]
+pub struct BaseInterfaceHandle {
+    tx: UnboundedSender<(ComInterfaceSocketUUID, Vec<u8>)>,
+    state: Rc<RefCell<BaseInterfaceState>>,
+}
+
+#[wasm_bindgen]
+impl BaseInterfaceHandle {
+    #[wasm_bindgen(js_name = "send")]
+    pub fn send_js(&mut self, socket_uuid: String, data: Uint8Array) {
+        let mut buf = vec![0u8; data.length() as usize];
+        data.copy_to(&mut buf);
+        let socket_uuid = ComInterfaceSocketUUID::from_string(socket_uuid);
+        let _ = self.tx.start_send((socket_uuid, buf));
+    }
+
+    #[wasm_bindgen(js_name = "onReceive")]
+    pub fn set_on_receive(&self, cb: js_sys::Function) {
+        self.state.borrow_mut().on_receive.replace(cb);
+    }
+
+    #[wasm_bindgen(js_name = "onClosed")]
+    pub fn set_on_closed(&self, cb: js_sys::Function) {
+        self.state.borrow_mut().on_closed.replace(cb);
+    }
+}
+
 #[wasm_bindgen]
 impl JSComHub {
     pub async fn create_base_interface(
         &self,
-        wrapper: JsValue,
         setup_data: String,
         priority: Option<u16>,
-    ) -> Result<(), JsBaseInterfaceError> {
+    ) -> Result<BaseInterfaceHandle, JsBaseInterfaceError> {
         let runtime = self.runtime.clone();
         let setup_data = runtime
             .execute_sync(&setup_data, &[], None)
@@ -100,6 +128,7 @@ impl JSComHub {
             interface_properties,
             AsyncContext::default(),
         );
+        let interface_uuid = interface.0.uuid().clone();
         self.com_hub()
             .register_com_interface(
                 interface,
@@ -108,41 +137,28 @@ impl JSComHub {
             .unwrap();
 
         // intercept events from wrapper and forward to interface
-        let (tx, mut rx) = create_unbounded_channel::<(String, Vec<u8>)>();
-        let send_block_closure = Closure::wrap(Box::new(
-            move |socket_uuid_js: JsValue, data_js: JsValue| {
-                let socket_uuid =
-                    socket_uuid_js.as_string().unwrap_or_default();
-                let arr = Uint8Array::new(&data_js);
-                let mut buf = vec![0u8; arr.length() as usize];
-                arr.copy_to(&mut buf);
-                let _ = tx.start_send((socket_uuid, buf));
-            },
-        )
-            as Box<dyn Fn(JsValue, JsValue)>);
-
-        Reflect::set(
-            wrapper,
-            &JsValue::from_str("send"),
-            send_block_closure.as_ref().unchecked_ref::<Function>(),
-        )
-        .expect("Failed to set send function on wrapper");
-        use futures::select;
-
+        let (send_block_tx, mut send_block_rx) =
+            create_unbounded_channel::<(ComInterfaceSocketUUID, Vec<u8>)>();
+        let handle = BaseInterfaceHandle {
+            tx,
+            state: Rc::new(RefCell::new(BaseInterfaceState::default())),
+        };
+        let task_handle = handle.state.clone();
+        use futures::{StreamExt, select};
         let com_hub = self.com_hub();
-        // handle incoming data from ComHub and forward to JS wrapper
         wasm_bindgen_futures::spawn_local(async move {
             let mut hub_rx = proxy.event_receiver;
             loop {
                 select! {
+                    // Event from JS side
                     js_event = rx.next().fuse() => {
                         match js_event {
                             Some((uuid, data)) => {
                                 let dxb_block = DXBBlock::from_bytes(&data).await.unwrap();
-                                let socket_uuid = ComInterfaceSocketUUID::from_string(uuid);
-                                let manager = com_hub.interface_manager().borrow();
-                                let interface = manager.get_interface_by_uuid(interface_uuid);
-                                let _ = interface.send_block(dxb_block, socket_uuid);
+                                let interface_manager = com_hub.interface_manager();
+                                let manager = interface_manager.borrow();
+                                let interface = manager.get_interface_by_uuid(&interface_uuid);
+                                let _ = interface.send_block(dxb_block, uuid);
                             }
                             None => {
                                 break;
@@ -150,25 +166,23 @@ impl JSComHub {
                         }
                     }
 
+                    // Event from ComHub side
                     com_hub_event = hub_rx.next().fuse() => {
                         match com_hub_event {
                             Some(ComInterfaceEvent::SendBlock(block, socket_uuid)) => {
                                 let bytes = block.to_bytes();
-                                if let Ok(val) = Reflect::get(&wrapper, &JsValue::from_str("onReceive")) {
-                                    if let Some(f) = val.dyn_ref::<Function>() {
-                                        let _ = f.call2(
-                                            &wrapper,
-                                            &JsValue::from_str(socket_uuid.0.to_string().as_str()),
-                                            &Uint8Array::from(bytes.as_slice()).into(),
-                                        );
-                                    }
+                                if let Some(cb) = task_handle.borrow().on_receive.as_ref() {
+                                    let _ = cb.call2(
+                                        &JsValue::NULL,
+                                        &JsValue::from_str(socket_uuid.0.to_string().as_str()),
+                                        &Uint8Array::from(bytes.as_slice()).into(),
+                                    );
                                 }
+
                             }
                             Some(ComInterfaceEvent::Destroy) => {
-                                if let Ok(val) = Reflect::get(&wrapper, &JsValue::from_str("onClosed")) {
-                                    if let Some(f) = val.dyn_ref::<Function>() {
-                                        let _ = f.call0(&wrapper);
-                                    }
+                                if let Some(cb) = task_handle.borrow().on_closed.as_ref() {
+                                    let _ = cb.call0(&JsValue::NULL);
                                 }
                                 break;
                             }
@@ -182,49 +196,51 @@ impl JSComHub {
             }
         });
 
-        Ok(())
+        Ok(handle)
     }
-}
-/// Registers a new socket on the base interface.
-pub fn base_interface_register_socket(
-    &self,
-    uuid: String,
-    direction: String,
-) -> Result<String, JsBaseInterfaceError> {
-    self.base_interface_register_socket_with_endpoint(uuid, direction, None)
-}
 
-/// Registers a new socket on the base interface with an optional endpoint.
-pub fn base_interface_register_socket_with_endpoint(
-    &self,
-    uuid: String,
-    direction: String,
-    endpoint: Option<String>,
-) -> Result<String, JsBaseInterfaceError> {
-    let interface_direction = InterfaceDirection::from_str(&direction)
-        .map_err(|e| JsBaseInterfaceError::InvalidInput(e.to_string()))?;
-    let interface_uuid = ComInterfaceUUID::from_string(uuid);
-    let interface_manager = self.com_hub().interface_manager();
-    let interface_borrow = interface_manager.borrow();
-    let interface = interface_borrow.get_interface_by_uuid(&interface_uuid);
+    /// Registers a new socket on the base interface.
+    pub fn base_interface_register_socket(
+        &self,
+        uuid: String,
+        direction: String,
+    ) -> Result<String, JsBaseInterfaceError> {
+        self.base_interface_register_socket_with_endpoint(uuid, direction, None)
+    }
 
-    let endpoint = endpoint
-        .map(|e| {
-            Endpoint::from_str(&e)
-                .map_err(|e| JsBaseInterfaceError::InvalidInput(e.to_string()))
-        })
-        .transpose()?;
+    /// Registers a new socket on the base interface with an optional endpoint.
+    pub fn base_interface_register_socket_with_endpoint(
+        &self,
+        uuid: String,
+        direction: String,
+        endpoint: Option<String>,
+    ) -> Result<String, JsBaseInterfaceError> {
+        let interface_direction = InterfaceDirection::from_str(&direction)
+            .map_err(|e| JsBaseInterfaceError::InvalidInput(e.to_string()))?;
+        let interface_uuid = ComInterfaceUUID::from_string(uuid);
+        let interface_manager = self.com_hub().interface_manager();
+        let interface_borrow = interface_manager.borrow();
+        let interface = interface_borrow.get_interface_by_uuid(&interface_uuid);
 
-    let (socket_uuid, sender) = interface
-        .socket_manager()
-        .lock()
-        .unwrap()
-        .create_and_init_socket_with_optional_endpoint(
-            interface_direction,
-            1,
-            endpoint,
-        );
-    Ok(socket_uuid.to_string())
+        let endpoint = endpoint
+            .map(|e| {
+                Endpoint::from_str(&e).map_err(|e| {
+                    JsBaseInterfaceError::InvalidInput(e.to_string())
+                })
+            })
+            .transpose()?;
+
+        let (socket_uuid, sender) = interface
+            .socket_manager()
+            .lock()
+            .unwrap()
+            .create_and_init_socket_with_optional_endpoint(
+                interface_direction,
+                1,
+                endpoint,
+            );
+        Ok(socket_uuid.to_string())
+    }
 }
 // pub fn base_interface_register_socket(
 //     &self,
