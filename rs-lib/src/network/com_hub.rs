@@ -1,7 +1,7 @@
 use datex_core::{
     global::dxb_block::DXBBlock,
     network::{
-        com_hub::{ComHub, InterfacePriority},
+        com_hub::{ComHub, InterfacePriority, errors::InterfaceCreateError},
         com_interfaces::com_interface::{
             ComInterfaceUUID, socket::ComInterfaceSocketUUID,
         },
@@ -22,7 +22,7 @@ use web_sys::js_sys::{self, Promise};
 #[derive(Clone)]
 pub struct JSComHub {
     // ignore for wasm bindgen
-    runtime: Runtime,
+    pub(crate) runtime: Runtime,
 }
 
 /**
@@ -35,6 +35,32 @@ impl JSComHub {
 
     pub fn com_hub(&self) -> Rc<ComHub> {
         self.runtime.com_hub()
+    }
+
+    pub(crate) async fn create_interface_internal(
+        &self,
+        interface_type: String,
+        properties: String,
+        priority: Option<u16>,
+    ) -> Result<ComInterfaceUUID, InterfaceCreateError> {
+        let runtime = self.runtime.clone();
+        let com_hub = runtime.com_hub();
+        let setup_data = runtime
+            .execute_sync(&properties, &[], None)
+            .map_err(|e| InterfaceCreateError::SetupDataParseError)?;
+        if let Some(setup_data) = setup_data {
+            let interface = com_hub
+                .create_interface(
+                    &interface_type,
+                    setup_data,
+                    InterfacePriority::from(priority),
+                    com_hub.async_context.clone(),
+                )
+                .await?;
+            Ok(interface)
+        } else {
+            Err(InterfaceCreateError::SetupDataParseError)
+        }
     }
 }
 
@@ -61,36 +87,17 @@ impl JSComHub {
         // self.com_hub().register_async_interface_factory::<crate::network::com_interfaces::webrtc_js_interface::WebRTCJSInterface>();
     }
 
-    pub fn create_interface(
+    pub async fn create_interface(
         &self,
         interface_type: String,
         properties: String,
         priority: Option<u16>,
-    ) -> Promise {
-        let runtime = self.runtime.clone();
-        future_to_promise(async move {
-            let com_hub = runtime.com_hub();
-            let setup_data = runtime
-                .execute_sync(&properties, &[], None)
-                .map_err(|e| JsError::new(&format!("{e:?}")))?;
-            if let Some(setup_data) = setup_data {
-                let interface = com_hub
-                    .create_interface(
-                        &interface_type,
-                        setup_data,
-                        InterfacePriority::from(priority),
-                        com_hub.async_context.clone(),
-                    )
-                    .await
-                    .map_err(|e| JsError::new(&format!("{e:?}")))?;
-                Ok(JsValue::from_str(&interface.to_string()))
-            } else {
-                Err(JsError::new(
-                    "Failed to create interface: properties are empty",
-                )
-                .into())
-            }
-        })
+    ) -> Result<String, JsError> {
+        let interface = self
+            .create_interface_internal(interface_type, properties, priority)
+            .await
+            .map_err(|e| JsError::new(&format!("{e:?}")))?;
+        Ok(interface.to_string())
     }
 
     pub fn close_interface(
