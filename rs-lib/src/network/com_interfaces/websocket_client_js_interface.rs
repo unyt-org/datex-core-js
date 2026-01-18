@@ -11,10 +11,11 @@ use datex_core::network::{
         managers::interface_manager::ComInterfaceAsyncFactoryResult,
     },
     com_interfaces::com_interface::{
-        ComInterface, ComInterfaceProxy,
+        ComInterface, ComInterfaceEvent, ComInterfaceProxy,
         error::ComInterfaceError,
         implementation::ComInterfaceAsyncFactory,
         properties::{InterfaceDirection, InterfaceProperties},
+        state::ComInterfaceStateWrapper,
     },
 };
 
@@ -55,6 +56,9 @@ pub struct WebSocketClientJSInterfaceSetupData(
 
 impl WebSocketClientJSInterfaceSetupData {
     const OPEN_TIMEOUT_MS: Duration = Duration::from_secs(15);
+    const MAX_RECONNECTS: usize = 5;
+    const RECONNECT_BACKOFF_MS: Duration = Duration::from_secs(5);
+
     async fn create_interface(
         self,
         com_interface_proxy: ComInterfaceProxy,
@@ -62,27 +66,59 @@ impl WebSocketClientJSInterfaceSetupData {
         let address = parse_url(&self.0.address).map_err(|e| {
             InterfaceCreateError::InvalidSetupData(e.to_string())
         })?;
-        let ws = self.create_websocket_client_connection(address).await?;
+        let ws = self
+            .create_websocket_client_connection(address.clone())
+            .await?;
 
-        todo!(); // TODO: Implement the interface creation logic
-        // let (_, sender) = com_interface_proxy
-        //     .create_and_init_socket(InterfaceDirection::InOut, 1);
+        let (_, incoming_tx) = com_interface_proxy
+            .create_and_init_socket(InterfaceDirection::InOut, 1);
+        let state = com_interface_proxy.state.clone();
 
-        // let state = com_interface_proxy.state;
+        let shutdown_signal =
+            state.try_lock().unwrap().shutdown_signal().clone();
 
-        // spawn_with_panic_notify(
-        //     &com_interface_proxy.async_context,
-        //     Self::read_task(read, sender, state.clone()),
-        // );
+        let (close_tx, close_rx) = oneshot::channel::<()>();
+        spawn_with_panic_notify(
+            &com_interface_proxy.async_context,
+            Self::read_task(ws.clone(), incoming_tx, Some(close_tx)),
+        );
+        spawn_with_panic_notify(
+            &com_interface_proxy.async_context,
+            Self::event_handler_task(
+                ws.clone(),
+                com_interface_proxy.event_receiver,
+                state,
+            ),
+        );
 
-        // spawn_with_panic_notify(
-        //     &com_interface_proxy.async_context,
-        //     Self::event_handler_task(
-        //         write,
-        //         com_interface_proxy.event_receiver,
-        //         state,
-        //     ),
-        // );
+        Ok(InterfaceProperties {
+            name: Some(address.to_string()),
+            ..Self::get_default_properties()
+        })
+    }
+
+    async fn event_handler_task(
+        ws: web_sys::WebSocket,
+        mut receiver: UnboundedReceiver<ComInterfaceEvent>,
+        state: Arc<Mutex<ComInterfaceStateWrapper>>,
+    ) {
+        while let Some(event) = receiver.next().await {
+            match event {
+                ComInterfaceEvent::SendBlock(block, uuid) => {
+                    let bytes = block.to_bytes();
+                    ws.send_with_u8_array(bytes.as_slice())
+                        .expect("Failed to send data to WebSocket writer task");
+                }
+
+                ComInterfaceEvent::Destroy => {
+                    break;
+                }
+
+                _ => {
+                    todo!()
+                }
+            }
+        }
     }
 
     async fn create_websocket_client_connection(
@@ -98,12 +134,10 @@ impl WebSocketClientJSInterfaceSetupData {
         let (open_tx, open_rx) = oneshot::channel::<()>();
         let (fail_tx, fail_rx) = oneshot::channel::<InterfaceCreateError>();
 
-        let open_cell: Rc<RefCell<Option<oneshot::Sender<()>>>> =
-            Rc::new(RefCell::new(Some(open_tx)));
-        let fail_cell: Rc<
-            RefCell<Option<oneshot::Sender<InterfaceCreateError>>>,
-        > = Rc::new(RefCell::new(Some(fail_tx)));
+        let open_cell = Rc::new(RefCell::new(Some(open_tx)));
+        let fail_cell = Rc::new(RefCell::new(Some(fail_tx)));
 
+        // onopen
         {
             let open_cell = Rc::clone(&open_cell);
             let onopen = Closure::once(move |_e: web_sys::Event| {
@@ -167,6 +201,41 @@ impl WebSocketClientJSInterfaceSetupData {
             }
         }
     }
+
+    async fn read_task(
+        ws: web_sys::WebSocket,
+        mut incoming_tx: UnboundedSender<Vec<u8>>,
+        mut close_tx: Option<oneshot::Sender<()>>,
+    ) {
+        let mut incoming_tx_clone = incoming_tx.clone();
+        let onmessage =
+            Closure::wrap(Box::new(move |e: web_sys::MessageEvent| {
+                if let Ok(abuf) = e.data().dyn_into::<js_sys::ArrayBuffer>() {
+                    let array = js_sys::Uint8Array::new(&abuf);
+                    let mut data = vec![0; array.byte_length() as usize];
+                    array.copy_to(&mut data[..]);
+                    let _ = incoming_tx_clone.start_send(data);
+                }
+            }) as Box<dyn FnMut(_)>);
+        ws.set_onmessage(Some(onmessage.as_ref().unchecked_ref()));
+        onmessage.forget();
+
+        // onclose
+        let onclose = Closure::once(move |_: web_sys::Event| {
+            if let Some(close_tx) = close_tx.take() {
+                let _ = close_tx.send(());
+            }
+        });
+        ws.set_onclose(Some(onclose.as_ref().unchecked_ref()));
+        onclose.forget();
+
+        // onerror
+        let onerror = Closure::once(move |_: web_sys::ErrorEvent| {
+            // pass
+        });
+        ws.set_onerror(Some(onerror.as_ref().unchecked_ref()));
+        onerror.forget();
+    }
 }
 
 impl ComInterfaceAsyncFactory for WebSocketClientJSInterfaceSetupData {
@@ -174,184 +243,18 @@ impl ComInterfaceAsyncFactory for WebSocketClientJSInterfaceSetupData {
         self,
         com_interface_proxy: ComInterfaceProxy,
     ) -> ComInterfaceAsyncFactoryResult {
-        todo!()
+        Box::pin(
+            async move { self.create_interface(com_interface_proxy).await },
+        )
     }
 
     fn get_default_properties() -> InterfaceProperties {
-        todo!()
+        InterfaceProperties {
+            interface_type: "websocket-client".to_string(),
+            channel: "websocket".to_string(),
+            round_trip_time: Duration::from_millis(40),
+            max_bandwidth: 1000,
+            ..InterfaceProperties::default()
+        }
     }
 }
-
-// #[com_interface]
-// impl WebSocketClientJSInterface {
-//     pub fn new(
-//         address: &str,
-//     ) -> Result<WebSocketClientJSInterface, WebSocketError> {
-//         let address =
-//             parse_url(address, true).map_err(|_| WebSocketError::InvalidURL)?;
-//         let ws = web_sys::WebSocket::new(address.as_ref())
-//             .map_err(|_| WebSocketError::InvalidURL)?;
-//         let interface = WebSocketClientJSInterface {
-//             address,
-//             info: ComInterfaceInfo::new(),
-//             ws,
-//         };
-//         Ok(interface)
-//     }
-
-//     #[create_opener]
-//     async fn open(&mut self) -> Result<(), WebSocketError> {
-//         let address = self.address.clone();
-//         info!("Connecting to WebSocket server at {address}");
-
-//         self.ws.set_binary_type(web_sys::BinaryType::Arraybuffer);
-
-//         let (mut sender, mut receiver) =
-//             mpsc::channel::<Result<(), WebSocketError>>(32); // buffer size of 32
-
-//         let message_callback = self.create_onmessage_callback();
-//         let error_callback = self.create_onerror_callback(sender.clone());
-
-//         let uuid = self.get_uuid().clone();
-//         let com_interface_sockets = self.get_sockets().clone();
-//         let open_callback = Closure::once(move |_: MessageEvent| {
-//             let socket = ComInterfaceSocket::new(
-//                 uuid.clone(),
-//                 InterfaceDirection::InOut,
-//                 1,
-//             );
-//             com_interface_sockets
-//                 .lock()
-//                 .unwrap()
-//                 .add_socket(Arc::new(Mutex::new(socket)));
-//             info!("WebSocket connection opened successfully");
-//             spawn_with_panic_notify_default(async move {
-//                 sender
-//                     .send(Ok(()))
-//                     .await
-//                     .expect("Failed to send onopen event");
-//             });
-//         });
-//         let close_callback = self.create_onclose_callback();
-
-//         self.ws
-//             .set_onmessage(Some(message_callback.as_ref().unchecked_ref()));
-//         self.ws
-//             .set_onerror(Some(error_callback.as_ref().unchecked_ref()));
-
-//         self.ws
-//             .set_onclose(Some(close_callback.as_ref().unchecked_ref()));
-//         self.ws
-//             .set_onopen(Some(open_callback.as_ref().unchecked_ref()));
-
-//         info!("Waiting for WebSocket connection to open...");
-//         /* receiver.recv().await.map_err(|_| {
-//             error!("Failed to receive onopen event");
-//             WebSocketError::Other("Failed to receive onopen event".to_string())
-//         })?;*/
-//         receiver.next().await.ok_or_else(|| {
-//             error!("Failed to receive onopen event");
-//             WebSocketError::Other("Failed to receive onopen event".to_string())
-//         })??;
-
-//         message_callback.forget();
-//         error_callback.forget();
-//         open_callback.forget();
-//         close_callback.forget();
-//         Ok(())
-//     }
-
-//     fn create_onmessage_callback(
-//         &mut self,
-//     ) -> Closure<dyn FnMut(MessageEvent)> {
-//         let sockets = self.get_sockets().clone();
-//         Closure::new(move |e: MessageEvent| {
-//             let sockets = sockets.clone();
-//             let sockets = sockets.lock().unwrap();
-//             let socket = sockets.sockets.values().next().unwrap();
-
-//             let receive_queue = socket.lock().unwrap().receive_queue.clone();
-//             if let Ok(abuf) = e.data().dyn_into::<js_sys::ArrayBuffer>() {
-//                 let array = js_sys::Uint8Array::new(&abuf);
-//                 receive_queue.lock().unwrap().extend(array.to_vec());
-//             }
-//         })
-//     }
-
-//     fn create_onerror_callback(
-//         &self,
-//         sender: mpsc::Sender<Result<(), WebSocketError>>,
-//     ) -> Closure<dyn FnMut(ErrorEvent)> {
-//         Closure::new(move |e: ErrorEvent| {
-//             error!("Socket error event: {:?}", e.message());
-//             let mut sender = sender.clone();
-//             spawn_with_panic_notify_default(async move {
-//                 sender
-//                     .send(Err(WebSocketError::ConnectionError))
-//                     .await
-//                     .expect("Failed to send onerror event");
-//             })
-//         })
-//     }
-
-//     fn create_onclose_callback(&self) -> Closure<dyn FnMut()> {
-//         let state = self.get_info().state.clone();
-//         Closure::new(move || {
-//             warn!("Socket closed");
-//             state.lock().unwrap().set(ComInterfaceState::NotConnected);
-//         })
-//     }
-// }
-
-// impl ComInterfaceFactory<WebSocketClientInterfaceSetupData>
-//     for WebSocketClientJSInterface
-// {
-//     fn create(
-//         setup_data: WebSocketClientInterfaceSetupData,
-//     ) -> Result<WebSocketClientJSInterface, ComInterfaceError> {
-//         WebSocketClientJSInterface::new(&setup_data.address)
-//             .map_err(|_| ComInterfaceError::InvalidSetupData)
-//     }
-
-//     fn get_default_properties() -> InterfaceProperties {
-//         InterfaceProperties {
-//             interface_type: "websocket-client".to_string(),
-//             channel: "websocket".to_string(),
-//             round_trip_time: Duration::from_millis(40),
-//             max_bandwidth: 1000,
-//             ..InterfaceProperties::default()
-//         }
-//     }
-// }
-
-// impl ComInterface for WebSocketClientJSInterface {
-//     fn send_block<'a>(
-//         &'a mut self,
-//         block: &'a [u8],
-//         _: ComInterfaceSocketUUID,
-//     ) -> Pin<Box<dyn Future<Output = bool> + 'a>> {
-//         Box::pin(async move {
-//             self.ws
-//                 .send_with_u8_array(block)
-//                 .map_err(|e| {
-//                     error!("Error sending message: {e:?}");
-//                     false
-//                 })
-//                 .is_ok()
-//         })
-//     }
-
-//     fn init_properties(&self) -> InterfaceProperties {
-//         InterfaceProperties {
-//             name: Some(self.address.to_string()),
-//             ..Self::get_default_properties()
-//         }
-//     }
-//     fn handle_close<'a>(
-//         &'a mut self,
-//     ) -> Pin<Box<dyn Future<Output = bool> + 'a>> {
-//         Box::pin(async move { self.ws.close().is_ok() })
-//     }
-//     delegate_com_interface_info!();
-//     set_opener!(open);
-// }
