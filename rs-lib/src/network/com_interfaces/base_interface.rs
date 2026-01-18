@@ -1,37 +1,22 @@
-use crate::{
-    network::{com_hub::JSComHub, errors::JsComInterfaceError},
-    wrap_error_for_js,
-};
+use crate::network::com_hub::JSComHub;
 use datex_core::{
     network::{
-        com_hub::{InterfacePriority, errors::InterfaceCreateError},
+        com_hub::errors::InterfaceCreateError,
         com_interfaces::com_interface::{
             ComInterfaceProxy, ComInterfaceUUID,
-            error::ComInterfaceError,
             implementation::ComInterfaceSyncFactory,
             properties::{InterfaceDirection, InterfaceProperties},
         },
     },
-    serde::{
-        deserializer::from_value_container, serializer::to_value_container,
-    },
-    utils::uuid::UUID,
-    values::{
-        core_values::endpoint::Endpoint, value_container::ValueContainer,
-    },
+    values::core_values::endpoint::Endpoint,
 };
-use log::error;
 use serde::{Deserialize, Serialize};
 use std::{
-    future::Future,
-    pin::Pin,
     str::FromStr,
-    sync::{Arc, Mutex},
     time::Duration,
 };
 use wasm_bindgen::{JsError, JsValue, prelude::wasm_bindgen};
-use wasm_bindgen_futures::JsFuture;
-use web_sys::js_sys::{Function, Promise, Uint8Array};
+use web_sys::js_sys::Promise;
 
 #[wasm_bindgen]
 #[derive(tsify::Tsify, Serialize, Deserialize)]
@@ -39,7 +24,7 @@ pub struct BaseJSInterfaceSetupData(InterfaceProperties);
 impl ComInterfaceSyncFactory for BaseJSInterfaceSetupData {
     fn create_interface(
         self,
-        mut com_interface_proxy: ComInterfaceProxy,
+        com_interface_proxy: ComInterfaceProxy,
     ) -> Result<InterfaceProperties, InterfaceCreateError> {
         Ok(self.0)
     }

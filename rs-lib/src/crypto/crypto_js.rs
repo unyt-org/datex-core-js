@@ -115,7 +115,7 @@ impl CryptoTrait for CryptoJS {
                 subtle
                     .digest_with_object_and_u8_array(
                         &js_object(vec![("name", "SHA-256")]),
-                        &ikm,
+                        ikm,
                     )
                     .map_err(|_| CryptoError::KeyImport)?,
             )
@@ -169,10 +169,10 @@ impl CryptoTrait for CryptoJS {
             )
             .map_err(|_| CryptoError::KeyImport)?;
 
-            let bit_len: u32 = (32 as u32) * 8;
+            let bit_len: u32 = 32_u32 * 8;
             let bits = JsFuture::from(
                 subtle
-                    .derive_bits_with_object(&params.into(), &base_key, bit_len)
+                    .derive_bits_with_object(&params, &base_key, bit_len)
                     .map_err(|_| CryptoError::KeyGeneration)?,
             )
             .await

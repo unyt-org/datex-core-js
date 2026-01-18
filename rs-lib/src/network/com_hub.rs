@@ -1,13 +1,13 @@
 use datex_core::{
-    global::dxb_block::{DXBBlock, IncomingSection},
+    global::dxb_block::DXBBlock,
     network::{
         com_hub::{ComHub, InterfacePriority},
         com_interfaces::com_interface::{
-            ComInterface, ComInterfaceUUID, socket::ComInterfaceSocketUUID,
+            ComInterfaceUUID, socket::ComInterfaceSocketUUID,
         },
     },
-    runtime::{AsyncContext, Runtime},
-    stdlib::{cell::RefCell, rc::Rc},
+    runtime::Runtime,
+    stdlib::rc::Rc,
     utils::uuid::UUID,
     values::core_values::endpoint::Endpoint,
 };
@@ -109,7 +109,7 @@ impl JSComHub {
             Ok(JsValue::TRUE)
         } else {
             error!("Failed to find interface");
-            Err(JsError::new("Failed to find interface").into())
+            Err(JsError::new("Failed to find interface"))
         }
     }
 

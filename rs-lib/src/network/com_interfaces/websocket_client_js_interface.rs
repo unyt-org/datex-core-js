@@ -1,54 +1,41 @@
 use futures_channel::oneshot;
 use gloo_timers::future::TimeoutFuture;
 use std::{
-    cell::RefCell, future::Future, pin::Pin, rc::Rc, sync::Mutex,
+    cell::RefCell, rc::Rc, sync::Mutex,
     time::Duration,
 };
 
-use datex_core::{
-    network::{
+use datex_core::network::{
         com_hub::{
             errors::InterfaceCreateError,
             managers::interface_manager::ComInterfaceAsyncFactoryResult,
         },
         com_interfaces::com_interface::{
-            ComInterface, ComInterfaceEvent, ComInterfaceProxy,
+            ComInterfaceEvent, ComInterfaceProxy,
             error::ComInterfaceError,
             implementation::ComInterfaceAsyncFactory,
             properties::{InterfaceDirection, InterfaceProperties},
             state::ComInterfaceStateWrapper,
         },
-    },
-    runtime::AsyncContext,
-};
+    };
 
 use datex_core::{
-    network::com_interfaces::{
-        com_interface::socket::{ComInterfaceSocket, ComInterfaceSocketUUID},
-        default_com_interfaces::websocket::websocket_common::{
-            WebSocketClientInterfaceSetupData, WebSocketError,
-        },
-    },
+    network::com_interfaces::default_com_interfaces::websocket::websocket_common::WebSocketClientInterfaceSetupData,
     stdlib::sync::Arc,
 };
 
-use datex_core::network::com_interfaces::{
-    com_interface::state::ComInterfaceState,
-    default_com_interfaces::websocket::websocket_common::parse_url,
-};
+use datex_core::network::com_interfaces::default_com_interfaces::websocket::websocket_common::parse_url;
 use serde::{Deserialize, Serialize};
 
 use crate::wrap_error_for_js;
 use datex_core::task::{
-    UnboundedReceiver, UnboundedSender, create_bounded_channel,
-    create_unbounded_channel, spawn_with_panic_notify,
+    UnboundedReceiver, UnboundedSender,
     spawn_with_panic_notify_default,
 };
-use futures::{SinkExt, StreamExt, channel::mpsc, pin_mut, select};
-use log::{error, info, warn};
+use futures::{SinkExt, StreamExt, select};
 use url::Url;
 use wasm_bindgen::{JsCast, prelude::Closure};
-use web_sys::{ErrorEvent, MessageEvent, js_sys};
+use web_sys::js_sys;
 
 wrap_error_for_js!(JSWebSocketError, datex_core::network::com_interfaces::default_com_interfaces::websocket::websocket_common::WebSocketError);
 
@@ -152,7 +139,7 @@ impl WebSocketClientJSInterfaceSetupData {
 
                     // Wait for close or shutdown
                     futures::pin_mut!(close_rx);
-                    let mut shutdown_fut = shutdown_signal.notified().fuse();
+                    let shutdown_fut = shutdown_signal.notified().fuse();
                     futures::pin_mut!(shutdown_fut);
                     use futures::{FutureExt, select};
                     select! {
@@ -311,7 +298,7 @@ impl WebSocketClientJSInterfaceSetupData {
                 let _ = ws.close();
                 Err(InterfaceCreateError::InterfaceError(ComInterfaceError::connection_error_with_details(
                     "Creation cancelled due to shutdown",
-                ).into()))
+                )))
             },
             err = fail_rx.fuse() => Err(err.unwrap_or(ComInterfaceError::connection_error().into())),
             _ = timeout.fuse() => {
@@ -325,7 +312,7 @@ impl WebSocketClientJSInterfaceSetupData {
     /// Read task - handles incoming messages and close events
     async fn read_task(
         ws: web_sys::WebSocket,
-        mut incoming_tx: UnboundedSender<Vec<u8>>,
+        incoming_tx: UnboundedSender<Vec<u8>>,
         mut close_tx: Option<oneshot::Sender<()>>,
     ) {
         let mut incoming_tx_clone = incoming_tx.clone();

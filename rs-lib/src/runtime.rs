@@ -3,10 +3,7 @@ use crate::js_utils::{js_array, js_error};
 use crate::network::com_hub::JSComHub;
 use crate::utils::time::TimeJS;
 use datex_core::crypto::crypto::CryptoTrait;
-use datex_core::decompiler::{
-    DecompileOptions, FormattingMode, FormattingOptions, IndentType,
-    decompile_value,
-};
+use datex_core::decompiler::decompile_value;
 use datex_core::dif::interface::{
     DIFApplyError, DIFCreatePointerError, DIFInterface, DIFObserveError,
     DIFResolveReferenceError, DIFUpdateError,
