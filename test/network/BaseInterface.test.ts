@@ -7,14 +7,14 @@ import { assertEquals } from "@std/assert/equals";
 import { assertThrows } from "@std/assert/throws";
 import { isNodeOrBun } from "../is-node.ts";
 import type { InterfaceProperties } from "../../src/datex-core.ts";
-
+// TODO https://github.com/unyt-org/datex-core-js/issues/47
 const config: InterfaceProperties = {
     name: "base",
     interface_type: "base",
     channel: "test",
     direction: "InOut",
-    round_trip_time: 5n,
-    max_bandwidth: 1n,
+    round_trip_time: 5,
+    max_bandwidth: 1,
     continuous_connection: true,
     allow_redirects: true,
     is_secure_channel: true,
