@@ -38,29 +38,6 @@ use std::{
 use wasm_bindgen::{JsCast, JsError, JsValue, prelude::wasm_bindgen};
 use web_sys::js_sys::Promise;
 
-#[wasm_bindgen]
-#[derive(Serialize, Deserialize)]
-pub struct BaseJSInterfaceSetupData(InterfaceProperties);
-impl ComInterfaceSyncFactory for BaseJSInterfaceSetupData {
-    fn create_interface(
-        self,
-        com_interface_proxy: ComInterfaceProxy,
-    ) -> Result<InterfaceProperties, InterfaceCreateError> {
-        Ok(self.0)
-    }
-
-    fn get_default_properties() -> InterfaceProperties {
-        InterfaceProperties {
-            interface_type: "local".to_string(),
-            channel: "local".to_string(),
-            auto_identify: false,
-            round_trip_time: Duration::from_millis(0),
-            max_bandwidth: u32::MAX,
-            ..InterfaceProperties::default()
-        }
-    }
-}
-
 pub enum JsBaseInterfaceError {
     InvalidInput(String),
     SocketNotFound,
@@ -107,7 +84,6 @@ pub struct BaseInterfaceHandle {
 
 impl BaseInterfaceHandle {
     pub async fn create_interface(
-        setup_data: ValueContainer,
         proxy: ComInterfaceProxy,
     ) -> BaseInterfaceHandle {
         let interface_uuid = proxy.uuid;

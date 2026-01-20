@@ -1,5 +1,10 @@
 import type { BaseInterfaceHandle } from "../datex-core.ts";
 
+interface JSComInterface {
+    readonly uuid: string;
+    readonly handle: BaseInterfaceHandle;
+}
+
 /**
  * Represents a communication interface.
  */

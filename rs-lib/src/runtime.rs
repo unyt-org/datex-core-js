@@ -1,41 +1,48 @@
-use crate::crypto::crypto_js::CryptoJS;
-use crate::js_utils::{js_array, js_error};
-use crate::network::com_hub::JSComHub;
-use crate::utils::time::TimeJS;
-use datex_core::crypto::crypto::CryptoTrait;
-use datex_core::decompiler::decompile_value;
-use datex_core::dif::interface::{
-    DIFApplyError, DIFCreatePointerError, DIFInterface, DIFObserveError,
-    DIFResolveReferenceError, DIFUpdateError,
+use crate::{
+    crypto::crypto_js::CryptoJS,
+    js_utils::{js_array, js_error, to_js_value},
+    network::com_hub::JSComHub,
+    utils::time::TimeJS,
 };
-use datex_core::dif::reference::DIFReference;
-use datex_core::dif::r#type::DIFTypeDefinition;
-use datex_core::dif::update::{DIFUpdate, DIFUpdateData};
-use datex_core::dif::value::DIFValueContainer;
-use datex_core::global::dxb_block::DXBBlock;
-use datex_core::global::protocol_structures::block_header::{
-    BlockHeader, FlagsAndTimestamp,
-};
-use datex_core::references::observers::{ObserveOptions, TransceiverId};
-use datex_core::references::reference::ReferenceMutability;
-use datex_core::runtime::AsyncContext;
 #[cfg(feature = "debug")]
 use datex_core::runtime::global_context::DebugFlags;
-use datex_core::runtime::global_context::GlobalContext;
-use datex_core::runtime::{Runtime, RuntimeConfig, RuntimeInternal};
-use datex_core::serde::deserializer::DatexDeserializer;
-use datex_core::values::core_values::endpoint::Endpoint;
-use datex_core::values::pointer::PointerAddress;
-use datex_core::values::value_container::ValueContainer;
+use datex_core::{
+    crypto::crypto::CryptoTrait,
+    decompiler::decompile_value,
+    dif::{
+        interface::{
+            DIFApplyError, DIFCreatePointerError, DIFInterface,
+            DIFObserveError, DIFResolveReferenceError, DIFUpdateError,
+        },
+        reference::DIFReference,
+        r#type::DIFTypeDefinition,
+        update::{DIFUpdate, DIFUpdateData},
+        value::DIFValueContainer,
+    },
+    global::{
+        dxb_block::DXBBlock,
+        protocol_structures::block_header::{BlockHeader, FlagsAndTimestamp},
+    },
+    references::{
+        observers::{ObserveOptions, TransceiverId},
+        reference::ReferenceMutability,
+    },
+    runtime::{
+        AsyncContext, Runtime, RuntimeConfig, RuntimeInternal,
+        global_context::GlobalContext,
+    },
+    serde::deserializer::DatexDeserializer,
+    values::{
+        core_values::endpoint::Endpoint, pointer::PointerAddress,
+        value_container::ValueContainer,
+    },
+};
 use std::borrow::Cow;
 
 use js_sys::Function;
 use serde::{Deserialize, Serialize};
 use serde_wasm_bindgen::{Error, from_value};
-use std::fmt::Display;
-use std::rc::Rc;
-use std::str::FromStr;
-use std::sync::Arc;
+use std::{fmt::Display, rc::Rc, str::FromStr, sync::Arc};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::future_to_promise;
 use web_sys::js_sys::Promise;
@@ -466,11 +473,6 @@ impl JSRuntime {
         use crate::lsp::start_lsp;
         start_lsp(self.runtime.clone(), send_to_js)
     }
-}
-
-/// Convert a serializable value to a JsValue (JSON compatible)
-fn to_js_value<T: Serialize>(value: &T) -> Result<JsValue, Error> {
-    value.serialize(&serde_wasm_bindgen::Serializer::json_compatible())
 }
 
 #[wasm_bindgen]

@@ -138,21 +138,16 @@ export class BaseInterfaceHandle {
     private constructor();
     free(): void;
     [Symbol.dispose](): void;
-    sendBlock(socket_uuid: string, data: Uint8Array): void;
-    onReceive(cb: Function): void;
-    removeSocket(socket_uuid: string): void;
-    onClosed(cb: Function): void;
     destroy(): void;
+    onReceive(cb: Function): void;
+    onClosed(cb: Function): void;
     registerSocket(
         direction: string,
         channel_factor: number,
         direct_endpoint?: string | null,
     ): string;
-}
-export class BaseJSInterfaceSetupData {
-    private constructor();
-    free(): void;
-    [Symbol.dispose](): void;
+    removeSocket(socket_uuid: string): void;
+    sendBlock(socket_uuid: string, data: Uint8Array): void;
 }
 export class JSComHub {
     private constructor();
@@ -175,7 +170,7 @@ export class JSComHub {
     register_incoming_block_interceptor(callback: Function): void;
     create_interface(
         interface_type: string,
-        properties: string,
+        setup_data: any,
         priority?: number | null,
     ): Promise<string>;
     register_default_interface_factories(): void;

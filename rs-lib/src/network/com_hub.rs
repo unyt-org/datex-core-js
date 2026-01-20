@@ -1,4 +1,5 @@
 use datex_core::{
+    dif::value::{DIFValue, DIFValueContainer},
     global::dxb_block::DXBBlock,
     network::{
         com_hub::{
@@ -10,22 +11,35 @@ use datex_core::{
             },
         },
         com_interfaces::com_interface::{
-            ComInterfaceUUID, socket::ComInterfaceSocketUUID,
+            ComInterfaceUUID, properties::InterfaceProperties,
+            socket::ComInterfaceSocketUUID,
         },
     },
     runtime::Runtime,
+    serde::{
+        deserializer::from_value_container, serializer::to_value_container,
+    },
     stdlib::rc::Rc,
     utils::uuid::UUID,
-    values::core_values::endpoint::Endpoint,
+    values::{
+        core_values::endpoint::Endpoint, value_container::ValueContainer,
+    },
 };
 use js_sys::Uint8Array;
 use log::error;
+use serde_wasm_bindgen::from_value;
 use std::{collections::HashMap, str::FromStr};
 use wasm_bindgen::prelude::*;
-use wasm_bindgen_futures::future_to_promise;
+use wasm_bindgen_futures::{JsFuture, future_to_promise};
 use web_sys::js_sys::{self, Promise};
 
-use crate::network::com_interfaces::base_interface::BaseInterfaceHandle;
+use crate::{
+    js_utils::{
+        cast_from_dif_js_value, dif_js_value_to_value_container,
+        value_container_to_dif_js_value,
+    },
+    network::com_interfaces::base_interface::BaseInterfaceHandle,
+};
 
 #[wasm_bindgen]
 #[derive(Clone)]
@@ -53,27 +67,20 @@ impl JSComHub {
     pub(crate) async fn create_interface_internal(
         &self,
         interface_type: String,
-        properties: String,
+        setup_data: ValueContainer,
         priority: Option<u16>,
     ) -> Result<ComInterfaceUUID, InterfaceCreateError> {
         let runtime = self.runtime.clone();
         let com_hub = runtime.com_hub();
-        let setup_data = runtime
-            .execute_sync(&properties, &[], None)
-            .map_err(|e| InterfaceCreateError::SetupDataParseError)?;
-        if let Some(setup_data) = setup_data {
-            let interface = com_hub
-                .create_interface(
-                    &interface_type,
-                    setup_data,
-                    InterfacePriority::from(priority),
-                    com_hub.async_context.clone(),
-                )
-                .await?;
-            Ok(interface)
-        } else {
-            Err(InterfaceCreateError::SetupDataParseError)
-        }
+        let interface = com_hub
+            .create_interface(
+                &interface_type,
+                setup_data,
+                InterfacePriority::from(priority),
+                com_hub.async_context.clone(),
+            )
+            .await?;
+        Ok(interface)
     }
 }
 
@@ -83,15 +90,8 @@ impl JSComHub {
 #[wasm_bindgen]
 impl JSComHub {
     pub fn register_default_interface_factories(&self) {
-        self.com_hub().register_sync_interface_factory::<
-            crate::network::com_interfaces::base_interface::BaseJSInterfaceSetupData,
-        >();
-
         #[cfg(feature = "wasm_websocket_client")]
         self.com_hub().register_async_interface_factory::<crate::network::com_interfaces::websocket_client_js_interface::WebSocketClientJSInterfaceSetupData>();
-
-        // #[cfg(feature = "wasm_websocket_server")]
-        // self.com_hub().register_async_interface_factory::<crate::network::com_interfaces::websocket_server_js_interface::WebSocketServerInterfaceSetupDataJS>();
 
         #[cfg(feature = "wasm_serial")]
         self.com_hub().register_async_interface_factory::<crate::network::com_interfaces::serial_js_interface::SerialInterfaceSetupDataJS>();
@@ -107,20 +107,40 @@ impl JSComHub {
     ) {
         self.registered_interface_factories
             .insert(interface_type.clone(), factory.clone());
+        let runtime = self.runtime.clone();
         self.com_hub().register_dyn_interface_factory(
             interface_type,
             Rc::new(move |setup_data, proxy| {
                 let factory = factory.clone();
+                let runtime = runtime.clone();
                 Box::pin(async move {
                     let base_interface_holder =
-                        BaseInterfaceHandle::create_interface(
-                            setup_data, proxy,
+                        BaseInterfaceHandle::create_interface(proxy).await;
+                    let interface_properties_promise = factory
+                        .call2(
+                            &JsValue::UNDEFINED,
+                            &JsValue::from(base_interface_holder),
+                            &value_container_to_dif_js_value(
+                                &setup_data,
+                                runtime.memory(),
+                            ),
                         )
-                        .await;
-                    let result =
-                        factory.call0(&JsValue::from(base_interface_holder));
+                        .map_err(|e| {
+                            error!("Error calling interface factory: {:?}", e);
+                            InterfaceCreateError::InterfaceOpenFailed
+                        })?
+                        .unchecked_into::<Promise>();
+                    let interface_properties = JsFuture::from(
+                        interface_properties_promise,
+                    )
+                    .await
+                    .expect("Failed to get interface properties from promise");
 
-                    Err(InterfaceCreateError::InterfaceOpenFailed)
+                    cast_from_dif_js_value::<InterfaceProperties>(
+                        interface_properties,
+                        runtime.memory(),
+                    )
+                    .map_err(|e| InterfaceCreateError::InterfaceOpenFailed)
                 })
             }),
         );
@@ -129,11 +149,14 @@ impl JSComHub {
     pub async fn create_interface(
         &self,
         interface_type: String,
-        properties: String,
+        setup_data: JsValue,
         priority: Option<u16>,
     ) -> Result<String, JsError> {
+        let setup_data =
+            dif_js_value_to_value_container(setup_data, self.runtime.memory())
+                .map_err(|e| JsError::new(&format!("{e:?}")))?;
         let interface = self
-            .create_interface_internal(interface_type, properties, priority)
+            .create_interface_internal(interface_type, setup_data, priority)
             .await
             .map_err(|e| JsError::new(&format!("{e:?}")))?;
         Ok(interface.to_string())

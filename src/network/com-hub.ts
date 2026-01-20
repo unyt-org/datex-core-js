@@ -1,7 +1,9 @@
 import type { JSComHub } from "../datex-core/datex_core_js.d.ts";
-import { ComInterface, type ComInterfaceImpl } from "./com-interface.ts";
-import type { DIFValue } from "../dif/definitions.ts";
-import type { InterfaceProperties } from "../datex-core.ts";
+import type { DIFValueContainer } from "../dif/definitions.ts";
+import type {
+    BaseInterfaceHandle,
+    InterfaceProperties,
+} from "../datex-core.ts";
 import type { Runtime } from "../runtime/runtime.ts";
 
 /**
@@ -11,63 +13,33 @@ export class ComHub {
     /** The JS communication hub. */
     readonly #jsComHub: JSComHub;
     readonly #runtime: Runtime;
-    readonly #interfaces = new Map<
-        string,
-        ComInterface<ComInterfaceImpl<unknown>>
-    >();
 
     constructor(jsComHub: JSComHub, runtime: Runtime) {
         this.#jsComHub = jsComHub;
         this.#runtime = runtime;
     }
 
-    /**
-     * Registers a communication interface implementation.
-     * @param interfaceType The type of the interface.
-     * @param impl The implementation class of the interface.
-     */
-    // TODO
-    registerInterfaceImpl<N extends string>(
-        interfaceType: N,
-        impl: typeof ComInterface,
-    ) {
-        this.registerInterfaceFactory(
-            interfaceType,
-            (uuid: string, setupData: unknown) => {
-                const instance = new (impl as (new (
-                    uuid: string,
-                    setupData: unknown,
-                    jsComHub: JSComHub,
-                ) => ComInterface))(
-                    uuid,
-                    setupData,
-                    this.#jsComHub,
-                );
-                this.#interfaces.set(
-                    instance.uuid,
-                    new ComInterface(instance.uuid, instance, jsComHub),
-                );
-                return {
-                    uuid: instance.uuid,
-                    impl: instance,
-                };
-            },
-        );
-    }
-
-    registerInterfaceFactory<SetupData>(
+    public registerInterfaceFactory<SetupData>(
         interface_type: string,
         factory: (
-            uuid: string,
+            handle: BaseInterfaceHandle,
             setup_data: SetupData,
         ) => InterfaceProperties | Promise<InterfaceProperties>,
     ) {
         this.#jsComHub.register_interface_factory(
             interface_type,
-            async (setup_data: DIFValue) => {
-                return factory(
-                    await this.#runtime.dif.resolveDIFValue<SetupData>(
-                        setup_data,
+            async (
+                handle: BaseInterfaceHandle,
+                setup_data: DIFValueContainer,
+            ) => {
+                return this.#runtime.dif.convertJSValueToDIFValueContainer(
+                    factory(
+                        handle,
+                        await this.#runtime.dif.resolveDIFValueContainer<
+                            SetupData
+                        >(
+                            setup_data,
+                        ),
                     ),
                 );
             },
@@ -76,29 +48,21 @@ export class ComHub {
 
     /**
      * Creates a new communication interface.
-     * @param interfaceType The type of the interface to create.
+     * @param type The type of the interface to create.
      * @param setupData The setup data for the interface.
+     * @param priority The priority of the interface (optional).
+     * @returns A promise that resolves to the UUID of the created interface.
      */
-    async createInterface<T extends typeof ComInterfaceImpl<unknown>>(
-        interfaceType: T,
-        setupData: T extends typeof ComInterfaceImpl<infer P> ? P : never,
-    ): Promise<ComInterface<InstanceType<T>>>;
-    async createInterface<
-        T extends ComInterfaceImpl<unknown>,
-    >(
-        interfaceType: string,
-        setupData: T extends ComInterfaceImpl<infer P> ? P : never,
-    ): Promise<ComInterface<T>>;
-
-    async createInterface(
+    public async createInterface<SetupData>(
         type: string,
-        setupData: unknown,
-    ): Promise<ComInterface<ComInterfaceImpl<unknown>>> {
-        const uuid = await this.#jsComHub.create_interface(
+        setupData: SetupData,
+        priority?: number,
+    ): Promise<string> {
+        return await this.#jsComHub.create_interface(
             type,
-            JSON.stringify(setupData),
+            this.#runtime.dif.convertJSValueToDIFValueContainer(setupData),
+            priority,
         );
-        return this.#interfaces.get(uuid)!;
     }
 
     /**
