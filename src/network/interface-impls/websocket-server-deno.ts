@@ -1,30 +1,33 @@
-import { ComInterfaceImpl } from "../com-interface.ts";
-import { ComHub } from "../com-hub.ts";
-import type { WebSocketServerInterfaceSetupData } from "../../datex-core/datex_core_js.d.ts";
-
-// TODO: deprecate this class, not needed anymore - only write interfaces for custom implementations like websocket-server-deno
+import {ComHub, ComInterfaceFactory, ComInterfaceFactoryFn} from "../com-hub.ts";
+import type {
+    BaseInterfaceHandle,
+    InterfaceProperties,
+    WebSocketServerInterfaceSetupData
+} from "../../datex-core/datex_core_js.d.ts";
 
 /**
- * Implementation of the WebSocket server communication interface for Deno.
+ * General utility functions for WebSockets that can be reused for different socket server implementations.
  */
-export class WebSockerServerDenoInterfaceImpl
-    extends ComInterfaceImpl<WebSocketServerInterfaceSetupData> {
-    #server?: Deno.HttpServer;
+export function registerWebSocket(webSocket: WebSocket, baseInterfaceHandle: BaseInterfaceHandle): boolean {
+    const [uuid, sendCallback] = baseInterfaceHandle.registerSocket();
+    // TODO:
+    webSocket.onopen = () => {
+        console.log("WebSocket connection opened");
+    };
+}
 
-    override init() {
-        this.#server = Deno.serve({
-            port: this.setupData.port,
+export const websocketServerDenoComInterfaceFactory: ComInterfaceFactory<WebSocketServerInterfaceSetupData> = {
+    interfaceType: "websocket-server",
+    factory: (baseInterfaceHandle, setupData) => {
+        const server =  Deno.serve({
+            port: setupData.port,
         }, (req) => {
             if (req.headers.get("upgrade") != "websocket") {
                 return new Response(null, { status: 501 });
             }
-            const { socket, response } = Deno.upgradeWebSocket(req);
-            if (
-                !this.jsComHub.websocket_server_interface_add_socket(
-                    this.uuid,
-                    socket,
-                )
-            ) {
+            const { socket: webSocket, response } = Deno.upgradeWebSocket(req);
+
+            if (!registerWebSocket(webSocket, baseInterfaceHandle)) {
                 console.error("Failed to add websocket to server interface");
                 return new Response(
                     "Failed to add websocket to server interface",
@@ -33,17 +36,27 @@ export class WebSockerServerDenoInterfaceImpl
             }
             return response;
         });
-    }
 
-    override async cleanup() {
-        if (this.#server) {
-            await this.#server.shutdown();
-            this.#server = undefined;
-        }
+        // cleanup handler
+        baseInterfaceHandle.onClosed(async () => {
+            await server.shutdown();
+        });
+
+        // TODO: set properties
+        return {
+            interface_type: "websocket-server",
+            channel: "websocket",
+            name: undefined,
+            direction: "InOut",
+            round_trip_time: 0,
+            max_bandwidth: 0,
+            continuous_connection: false,
+            allow_redirects: false,
+            is_secure_channel: false,
+            reconnection_config: "NoReconnect",
+            auto_identify: false,
+            close_timestamp: undefined,
+            reconnect_attempts: undefined
+        } satisfies InterfaceProperties
     }
 }
-
-ComHub.registerInterfaceImpl(
-    "websocket-server",
-    WebSockerServerDenoInterfaceImpl,
-);

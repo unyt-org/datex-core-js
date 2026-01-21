@@ -26,9 +26,9 @@ const config: InterfaceProperties = {
 
 Deno.test("construct custom factory", () => {
     const runtime = new Runtime({ endpoint: "@unyt", debug: true });
-    runtime.comHub.registerInterfaceFactory<InterfaceProperties>(
-        "test",
-        (handle, setupData) => {
+    runtime.comHub.registerInterfaceFactory<InterfaceProperties>({
+        interfaceType: "test",
+        factory: (handle, setupData) => {
             assert(handle instanceof Object, "Handle should be an object");
             assertEquals(
                 Object.fromEntries(
@@ -39,7 +39,7 @@ Deno.test("construct custom factory", () => {
             );
             return setupData;
         },
-    );
+    });
     runtime.comHub.createInterface("test", config);
 });
 
