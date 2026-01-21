@@ -90,8 +90,6 @@ where
         .to_value_container(memory)
         .map_err(|_| ())?;
 
-    info!("Deserializing DIFValueContainer: {:#?}", value_container);
-
     from_value_container::<T>(value_container).map_err(|e| {
         info!("Deserialization error: {}", e);
         ()

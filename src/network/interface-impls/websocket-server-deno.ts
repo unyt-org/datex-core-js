@@ -9,10 +9,11 @@ import type {
  * General utility functions for WebSockets that can be reused for different socket server implementations.
  */
 export function registerWebSocket(webSocket: WebSocket, baseInterfaceHandle: BaseInterfaceHandle): boolean {
-    const [uuid, sendCallback] = baseInterfaceHandle.registerSocket();
+    const uuid = baseInterfaceHandle.registerSocket();
     // TODO:
-    webSocket.onopen = () => {
+    webSocket.onmessage = (msg) => {
         console.log("WebSocket connection opened");
+        baseInterfaceHandle.sendBlock(uuid, msg.data)
     };
 }
 

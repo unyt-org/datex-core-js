@@ -24,7 +24,7 @@ const config: InterfaceProperties = {
     auto_identify: false,
 };
 
-Deno.test("construct custom factory", () => {
+Deno.test("construct custom factory", async () => {
     const runtime = new Runtime({ endpoint: "@unyt", debug: true });
     runtime.comHub.registerInterfaceFactory<InterfaceProperties>({
         interfaceType: "test",
@@ -40,7 +40,8 @@ Deno.test("construct custom factory", () => {
             return setupData;
         },
     });
-    runtime.comHub.createInterface("test", config);
+    await runtime.comHub.createInterface("test", config);
+    runtime.comHub;
 });
 
 // // FIXME rest

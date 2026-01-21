@@ -34,7 +34,7 @@ use web_sys::{
 wrap_error_for_js!(JsSerialError, datex_core::network::com_interfaces::default_com_interfaces::serial::serial_common::SerialError);
 
 #[derive(tsify::Tsify, Serialize, Deserialize)]
-pub struct SerialInterfaceSetupDataJS(SerialInterfaceSetupData);
+pub struct SerialInterfaceSetupDataJS(pub SerialInterfaceSetupData);
 impl Deref for SerialInterfaceSetupDataJS {
     type Target = SerialInterfaceSetupData;
 

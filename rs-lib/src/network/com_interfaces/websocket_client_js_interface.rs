@@ -41,7 +41,7 @@ wrap_error_for_js!(JSWebSocketError, datex_core::network::com_interfaces::defaul
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct WebSocketClientJSInterfaceSetupData(
-    WebSocketClientInterfaceSetupData,
+    pub WebSocketClientInterfaceSetupData,
 );
 
 impl WebSocketClientJSInterfaceSetupData {
