@@ -43,9 +43,12 @@ use js_sys::Function;
 use serde::{Deserialize, Serialize};
 use serde_wasm_bindgen::{Error, from_value};
 use std::{fmt::Display, rc::Rc, str::FromStr, sync::Arc};
+use std::cell::RefCell;
+use datex_core::runtime::memory::Memory;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::future_to_promise;
 use web_sys::js_sys::Promise;
+use crate::js_utils::cast_from_dif_js_value;
 
 #[wasm_bindgen(getter_with_clone)]
 pub struct JSRuntime {
@@ -92,12 +95,12 @@ impl JSRuntime {
     }
 
     pub fn create(
-        config: &str,
+        config: JsValue,
         debug_flags: Option<JSDebugFlags>,
     ) -> JSRuntime {
-        let deserializer = DatexDeserializer::from_script(config).unwrap();
-        let config: RuntimeConfig =
-            Deserialize::deserialize(deserializer).unwrap();
+        // NOTE: mock memory is used here, since we don't have an initialized runtime yet - so no pointers can be resolved during config parsing
+        // We must think about a better way to handle this in the future
+        let config: RuntimeConfig = cast_from_dif_js_value(config, &RefCell::new(Memory::default())).unwrap();
         let runtime = Runtime::init(
             config,
             GlobalContext {
@@ -109,13 +112,6 @@ impl JSRuntime {
             },
             AsyncContext::new(),
         );
-        // runtime.memory.borrow_mut().store_pointer(
-        //     [
-        //         10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140,
-        //         150, 160, 170, 180, 190, 200, 210, 220, 230, 240, 250, 255,
-        //     ],
-        //     Pointer::from_id(Vec::new()),
-        // );
         let runtime = JSRuntime::new(runtime);
         runtime.com_hub.register_default_interface_factories();
         runtime

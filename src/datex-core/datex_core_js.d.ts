@@ -2,7 +2,7 @@
 // deno-lint-ignore-file
 // deno-fmt-ignore-file
 
-export function create_runtime(config: string, debug_flags: any): JSRuntime;
+export function create_runtime(config: any, debug_flags: any): JSRuntime;
 /**
  * Executes a Datex script and returns the result as a string.
  */
@@ -14,15 +14,40 @@ export function execute(datex_script: string, decompile_options: any): string;
 export function execute_internal(datex_script: string): boolean;
 export type SerialInterfaceSetupDataJS = SerialInterfaceSetupData;
 
+export interface RTCIceServer {
+    urls: string[];
+    username: string | undefined;
+    credential: string | undefined;
+}
+
 export interface WebRTCInterfaceSetupData {
     peer_endpoint: string;
     ice_servers: RTCIceServer[] | undefined;
 }
 
-export interface RTCIceServer {
-    urls: string[];
-    username: string | undefined;
-    credential: string | undefined;
+export interface WebSocketClientInterfaceSetupData {
+    /**
+     * A websocket URL (ws:// or wss://).
+     */
+    url: string;
+}
+
+export type TLSMode = { type: "HandledExternally" } | {
+    type: "WithCertificate";
+    data: { private_key: number[]; certificate: number[] };
+};
+
+export interface WebSocketServerInterfaceSetupData {
+    /**
+     * The address to bind the WebSocket server to (e.g., \"0.0.0.0:8080\").
+     */
+    bind_address: string;
+    /**
+     * A list of addresses the server should accept connections from,
+     * along with their optional TLS mode.
+     * E.g., [(\"example.com\", Some(TLSMode::WithCertificate { ... })), (\"example.org:1234\", None)]
+     */
+    accept_addresses: [string, TLSMode | undefined][] | undefined;
 }
 
 export type InterfaceDirection = "In" | "Out" | "InOut";
@@ -77,17 +102,7 @@ export interface InterfaceProperties {
     is_secure_channel: boolean;
     reconnection_config: ReconnectionConfig;
     auto_identify: boolean;
-    /**
-     * Timestamp of the interface close event
-     * This is used to determine if the interface shall be reopened
-     */
-    close_timestamp: number | undefined;
-    /**
-     * Number of reconnection attempts already made
-     * This is used to determine if the interface shall be reopened
-     * and if the interface shall be destroyed
-     */
-    reconnect_attempts: number | undefined;
+    connectable_interfaces: RuntimeConfigInterface[] | undefined;
 }
 
 export type ReconnectionConfig = "NoReconnect" | "InstantReconnect" | {
@@ -98,18 +113,6 @@ export type ReconnectionConfig = "NoReconnect" | "InstantReconnect" | {
         attempts: number;
     };
 };
-
-export interface WebSocketClientInterfaceSetupData {
-    address: string;
-}
-
-export interface WebSocketServerInterfaceSetupData {
-    port: number;
-    /**
-     * if true, the server will use wss (secure WebSocket). Defaults to true.
-     */
-    secure: boolean | undefined;
-}
 
 export interface DecompileOptions {
     formatting_options?: FormattingOptions;

@@ -4,11 +4,11 @@ use datex_core::{
     network::{
         com_hub::{
             InterfacePriority, errors::InterfaceCreateError,
-            managers::socket_manager,
+            managers::sockets_manager,
         },
         com_interfaces::com_interface::{
             ComInterfaceEvent, ComInterfaceProxy, ComInterfaceUUID,
-            implementation::ComInterfaceSyncFactory,
+            factory::ComInterfaceSyncFactory,
             properties::{InterfaceDirection, InterfaceProperties},
             socket::ComInterfaceSocketUUID,
             socket_manager::ComInterfaceSocketManager,

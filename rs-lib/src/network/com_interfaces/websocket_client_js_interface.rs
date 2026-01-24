@@ -8,12 +8,12 @@ use std::{
 use datex_core::network::{
         com_hub::{
             errors::InterfaceCreateError,
-            managers::interface_manager::ComInterfaceAsyncFactoryResult,
+            managers::interfaces_manager::ComInterfaceAsyncFactoryResult,
         },
         com_interfaces::com_interface::{
             ComInterfaceEvent, ComInterfaceProxy,
             error::ComInterfaceError,
-            implementation::ComInterfaceAsyncFactory,
+            factory::ComInterfaceAsyncFactory,
             properties::{InterfaceDirection, InterfaceProperties},
             state::ComInterfaceStateWrapper,
         },
@@ -54,7 +54,7 @@ impl WebSocketClientJSInterfaceSetupData {
         self,
         com_interface_proxy: ComInterfaceProxy,
     ) -> Result<InterfaceProperties, InterfaceCreateError> {
-        let address = parse_url(&self.0.address).map_err(|e| {
+        let address = parse_url(&self.0.url).map_err(|e| {
             InterfaceCreateError::InvalidSetupData(e.to_string())
         })?;
         let state = com_interface_proxy.state.clone();

@@ -5,7 +5,7 @@ use datex_core::{
         com_hub::{
             ComHub, InterfacePriority,
             errors::InterfaceCreateError,
-            managers::interface_manager::{
+            managers::interfaces_manager::{
                 AsyncComInterfaceImplementationFactoryFn,
                 ComInterfaceAsyncFactoryResult,
             },

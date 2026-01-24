@@ -1,6 +1,6 @@
 use datex_core::network::com_hub::{
     errors::InterfaceCreateError,
-    managers::interface_manager::ComInterfaceAsyncFactoryResult,
+    managers::interfaces_manager::ComInterfaceAsyncFactoryResult,
 };
 use serde::{Deserialize, Serialize};
 use std::{
@@ -12,7 +12,7 @@ use datex_core::network::com_interfaces::{
         com_interface::{
             ComInterfaceEvent, ComInterfaceProxy,
             error::ComInterfaceError,
-            implementation::{
+            factory::{
                 ComInterfaceAsyncFactory, ComInterfaceSyncFactory,
             },
             properties::{InterfaceDirection, InterfaceProperties},

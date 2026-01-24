@@ -8,6 +8,7 @@ use datex_core::{
 };
 use log::info;
 use serde::{Deserialize, Serialize};
+use serde::de::DeserializeOwned;
 use serde_wasm_bindgen::{Error, from_value};
 use wasm_bindgen::{JsError, JsValue};
 use web_sys::js_sys::{self, Array, ArrayBuffer, Object, Reflect};
@@ -76,12 +77,12 @@ impl<T, E: std::error::Error + 'static> ToJsError<T> for Result<T, E> {
 }
 
 /// Deserialize a JsValue into a Rust type T using DIFValueContainer as an intermediary,
-pub fn cast_from_dif_js_value<'de, T>(
+pub fn cast_from_dif_js_value<T>(
     value: JsValue,
     memory: &RefCell<Memory>,
 ) -> Result<T, ()>
 where
-    T: Deserialize<'de>,
+    T: DeserializeOwned,
 {
     let unresolved_value_container: DIFValueContainer = from_value(value)
         .expect("Failed to deserialize JsValue to DIFValueContainer");
@@ -90,7 +91,7 @@ where
         .to_value_container(memory)
         .map_err(|_| ())?;
 
-    from_value_container::<T>(value_container).map_err(|e| {
+    from_value_container::<T>(&value_container).map_err(|e| {
         info!("Deserialization error: {}", e);
         ()
     })

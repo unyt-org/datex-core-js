@@ -35,7 +35,7 @@ extern "C" {
 }
 
 #[wasm_bindgen]
-pub fn create_runtime(config: &str, debug_flags: JsValue) -> JSRuntime {
+pub fn create_runtime(config: JsValue, debug_flags: JsValue) -> JSRuntime {
     let debug_flags: Option<JSDebugFlags> =
         from_value(debug_flags).unwrap_or_default();
     JSRuntime::create(config, debug_flags)
