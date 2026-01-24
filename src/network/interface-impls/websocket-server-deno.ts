@@ -1,8 +1,4 @@
-import type {
-    ComHub,
-    ComInterfaceFactory,
-    ComInterfaceFactoryFn,
-} from "../com-hub.ts";
+import type { ComInterfaceFactory } from "../com-hub.ts";
 import type {
     BaseInterfaceHandle,
     InterfaceProperties,
@@ -55,8 +51,12 @@ export const websocketServerDenoComInterfaceFactory: ComInterfaceFactory<
     factory: (baseInterfaceHandle, setupData) => {
         const sockets: Map<string, WebSocket> = new Map();
 
+        const [hostname, maybe_port] = setupData.bind_address.split(":");
+        const port = maybe_port ? parseInt(maybe_port) : undefined;
+
         const server = Deno.serve({
-            port: setupData.port,
+            port,
+            hostname,
         }, (req) => {
             if (req.headers.get("upgrade") != "websocket") {
                 return new Response(null, { status: 501 });
@@ -96,7 +96,7 @@ export const websocketServerDenoComInterfaceFactory: ComInterfaceFactory<
         return {
             interface_type: "websocket-server",
             channel: "websocket",
-            name: setupData.port,
+            name: setupData.bind_address,
             direction: "InOut",
             round_trip_time: 0,
             max_bandwidth: 0,
@@ -105,8 +105,7 @@ export const websocketServerDenoComInterfaceFactory: ComInterfaceFactory<
             is_secure_channel: false,
             reconnection_config: "NoReconnect",
             auto_identify: false,
-            close_timestamp: undefined,
-            reconnect_attempts: undefined,
+            connectable_interfaces: [], // TODO
         } satisfies InterfaceProperties;
     },
 };

@@ -19,14 +19,6 @@ await build({
             path: "./src/default.ts",
         },
         // interface impls
-        {
-            name: "./interface-impls/base",
-            path: "./src/network/interface-impls/base.ts",
-        },
-        {
-            name: "./interface-impls/websocket-client",
-            path: "./src/network/interface-impls/websocket-client.ts",
-        },
     ],
     outDir: "./npm",
     shims: { deno: false },

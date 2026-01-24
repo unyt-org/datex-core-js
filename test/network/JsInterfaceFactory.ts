@@ -1,11 +1,6 @@
 import { assert } from "@std/assert/assert";
 import { Runtime } from "../../src/runtime/runtime.ts";
-import type * as uuid from "@std/uuid";
-import type { sleep } from "../utils.ts";
-import type { assertFalse } from "@std/assert/false";
 import { assertEquals } from "@std/assert/equals";
-import type { assertThrows } from "@std/assert/throws";
-import type { isNodeOrBun } from "../is-node.ts";
 import type { InterfaceProperties } from "../../src/datex-core.ts";
 // TODO https://github.com/unyt-org/datex-core-js/issues/47
 const config: InterfaceProperties = {
@@ -19,9 +14,8 @@ const config: InterfaceProperties = {
     allow_redirects: true,
     is_secure_channel: true,
     reconnection_config: "NoReconnect",
-    reconnect_attempts: undefined,
-    close_timestamp: undefined,
     auto_identify: false,
+    connectable_interfaces: undefined,
 };
 
 Deno.test("construct custom factory", async () => {
