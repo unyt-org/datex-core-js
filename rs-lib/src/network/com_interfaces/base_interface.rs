@@ -35,6 +35,7 @@ use std::{
     sync::{Arc, Mutex},
     time::Duration,
 };
+use datex_core::network::com_interfaces::com_interface::state::{ComInterfaceState, ComInterfaceStateWrapper};
 use wasm_bindgen::{JsCast, JsError, JsValue, prelude::wasm_bindgen};
 use web_sys::js_sys::Promise;
 
@@ -65,7 +66,7 @@ impl From<JsBaseInterfaceError> for JsValue {
 }
 
 #[derive(Default)]
-struct BaseInterfaceState {
+struct BaseInterfaceCallbacks {
     on_receive: Option<js_sys::Function>,
     on_closed: Option<js_sys::Function>,
 }
@@ -79,7 +80,8 @@ pub struct BaseInterfaceHandle {
     sender_map: HashMap<ComInterfaceSocketUUID, UnboundedSender<Vec<u8>>>,
     tx: UnboundedSender<BaseInterfaceEvent>,
     socket_manager: Arc<Mutex<ComInterfaceSocketManager>>,
-    state: Rc<RefCell<BaseInterfaceState>>,
+    callbacks: Rc<RefCell<BaseInterfaceCallbacks>>,
+    state: Arc<Mutex<ComInterfaceStateWrapper>>,
 }
 
 impl BaseInterfaceHandle {
@@ -97,9 +99,10 @@ impl BaseInterfaceHandle {
             tx: js_event_tx,
             sender_map,
             socket_manager: socket_manager.clone(),
-            state: Rc::new(RefCell::new(BaseInterfaceState::default())),
+            callbacks: Rc::new(RefCell::new(BaseInterfaceCallbacks::default())),
+            state: proxy.state.clone()
         };
-        let task_handle = handle.state.clone();
+        let task_handle = handle.callbacks.clone();
         use futures::{StreamExt, select};
         wasm_bindgen_futures::spawn_local(async move {
             let mut hub_rx = proxy.event_receiver;
@@ -113,7 +116,7 @@ impl BaseInterfaceHandle {
                                 if let Some(cb) = task_handle.borrow().on_receive.as_ref() {
                                     let _ = cb.call2(
                                         &JsValue::NULL,
-                                        &JsValue::from_str(socket_uuid.0.to_string().as_str()),
+                                        &JsValue::from_str(socket_uuid.to_string().as_str()),
                                         &Uint8Array::from(bytes.as_slice()).into(),
                                     );
                                 }
@@ -211,18 +214,24 @@ impl BaseInterfaceHandle {
         Ok(())
     }
 
+    /// Gets the current state of the interface
+    #[wasm_bindgen(js_name = "getState")]
+    pub fn get_state(&self) -> String {
+        self.state.lock().unwrap().get().to_string()
+    }
+
     pub fn destroy(&mut self) {
         self.tx.close_channel();
     }
 
     #[wasm_bindgen(js_name = "onReceive")]
     pub fn set_on_receive(&self, cb: js_sys::Function) {
-        self.state.borrow_mut().on_receive.replace(cb);
+        self.callbacks.borrow_mut().on_receive.replace(cb);
     }
 
     #[wasm_bindgen(js_name = "onClosed")]
     pub fn set_on_closed(&self, cb: js_sys::Function) {
-        self.state.borrow_mut().on_closed.replace(cb);
+        self.callbacks.borrow_mut().on_closed.replace(cb);
     }
 }
 

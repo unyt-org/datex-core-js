@@ -1,5 +1,5 @@
 import type {
-    BaseInterfaceHandle,
+    BaseInterfaceHandle, ComHubMetadata,
     JSComHub,
 } from "../datex-core/datex_core_js.d.ts";
 import type { DIFValueContainer } from "../dif/definitions.ts";
@@ -86,6 +86,12 @@ export class ComHub {
         // deno-lint-ignore no-explicit-any
         const metadata = (this.#jsComHub as any).get_metadata_string();
         console.log(metadata);
+    }
+
+    public getMetadata(): ComHubMetadata {
+        // as any required because get_metadata only exists in debug builds
+        // deno-lint-ignore no-explicit-any
+        return (this.#jsComHub as any).get_metadata();
     }
 
     /**

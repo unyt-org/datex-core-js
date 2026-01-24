@@ -1,4 +1,5 @@
 import { assert } from "@std/assert/assert";
+import { assertEquals } from "@std/assert/equals";
 import { Runtime } from "datex-core-js/runtime/runtime.ts";
 import * as uuid from "@std/uuid";
 import { isNodeOrBun } from "../is-node.ts";
@@ -41,6 +42,27 @@ Deno.test("connect two runtimes", async () => {
         { url: `ws://localhost:${PORT}` },
     );
 
+    await sleep(100);
+
+    runtimeA.comHub.printMetadata();
+    runtimeB.comHub.printMetadata();
+
+    const serverInterfaceMetadata = runtimeA.comHub.getMetadata().interfaces.find(v => v.uuid === serverInterfaceUUID);
+    assert(serverInterfaceMetadata !== undefined);
+    const serverSocketMetadata = serverInterfaceMetadata.sockets.find(v => v.endpoint === "@test_b");
+    assert(serverSocketMetadata !== undefined);
+    assertEquals(serverSocketMetadata.direction, "InOut");
+    assertEquals(serverSocketMetadata.properties!.is_direct, true);
+    assertEquals(serverSocketMetadata.properties!.distance, 1);
+
+    const clientInterfaceMetaData = runtimeB.comHub.getMetadata().interfaces.find(v => v.uuid === clientInterfaceUUID);
+    assert(clientInterfaceMetaData !== undefined);
+    const clientSocketMetadata = clientInterfaceMetaData.sockets.find(v => v.endpoint === "@test_a");
+    assert(clientSocketMetadata !== undefined);
+    assertEquals(clientSocketMetadata.direction, "InOut");
+    assertEquals(clientSocketMetadata.properties!.is_direct, true);
+    assertEquals(clientSocketMetadata.properties!.distance, 1);
+
     runtimeA.comHub.closeInterface(serverInterfaceUUID);
     runtimeB.comHub.closeInterface(clientInterfaceUUID);
 });
@@ -72,7 +94,7 @@ Deno.test("send data between two runtimes", async () => {
         { url: `ws://localhost:${PORT}` },
     );
 
-    await sleep(1000);
+    await sleep(100);
 
     const res = await runtimeA.executeWithStringResult("@test_b :: 1 + 2");
     assert(res === "3", "Expected result from remote execution to be 3");

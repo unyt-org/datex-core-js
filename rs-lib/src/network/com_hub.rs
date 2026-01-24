@@ -247,6 +247,12 @@ impl JSComHub {
     }
 
     #[cfg(feature = "debug")]
+    pub fn get_metadata(&self) -> JsValue {
+        let metadata = self.com_hub().get_metadata();
+        serde_wasm_bindgen::to_value(&metadata).unwrap()
+    }
+
+    #[cfg(feature = "debug")]
     pub async fn get_trace_string(&self, endpoint: String) -> Option<String> {
         let endpoint = Endpoint::from_str(&endpoint);
         if let Ok(endpoint) = endpoint {

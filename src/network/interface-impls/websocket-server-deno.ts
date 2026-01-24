@@ -28,14 +28,14 @@ export function registerWebSocket(
     }, { once: true });
 
     webSocket.addEventListener("error", () => {
-        if (uuid) {
+        if (uuid && baseInterfaceHandle.getState() !== "Destroyed") {
             baseInterfaceHandle.removeSocket(uuid);
         }
         reject();
     }, { once: true });
 
     webSocket.addEventListener("close", () => {
-        if (uuid) {
+        if (uuid && baseInterfaceHandle.getState() !== "Destroyed") {
             baseInterfaceHandle.removeSocket(uuid);
             closeCallback(uuid);
         }
@@ -110,8 +110,8 @@ export const websocketServerDenoComInterfaceFactory: ComInterfaceFactory<
             allow_redirects: false,
             is_secure_channel: false,
             reconnection_config: "NoReconnect",
-            auto_identify: false,
-            connectable_interfaces: [], // TODO
+            auto_identify: true,
+            connectable_interfaces: [], // TODO add websocket client connections
         } satisfies InterfaceProperties;
     },
 };

@@ -16,15 +16,39 @@ export type SerialInterfaceSetupDataJS = SerialInterfaceSetupData;
 
 export type InterfacePriority = "None" | { Priority: number };
 
-export interface WebRTCInterfaceSetupData {
-    peer_endpoint: string;
-    ice_servers: RTCIceServer[] | undefined;
+export interface ComHubMetadataInterfaceSocket {
+    uuid: string;
+    direction: InterfaceDirection;
+    endpoint: Endpoint | undefined;
+    properties: DynamicEndpointProperties | undefined;
 }
 
-export interface RTCIceServer {
-    urls: string[];
-    username: string | undefined;
-    credential: string | undefined;
+export interface ComHubMetadataInterfaceSocketWithoutEndpoint {
+    uuid: string;
+    direction: InterfaceDirection;
+}
+
+export interface ComHubMetadataInterface {
+    uuid: string;
+    properties: InterfaceProperties;
+    sockets: ComHubMetadataInterfaceSocket[];
+}
+
+export interface ComHubMetadata {
+    endpoint: Endpoint;
+    interfaces: ComHubMetadataInterface[];
+    endpoint_sockets: Map<
+        Endpoint,
+        [ComInterfaceSocketUUID, DynamicEndpointProperties][]
+    >;
+}
+
+export interface DynamicEndpointProperties {
+    known_since: number;
+    distance: number;
+    is_direct: boolean;
+    channel_factor: number;
+    direction: InterfaceDirection;
 }
 
 export interface WebSocketClientInterfaceSetupData {
@@ -52,6 +76,12 @@ export interface WebSocketServerInterfaceSetupData {
     accept_addresses: [string, TLSMode | undefined][] | undefined;
 }
 
+export interface RuntimeConfigInterface {
+    type: string;
+    config: unknown;
+    priority?: InterfacePriority;
+}
+
 export interface DecompileOptions {
     formatting_options?: FormattingOptions;
     /**
@@ -75,15 +105,20 @@ export interface FormattingOptions {
     add_variant_suffix?: boolean;
 }
 
-export interface RuntimeConfigInterface {
-    type: string;
-    config: unknown;
-    priority?: InterfacePriority;
-}
-
 export interface SerialInterfaceSetupData {
     port_name: string | undefined;
     baud_rate: number;
+}
+
+export interface WebRTCInterfaceSetupData {
+    peer_endpoint: string;
+    ice_servers: RTCIceServer[] | undefined;
+}
+
+export interface RTCIceServer {
+    urls: string[];
+    username: string | undefined;
+    credential: string | undefined;
 }
 
 export type InterfaceDirection = "In" | "Out" | "InOut";
@@ -164,6 +199,10 @@ export class BaseInterfaceHandle {
         direct_endpoint?: string | null,
     ): string;
     destroy(): void;
+    /**
+     * Gets the current state of the interface
+     */
+    getState(): string;
 }
 export class JSComHub {
     private constructor();
@@ -186,6 +225,7 @@ export class JSComHub {
         priority?: number | null,
     ): Promise<string>;
     get_trace_string(endpoint: string): Promise<string | undefined>;
+    get_metadata(): any;
     close_interface(interface_uuid: string): void;
     get_metadata_string(): string;
     register_interface_factory(interface_type: string, factory: Function): void;
