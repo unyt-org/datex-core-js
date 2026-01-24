@@ -186,7 +186,7 @@ export class JSComHub {
         priority?: number | null,
     ): Promise<string>;
     get_trace_string(endpoint: string): Promise<string | undefined>;
-    close_interface(interface_uuid: string): any;
+    close_interface(interface_uuid: string): void;
     get_metadata_string(): string;
     register_interface_factory(interface_type: string, factory: Function): void;
     register_incoming_block_interceptor(callback: Function): void;

@@ -71,6 +71,10 @@ export class ComHub {
         );
     }
 
+    public closeInterface(interface_uuid: string): void {
+        this.#jsComHub.close_interface(interface_uuid);
+    }
+
     /**
      * Prints the metadata of the ComHub. Only available in debug builds.
      */

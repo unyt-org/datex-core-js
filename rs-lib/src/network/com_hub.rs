@@ -165,7 +165,7 @@ impl JSComHub {
     pub fn close_interface(
         &self,
         interface_uuid: String,
-    ) -> Result<JsValue, JsError> {
+    ) -> Result<(), JsError> {
         let interface_uuid =
             ComInterfaceUUID(UUID::from_string(interface_uuid));
         let runtime = self.runtime.clone();
@@ -175,7 +175,7 @@ impl JSComHub {
             com_hub
                 .remove_interface(interface_uuid.clone())
                 .map_err(|e| JsError::new(&format!("{e:?}")))?;
-            Ok(JsValue::TRUE)
+            Ok(())
         } else {
             error!("Failed to find interface");
             Err(JsError::new("Failed to find interface"))
@@ -242,7 +242,7 @@ impl JSComHub {
 
     #[cfg(feature = "debug")]
     pub fn get_metadata_string(&self) -> String {
-        let metadata = self.com_hub().metadata();
+        let metadata = self.com_hub().get_metadata();
         metadata.to_string()
     }
 
