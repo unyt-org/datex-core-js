@@ -10,9 +10,10 @@ Deno.test("add and close interface", async () => {
     runtime.comHub.registerInterfaceFactory(websocketServerDenoComInterfaceFactory);
     const serverInterfaceUUID = await runtime.comHub.createInterface(
         "websocket-server",
-        { port: 1234 },
+        { bind_address: "0.0.0.0:1234" },
     );
-    assert(uuid.validate(serverInterfaceUUID), "Invalid UUID");
+    assert(serverInterfaceUUID.startsWith("com_interface::"), "Invalid interface UUID");
+    assert(uuid.validate(serverInterfaceUUID.replace("com_interface::", "")), "Invalid UUID format");
     runtime.comHub.closeInterface(serverInterfaceUUID);
 });
 
@@ -31,13 +32,13 @@ Deno.test("connect two runtimes", async () => {
 
     const serverInterfaceUUID = await runtimeA.comHub.createInterface(
         "websocket-server",
-        { port: PORT, secure: false },
+        { bind_address: `0.0.0.0:${PORT}` },
     );
 
     const runtimeB = new Runtime({ endpoint: "@test_b" });
     const clientInterfaceUUID = await runtimeB.comHub.createInterface(
         "websocket-client",
-        { address: `ws://localhost:${PORT}` },
+        { url: `ws://localhost:${PORT}` },
     );
 
     runtimeA.comHub.closeInterface(serverInterfaceUUID);
@@ -53,14 +54,14 @@ Deno.test("send data between two runtimes", async () => {
         return;
     }
 
-    const PORT = 8082;
+    const PORT = 8083;
     const runtimeA = await Runtime.create({ endpoint: "@test_a" }, {
         allow_unsigned_blocks: true,
     });
     runtimeA.comHub.registerInterfaceFactory(websocketServerDenoComInterfaceFactory);
     const serverInterfaceUUID = await runtimeA.comHub.createInterface(
         "websocket-server",
-        { port: PORT },
+        { bind_address: `0.0.0.0:${PORT}` },
     );
 
     const runtimeB = await Runtime.create({ endpoint: "@test_b" }, {
@@ -68,7 +69,7 @@ Deno.test("send data between two runtimes", async () => {
     });
     const clientInterfaceUUID = await runtimeB.comHub.createInterface(
         "websocket-client",
-        { address: `ws://localhost:${PORT}` },
+        { url: `ws://localhost:${PORT}` },
     );
 
     await sleep(1000);

@@ -50,6 +50,12 @@ export const websocketServerDenoComInterfaceFactory: ComInterfaceFactory<
     interfaceType: "websocket-server",
     factory: (baseInterfaceHandle, setupData) => {
         const sockets: Map<string, WebSocket> = new Map();
+        // FIXME: workaround, convert map to object if map provided as setupData
+        if (setupData instanceof Map) {
+            setupData = Object.fromEntries(
+                Array.from(setupData.entries()),
+            ) as unknown as WebSocketServerInterfaceSetupData;
+        }
 
         const [hostname, maybe_port] = setupData.bind_address.split(":");
         const port = maybe_port ? parseInt(maybe_port) : undefined;

@@ -16,6 +16,9 @@ export type ComInterfaceFactoryFn<SetupData = unknown> = (
     setup_data: SetupData,
 ) => InterfaceProperties | Promise<InterfaceProperties>;
 
+export type ComInterfaceUUID = `com_interface::${string}`;
+export type ComInterfaceSocketUUID = `socket::${string}`;
+
 /**
  * Communication hub for managing communication interfaces.
  */
@@ -63,15 +66,15 @@ export class ComHub {
         type: string,
         setupData: SetupData,
         priority?: number,
-    ): Promise<string> {
+    ): Promise<ComInterfaceUUID> {
         return await this.#jsComHub.create_interface(
             type,
             this.#runtime.dif.convertJSValueToDIFValueContainer(setupData),
             priority,
-        );
+        ) as ComInterfaceUUID;
     }
 
-    public closeInterface(interface_uuid: string): void {
+    public closeInterface(interface_uuid: ComInterfaceUUID): void {
         this.#jsComHub.close_interface(interface_uuid);
     }
 

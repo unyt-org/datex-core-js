@@ -2,7 +2,7 @@ import {
     create_runtime,
     type DecompileOptions,
     execute_internal,
-    type JSRuntime,
+    JSRuntime,
 } from "../datex-core.ts";
 import { ComHub } from "../network/com-hub.ts";
 import { DIFHandler, type PointerOut } from "../dif/dif-handler.ts";
@@ -41,7 +41,9 @@ export class Runtime {
     readonly #difHandler: DIFHandler;
 
     constructor(config: RuntimeConfig, debug_flags?: DebugFlags) {
-        this.#runtime = create_runtime(JSON.stringify(config), debug_flags);
+        // workaround: temp dif handler without runtime to convert config to DIF
+        const configDIF = DIFHandler.convertJSValueToDIFValueContainer(config);
+        this.#runtime = create_runtime(configDIF, debug_flags);
         this.#comHub = new ComHub(this.#runtime.com_hub, this);
         this.#difHandler = new DIFHandler(this.#runtime);
     }

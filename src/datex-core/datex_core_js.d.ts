@@ -16,6 +16,17 @@ export type SerialInterfaceSetupDataJS = SerialInterfaceSetupData;
 
 export type InterfacePriority = "None" | { Priority: number };
 
+export interface WebRTCInterfaceSetupData {
+    peer_endpoint: string;
+    ice_servers: RTCIceServer[] | undefined;
+}
+
+export interface RTCIceServer {
+    urls: string[];
+    username: string | undefined;
+    credential: string | undefined;
+}
+
 export interface WebSocketClientInterfaceSetupData {
     /**
      * A websocket URL (ws:// or wss://).
@@ -41,15 +52,33 @@ export interface WebSocketServerInterfaceSetupData {
     accept_addresses: [string, TLSMode | undefined][] | undefined;
 }
 
+export interface DecompileOptions {
+    formatting_options?: FormattingOptions;
+    /**
+     * display slots with generated variable names
+     */
+    resolve_slots?: boolean;
+}
+
+export type IndentType = "Spaces" | "Tabs";
+
+export type FormattingMode = { type: "Compact" } | {
+    type: "Pretty";
+    indent: number;
+    indent_type?: IndentType;
+};
+
+export interface FormattingOptions {
+    mode?: FormattingMode;
+    json_compat?: boolean;
+    colorized?: boolean;
+    add_variant_suffix?: boolean;
+}
+
 export interface RuntimeConfigInterface {
     type: string;
     config: unknown;
     priority?: InterfacePriority;
-}
-
-export interface WebRTCInterfaceSetupData {
-    peer_endpoint: string;
-    ice_servers: RTCIceServer[] | undefined;
 }
 
 export interface SerialInterfaceSetupData {
@@ -120,35 +149,6 @@ export type ReconnectionConfig = "NoReconnect" | "InstantReconnect" | {
         attempts: number;
     };
 };
-
-export interface RTCIceServer {
-    urls: string[];
-    username: string | undefined;
-    credential: string | undefined;
-}
-
-export interface DecompileOptions {
-    formatting_options?: FormattingOptions;
-    /**
-     * display slots with generated variable names
-     */
-    resolve_slots?: boolean;
-}
-
-export type IndentType = "Spaces" | "Tabs";
-
-export type FormattingMode = { type: "Compact" } | {
-    type: "Pretty";
-    indent: number;
-    indent_type?: IndentType;
-};
-
-export interface FormattingOptions {
-    mode?: FormattingMode;
-    json_compat?: boolean;
-    colorized?: boolean;
-    add_variant_suffix?: boolean;
-}
 
 export class BaseInterfaceHandle {
     private constructor();

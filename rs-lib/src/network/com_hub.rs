@@ -167,7 +167,7 @@ impl JSComHub {
         interface_uuid: String,
     ) -> Result<(), JsError> {
         let interface_uuid =
-            ComInterfaceUUID(UUID::from_string(interface_uuid));
+            ComInterfaceUUID::try_from(interface_uuid).map_err(|e| JsError::new(&format!("{e:?}")))?;
         let runtime = self.runtime.clone();
         let com_hub = runtime.com_hub();
         let has_interface = { com_hub.has_interface(&interface_uuid) };
