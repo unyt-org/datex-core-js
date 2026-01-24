@@ -1,19 +1,20 @@
-import type { BaseInterfaceHandle, JSComHub} from "../datex-core/datex_core_js.d.ts";
-import type { DIFValueContainer } from "../dif/definitions.ts";
 import type {
-    InterfaceProperties,
-} from "../datex-core.ts";
+    BaseInterfaceHandle,
+    JSComHub,
+} from "../datex-core/datex_core_js.d.ts";
+import type { DIFValueContainer } from "../dif/definitions.ts";
+import type { InterfaceProperties } from "../datex-core.ts";
 import type { Runtime } from "../runtime/runtime.ts";
 
 export type ComInterfaceFactory<SetupData = unknown> = {
     interfaceType: string;
     factory: ComInterfaceFactoryFn<SetupData>;
-}
+};
 
 export type ComInterfaceFactoryFn<SetupData = unknown> = (
     handle: BaseInterfaceHandle,
     setup_data: SetupData,
-) => InterfaceProperties | Promise<InterfaceProperties>
+) => InterfaceProperties | Promise<InterfaceProperties>;
 
 /**
  * Communication hub for managing communication interfaces.

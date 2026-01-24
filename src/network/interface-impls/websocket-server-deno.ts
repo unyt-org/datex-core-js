@@ -1,15 +1,23 @@
-import {ComHub, ComInterfaceFactory, ComInterfaceFactoryFn} from "../com-hub.ts";
+import type {
+    ComHub,
+    ComInterfaceFactory,
+    ComInterfaceFactoryFn,
+} from "../com-hub.ts";
 import type {
     BaseInterfaceHandle,
     InterfaceProperties,
-    WebSocketServerInterfaceSetupData
+    WebSocketServerInterfaceSetupData,
 } from "../../datex-core/datex_core_js.d.ts";
 
 /**
  * General utility functions for WebSockets that can be reused for different socket server implementations.
  */
-export function registerWebSocket(webSocket: WebSocket, baseInterfaceHandle: BaseInterfaceHandle, closeCallback: (uuid: string) => void): Promise<string> {
-    let uuid: string|null = null;
+export function registerWebSocket(
+    webSocket: WebSocket,
+    baseInterfaceHandle: BaseInterfaceHandle,
+    closeCallback: (uuid: string) => void,
+): Promise<string> {
+    let uuid: string | null = null;
 
     const { promise, resolve, reject } = Promise.withResolvers<string>();
 
@@ -20,19 +28,19 @@ export function registerWebSocket(webSocket: WebSocket, baseInterfaceHandle: Bas
             baseInterfaceHandle.sendBlock(uuid!, new Uint8Array(event.data));
         };
 
-        resolve(uuid)
+        resolve(uuid);
     }, { once: true });
 
     webSocket.addEventListener("error", () => {
         if (uuid) {
-            baseInterfaceHandle.removeSocket(uuid)
+            baseInterfaceHandle.removeSocket(uuid);
         }
         reject();
     }, { once: true });
 
     webSocket.addEventListener("close", () => {
         if (uuid) {
-            baseInterfaceHandle.removeSocket(uuid)
+            baseInterfaceHandle.removeSocket(uuid);
             closeCallback(uuid);
         }
     }, { once: true });
@@ -40,12 +48,14 @@ export function registerWebSocket(webSocket: WebSocket, baseInterfaceHandle: Bas
     return promise;
 }
 
-export const websocketServerDenoComInterfaceFactory: ComInterfaceFactory<WebSocketServerInterfaceSetupData> = {
+export const websocketServerDenoComInterfaceFactory: ComInterfaceFactory<
+    WebSocketServerInterfaceSetupData
+> = {
     interfaceType: "websocket-server",
     factory: (baseInterfaceHandle, setupData) => {
         const sockets: Map<string, WebSocket> = new Map();
 
-        const server =  Deno.serve({
+        const server = Deno.serve({
             port: setupData.port,
         }, (req) => {
             if (req.headers.get("upgrade") != "websocket") {
@@ -53,8 +63,12 @@ export const websocketServerDenoComInterfaceFactory: ComInterfaceFactory<WebSock
             }
             const { socket: webSocket, response } = Deno.upgradeWebSocket(req);
 
-            registerWebSocket(webSocket, baseInterfaceHandle, uuid => sockets.delete(uuid))
-                .then(uuid => sockets.set(uuid, webSocket))
+            registerWebSocket(
+                webSocket,
+                baseInterfaceHandle,
+                (uuid) => sockets.delete(uuid),
+            )
+                .then((uuid) => sockets.set(uuid, webSocket));
             return response;
         });
 
@@ -64,16 +78,19 @@ export const websocketServerDenoComInterfaceFactory: ComInterfaceFactory<WebSock
         });
 
         // outgoing data handler
-        baseInterfaceHandle.onReceive((socket_uuid: string, data: Uint8Array) => {
-            const socket = sockets.get(socket_uuid);
-            if (socket) {
-                socket.send(data);
-            }
-            else {
-                // TODO:
-                console.error(`WebSocketServer: No socket found for UUID ${socket_uuid}`);
-            }
-        });
+        baseInterfaceHandle.onReceive(
+            (socket_uuid: string, data: Uint8Array) => {
+                const socket = sockets.get(socket_uuid);
+                if (socket) {
+                    socket.send(data);
+                } else {
+                    // TODO:
+                    console.error(
+                        `WebSocketServer: No socket found for UUID ${socket_uuid}`,
+                    );
+                }
+            },
+        );
 
         // TODO: set properties
         return {
@@ -89,7 +106,7 @@ export const websocketServerDenoComInterfaceFactory: ComInterfaceFactory<WebSock
             reconnection_config: "NoReconnect",
             auto_identify: false,
             close_timestamp: undefined,
-            reconnect_attempts: undefined
-        } satisfies InterfaceProperties
-    }
-}
+            reconnect_attempts: undefined,
+        } satisfies InterfaceProperties;
+    },
+};

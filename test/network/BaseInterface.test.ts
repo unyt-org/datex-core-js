@@ -1,11 +1,11 @@
 import { assert } from "@std/assert/assert";
 import { Runtime } from "../../src/runtime/runtime.ts";
-import * as uuid from "@std/uuid";
-import { sleep } from "../utils.ts";
-import { assertFalse } from "@std/assert/false";
+import type * as uuid from "@std/uuid";
+import type { sleep } from "../utils.ts";
+import type { assertFalse } from "@std/assert/false";
 import { assertEquals } from "@std/assert/equals";
-import { assertThrows } from "@std/assert/throws";
-import { isNodeOrBun } from "../is-node.ts";
+import type { assertThrows } from "@std/assert/throws";
+import type { isNodeOrBun } from "../is-node.ts";
 import type { InterfaceProperties } from "../../src/datex-core.ts";
 // TODO https://github.com/unyt-org/datex-core-js/issues/47
 const config: InterfaceProperties = {
