@@ -4,7 +4,6 @@ import { Runtime } from "../../src/runtime/runtime.ts";
 import { sleep } from "../utils.ts";
 import * as uuid from "@std/uuid";
 import { isNodeOrBun } from "../is-node.ts";
-import "../../src/network/interface-impls/websocket-client.ts";
 
 Deno.test("invalid url construct", async () => {
     const runtime = new Runtime({ endpoint: "@unyt" });
@@ -51,12 +50,12 @@ Deno.test("websocket basic connect", async () => {
     const mockupServer = createMockupServer(port);
     const runtime = new Runtime({ endpoint: "@unyt" });
     await new Promise((resolve) => setTimeout(resolve, 1000));
-    const connection = await runtime.comHub.createInterface(
+    const interface_uuid = await runtime.comHub.createInterface(
         "websocket-client",
         { address: `ws://localhost:${port}/` },
     );
     await using _ = await mockupServer;
-    assert(uuid.validate(connection.uuid), "Invalid UUID");
+    assert(uuid.validate(interface_uuid), "Invalid UUID");
 });
 
 Deno.test("websocket block retrieval", async () => {

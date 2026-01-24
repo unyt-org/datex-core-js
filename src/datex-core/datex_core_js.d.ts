@@ -14,16 +14,7 @@ export function execute(datex_script: string, decompile_options: any): string;
 export function execute_internal(datex_script: string): boolean;
 export type SerialInterfaceSetupDataJS = SerialInterfaceSetupData;
 
-export interface RTCIceServer {
-    urls: string[];
-    username: string | undefined;
-    credential: string | undefined;
-}
-
-export interface WebRTCInterfaceSetupData {
-    peer_endpoint: string;
-    ice_servers: RTCIceServer[] | undefined;
-}
+export type InterfacePriority = "None" | { Priority: number };
 
 export interface WebSocketClientInterfaceSetupData {
     /**
@@ -48,6 +39,22 @@ export interface WebSocketServerInterfaceSetupData {
      * E.g., [(\"example.com\", Some(TLSMode::WithCertificate { ... })), (\"example.org:1234\", None)]
      */
     accept_addresses: [string, TLSMode | undefined][] | undefined;
+}
+
+export interface RuntimeConfigInterface {
+    type: string;
+    config: unknown;
+    priority?: InterfacePriority;
+}
+
+export interface WebRTCInterfaceSetupData {
+    peer_endpoint: string;
+    ice_servers: RTCIceServer[] | undefined;
+}
+
+export interface SerialInterfaceSetupData {
+    port_name: string | undefined;
+    baud_rate: number;
 }
 
 export type InterfaceDirection = "In" | "Out" | "InOut";
@@ -113,6 +120,12 @@ export type ReconnectionConfig = "NoReconnect" | "InstantReconnect" | {
         attempts: number;
     };
 };
+
+export interface RTCIceServer {
+    urls: string[];
+    username: string | undefined;
+    credential: string | undefined;
+}
 
 export interface DecompileOptions {
     formatting_options?: FormattingOptions;
