@@ -26,7 +26,7 @@ use web_sys::{ErrorEvent, MessageEvent, js_sys};
 
 wrap_error_for_js!(JSWebSocketServerError, datex_core::network::com_interfaces::default_com_interfaces::websocket::websocket_common::WebSocketServerError);
 
-#[Derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct WebSocketServerInterfaceSetupDataJS(
     WebSocketServerInterfaceSetupData,
 );
