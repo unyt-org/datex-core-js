@@ -8,13 +8,21 @@ import { sleep } from "../utils.ts";
 
 Deno.test("add and close interface", async () => {
     const runtime = new Runtime({ endpoint: "@unyt" });
-    runtime.comHub.registerInterfaceFactory(websocketServerDenoComInterfaceFactory);
+    runtime.comHub.registerInterfaceFactory(
+        websocketServerDenoComInterfaceFactory,
+    );
     const serverInterfaceUUID = await runtime.comHub.createInterface(
         "websocket-server",
         { bind_address: "0.0.0.0:1234" },
     );
-    assert(serverInterfaceUUID.startsWith("com_interface::"), "Invalid interface UUID");
-    assert(uuid.validate(serverInterfaceUUID.replace("com_interface::", "")), "Invalid UUID format");
+    assert(
+        serverInterfaceUUID.startsWith("com_interface::"),
+        "Invalid interface UUID",
+    );
+    assert(
+        uuid.validate(serverInterfaceUUID.replace("com_interface::", "")),
+        "Invalid UUID format",
+    );
     runtime.comHub.closeInterface(serverInterfaceUUID);
 });
 
@@ -29,7 +37,9 @@ Deno.test("connect two runtimes", async () => {
 
     const PORT = 8082;
     const runtimeA = new Runtime({ endpoint: "@test_a" });
-    runtimeA.comHub.registerInterfaceFactory(websocketServerDenoComInterfaceFactory);
+    runtimeA.comHub.registerInterfaceFactory(
+        websocketServerDenoComInterfaceFactory,
+    );
 
     const serverInterfaceUUID = await runtimeA.comHub.createInterface(
         "websocket-server",
@@ -47,17 +57,23 @@ Deno.test("connect two runtimes", async () => {
     runtimeA.comHub.printMetadata();
     runtimeB.comHub.printMetadata();
 
-    const serverInterfaceMetadata = runtimeA.comHub.getMetadata().interfaces.find(v => v.uuid === serverInterfaceUUID);
+    const serverInterfaceMetadata = runtimeA.comHub.getMetadata().interfaces
+        .find((v) => v.uuid === serverInterfaceUUID);
     assert(serverInterfaceMetadata !== undefined);
-    const serverSocketMetadata = serverInterfaceMetadata.sockets.find(v => v.endpoint === "@test_b");
+    const serverSocketMetadata = serverInterfaceMetadata.sockets.find((v) =>
+        v.endpoint === "@test_b"
+    );
     assert(serverSocketMetadata !== undefined);
     assertEquals(serverSocketMetadata.direction, "InOut");
     assertEquals(serverSocketMetadata.properties!.is_direct, true);
     assertEquals(serverSocketMetadata.properties!.distance, 1);
 
-    const clientInterfaceMetaData = runtimeB.comHub.getMetadata().interfaces.find(v => v.uuid === clientInterfaceUUID);
+    const clientInterfaceMetaData = runtimeB.comHub.getMetadata().interfaces
+        .find((v) => v.uuid === clientInterfaceUUID);
     assert(clientInterfaceMetaData !== undefined);
-    const clientSocketMetadata = clientInterfaceMetaData.sockets.find(v => v.endpoint === "@test_a");
+    const clientSocketMetadata = clientInterfaceMetaData.sockets.find((v) =>
+        v.endpoint === "@test_a"
+    );
     assert(clientSocketMetadata !== undefined);
     assertEquals(clientSocketMetadata.direction, "InOut");
     assertEquals(clientSocketMetadata.properties!.is_direct, true);
@@ -80,7 +96,9 @@ Deno.test("send data between two runtimes", async () => {
     const runtimeA = await Runtime.create({ endpoint: "@test_a" }, {
         allow_unsigned_blocks: true,
     });
-    runtimeA.comHub.registerInterfaceFactory(websocketServerDenoComInterfaceFactory);
+    runtimeA.comHub.registerInterfaceFactory(
+        websocketServerDenoComInterfaceFactory,
+    );
     const serverInterfaceUUID = await runtimeA.comHub.createInterface(
         "websocket-server",
         { bind_address: `0.0.0.0:${PORT}` },

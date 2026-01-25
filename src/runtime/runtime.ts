@@ -2,7 +2,7 @@ import {
     create_runtime,
     type DecompileOptions,
     execute_internal,
-    JSRuntime,
+    type JSRuntime,
 } from "../datex-core.ts";
 import { ComHub } from "../network/com-hub.ts";
 import { DIFHandler, type PointerOut } from "../dif/dif-handler.ts";

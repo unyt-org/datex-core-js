@@ -1,5 +1,6 @@
 import type {
-    BaseInterfaceHandle, ComHubMetadata,
+    BaseInterfaceHandle,
+    ComHubMetadata,
     JSComHub,
 } from "../datex-core/datex_core_js.d.ts";
 import type { DIFValueContainer } from "../dif/definitions.ts";

@@ -1102,9 +1102,10 @@ export class DIFHandler {
         difHandlerInstance?: DIFHandler,
     ): DIFValueContainer {
         // if the value is a registered reference, return its address
-        const existingReference = difHandlerInstance && difHandlerInstance.tryGetReferenceMetadata(
-            value as WeakKey,
-        );
+        const existingReference = difHandlerInstance &&
+            difHandlerInstance.tryGetReferenceMetadata(
+                value as WeakKey,
+            );
         if (existingReference) {
             return existingReference.address;
         }

@@ -1,4 +1,4 @@
-import { assert, assertEquals, assertRejects } from "@std/assert";
+import { assert, assertRejects } from "@std/assert";
 import { createMockupServer } from "./WebsocketMockupServer.ts";
 import { Runtime } from "../../src/runtime/runtime.ts";
 import { sleep } from "../utils.ts";
@@ -55,8 +55,14 @@ Deno.test("websocket basic connect", async () => {
         "websocket-client",
         { url: `ws://localhost:${port}` },
     );
-    assert(interfaceUUID.startsWith("com_interface::"), "Invalid interface UUID");
-    assert(uuid.validate(interfaceUUID.replace("com_interface::", "")), "Invalid UUID format");
+    assert(
+        interfaceUUID.startsWith("com_interface::"),
+        "Invalid interface UUID",
+    );
+    assert(
+        uuid.validate(interfaceUUID.replace("com_interface::", "")),
+        "Invalid UUID format",
+    );
 
     runtime.comHub.printMetadata();
     await using _ = await mockupServer;
@@ -81,9 +87,12 @@ Deno.test("websocket block retrieval", async () => {
     const runtime = new Runtime({ endpoint: "@unyt" }, {
         allow_unsigned_blocks: true,
     });
-    let interfaceUUID = await runtime.comHub.createInterface("websocket-client", {
-        url: `ws://localhost:${port}`,
-    });
+    const interfaceUUID = await runtime.comHub.createInterface(
+        "websocket-client",
+        {
+            url: `ws://localhost:${port}`,
+        },
+    );
     await using server = await mockupServer;
 
     const block = runtime._runtime._create_block(
