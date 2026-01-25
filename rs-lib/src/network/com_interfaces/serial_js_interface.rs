@@ -1,70 +1,82 @@
-use std::cell::RefCell;
-use std::future::Future;
-use std::pin::Pin;
-use std::rc::Rc;
-use std::sync::Mutex;
-use std::time::Duration; // FIXME no-std
+use datex_core::network::com_hub::{
+    errors::InterfaceCreateError,
+    managers::interfaces_manager::ComInterfaceAsyncFactoryResult,
+};
+use serde::{Deserialize, Serialize};
+use std::{
+    ops::Deref,
+    time::Duration,
+};
 
-use datex_core::{ delegate_com_interface_info, set_opener};
-use datex_core::network::com_interfaces::com_interface::{ComInterface, ComInterfaceError, ComInterfaceFactory, ComInterfaceInfo};
-use datex_core::network::com_interfaces::com_interface_properties::InterfaceProperties;
-use datex_core::network::com_interfaces::com_interface_socket::ComInterfaceSocketUUID;
-use datex_core::network::com_interfaces::default_com_interfaces::serial::serial_common::{SerialError, SerialInterfaceSetupData};
-use datex_core::stdlib::sync::Arc;
-
-use datex_core::network::com_interfaces::com_interface::ComInterfaceState;
+use datex_core::network::com_interfaces::{
+        com_interface::{
+            ComInterfaceEvent, ComInterfaceProxy,
+            error::ComInterfaceError,
+            factory::{
+                ComInterfaceAsyncFactory, ComInterfaceSyncFactory,
+            },
+            properties::{InterfaceDirection, InterfaceProperties},
+        },
+        default_com_interfaces::serial::serial_common::{
+            SerialError, SerialInterfaceSetupData,
+        },
+    };
 
 use crate::wrap_error_for_js;
 use datex_core::task::spawn_with_panic_notify_default;
 use log::{debug, error};
 use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::JsFuture;
-use web_sys::SerialPort;
-use web_sys::js_sys::Uint8Array;
 use web_sys::{
-    ReadableStreamDefaultReader, SerialOptions, WritableStreamDefaultWriter,
-    js_sys,
+    ReadableStreamDefaultReader, SerialOptions, SerialPort, js_sys, js_sys::Uint8Array,
 };
-
-pub struct SerialJSInterface {
-    port: Option<SerialPort>,
-    tx: Option<Rc<RefCell<WritableStreamDefaultWriter>>>,
-    info: ComInterfaceInfo,
-    options: SerialOptions,
-}
 
 wrap_error_for_js!(JsSerialError, datex_core::network::com_interfaces::default_com_interfaces::serial::serial_common::SerialError);
 
-use datex_macros::{com_interface, create_opener};
+#[derive(tsify::Tsify, Serialize, Deserialize)]
+pub struct SerialInterfaceSetupDataJS(pub SerialInterfaceSetupData);
+impl Deref for SerialInterfaceSetupDataJS {
+    type Target = SerialInterfaceSetupData;
 
-#[com_interface]
-impl SerialJSInterface {
-    pub fn new(baud_rate: u32) -> Result<SerialJSInterface, JsSerialError> {
-        let interface = SerialJSInterface {
-            info: ComInterfaceInfo::new(),
-            tx: None,
-            port: None,
-            options: SerialOptions::new(baud_rate),
-        };
-        Ok(interface)
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
+}
 
-    #[create_opener]
-    async fn open(&mut self) -> Result<(), SerialError> {
+impl SerialInterfaceSetupDataJS {
+    async fn create_interface(
+        &self,
+        mut com_interface_proxy: ComInterfaceProxy,
+    ) -> Result<InterfaceProperties, InterfaceCreateError> {
         let window = web_sys::window()
-            .ok_or(SerialError::Other("Unsupported platform".to_string()))?;
+            .ok_or(SerialError::Other("Unsupported platform".to_string()))
+            .map_err(|e| {
+                InterfaceCreateError::InterfaceError(
+                    ComInterfaceError::connection_error_with_details(e),
+                )
+            })?;
         let navigator = window.navigator();
         let serial = navigator.serial();
 
         let port_promise = serial.request_port();
         let port_js = JsFuture::from(port_promise)
             .await
-            .map_err(|_| SerialError::PermissionError)?;
+            .map_err(|_| SerialError::PermissionError)
+            .map_err(|e| {
+                InterfaceCreateError::InterfaceError(
+                    ComInterfaceError::connection_error_with_details(e),
+                )
+            })?;
         let port: SerialPort = port_js.into();
 
-        JsFuture::from(port.open(&self.options))
+        JsFuture::from(port.open(&SerialOptions::new(self.baud_rate)))
             .await
-            .map_err(|_| SerialError::PortNotFound)?;
+            .map_err(|_| SerialError::PortNotFound)
+            .map_err(|e| {
+                InterfaceCreateError::InterfaceError(
+                    ComInterfaceError::connection_error_with_details(e),
+                )
+            })?;
 
         let readable = port.readable();
         let reader = readable
@@ -73,7 +85,12 @@ impl SerialJSInterface {
             .unwrap();
         let writable = port.writable();
         let writer = writable.get_writer().unwrap();
-        self.tx = Some(Rc::new(RefCell::new(writer)));
+
+        // create new socket
+        let (socket_uuid, mut sender) = com_interface_proxy
+            .create_and_init_socket(InterfaceDirection::InOut, 1);
+
+        // handle incoming data
         spawn_with_panic_notify_default(async move {
             loop {
                 let result = JsFuture::from(reader.read()).await;
@@ -96,6 +113,7 @@ impl SerialJSInterface {
                                 .unwrap()
                                 .to_vec();
                             println!("Received bytes: {bytes:?}");
+                            sender.start_send(bytes).unwrap();
                         }
                     }
                     Err(_) => {
@@ -106,17 +124,43 @@ impl SerialJSInterface {
             }
             reader.release_lock();
         });
-        self.port = Some(port.clone());
-        Ok(())
+
+        // handle outgoing data
+        spawn_with_panic_notify_default(async move {
+            while let Some(event) =
+                com_interface_proxy.event_receiver.next().await
+            {
+                match event {
+                    ComInterfaceEvent::SendBlock(block, _) => {
+                        let js_array =
+                            Uint8Array::from(block.to_bytes().as_slice());
+                        let promise = writer.write_with_chunk(&js_array);
+                        debug!("Sending block: {block:?}");
+                        JsFuture::from(promise).await.unwrap();
+                    }
+                    ComInterfaceEvent::Destroy => {
+                        JsFuture::from(port.close()).await.unwrap();
+                    }
+                    _ => todo!(),
+                }
+            }
+        });
+
+        Ok(InterfaceProperties {
+            created_sockets: Some(vec![socket_uuid]),
+            ..InterfaceProperties::default()
+        })
     }
 }
 
-impl ComInterfaceFactory<SerialInterfaceSetupData> for SerialJSInterface {
-    fn create(
-        setup_data: SerialInterfaceSetupData,
-    ) -> Result<SerialJSInterface, ComInterfaceError> {
-        SerialJSInterface::new(setup_data.baud_rate)
-            .map_err(|_| ComInterfaceError::InvalidSetupData)
+impl ComInterfaceAsyncFactory for SerialInterfaceSetupDataJS {
+    fn create_interface(
+        self,
+        com_interface_proxy: ComInterfaceProxy,
+    ) -> ComInterfaceAsyncFactoryResult {
+        Box::pin(
+            async move { self.create_interface(com_interface_proxy).await },
+        )
     }
 
     fn get_default_properties() -> InterfaceProperties {
@@ -128,47 +172,4 @@ impl ComInterfaceFactory<SerialInterfaceSetupData> for SerialJSInterface {
             ..InterfaceProperties::default()
         }
     }
-}
-
-impl ComInterface for SerialJSInterface {
-    fn send_block<'a>(
-        &'a mut self,
-        block: &'a [u8],
-        _: ComInterfaceSocketUUID,
-    ) -> Pin<Box<dyn Future<Output = bool> + 'a>> {
-        let tx = self.tx.clone();
-        if tx.is_none() {
-            error!("Client is not connected");
-            return Box::pin(async { false });
-        }
-        let tx = tx.unwrap();
-        Box::pin(async move {
-            let js_array = Uint8Array::from(block);
-            let promise = tx.borrow().write_with_chunk(&js_array);
-            debug!("Sending block: {block:?}");
-            match JsFuture::from(promise).await {
-                Ok(_) => true,
-                Err(e) => {
-                    error!("Error sending message: {e:?}");
-                    false
-                }
-            }
-        })
-    }
-
-    fn init_properties(&self) -> InterfaceProperties {
-        Self::get_default_properties()
-    }
-    fn handle_close<'a>(
-        &'a mut self,
-    ) -> Pin<Box<dyn Future<Output = bool> + 'a>> {
-        // TODO add shutdown hook
-        let port = self.port.as_ref();
-        Box::pin(async move {
-            let result = JsFuture::from(port.unwrap().close()).await;
-            result.is_ok()
-        })
-    }
-    delegate_com_interface_info!();
-    set_opener!(open);
 }

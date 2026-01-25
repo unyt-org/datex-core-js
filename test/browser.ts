@@ -1,14 +1,7 @@
 // deno-lint-ignore-file
 import { Runtime } from "../src/mod.ts";
 import { parseStructure } from "https://cdn.jsdelivr.net/npm/@unyt/speck@0.0.10/esm/parser.js";
-import { SerialInterfaceImpl } from "../src/network/interface-impls/serial.ts";
 import { WebRTCInterfaceImpl } from "../src/network/interface-impls/webrtc.ts";
-
-import "../src/network/interface-impls/base.ts";
-import type {
-    BaseInterfaceImpl,
-    BaseInterfaceSetupData,
-} from "../src/network/interface-impls/base.ts";
 
 const definition = await (await fetch(
     "https://raw.githubusercontent.com/unyt-org/datex-specification/refs/heads/main/assets/structures/dxb.json",

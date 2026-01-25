@@ -1,101 +1,82 @@
-import type { JSComHub } from "../datex-core/datex_core_js.d.ts";
-import { ComInterface, type ComInterfaceImpl } from "./com-interface.ts";
+import type {
+    BaseInterfaceHandle,
+    ComHubMetadata,
+    JSComHub,
+} from "../datex-core/datex_core_js.d.ts";
+import type { DIFValueContainer } from "../dif/definitions.ts";
+import type { InterfaceProperties } from "../datex-core.ts";
+import type { Runtime } from "../runtime/runtime.ts";
+
+export type ComInterfaceFactory<SetupData = unknown> = {
+    interfaceType: string;
+    factory: ComInterfaceFactoryFn<SetupData>;
+};
+
+export type ComInterfaceFactoryFn<SetupData = unknown> = (
+    handle: BaseInterfaceHandle,
+    setup_data: SetupData,
+) => InterfaceProperties | Promise<InterfaceProperties>;
+
+export type ComInterfaceUUID = `com_interface::${string}`;
+export type ComInterfaceSocketUUID = `socket::${string}`;
 
 /**
  * Communication hub for managing communication interfaces.
  */
 export class ComHub {
-    /** Static map of registered interface implementations. */
-    static #interfaceImpls = new Map<
-        string,
-        typeof ComInterfaceImpl<unknown>
-    >();
-
-    /** Static map of interface implementations by class. */
-    static #interfaceImplsByClass = new Map<
-        typeof ComInterfaceImpl<unknown>,
-        string
-    >();
-
     /** The JS communication hub. */
     readonly #jsComHub: JSComHub;
+    readonly #runtime: Runtime;
 
-    constructor(jsComHub: JSComHub) {
+    constructor(jsComHub: JSComHub, runtime: Runtime) {
         this.#jsComHub = jsComHub;
+        this.#runtime = runtime;
     }
 
-    /**
-     * Registers a communication interface implementation.
-     * @param interfaceType The type of the interface.
-     * @param impl The implementation class of the interface.
-     */
-    static registerInterfaceImpl<N extends string>(
-        interfaceType: N,
-        impl: typeof ComInterfaceImpl<unknown>,
+    public registerInterfaceFactory<SetupData>(
+        factoryDefinition: ComInterfaceFactory<SetupData>,
     ) {
-        if (this.#interfaceImpls.has(interfaceType)) {
-            throw new Error(
-                `Interface implementation for ${interfaceType} already registered.`,
-            );
-        }
-        this.#interfaceImpls.set(interfaceType, impl);
-        this.#interfaceImplsByClass.set(impl, interfaceType);
+        this.#jsComHub.register_interface_factory(
+            factoryDefinition.interfaceType,
+            async (
+                handle: BaseInterfaceHandle,
+                setup_data: DIFValueContainer,
+            ) => {
+                return this.#runtime.dif.convertJSValueToDIFValueContainer(
+                    factoryDefinition.factory(
+                        handle,
+                        await this.#runtime.dif.resolveDIFValueContainer<
+                            SetupData
+                        >(
+                            setup_data,
+                        ),
+                    ),
+                );
+            },
+        );
     }
 
     /**
      * Creates a new communication interface.
-     * @param interfaceType The type of the interface to create.
+     * @param type The type of the interface to create.
      * @param setupData The setup data for the interface.
+     * @param priority The priority of the interface (optional).
+     * @returns A promise that resolves to the UUID of the created interface.
      */
-    async createInterface<T extends typeof ComInterfaceImpl<unknown>>(
-        interfaceType: T,
-        setupData: T extends typeof ComInterfaceImpl<infer P> ? P : never,
-    ): Promise<ComInterface<InstanceType<T>>>;
-    async createInterface<
-        T extends ComInterfaceImpl<unknown>,
-    >(
-        interfaceType: string,
-        setupData: T extends ComInterfaceImpl<infer P> ? P : never,
-    ): Promise<ComInterface<T>>;
-    async createInterface(
-        interfaceType: string | typeof ComInterfaceImpl,
-        setupData: unknown,
-    ): Promise<ComInterface<ComInterfaceImpl<unknown>>> {
-        const type = typeof interfaceType === "string"
-            ? interfaceType
-            : ComHub.#interfaceImplsByClass.get(interfaceType);
-        if (type === undefined) {
-            throw new Error(
-                `Interface implementation for ${
-                    (interfaceType as typeof ComInterfaceImpl).name
-                } not registered.`,
-            );
-        }
-        const implClass = ComHub.#interfaceImpls.get(type);
-        if (implClass === undefined) {
-            throw new Error(
-                `Interface implementation for ${type} not registered.`,
-            );
-        }
-        const uuid = await this.#jsComHub.create_interface(
+    public async createInterface<SetupData>(
+        type: string,
+        setupData: SetupData,
+        priority?: number,
+    ): Promise<ComInterfaceUUID> {
+        return await this.#jsComHub.create_interface(
             type,
-            JSON.stringify(setupData),
-        );
-        const impl = new (implClass as (new (
-            uuid: string,
-            setupData: unknown,
-            comHub: JSComHub,
-        ) => ComInterfaceImpl<unknown>))(uuid, setupData, this.#jsComHub);
-        await impl.init?.();
-        return new ComInterface(uuid, impl, this.#jsComHub);
+            this.#runtime.dif.convertJSValueToDIFValueContainer(setupData),
+            priority,
+        ) as ComInterfaceUUID;
     }
 
-    public _update(): Promise<void> {
-        return this.#jsComHub.update();
-    }
-
-    public _drain_incoming_blocks(): Uint8Array<ArrayBufferLike>[] {
-        return this.#jsComHub._drain_incoming_blocks();
+    public closeInterface(interface_uuid: ComInterfaceUUID): void {
+        this.#jsComHub.close_interface(interface_uuid);
     }
 
     /**
@@ -106,6 +87,12 @@ export class ComHub {
         // deno-lint-ignore no-explicit-any
         const metadata = (this.#jsComHub as any).get_metadata_string();
         console.log(metadata);
+    }
+
+    public getMetadata(): ComHubMetadata {
+        // as any required because get_metadata only exists in debug builds
+        // deno-lint-ignore no-explicit-any
+        return (this.#jsComHub as any).get_metadata();
     }
 
     /**
@@ -124,6 +111,7 @@ export class ComHub {
     }
 
     /**
+     * @deprecated Use sender of interface instead.
      * Sends a block of data to a specific interface and socket.
      * @param block The data block to send.
      * @param interface_uuid The UUID of the interface to send the block to.
@@ -134,8 +122,8 @@ export class ComHub {
         block: Uint8Array,
         interface_uuid: string,
         socket_uuid: string,
-    ): Promise<boolean> {
-        return this.#jsComHub.send_block(block, interface_uuid, socket_uuid);
+    ) {
+        this.#jsComHub.send_block(block, interface_uuid, socket_uuid);
     }
 
     /**

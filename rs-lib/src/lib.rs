@@ -8,7 +8,7 @@ use serde_wasm_bindgen::from_value;
 // use datex_cli_core::CLI;
 
 use datex_core::compiler::{CompileOptions, compile_script, compile_template};
-use datex_core::decompiler::{DecompileOptions, decompile_body};
+use datex_core::decompiler::decompile_body;
 use datex_core::runtime::execution::{
     ExecutionInput, ExecutionOptions, execute_dxb_sync,
 };
@@ -35,7 +35,7 @@ extern "C" {
 }
 
 #[wasm_bindgen]
-pub fn create_runtime(config: &str, debug_flags: JsValue) -> JSRuntime {
+pub fn create_runtime(config: JsValue, debug_flags: JsValue) -> JSRuntime {
     let debug_flags: Option<JSDebugFlags> =
         from_value(debug_flags).unwrap_or_default();
     JSRuntime::create(config, debug_flags)

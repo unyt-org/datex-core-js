@@ -1093,14 +1093,19 @@ export class DIFHandler {
 
     /**
      * Converts a given JS value to its DIFValueContainer representation.
+     * This method can be called statically or with an instance to use the instance's DIFHandler context.
+     * NOTE: When called statically, there is no cache for already registered references, meaning that new references will be created
+     * for the same object each time this method is called.
      */
-    public convertJSValueToDIFValueContainer<T extends unknown>(
+    public static convertJSValueToDIFValueContainer<T extends unknown>(
         value: T,
+        difHandlerInstance?: DIFHandler,
     ): DIFValueContainer {
         // if the value is a registered reference, return its address
-        const existingReference = this.tryGetReferenceMetadata(
-            value as WeakKey,
-        );
+        const existingReference = difHandlerInstance &&
+            difHandlerInstance.tryGetReferenceMetadata(
+                value as WeakKey,
+            );
         if (existingReference) {
             return existingReference.address;
         }
@@ -1171,6 +1176,20 @@ export class DIFHandler {
             };
         }
         throw new Error("Unsupported type for conversion to DIFValue");
+    }
+
+    /**
+     * Instance method wrapper for static convertJSValueToDIFValueContainer
+     * Converts a given JS value to its DIFValueContainer representation.
+     * @param value
+     */
+    public convertJSValueToDIFValueContainer<T extends unknown>(
+        value: T,
+    ): DIFValueContainer {
+        return DIFHandler.convertJSValueToDIFValueContainer(
+            value,
+            this,
+        );
     }
 
     /** DIF update handler utilities */

@@ -1,47 +1,118 @@
-import { ComInterfaceImpl } from "../com-interface.ts";
-import { ComHub } from "../com-hub.ts";
-import type { WebSocketServerInterfaceSetupData } from "../../datex-core/datex_core_js.d.ts";
+import type { ComInterfaceFactory } from "../com-hub.ts";
+import type {
+    BaseInterfaceHandle,
+    InterfaceProperties,
+    WebSocketServerInterfaceSetupData,
+} from "../../datex-core/datex_core_js.d.ts";
 
 /**
- * Implementation of the WebSocket server communication interface for Deno.
+ * General utility functions for WebSockets that can be reused for different socket server implementations.
  */
-export class WebSockerServerDenoInterfaceImpl
-    extends ComInterfaceImpl<WebSocketServerInterfaceSetupData> {
-    #server?: Deno.HttpServer;
+export function registerWebSocket(
+    webSocket: WebSocket,
+    baseInterfaceHandle: BaseInterfaceHandle,
+    closeCallback: (uuid: string) => void,
+): Promise<string> {
+    let uuid: string | null = null;
 
-    override init() {
-        this.#server = Deno.serve({
-            port: this.setupData.port,
+    const { promise, resolve, reject } = Promise.withResolvers<string>();
+
+    webSocket.addEventListener("open", () => {
+        uuid = baseInterfaceHandle.registerSocket("InOut", 1);
+
+        webSocket.onmessage = (event: MessageEvent<ArrayBuffer>) => {
+            baseInterfaceHandle.sendBlock(uuid!, new Uint8Array(event.data));
+        };
+
+        resolve(uuid);
+    }, { once: true });
+
+    webSocket.addEventListener("error", () => {
+        if (uuid && baseInterfaceHandle.getState() !== "Destroyed") {
+            baseInterfaceHandle.removeSocket(uuid);
+        }
+        reject();
+    }, { once: true });
+
+    webSocket.addEventListener("close", () => {
+        if (uuid && baseInterfaceHandle.getState() !== "Destroyed") {
+            baseInterfaceHandle.removeSocket(uuid);
+            closeCallback(uuid);
+        }
+    }, { once: true });
+
+    return promise;
+}
+
+export const websocketServerDenoComInterfaceFactory: ComInterfaceFactory<
+    WebSocketServerInterfaceSetupData
+> = {
+    interfaceType: "websocket-server",
+    factory: (baseInterfaceHandle, setupData) => {
+        const sockets: Map<string, WebSocket> = new Map();
+        // FIXME: workaround, convert map to object if map provided as setupData
+        if (setupData instanceof Map) {
+            setupData = Object.fromEntries(
+                Array.from(setupData.entries()),
+            ) as unknown as WebSocketServerInterfaceSetupData;
+        }
+
+        const [hostname, maybe_port] = setupData.bind_address.split(":");
+        const port = maybe_port ? parseInt(maybe_port) : undefined;
+
+        const server = Deno.serve({
+            port,
+            hostname,
         }, (req) => {
             if (req.headers.get("upgrade") != "websocket") {
                 return new Response(null, { status: 501 });
             }
-            const { socket, response } = Deno.upgradeWebSocket(req);
-            if (
-                !this.jsComHub.websocket_server_interface_add_socket(
-                    this.uuid,
-                    socket,
-                )
-            ) {
-                console.error("Failed to add websocket to server interface");
-                return new Response(
-                    "Failed to add websocket to server interface",
-                    { status: 500 },
-                );
-            }
+            const { socket: webSocket, response } = Deno.upgradeWebSocket(req);
+
+            registerWebSocket(
+                webSocket,
+                baseInterfaceHandle,
+                (uuid) => sockets.delete(uuid),
+            )
+                .then((uuid) => sockets.set(uuid, webSocket));
             return response;
         });
-    }
 
-    override async cleanup() {
-        if (this.#server) {
-            await this.#server.shutdown();
-            this.#server = undefined;
-        }
-    }
-}
+        // cleanup handler
+        baseInterfaceHandle.onClosed(async () => {
+            await server.shutdown();
+        });
 
-ComHub.registerInterfaceImpl(
-    "websocket-server",
-    WebSockerServerDenoInterfaceImpl,
-);
+        // outgoing data handler
+        baseInterfaceHandle.onReceive(
+            (socket_uuid: string, data: Uint8Array) => {
+                const socket = sockets.get(socket_uuid);
+                if (socket) {
+                    socket.send(data);
+                } else {
+                    // TODO:
+                    console.error(
+                        `WebSocketServer: No socket found for UUID ${socket_uuid}`,
+                    );
+                }
+            },
+        );
+
+        // TODO: set properties
+        return {
+            interface_type: "websocket-server",
+            channel: "websocket",
+            name: setupData.bind_address,
+            direction: "InOut",
+            round_trip_time: 0,
+            max_bandwidth: 0,
+            continuous_connection: false,
+            allow_redirects: false,
+            is_secure_channel: false,
+            reconnection_config: "NoReconnect",
+            auto_identify: true,
+            connectable_interfaces: [], // TODO add websocket client connections
+            created_sockets: [],
+        } satisfies InterfaceProperties;
+    },
+};
