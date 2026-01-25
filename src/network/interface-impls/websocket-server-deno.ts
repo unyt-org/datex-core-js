@@ -112,6 +112,7 @@ export const websocketServerDenoComInterfaceFactory: ComInterfaceFactory<
             reconnection_config: "NoReconnect",
             auto_identify: true,
             connectable_interfaces: [], // TODO add websocket client connections
+            created_sockets: [],
         } satisfies InterfaceProperties;
     },
 };
