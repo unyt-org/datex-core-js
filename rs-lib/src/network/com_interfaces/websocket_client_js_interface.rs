@@ -1,11 +1,9 @@
 use futures_channel::oneshot;
 use gloo_timers::future::TimeoutFuture;
-use std::{
-    cell::RefCell, rc::Rc, sync::Mutex,
-    time::Duration,
-};
+use std::{cell::RefCell, rc::Rc, sync::Mutex, time::Duration};
 
-use datex_core::network::{
+use datex_core::{
+    network::{
         com_hub::{
             errors::InterfaceCreateError,
             managers::interfaces_manager::ComInterfaceAsyncFactoryResult,
@@ -17,7 +15,9 @@ use datex_core::network::{
             properties::{InterfaceDirection, InterfaceProperties},
             state::ComInterfaceStateWrapper,
         },
-    };
+    },
+    task::spawn_with_panic_notify_default,
+};
 
 use datex_core::{
     network::com_interfaces::default_com_interfaces::websocket::websocket_common::WebSocketClientInterfaceSetupData,
@@ -28,10 +28,7 @@ use datex_core::network::com_interfaces::default_com_interfaces::websocket::webs
 use serde::{Deserialize, Serialize};
 
 use crate::wrap_error_for_js;
-use datex_core::task::{
-    UnboundedReceiver, UnboundedSender,
-    spawn_with_panic_notify_default,
-};
+use datex_core::channel::mpsc::{UnboundedReceiver, UnboundedSender};
 use futures::{SinkExt, StreamExt, select};
 use url::Url;
 use wasm_bindgen::{JsCast, prelude::Closure};
@@ -106,7 +103,7 @@ impl WebSocketClientJSInterfaceSetupData {
         ws_cell: Rc<RefCell<Option<web_sys::WebSocket>>>,
         mut ready_tx: Option<oneshot::Sender<Result<(), InterfaceCreateError>>>,
     ) {
-        let shutdown_signal = state.lock().unwrap().shutdown_signal().clone();
+        let mut shutdown_receiver = state.lock().unwrap().shutdown_receiver();
         let mut attempts: usize = 0;
 
         loop {
@@ -140,7 +137,7 @@ impl WebSocketClientJSInterfaceSetupData {
 
                     // Wait for close or shutdown
                     futures::pin_mut!(close_rx);
-                    let shutdown_fut = shutdown_signal.notified().fuse();
+                    let shutdown_fut = shutdown_receiver.next().fuse();
                     futures::pin_mut!(shutdown_fut);
                     use futures::{FutureExt, select};
                     select! {
@@ -170,11 +167,14 @@ impl WebSocketClientJSInterfaceSetupData {
             futures::pin_mut!(timeout);
 
             use futures::{FutureExt, select};
-            let shutdown_signal = state.lock().unwrap().shutdown_signal();
-            futures::pin_mut!(shutdown_signal);
+            let mut shutdown_receiver =
+                state.lock().unwrap().shutdown_receiver();
+            let shutdown_fut = shutdown_receiver.next().fuse();
+
+            futures::pin_mut!(shutdown_fut);
 
             select! {
-                stop = shutdown_signal.notified().fuse() => {
+                stop = shutdown_fut => {
                     *ws_cell.borrow_mut() = None;
                     return;
                 },
@@ -289,12 +289,12 @@ impl WebSocketClientJSInterfaceSetupData {
         futures::pin_mut!(timeout);
 
         use futures::{FutureExt, select};
-        let shutdown_signal = state.lock().unwrap().shutdown_signal();
-        futures::pin_mut!(shutdown_signal);
+        let mut shutdown_receiver = state.lock().unwrap().shutdown_receiver();
+        // futures::pin_mut!(shutdown_receiver);
 
         select! {
             _ = open_rx.fuse() => Ok(ws),
-            stop = shutdown_signal.notified().fuse() => {
+            stop = shutdown_receiver.next().fuse() => {
                 // Close the socket to avoid dangling connection attempt
                 let _ = ws.close();
                 Err(InterfaceCreateError::InterfaceError(ComInterfaceError::connection_error_with_details(

@@ -1,5 +1,6 @@
 use crate::network::com_hub::JSComHub;
 use datex_core::{
+    channel::mpsc::{UnboundedSender, create_unbounded_channel},
     global::dxb_block::DXBBlock,
     network::{
         com_hub::{
@@ -12,14 +13,11 @@ use datex_core::{
             properties::{InterfaceDirection, InterfaceProperties},
             socket::ComInterfaceSocketUUID,
             socket_manager::ComInterfaceSocketManager,
+            state::{ComInterfaceState, ComInterfaceStateWrapper},
         },
     },
     runtime::AsyncContext,
     serde::deserializer::from_value_container,
-    task::{
-        UnboundedSender, create_unbounded_channel,
-        spawn_with_panic_notify_default,
-    },
     values::{
         core_values::endpoint::Endpoint, value_container::ValueContainer,
     },
@@ -35,7 +33,6 @@ use std::{
     sync::{Arc, Mutex},
     time::Duration,
 };
-use datex_core::network::com_interfaces::com_interface::state::{ComInterfaceState, ComInterfaceStateWrapper};
 use wasm_bindgen::{JsCast, JsError, JsValue, prelude::wasm_bindgen};
 use web_sys::js_sys::Promise;
 
@@ -100,7 +97,7 @@ impl BaseInterfaceHandle {
             sender_map,
             socket_manager: socket_manager.clone(),
             callbacks: Rc::new(RefCell::new(BaseInterfaceCallbacks::default())),
-            state: proxy.state.clone()
+            state: proxy.state.clone(),
         };
         let task_handle = handle.callbacks.clone();
         use futures::{StreamExt, select};
