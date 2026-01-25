@@ -137,7 +137,7 @@ impl WebSocketClientJSInterfaceSetupData {
 
                     // Wait for close or shutdown
                     futures::pin_mut!(close_rx);
-                    let shutdown_fut = shutdown_receiver.next().fuse();
+                    let shutdown_fut = shutdown_receiver.wait().fuse();
                     futures::pin_mut!(shutdown_fut);
                     use futures::{FutureExt, select};
                     select! {
@@ -169,7 +169,7 @@ impl WebSocketClientJSInterfaceSetupData {
             use futures::{FutureExt, select};
             let mut shutdown_receiver =
                 state.lock().unwrap().shutdown_receiver();
-            let shutdown_fut = shutdown_receiver.next().fuse();
+            let shutdown_fut = shutdown_receiver.wait().fuse();
 
             futures::pin_mut!(shutdown_fut);
 
@@ -294,7 +294,7 @@ impl WebSocketClientJSInterfaceSetupData {
 
         select! {
             _ = open_rx.fuse() => Ok(ws),
-            stop = shutdown_receiver.next().fuse() => {
+            stop = shutdown_receiver.wait().fuse() => {
                 // Close the socket to avoid dangling connection attempt
                 let _ = ws.close();
                 Err(InterfaceCreateError::InterfaceError(ComInterfaceError::connection_error_with_details(

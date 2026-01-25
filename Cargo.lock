@@ -395,6 +395,7 @@ dependencies = [
  "embedded-time",
  "futures",
  "futures-core",
+ "futures-intrusive",
  "futures-util",
  "gloo-timers 0.3.0",
  "hex",
@@ -628,6 +629,17 @@ name = "futures-core"
 version = "0.3.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "05f29059c0c2090612e8d742178b0580d2dc940c837851ad723096f87af6663e"
+
+[[package]]
+name = "futures-intrusive"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1d930c203dd0b6ff06e0201a4a2fe9149b43c684fd4420555b26d21b1a02956f"
+dependencies = [
+ "futures-core",
+ "lock_api",
+ "parking_lot",
+]
 
 [[package]]
 name = "futures-io"
@@ -1276,6 +1288,16 @@ name = "parking"
 version = "2.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f38d5652c16fde515bb1ecef450ab0f6a219d619a7274976324d5e377f7dceba"
+
+[[package]]
+name = "parking_lot"
+version = "0.12.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "93857453250e3077bd71ff98b6a65ea6621a19bb0f559a85248955ac12c45a1a"
+dependencies = [
+ "lock_api",
+ "parking_lot_core",
+]
 
 [[package]]
 name = "parking_lot_core"
