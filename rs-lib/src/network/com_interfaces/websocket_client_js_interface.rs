@@ -64,7 +64,7 @@ impl WebSocketClientJSInterfaceSetupData {
             Rc::new(RefCell::new(None));
 
         // Create socket
-        let (_, incoming_tx) = com_interface_proxy
+        let (socket_uuid, incoming_tx) = com_interface_proxy
             .create_and_init_socket(InterfaceDirection::InOut, 1);
         let (ready_tx, ready_rx) =
             oneshot::channel::<Result<(), InterfaceCreateError>>();
@@ -93,6 +93,7 @@ impl WebSocketClientJSInterfaceSetupData {
 
         Ok(InterfaceProperties {
             name: Some(address.to_string()),
+            created_sockets: Some(vec![socket_uuid]),
             ..Self::get_default_properties()
         })
     }

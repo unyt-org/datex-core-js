@@ -16,6 +16,20 @@ export type SerialInterfaceSetupDataJS = SerialInterfaceSetupData;
 
 export type InterfacePriority = "None" | { Priority: number };
 
+export interface DynamicEndpointProperties {
+    known_since: number;
+    distance: number;
+    is_direct: boolean;
+    channel_factor: number;
+    direction: InterfaceDirection;
+}
+
+export interface RTCIceServer {
+    urls: string[];
+    username: string | undefined;
+    credential: string | undefined;
+}
+
 export interface ComHubMetadataInterfaceSocket {
     uuid: string;
     direction: InterfaceDirection;
@@ -41,45 +55,6 @@ export interface ComHubMetadata {
         Endpoint,
         [ComInterfaceSocketUUID, DynamicEndpointProperties][]
     >;
-}
-
-export interface DynamicEndpointProperties {
-    known_since: number;
-    distance: number;
-    is_direct: boolean;
-    channel_factor: number;
-    direction: InterfaceDirection;
-}
-
-export interface WebSocketClientInterfaceSetupData {
-    /**
-     * A websocket URL (ws:// or wss://).
-     */
-    url: string;
-}
-
-export type TLSMode = { type: "HandledExternally" } | {
-    type: "WithCertificate";
-    data: { private_key: number[]; certificate: number[] };
-};
-
-export interface WebSocketServerInterfaceSetupData {
-    /**
-     * The address to bind the WebSocket server to (e.g., \"0.0.0.0:8080\").
-     */
-    bind_address: string;
-    /**
-     * A list of addresses the server should accept connections from,
-     * along with their optional TLS mode.
-     * E.g., [(\"example.com\", Some(TLSMode::WithCertificate { ... })), (\"example.org:1234\", None)]
-     */
-    accept_addresses: [string, TLSMode | undefined][] | undefined;
-}
-
-export interface RuntimeConfigInterface {
-    type: string;
-    config: unknown;
-    priority?: InterfacePriority;
 }
 
 export interface DecompileOptions {
@@ -110,15 +85,15 @@ export interface SerialInterfaceSetupData {
     baud_rate: number;
 }
 
+export interface RuntimeConfigInterface {
+    type: string;
+    config: unknown;
+    priority?: InterfacePriority;
+}
+
 export interface WebRTCInterfaceSetupData {
     peer_endpoint: string;
     ice_servers: RTCIceServer[] | undefined;
-}
-
-export interface RTCIceServer {
-    urls: string[];
-    username: string | undefined;
-    credential: string | undefined;
 }
 
 export type InterfaceDirection = "In" | "Out" | "InOut";
@@ -173,6 +148,7 @@ export interface InterfaceProperties {
     is_secure_channel: boolean;
     reconnection_config: ReconnectionConfig;
     auto_identify: boolean;
+    created_sockets: ComInterfaceSocketUUID[] | undefined;
     connectable_interfaces: RuntimeConfigInterface[] | undefined;
 }
 
@@ -184,6 +160,31 @@ export type ReconnectionConfig = "NoReconnect" | "InstantReconnect" | {
         attempts: number;
     };
 };
+
+export interface WebSocketClientInterfaceSetupData {
+    /**
+     * A websocket URL (ws:// or wss://).
+     */
+    url: string;
+}
+
+export type TLSMode = { type: "HandledExternally" } | {
+    type: "WithCertificate";
+    data: { private_key: number[]; certificate: number[] };
+};
+
+export interface WebSocketServerInterfaceSetupData {
+    /**
+     * The address to bind the WebSocket server to (e.g., \"0.0.0.0:8080\").
+     */
+    bind_address: string;
+    /**
+     * A list of addresses the server should accept connections from,
+     * along with their optional TLS mode.
+     * E.g., [(\"example.com\", Some(TLSMode::WithCertificate { ... })), (\"example.org:1234\", None)]
+     */
+    accept_addresses: [string, TLSMode | undefined][] | undefined;
+}
 
 export class BaseInterfaceHandle {
     private constructor();

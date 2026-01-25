@@ -27,7 +27,7 @@ Deno.test("invalid url scheme construct", async () => {
     );
 });
 
-// FIXME
+// FIXME: this test takes very long (1min+), maybe due to auto reconnection attempts?
 // Deno.test("websocket connect fail", async () => {
 //     const runtime = new Runtime({ endpoint: "@unyt" });
 //     await assertRejects(
@@ -49,14 +49,22 @@ Deno.test("websocket basic connect", async () => {
     }
     const port = 8484;
     const mockupServer = createMockupServer(port);
-    const runtime = new Runtime({ endpoint: "@unyt" });
+    const runtime = new Runtime({ endpoint: "@unyt", debug: true });
     await new Promise((resolve) => setTimeout(resolve, 1000));
-    const interface_uuid = await runtime.comHub.createInterface(
+    const interfaceUUID = await runtime.comHub.createInterface(
         "websocket-client",
-        { url: `ws://localhost:${port}/` },
+        { url: `ws://localhost:${port}` },
     );
+    assert(interfaceUUID.startsWith("com_interface::"), "Invalid interface UUID");
+    assert(uuid.validate(interfaceUUID.replace("com_interface::", "")), "Invalid UUID format");
+
+    runtime.comHub.printMetadata();
     await using _ = await mockupServer;
-    assert(uuid.validate(interface_uuid), "Invalid UUID");
+
+    // TODO: why sleep needed here?
+    await sleep(100);
+
+    runtime.comHub.closeInterface(interfaceUUID);
 });
 
 Deno.test("websocket block retrieval", async () => {
@@ -73,11 +81,9 @@ Deno.test("websocket block retrieval", async () => {
     const runtime = new Runtime({ endpoint: "@unyt" }, {
         allow_unsigned_blocks: true,
     });
-    runtime.comHub.createInterface("websocket-client", {
-        url: `ws://localhost:${port}/`,
-    })
-        .then(() => console.info("Connected"))
-        .catch((err) => console.error("Error:", err));
+    let interfaceUUID = await runtime.comHub.createInterface("websocket-client", {
+        url: `ws://localhost:${port}`,
+    });
     await using server = await mockupServer;
 
     const block = runtime._runtime._create_block(
@@ -95,4 +101,7 @@ Deno.test("websocket block retrieval", async () => {
     // const incoming_block = blocks[0];
     // assert(incoming_block.length === block.length);
     // assertEquals(incoming_block, block);
+
+    runtime.comHub.printMetadata();
+    runtime.comHub.closeInterface(interfaceUUID);
 });

@@ -87,7 +87,7 @@ impl SerialInterfaceSetupDataJS {
         let writer = writable.get_writer().unwrap();
 
         // create new socket
-        com_interface_proxy
+        let (socket_uuid, mut sender) = com_interface_proxy
             .create_and_init_socket(InterfaceDirection::InOut, 1);
 
         // handle incoming data
@@ -113,6 +113,7 @@ impl SerialInterfaceSetupDataJS {
                                 .unwrap()
                                 .to_vec();
                             println!("Received bytes: {bytes:?}");
+                            sender.start_send(bytes).unwrap();
                         }
                     }
                     Err(_) => {
@@ -146,6 +147,7 @@ impl SerialInterfaceSetupDataJS {
         });
 
         Ok(InterfaceProperties {
+            created_sockets: Some(vec![socket_uuid]),
             ..InterfaceProperties::default()
         })
     }
