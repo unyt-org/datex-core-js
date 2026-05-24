@@ -1,6 +1,6 @@
 use crate::{
     dif::JSDIFInterface,
-    js_utils::{from_js_value_with_cache, js_array, js_error, to_js_value},
+    js_utils::{from_dif_js_value, js_array, js_error, to_dif_js_value},
     network::com_hub::JSComHub,
 };
 use datex_core::{
@@ -24,10 +24,11 @@ use datex_core::{
 };
 use serde_wasm_bindgen::from_value;
 use std::{cell::RefCell, fmt::Display, rc::Rc};
+use datex_core::dif::cache::DIFSharedContainerCache;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::{future_to_promise, spawn_local};
 use web_sys::js_sys::Promise;
-use crate::js_utils::{from_js_value, to_js_value_with_cache};
+use crate::js_utils::to_js_value;
 
 #[wasm_bindgen(getter_with_clone)]
 #[derive(Clone)]
@@ -46,8 +47,7 @@ impl JSRuntime {
     }
 
     pub(crate) async fn run(config: JsValue) -> JSRuntime {
-        let config: RuntimeConfig =
-            from_js_value(config)
+        let config: RuntimeConfig = from_dif_js_value(config, &mut DIFSharedContainerCache::default())
                 .unwrap();
         let runtime_runner = RuntimeRunner::new(config);
         // Note: JSRuntime::new must be called before runtime run to initialize com interface factories
@@ -275,7 +275,7 @@ impl JSRuntime {
             )
             .await
             .map_err(js_error)?;
-        result.map(|value| to_js_value_with_cache(&value, &mut self.dif_interface.cache())).transpose()
+        Ok(result.map(|value| to_js_value(&value, &mut self.dif_interface.cache())))
     }
 
     pub fn execute_sync_with_string_result(
@@ -314,7 +314,7 @@ impl JSRuntime {
                 None,
             )
             .map_err(js_error)?;
-        result.map(|val| to_js_value_with_cache(&val, &mut self.dif_interface.cache())).transpose()
+        Ok(result.map(|val| to_js_value(&val, &mut self.dif_interface.cache())))
     }
 
     pub fn value_to_string(
@@ -347,7 +347,7 @@ impl JSRuntime {
         &self,
         value: JsValue,
     ) -> Result<ValueContainer, JsError> {
-        from_js_value_with_cache::<ValueContainer>(
+        from_dif_js_value::<ValueContainer>(
             value,
             &mut self.dif_interface.cache(),
         )

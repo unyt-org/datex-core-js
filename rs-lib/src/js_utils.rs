@@ -2,7 +2,9 @@ use core::fmt::{Debug, Display};
 use datex_core::{
     dif::{cache::DIFSharedContainerCache, serde_context::SerdeContext},
 };
+use datex_core::datex_proxy::{DatexValueContainerProxyDeserialize, DatexValueContainerProxyInfallibleSerialize};
 use datex_core::utils::serde_serialize_seed::SerializeSeed;
+use datex_core::values::value_container::ValueContainer;
 use serde::{
     Serialize,
     de::{DeserializeOwned, DeserializeSeed},
@@ -107,44 +109,34 @@ impl<T, E: std::error::Error + 'static> ToJsError<T> for Result<T, E> {
     }
 }
 
-/// Convert a JsValue to a deserializable Rust type
-pub fn from_js_value<T: DeserializeOwned>(
+/// Converts a JSValue to a DIF-serializable Rust value (e.g. [Value], [ValueContainer])
+pub fn from_js_value<'de, T>(
     value: impl Into<JsValue>,
-) -> Result<T, JsError> {
-    T::deserialize(serde_wasm_bindgen::Deserializer::from(value.into()))
+    cache: &'de mut DIFSharedContainerCache,
+) -> Result<T, JsError>
+where
+    SerdeContext<'de, T>: DeserializeSeed<'de, Value = T>,
+{
+    let context = SerdeContext::<T>::new(cache);
+    DeserializeSeed::deserialize(context, serde_wasm_bindgen::Deserializer::from(value.into()))
         .map_err(js_error)
 }
 
-/// Convert a JsValue to a deserializable Rust type, using the DIF cache for resolving shared containers
-pub fn from_js_value_with_cache<'ctx, T>(
-    value: JsValue,
-    cache: &'ctx mut DIFSharedContainerCache,
-) -> Result<T, JsError>
-where
-    SerdeContext<'ctx, T>: DeserializeSeed<'ctx, Value = T>,
-{
-    let context = SerdeContext::new(cache);
-    DeserializeSeed::deserialize(
-        context,
-        serde_wasm_bindgen::Deserializer::from(value),
-    )
-    .map_err(js_error)
+/// Convert a DIF format JsValue to a #[Datex] struct
+pub fn from_dif_js_value<T: DatexValueContainerProxyDeserialize>(
+    value: impl Into<JsValue>,
+    cache: &mut DIFSharedContainerCache,
+) -> Result<T, JsError> {
+    let value_container: ValueContainer = from_js_value(value, cache)?;
+    T::try_from_value_container(value_container)
+        .map_err(|e| js_error(format!("Failed to convert ValueContainer to target type: {:?}", e)))
 }
 
-
-/// Convert a serializable value to a JsValue (JSON compatible)
-pub fn to_js_value<T: Serialize>(value: &T) -> Result<JsValue, JsError> {
-    value
-        .serialize(&serde_wasm_bindgen::Serializer::json_compatible())
-        .map_err(|e| js_error(e.to_string()))
-}
-
-
-/// Convert a serializable Rust value to a JsValue, using the DIF cache for resolving shared containers
-pub fn to_js_value_with_cache<'ctx, T>(
+/// Convert a DIF-serializable Rust value (e.g. [Value], [ValueContainer]) to a JsValue, using the DIF cache for resolving shared containers
+pub fn to_js_value<'ctx, T>(
     value: &T,
     cache: &'ctx mut DIFSharedContainerCache,
-) -> Result<JsValue, JsError>
+) -> JsValue
 where
     SerdeContext<'ctx, T>: SerializeSeed<Value = T>,
 {
@@ -154,5 +146,13 @@ where
             value,
             &serde_wasm_bindgen::Serializer::json_compatible(),
         )
-        .map_err(|e| js_error(e.to_string()))
+        .unwrap()
+}
+
+/// Convert a serializable #[Datex] struct to a JsValue, using the DIF cache for resolving shared containers
+pub fn to_dif_js_value<T: DatexValueContainerProxyInfallibleSerialize>(
+    value: T,
+    cache: &mut DIFSharedContainerCache,
+) -> JsValue {
+    to_js_value(&value.to_value_container(), cache)
 }

@@ -5,7 +5,7 @@ use datex_core::runtime::execution::execution_input::ExecutionCallerMetadata;
 use wasm_bindgen::{JsError, JsValue, prelude::wasm_bindgen};
 
 use crate::{js_utils::js_error, runtime::JSRuntime};
-use crate::js_utils::{to_js_value, to_js_value_with_cache};
+use crate::js_utils::{to_dif_js_value, to_js_value};
 
 #[wasm_bindgen]
 pub struct Repl {
@@ -44,6 +44,6 @@ impl Repl {
             .execute(script, &[], Some(&mut self.execution_context))
             .await
             .map_err(js_error)?;
-        result.map(|v| to_js_value_with_cache(&v, &mut self.runtime.dif_interface().cache())).transpose()
+        Ok(result.map(|v| to_js_value(&v, &mut self.runtime.dif_interface().cache())))
     }
 }

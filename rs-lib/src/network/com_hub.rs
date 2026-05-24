@@ -23,9 +23,6 @@ use datex_core::{
         },
     },
     runtime::Runtime,
-    serde::{
-        deserializer::from_value_container, serializer::to_value_container,
-    },
     utils::uuid::UUID,
     values::{
         core_values::endpoint::Endpoint, value_container::ValueContainer,
@@ -35,11 +32,13 @@ use js_sys::{Function, JsFunction1, Object, Promise, Reflect};
 use log::{error, info};
 use serde_wasm_bindgen::from_value;
 use std::{cell::RefCell, ops::Deref, rc::Rc, str::FromStr};
+use datex_core::dif::cache::DIFSharedContainerCache;
+use datex_core::values::value::Value;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::{JsFuture, future_to_promise};
 use web_sys::js_sys::{self};
 
-use crate::js_utils::{from_js_value_with_cache, to_js_value};
+use crate::js_utils::{from_dif_js_value, from_js_value, to_dif_js_value, to_js_value};
 
 #[wasm_bindgen]
 #[derive(Clone)]
@@ -92,7 +91,7 @@ impl JSComHub {
     pub(crate) async fn create_interface_internal(
         &self,
         interface_type: String,
-        setup_data: ValueContainer,
+        setup_data: Value,
         priority: Option<u16>,
     ) -> Result<ComInterfaceUUID, ComInterfaceCreateError> {
         let runtime = self.runtime.clone();
@@ -118,11 +117,14 @@ impl JSComHub {
         factory: js_sys::Function,
     ) {
         let runtime = self.runtime.clone();
+        let dif_interface = self.dif_interface.clone();
+
         self.com_hub().register_dyn_interface_factory(
             interface_type,
             Rc::new(move |setup_data| {
                 let factory = factory.clone();
                 let runtime = runtime.clone();
+                let dif_interface = dif_interface.clone();
 
                 Box::pin(async move {
                     let interface_configuration_promise = factory
@@ -130,7 +132,8 @@ impl JSComHub {
                             &JsValue::UNDEFINED,
                             &to_js_value(
                                 &setup_data,
-                            ).unwrap(),
+                                &mut dif_interface.borrow_mut().cache
+                            )
                         )
                         .map_err(|e| {
                             error!("Error calling interface factory: {:?}", e);
@@ -146,12 +149,12 @@ impl JSComHub {
                         .await
                         .expect("Failed to get value from promise");
 
-                    let (properties, has_single_socket, new_sockets_generator) = JSComHub::parse_com_interface_configuration(&interface_configuration)
+                    let (properties, has_single_socket, new_sockets_generator) = JSComHub::parse_com_interface_configuration(&interface_configuration, &mut dif_interface.borrow_mut().cache)
                         .map_err(|e| {
                             error!("Error parse_com_interface_configuration: {:?}", e);
 
                             ComInterfaceCreateError::connection_error_with_details(
-                                e.to_string()
+                                format!("{:?}", e)
                             )
                         })?;
 
@@ -242,15 +245,15 @@ impl JSComHub {
 
     fn parse_com_interface_configuration(
         interface_configuration: &JsValue,
+        cache: &mut DIFSharedContainerCache,
     ) -> Result<
         (ComInterfaceProperties, bool, JsReadableStream),
-        serde_wasm_bindgen::Error,
+        JsValue,
     > {
         let properties =
-            Reflect::get(interface_configuration, &"properties".into())
-                .and_then(|v| v.dyn_into::<Object>())?;
+            Reflect::get(interface_configuration, &"properties".into())?;
 
-        let properties: ComInterfaceProperties = from_value(properties.into())?;
+        let properties: ComInterfaceProperties = from_dif_js_value(properties, cache)?;
 
         // get bool has_single_socket from interface_configuration
         let has_single_socket =
@@ -339,7 +342,7 @@ impl JSComHub {
         priority: Option<u16>,
     ) -> Result<String, JsError> {
         let setup_data =
-            from_js_value_with_cache(setup_data, &mut self.dif_interface.borrow_mut().cache)
+            from_dif_js_value(setup_data, &mut self.dif_interface.borrow_mut().cache)
                 .map_err(|e| JsError::new(&format!("{e:?}")))?;
         let interface = self
             .create_interface_internal(interface_type, setup_data, priority)
@@ -383,7 +386,7 @@ impl JSComHub {
 
     pub fn get_metadata(&self) -> JsValue {
         let metadata = self.com_hub().get_metadata();
-        serde_wasm_bindgen::to_value(&metadata).unwrap()
+        to_dif_js_value(metadata, &mut self.dif_interface.borrow_mut().cache)
     }
 
     pub async fn get_trace_string(

@@ -9,18 +9,6 @@ export interface AcceptAddress {
     tls_mode: TLSMode | undefined;
 }
 
-export interface ComHubMetadata {
-    endpoint: Endpoint;
-    interfaces: ComHubMetadataInterface[];
-}
-
-export interface ComHubMetadataInterface {
-    uuid: string;
-    properties: ComInterfaceProperties;
-    sockets: ComHubMetadataInterfaceSocket[];
-    is_waiting_for_socket_connections: boolean;
-}
-
 export interface ComHubMetadataInterfaceSocket {
     uuid: string;
     direction: InterfaceDirection;
@@ -50,59 +38,6 @@ export interface ComInterfaceConfiguration {
      * An optional asynchronous callback that is called by the com hub when the interface is closed
      */
     close_async_callback?: never;
-}
-
-export interface ComInterfaceProperties {
-    /**
-     * the type of the interface, by which it is identified
-     * e.g. \"tcp-client\", \"websocket-server\",
-     * multiple interfaces implementations (e.g. for native and web)
-     * can have the same interface type if they are compatible and
-     * have an identical initialization function
-     */
-    interface_type: string;
-    /**
-     * the channel that the interface is using,
-     * e.g. \"tcp\", \"websocket\
-     */
-    channel: string;
-    /**
-     * a unique name that further identifies an interface instance
-     * e.g. \"wss://example.com:443\
-     */
-    name: string | undefined;
-    /**
-     * The support message direction of the interface
-     */
-    direction: InterfaceDirection;
-    /**
-     * Estimated mean latency for this interface type in milliseconds (round trip time).
-     * Lower latency interfaces are preferred over higher latency channels
-     */
-    round_trip_time: number;
-    /**
-     * Bandwidth in bytes per second
-     */
-    max_bandwidth: number;
-    /**
-     * If true, the interface does support continuous connections
-     */
-    continuous_connection: boolean;
-    /**
-     * If true, the interface can be used to redirect DATEX messages to other endpoints
-     * which are not directly connected to the interface (default: true)
-     * Currently only enforced for broadcast messages
-     */
-    allow_redirects: boolean;
-    /**
-     * If true, the interface is a secure channel (can not be eavesdropped).
-     * This might be an already encrypted channel such as WebRTC or a channel
-     * that is end-to-end and not interceptable by third parties
-     */
-    is_secure_channel: boolean;
-    reconnection_config: ReconnectionConfig;
-    auto_identify: boolean;
-    connectable_interfaces: RuntimeConfigInterface[] | undefined;
 }
 
 export interface DecompileOptions {
@@ -177,12 +112,6 @@ export interface NetworkTraceResult {
     round_trip_time: number;
 }
 
-export interface RuntimeConfigInterface {
-    type: string;
-    config: unknown;
-    priority?: InterfacePriority;
-}
-
 export interface SerialClientInterfaceSetupData {
     port_name: string | undefined;
     baud_rate: number;
@@ -253,13 +182,9 @@ export type FormattingMode = { type: "Compact" } | { type: "Pretty"; indent: num
 
 export type IndentType = "Spaces" | "Tabs";
 
-export type InterfaceDirection = "In" | "Out" | "InOut";
-
 export type InterfacePriority = "None" | { Priority: number };
 
 export type NetworkTraceHopDirection = "Outgoing" | "Incoming";
-
-export type ReconnectionConfig = "NoReconnect" | "InstantReconnect" | { ReconnectWithTimeout: { timeout: { secs: number; nanos: number } } } | { ReconnectWithTimeoutAndAttempts: { timeout: { secs: number; nanos: number }; attempts: number } };
 
 export type TLSMode = { type: "HandledExternally" } | { type: "WithCertificate"; data: { private_key: number[]; certificate: number[] } };
 

@@ -2,8 +2,8 @@ use std::{
     cell::{Ref, RefCell, RefMut},
     rc::Rc,
 };
-
-use crate::js_utils::{from_js_value, from_js_value_with_cache, js_error, to_js_value, to_js_value_with_cache, unwrap_or_report_js_error_debug};
+use std::ops::DerefMut;
+use crate::js_utils::{from_dif_js_value, from_js_value, js_error, to_js_value, unwrap_or_report_js_error_debug};
 use datex_core::{
     dif::{
         cache::DIFSharedContainerCache,
@@ -57,15 +57,16 @@ impl JSDIFInterface {
         callback: &Function,
     ) -> Result<u32, JsError> {
         let transceiver_id = TransceiverId(transceiver_id);
-        let address: PointerAddress = from_js_value(address)?;
+        let address = PointerAddress::try_from(address)
+            .map_err(js_error)?;
         let cb = callback.clone();
-        let observe_options: ObserveOptions = from_js_value(observe_options)?;
+        let observe_options: ObserveOptions = from_js_value(observe_options, self.cache().deref_mut())?;
         let self_clone = self.clone();
         let observer = move |update: &Update| {
-            let value = to_js_value_with_cache(
+            let value = to_js_value(
                 update,
                 &mut self_clone.cache()
-            ).expect("Failed to convert update data to JsValue");
+            );
             let _ = unwrap_or_report_js_error_debug(cb.call1(&JsValue::NULL, &value));
         };
         self.dif_interface
@@ -80,7 +81,8 @@ impl JSDIFInterface {
         address: &str,
         observer_id: u32,
     ) -> Result<(), JsError> {
-        let address: PointerAddress = from_js_value(address)?;
+        let address = PointerAddress::try_from(address)
+            .map_err(js_error)?;
         self.dif_interface
             .borrow_mut()
             .unobserve_pointer(address, ObserverId(observer_id))
@@ -93,8 +95,9 @@ impl JSDIFInterface {
         observer_id: u32,
         observe_options: JsValue,
     ) -> Result<(), JsError> {
-        let address: PointerAddress = from_js_value(address)?;
-        let observe_options: ObserveOptions = from_js_value(observe_options)?;
+        let address = PointerAddress::try_from(address)
+            .map_err(js_error)?;
+        let observe_options: ObserveOptions = from_js_value(observe_options, &mut *self.cache())?;
         self.dif_interface
             .borrow_mut()
             .update_observer_options(
@@ -113,15 +116,16 @@ impl JSDIFInterface {
         address: &str,
         update: JsValue,
     ) -> Result<JsValue, JsError> {
-        let address: PointerAddress = from_js_value(address)?;
+        let address = PointerAddress::try_from(address)
+            .map_err(js_error)?;
         let update: Update =
-            from_js_value_with_cache(update, &mut self.cache())?;
+            from_js_value(update, &mut self.cache())?;
         let result = self
             .dif_interface
             .borrow_mut()
             .update(address, update)
             .map_err(js_error)?;
-        to_js_value_with_cache(&result, &mut self.cache())
+        Ok(to_js_value(&result, &mut self.cache()))
     }
 
     pub fn apply(
@@ -130,25 +134,25 @@ impl JSDIFInterface {
         value: JsValue,
     ) -> Result<Option<JsValue>, JsError> {
         let callee: ValueContainer =
-            from_js_value_with_cache(callee, &mut self.cache())?;
+            from_dif_js_value(callee, &mut self.cache())?;
         let value: ValueContainer =
-            from_js_value_with_cache(value, &mut self.cache())?;
-        self.dif_interface
-            .borrow_mut()
-            .apply(callee, value)
-            .map_err(js_error)?
-            .map(|res| to_js_value_with_cache(&res, &mut self.cache()))
-            .transpose()
+            from_dif_js_value(value, &mut self.cache())?;
+        Ok(
+            self.dif_interface
+                .borrow_mut()
+                .apply(callee, value)
+                .map_err(js_error)?
+                .map(|res| to_js_value(&res, &mut self.cache()))
+        )
     }
 
     pub fn create_pointer(&self, value: JsValue) -> Result<String, JsError> {
         let value: BaseSharedValueContainer =
-            from_js_value_with_cache(value, &mut self.cache())?;
-        self.dif_interface
+            from_js_value(value, &mut self.cache())?;
+        Ok(self.dif_interface
             .borrow_mut()
             .create_pointer(value)
-            .map_err(js_error)
-            .map(|address| address.to_string())
+            .to_string())
     }
 
     /// Resolve a pointer address synchronously if it's in memory, otherwise return an error
@@ -163,6 +167,6 @@ impl JSDIFInterface {
             .borrow_mut()
             .resolve_pointer_address(address)
             .map_err(js_error)?;
-        to_js_value_with_cache(&*result.base_shared_container(), &mut self.cache())
+        Ok(to_js_value(&*result.base_shared_container(), &mut self.cache()))
     }
 }

@@ -378,19 +378,17 @@ dependencies = [
  "num-integer",
  "num-traits",
  "num_enum",
- "ordered-float",
+ "ordered-float 5.3.0",
  "pretty",
- "proc-macro2",
- "quote",
  "realhydroper-lsp",
  "ringmap",
  "serde",
  "serde-big-array",
+ "serde-value",
  "serde_json",
  "serde_with",
  "strum",
  "strum_macros",
- "syn 2.0.117",
  "syntect",
  "thiserror 2.0.18",
  "tsify",
@@ -421,6 +419,7 @@ dependencies = [
 name = "datex-macros-internal"
 version = "0.0.2"
 dependencies = [
+ "proc-macro-crate",
  "proc-macro2",
  "quote",
  "syn 2.0.117",
@@ -1211,6 +1210,15 @@ checksum = "d6790f58c7ff633d8771f42965289203411a5e5c68388703c06e14f24770b41e"
 
 [[package]]
 name = "ordered-float"
+version = "2.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "68f19d67e5a2795c94e73e0bb1cc1a7edeb2e28efd39e2e1c9b7a40c1108b11c"
+dependencies = [
+ "num-traits",
+]
+
+[[package]]
+name = "ordered-float"
 version = "5.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b7d950ca161dc355eaf28f82b11345ed76c6e1f6eb1f4f4479e0323b9e2fbd0e"
@@ -1515,6 +1523,16 @@ version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "11fc7cc2c76d73e0f27ee52abbd64eec84d46f370c88371120433196934e4b7f"
 dependencies = [
+ "serde",
+]
+
+[[package]]
+name = "serde-value"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f3a1a3341211875ef120e117ea7fd5228530ae7e7036a779fdc9117be6b3282c"
+dependencies = [
+ "ordered-float 2.10.1",
  "serde",
 ]
 
