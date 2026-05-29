@@ -1,4 +1,5 @@
 import { DEBUG_MODE } from "../global.ts";
+import type { CoreLibTypeId } from "./core.ts";
 import { type DIFTypeDefinition, type DIFUpdateData, DIFUpdateKind } from "./definitions.ts";
 import { type CustomReferenceMetadata, type DIFHandler, IS_PROXY_ACCESS } from "./dif-handler.ts";
 
@@ -43,7 +44,8 @@ export type TypeBindingDefinition<
     T,
     M extends CustomReferenceMetadata = CustomReferenceMetadata,
 > = {
-    typeAddress: string;
+    coreLibTypeId?: CoreLibTypeId;
+    pointerAddress?: string;
     bind(
         this: TypeBindingContext<M>,
         value: T,
@@ -96,7 +98,8 @@ export type TypeBindingDefinition<
 
 export class TypeRegistry {
     #difHandler: DIFHandler;
-    #typeBindings: Map<string, TypeBinding> = new Map();
+    #typePointerAddressBindings: Map<string, TypeBinding> = new Map();
+    #coreLibTypeIdBindings: Map<CoreLibTypeId, TypeBinding> = new Map();
 
     constructor(difHandler: DIFHandler) {
         this.#difHandler = difHandler;
@@ -117,40 +120,50 @@ export class TypeRegistry {
     public registerTypeBinding<T>(
         typeBindingDefinition: TypeBindingDefinition<T>,
     ) {
-        this.#typeBindings.set(
-            typeBindingDefinition.typeAddress,
-            new TypeBinding(
-                typeBindingDefinition as TypeBindingDefinition<
-                    WeakKey,
-                    CustomReferenceMetadata
-                >,
-                this.#difHandler,
-            ),
+        const binding = new TypeBinding(
+            typeBindingDefinition as TypeBindingDefinition<
+                WeakKey,
+                CustomReferenceMetadata
+            >,
+            this.#difHandler,
         );
+        if (typeBindingDefinition.pointerAddress != null) {
+            this.#typePointerAddressBindings.set(
+                typeBindingDefinition.pointerAddress,
+                binding,
+            );
+        } else if (typeBindingDefinition.coreLibTypeId != null) {
+            this.#coreLibTypeIdBindings.set(
+                typeBindingDefinition.coreLibTypeId,
+                binding,
+            );
+        } else {
+            throw new Error(
+                "TypeBindingDefinition must have either pointerAddress or coreLibTypeId defined",
+            );
+        }
     }
 
     /**
-     * @private
      * Gets the type binding for a given type pointer address.
-     */
-    _getTypeBinding(
-        typePointerAddress: string,
-    ): TypeBinding | null {
-        return this.#typeBindings.get(typePointerAddress) || null;
-    }
-
-    /**
-     * Gets the type binding for a given type pointer address.
+     * @param typePointerAddress The pointer address of the type in the Datex runtime.
+     * @returns The corresponding TypeBinding or null if no binding is found for the given pointer address.
      */
     public getTypeBinding(
         typePointerAddress: string,
     ): TypeBinding | null {
-        const typeBinding = this.#typeBindings.get(typePointerAddress);
-        if (typeBinding) {
-            return typeBinding;
-        } else {
-            return null;
-        }
+        return this.#typePointerAddressBindings.get(typePointerAddress) || null;
+    }
+
+    /**
+     * Gets the type binding for a given core library type id.
+     * @param coreLibTypeId
+     * @returns
+     */
+    public getTypeBindingByCoreLibTypeId(
+        coreLibTypeId: CoreLibTypeId,
+    ): TypeBinding | null {
+        return this.#coreLibTypeIdBindings.get(coreLibTypeId) || null;
     }
 }
 

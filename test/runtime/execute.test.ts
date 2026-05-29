@@ -1,7 +1,7 @@
 import { Runtime } from "../../src/runtime/runtime.ts";
 import { assertEquals } from "@std/assert";
 import { Endpoint } from "../../src/lib/special-core-types/endpoint.ts";
-import { CoreTypeAddress } from "../../src/dif/core.ts";
+import { CoreLibTypeId } from "../../src/dif/core.ts";
 import { Range } from "../../src/lib/special-core-types/range.ts";
 Deno.test("execute sync with string result", async () => {
     const runtime = await Runtime.create({ endpoint: "@jonas" });
@@ -18,7 +18,7 @@ Deno.test("execute sync dif value", async () => {
     // For now, all DIF values are returned in the same format to reduce complexity.
     const result = runtime.dif.executeSyncDIF(script);
     assertEquals(result, {
-        type: CoreTypeAddress.integer,
+        type: CoreLibTypeId.integer,
         value: "3",
     });
     console.log(result);
@@ -37,7 +37,7 @@ Deno.test("execute sync typed integer", async () => {
         "42u8",
     );
     assertEquals(result, {
-        type: CoreTypeAddress.integer_u8,
+        type: CoreLibTypeId.integer_u8,
         value: 42,
     });
 });

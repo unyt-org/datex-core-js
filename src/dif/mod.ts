@@ -5,4 +5,4 @@
  */
 export * as Definitions from "./definitions.ts";
 export * as Display from "./display.ts";
-export { CoreTypeAddress } from "./core.ts";
+export { CoreLibTypeId as CoreTypeAddress } from "./core.ts";

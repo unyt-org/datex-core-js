@@ -9,7 +9,7 @@ import {
     type DIFUpdateData,
     DIFUpdateKind,
 } from "../../src/dif/definitions.ts";
-import { CoreTypeAddress } from "../../src/dif/core.ts";
+import { CoreLibTypeId } from "../../src/dif/core.ts";
 import { assertStrictEquals } from "@std/assert/strict-equals";
 import { Ref } from "../../src/refs/ref.ts";
 import { difReferenceToDisplayString, difValueContainerToDisplayString } from "../../src/dif/display.ts";
@@ -542,7 +542,7 @@ Deno.test("pointer primitive ref remote update and observe bind direct", () => {
         data: {
             value: { value: 456 },
             kind: DIFUpdateKind.Replace,
-        }
+        },
     });
 
     // check if the update was observed
@@ -583,7 +583,7 @@ Deno.test("pointer primitive ref remote update and observe local", () => {
         data: {
             value: { value: 456 },
             kind: DIFUpdateKind.Replace,
-        }
+        },
     });
 
     // check if the update was observed
@@ -606,7 +606,7 @@ Deno.test("pointer primitive ref remote update and observe local", () => {
             data: {
                 value: { value: 789 },
                 kind: DIFUpdateKind.Replace,
-            }
+            },
         },
     );
 
@@ -676,7 +676,7 @@ Deno.test("core integer", () => {
     const script = "42";
     const result = runtime.dif.executeSyncDIF(script);
     assertEquals(result, {
-        type: CoreTypeAddress.integer,
+        type: CoreLibTypeId.integer,
         value: "42",
     });
 });
@@ -698,6 +698,6 @@ Deno.test("core integer variants", () => {
     const result = runtime.dif.executeSyncDIF(script);
     assertEquals(result, {
         value: 42,
-        type: CoreTypeAddress.integer_u8,
+        type: CoreLibTypeId.integer_u8,
     });
 });

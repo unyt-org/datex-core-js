@@ -1,4 +1,4 @@
-import { CoreTypeAddress } from "../../dif/core.ts";
+import { CoreLibTypeId } from "../../dif/core.ts";
 import { type CustomReferenceMetadata, type DIFHandler, IS_PROXY_ACCESS } from "../../dif/dif-handler.ts";
 import type { TypeBindingDefinition } from "../../dif/type-registry.ts";
 import { interceptAccessors } from "../../dif/utils.ts";
@@ -13,7 +13,7 @@ type ArrayMethods<V> = {
 };
 
 export const arrayTypeBinding: TypeBindingDefinition<Array<unknown>> = {
-    typeAddress: CoreTypeAddress.list,
+    coreLibTypeId: CoreLibTypeId.List,
     bind(target, pointerAddress) {
         const metadata: CustomReferenceMetadata = {};
         const arrayMethods = getArrayMethods(

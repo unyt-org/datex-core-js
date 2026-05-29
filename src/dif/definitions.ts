@@ -6,9 +6,8 @@
 
 /**
  * A DATEX pointer address representation in the DIF format.
- * (3, 5, or 26 byte hex string)
  */
-export type DIFPointerAddress = string;
+export type DIFPointerAddress = { $: string };
 /**
  * A DATEX value representation in the DIF format,
  * which may optionally include type information.

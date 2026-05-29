@@ -10,7 +10,7 @@ import {
     type DIFTypeDefinition,
     type DIFValueContainer,
 } from "./definitions.ts";
-import { CoreTypeAddress } from "./core.ts";
+import { CoreLibTypeId } from "./core.ts";
 
 /**
  * Converts a DIF reference mutability to a display string.
@@ -104,7 +104,7 @@ export function difTypeDefinitionToDisplayString(
  * Converts a core type address to a display string.
  */
 export function addressToDisplayString(address: string): string {
-    const found = Object.entries(CoreTypeAddress).find(([_, addr]) => {
+    const found = Object.entries(CoreLibTypeId).find(([_, addr]) => {
         return addr === address;
     });
     if (found) {

@@ -4,11 +4,6 @@
 
 /* tslint:disable */
 /* eslint-disable */
-export interface AcceptAddress {
-    address: string;
-    tls_mode: TLSMode | undefined;
-}
-
 export interface ComHubMetadataInterfaceSocket {
     uuid: string;
     direction: InterfaceDirection;
@@ -185,8 +180,6 @@ export type IndentType = "Spaces" | "Tabs";
 export type InterfacePriority = "None" | { Priority: number };
 
 export type NetworkTraceHopDirection = "Outgoing" | "Incoming";
-
-export type TLSMode = { type: "HandledExternally" } | { type: "WithCertificate"; data: { private_key: number[]; certificate: number[] } };
 
 
 export class JSComHub {

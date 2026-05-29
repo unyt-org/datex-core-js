@@ -1,4 +1,4 @@
-import { CoreTypeAddress } from "../../dif/core.ts";
+import { CoreLibTypeId } from "../../dif/core.ts";
 import type { TypeBindingDefinition } from "../../dif/type-registry.ts";
 
 const ORIGINAL_SET = Symbol("ORIGINAL_SET");
@@ -15,7 +15,7 @@ export const mapTypeBinding: TypeBindingDefinition<
     Map<unknown, unknown>,
     MapMetadata
 > = {
-    typeAddress: CoreTypeAddress.map,
+    coreLibTypeId: CoreLibTypeId.Map,
     bind(value, pointerAddress) {
         const originalSet = value.set.bind(value);
         const originalDelete = value.delete.bind(value);

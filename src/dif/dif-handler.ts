@@ -1,4 +1,4 @@
-import {JSDIFInterface, JSRuntime} from "../datex.ts";
+import { JSDIFInterface, JSRuntime } from "../datex.ts";
 import { Ref } from "../refs/ref.ts";
 import { Endpoint } from "../lib/special-core-types/endpoint.ts";
 import { Range } from "../lib/special-core-types/range.ts";
@@ -19,7 +19,7 @@ import {
     type DIFValueContainer,
     type ObserveOptions,
 } from "./definitions.ts";
-import { CoreTypeAddress, CoreTypeAddressRanges } from "./core.ts";
+import { CoreLibTypeId } from "./core.ts";
 import { type TypeBinding, TypeRegistry } from "./type-registry.ts";
 import { panic } from "../utils/exceptions.ts";
 import { JsLibTypeAddress } from "./js-lib.ts";
@@ -170,7 +170,7 @@ export class DIFHandler {
         return this.#handle.create_pointer({
             value: difValueContainer,
             allowed_type: allowedType,
-            mutability
+            mutability,
         });
     }
 
@@ -182,7 +182,7 @@ export class DIFHandler {
     public updateReference(address: string, update_data: DIFUpdateData) {
         this.#handle.update(address, {
             source_id: this.#transceiver_id,
-            data: update_data
+            data: update_data,
         });
     }
 
@@ -353,15 +353,15 @@ export class DIFHandler {
             if (Array.isArray(value.value)) {
                 // [[x,y,]] -> map
                 if (Array.isArray(value.value[0])) {
-                    type = CoreTypeAddress.map;
+                    type = CoreLibTypeId.map;
                 } // [x,y] or [] -> list
                 else {
-                    type = CoreTypeAddress.list;
+                    type = CoreLibTypeId.list;
                 }
             } else if (
                 typeof value.value === "object" && value.value !== null
             ) {
-                type = CoreTypeAddress.map;
+                type = CoreLibTypeId.map;
                 convertMapToJSObject = true;
             } // primitive JS value, no type specified
             else {
@@ -371,15 +371,15 @@ export class DIFHandler {
 
         // null, boolean and text types values are just returned as is
         if (
-            type === CoreTypeAddress.boolean ||
-            type == CoreTypeAddress.text ||
-            type === CoreTypeAddress.null
+            type === CoreLibTypeId.boolean ||
+            type == CoreLibTypeId.text ||
+            type === CoreLibTypeId.null
         ) {
             return value.value as T;
         } // small integers are interpreted as JS numbers
         else if (
             typeof type === "string" && (
-                type == CoreTypeAddress.integer ||
+                type == CoreLibTypeId.integer ||
                 this.isPointerAddressInAdresses(
                     type,
                     CoreTypeAddressRanges.small_signed_integers,
@@ -411,9 +411,9 @@ export class DIFHandler {
         ) {
             return (Number(value.value) as number) as T;
         } // endpoint types are resolved to Endpoint instances
-        else if (type === CoreTypeAddress.endpoint) {
+        else if (type === CoreLibTypeId.endpoint) {
             return Endpoint.get(value.value as string) as T;
-        } else if (type === CoreTypeAddress.range) {
+        } else if (type === CoreLibTypeId.range) {
             const [start, end] = value.value as DIFArray;
             const result = this.promiseAllOrSync<number>([
                 this.resolveDIFValueContainer(start),
@@ -427,12 +427,12 @@ export class DIFHandler {
                 const [start, end] = result as number[];
                 return new Range(start, end) as T;
             }
-        } else if (type === CoreTypeAddress.list) {
+        } else if (type === CoreLibTypeId.list) {
             return this.promiseAllOrSync(
                 (value.value as DIFArray).map((v) => this.resolveDIFValueContainer(v)),
             ) as T | Promise<T>;
         } // map types are resolved from a DIFObject (aka JS Map) or Array of key-value pairs to a JS object
-        else if (type === CoreTypeAddress.map) {
+        else if (type === CoreLibTypeId.map) {
             if (Array.isArray(value.value)) {
                 const resolvedMap = new Map<unknown, unknown>();
                 for (const [key, val] of (value.value as DIFMap)) {
@@ -478,7 +478,7 @@ export class DIFHandler {
         ) {
             // undefined (null + js.undefined)
             if (
-                type.def[0] === CoreTypeAddress.null &&
+                type.def[0] === CoreLibTypeId.null &&
                 type.def[1].length === 1 &&
                 type.def[1][0] == JsLibTypeAddress.undefined
             ) {
@@ -1131,7 +1131,7 @@ export class DIFHandler {
                 type: {
                     kind: DIFTypeDefinitionKind.ImplType,
                     def: [
-                        CoreTypeAddress.null,
+                        CoreLibTypeId.null,
                         [JsLibTypeAddress.undefined],
                     ],
                 },
@@ -1147,7 +1147,7 @@ export class DIFHandler {
             };
         } else if (typeof value === "bigint") {
             return {
-                type: CoreTypeAddress.integer_ibig,
+                type: CoreLibTypeId.integer_ibig,
                 value: value.toString(), // convert bigint to string for DIFValue
             };
         } else if (typeof value === "string") {
@@ -1156,12 +1156,12 @@ export class DIFHandler {
             };
         } else if (value instanceof Endpoint) {
             return {
-                type: CoreTypeAddress.endpoint,
+                type: CoreLibTypeId.endpoint,
                 value: value.toString(),
             };
         } else if (value instanceof Range) {
             return {
-                type: CoreTypeAddress.range,
+                type: CoreLibTypeId.range,
                 value: [
                     this.convertJSValueToDIFValueContainer(value.start),
                     this.convertJSValueToDIFValueContainer(value.end),
@@ -1180,7 +1180,7 @@ export class DIFHandler {
                     this.convertJSValueToDIFValueContainer(v),
                 ] satisfies [DIFValueContainer, DIFValueContainer]).toArray();
             return {
-                type: CoreTypeAddress.map,
+                type: CoreLibTypeId.map,
                 value: map,
             };
         } else if (typeof value === "object") {

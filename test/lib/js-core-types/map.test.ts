@@ -2,7 +2,7 @@ import { assertEquals } from "@std/assert/equals";
 import { mapTypeBinding } from "datex/lib/js-core-types/map.ts";
 import { Runtime } from "datex/runtime/runtime.ts";
 import { DIFUpdateKind } from "datex/dif/definitions.ts";
-import { CoreTypeAddress } from "datex/dif/core.ts";
+import { CoreLibTypeId } from "datex/dif/core.ts";
 const runtime = await Runtime.create({ endpoint: "@test" });
 runtime.dif.type_registry.registerTypeBinding(mapTypeBinding);
 
@@ -35,7 +35,7 @@ Deno.test("map set external", () => {
             key: { kind: "text", value: "externalKey" },
             value: { value: "newValue" },
             kind: DIFUpdateKind.SetEntry,
-        }
+        },
     });
     assertEquals(map.get("externalKey"), "newValue");
 });
@@ -53,7 +53,7 @@ Deno.test("map delete external", () => {
         data: {
             kind: DIFUpdateKind.DeleteEntry,
             key: { kind: "text", value: "key1" },
-        }
+        },
     });
     assertEquals(map.has("key1"), false);
 });
@@ -71,7 +71,7 @@ Deno.test("map clear external", () => {
         source_id: 42,
         data: {
             kind: DIFUpdateKind.Clear,
-        }
+        },
     });
     assertEquals(map.size, 0);
 });
@@ -85,7 +85,7 @@ Deno.test("map replace external", () => {
         ]),
     );
 
-    runtime._runtime.dif_interface().update( address, {
+    runtime._runtime.dif_interface().update(address, {
         source_id: 42,
         data: {
             kind: DIFUpdateKind.Replace,
@@ -95,7 +95,7 @@ Deno.test("map replace external", () => {
                     ["b", "valueB"],
                 ]),
             ),
-        }
+        },
     });
     assertEquals(
         map,
@@ -178,8 +178,8 @@ Deno.test("map from datex", () => {
     assertEquals(mapDif, {
         value: [
             [
-                { type: CoreTypeAddress.integer, value: "1" },
-                { type: CoreTypeAddress.integer, value: "2" },
+                { type: CoreLibTypeId.integer, value: "1" },
+                { type: CoreLibTypeId.integer, value: "2" },
             ],
         ],
     });
