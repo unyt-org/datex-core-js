@@ -14,7 +14,7 @@ function getCurrentRuntimeLocalValue<T>(address: string) {
 }
 
 function createArrayReference<T>(array: T[]): [T[], string] {
-    const arrayPtr = runtime.createTransparentReference(array);
+    const arrayPtr = runtime.createSharedValue(array);
     const address = runtime.dif.getPointerAddressForValue(arrayPtr)!;
     return [arrayPtr, address];
 }
@@ -33,7 +33,7 @@ Deno.test("array set external", () => {
             key: { kind: "index", value: 0 },
             value: { value: "newValue" },
             kind: DIFUpdateKind.SetEntry,
-        }
+        },
     });
     assertEquals(arrayPtr[0], "newValue");
 });
@@ -48,7 +48,7 @@ Deno.test("array append external", () => {
         data: {
             value: { value: "newValueEnd" },
             kind: DIFUpdateKind.AppendEntry,
-        }
+        },
     });
     assertEquals(arrayPtr[3], "newValueEnd");
 });
@@ -63,7 +63,7 @@ Deno.test("array delete external", () => {
         data: {
             kind: DIFUpdateKind.DeleteEntry,
             key: { kind: "index", value: 0 },
-        }
+        },
     });
     assertEquals(arrayPtr, ["value2", 123]);
 });
@@ -77,7 +77,7 @@ Deno.test("array clear external", () => {
         source_id: 42,
         data: {
             kind: DIFUpdateKind.Clear,
-        }
+        },
     });
     assertEquals(arrayPtr.length, 0);
 });
@@ -93,7 +93,7 @@ Deno.test("array replace external", () => {
         data: {
             value: runtime.dif.convertJSValueToDIFValueContainer(["a", "b", "c"]),
             kind: DIFUpdateKind.Replace,
-        }
+        },
     });
     assertEquals(arrayPtr, ["a", "b", "c"]);
 });
@@ -113,7 +113,7 @@ Deno.test("array splice external", () => {
                 runtime.dif.convertJSValueToDIFValueContainer("newValueA"),
                 runtime.dif.convertJSValueToDIFValueContainer("newValueB"),
             ],
-        }
+        },
     });
     assertEquals(arrayPtr, ["value1", "newValueA", "newValueB", "value4"]);
 
@@ -124,7 +124,7 @@ Deno.test("array splice external", () => {
             start: 2,
             delete_count: 2,
             items: [],
-        }
+        },
     });
     assertEquals(arrayPtr, ["value1", "newValueA"]);
 });

@@ -19,7 +19,7 @@ const runtime = await Runtime.create({ endpoint: "@jonas" });
 runtime.dif.type_registry.registerTypeBinding(arrayTypeBinding);
 
 Deno.test("pointer create with observe", () => {
-    const ref = runtime.dif.createSharedValue(
+    const ref = runtime.dif.constructSharedValue(
         {
             value: "Hello, DATEX!",
         },
@@ -53,7 +53,7 @@ Deno.test("pointer create with observe", () => {
 });
 
 Deno.test("pointer create without observe", () => {
-    const ref = runtime.dif.createSharedValue(
+    const ref = runtime.dif.constructSharedValue(
         {
             value: "Hello, Datex!",
         },
@@ -79,37 +79,37 @@ Deno.test("pointer create without observe", () => {
 });
 
 Deno.test("pointer create primitive", () => {
-    runtime.createTransparentReference(
+    runtime.createSharedValue(
         42,
         undefined,
         DIFSharedValueMutability.Immutable,
     ) satisfies BaseSharedContainer<42>;
 
-    runtime.createTransparentReference(
+    runtime.createSharedValue(
         42,
         undefined,
         DIFSharedValueMutability.Mutable,
     ) satisfies BaseSharedContainer<number>;
 
-    runtime.createTransparentReference(
+    runtime.createSharedValue(
         "hello world",
         undefined,
         DIFSharedValueMutability.Immutable,
     ) satisfies BaseSharedContainer<"hello world">;
 
-    runtime.createTransparentReference(
+    runtime.createSharedValue(
         "hello world",
         undefined,
         DIFSharedValueMutability.Mutable,
     ) satisfies BaseSharedContainer<string>;
 
-    runtime.createTransparentReference(
+    runtime.createSharedValue(
         true,
         undefined,
         DIFSharedValueMutability.Immutable,
     ) satisfies BaseSharedContainer<true>;
 
-    runtime.createTransparentReference(
+    runtime.createSharedValue(
         { x: true } as const,
         undefined,
         DIFSharedValueMutability.Immutable,
@@ -117,12 +117,12 @@ Deno.test("pointer create primitive", () => {
         readonly x: true;
     };
 
-    const a = runtime.createTransparentReference(
+    const a = runtime.createSharedValue(
         5,
         undefined,
         DIFSharedValueMutability.Immutable,
     );
-    const b = runtime.createTransparentReference(
+    const b = runtime.createSharedValue(
         { x: a },
         undefined,
         DIFSharedValueMutability.Mutable,
@@ -134,7 +134,7 @@ Deno.test("pointer create primitive", () => {
 });
 
 Deno.test("pointer create struct", () => {
-    const innerPtr = runtime.createTransparentReference(
+    const innerPtr = runtime.createSharedValue(
         3,
         undefined,
         // x2: &mut() = x;
@@ -187,7 +187,7 @@ Deno.test("pointer create struct", () => {
     const struct = { a: 1.0, b: "text", c: { d: true }, e: { f: innerPtr } };
 
     // can not assign to ptrObjImmutable.e.f
-    const ptrObjImmutable = runtime.createTransparentReference(
+    const ptrObjImmutable = runtime.createSharedValue(
         struct,
         undefined,
         DIFSharedValueMutability.Immutable,
@@ -197,7 +197,7 @@ Deno.test("pointer create struct", () => {
     // cannot create a new reference for the same object
     assertThrows(
         () => {
-            runtime.createTransparentReference(
+            runtime.createSharedValue(
                 ptrObjImmutable,
                 undefined,
                 DIFSharedValueMutability.Mutable,
@@ -210,7 +210,7 @@ Deno.test("pointer create struct", () => {
     // also cannot create a new reference for the original object
     assertThrows(
         () => {
-            runtime.createTransparentReference(
+            runtime.createSharedValue(
                 struct,
                 undefined,
                 DIFSharedValueMutability.Mutable,
@@ -264,7 +264,7 @@ Deno.test("pointer create and resolve", () => {
     //     `Invalid`,
     // );
 
-    const ptr = runtime.dif.createSharedValue(
+    const ptr = runtime.dif.constructSharedValue(
         { value: "unyt.org" },
         undefined,
         DIFSharedValueMutability.Mutable,
@@ -280,7 +280,7 @@ Deno.test("pointer object create and resolve", () => {
         [{ value: "a" }, { value: 123 }],
         [{ value: "b" }, { value: 456 }],
     ];
-    const ptr = runtime.dif.createSharedValue(
+    const ptr = runtime.dif.constructSharedValue(
         {
             value: initialDIFValue,
         },
@@ -307,7 +307,7 @@ Deno.test("pointer object create and resolve", () => {
 
 Deno.test("pointer object create and cache", () => {
     const val = { a: 123, b: 456 };
-    const ptrObj = runtime.createTransparentReference(val);
+    const ptrObj = runtime.createSharedValue(val);
     console.log("ptrObj", ptrObj);
     assertEquals(
         ptrObj,
@@ -336,7 +336,7 @@ Deno.test("pointer object create and cache", () => {
 
 Deno.test("pointer map create and cache", () => {
     const val = new Map([[1, 2], [3, 4]]);
-    const ptrMap = runtime.createTransparentReference(val);
+    const ptrMap = runtime.createSharedValue(val);
     assertEquals(ptrMap, val);
     ptrMap.set(5, 6);
     ptrMap satisfies Map<number, number>;
@@ -370,7 +370,7 @@ Deno.test("pointer map create and cache", () => {
 
 Deno.test("pointer primitive ref create and cache", () => {
     const val = 123;
-    const ptrObj = runtime.createTransparentReference(val);
+    const ptrObj = runtime.createSharedValue(val);
     if (!(ptrObj instanceof BaseSharedContainer)) {
         throw new Error("Pointer object is not a Ref");
     }
@@ -388,7 +388,7 @@ Deno.test("pointer primitive ref create and cache", () => {
 
 Deno.test("pointer primitive ref update", () => {
     const val = 123;
-    const ptrObj = runtime.createTransparentReference(val as number);
+    const ptrObj = runtime.createSharedValue(val as number);
     if (!(ptrObj instanceof BaseSharedContainer)) {
         throw new Error("Pointer object is not a Ref");
     }
@@ -412,7 +412,7 @@ Deno.test("pointer primitive ref update", () => {
 
 Deno.test("immutable pointer primitive ref update", () => {
     const val = 123;
-    const ptrObj = runtime.createTransparentReference(
+    const ptrObj = runtime.createSharedValue(
         val as number,
         undefined,
         DIFSharedValueMutability.Immutable,
@@ -440,7 +440,7 @@ Deno.test("immutable pointer primitive ref update", () => {
 
 Deno.test("pointer primitive ref update and observe", () => {
     const val = 123;
-    const ptrObj = runtime.createTransparentReference(
+    const ptrObj = runtime.createSharedValue(
         val as number,
     ) as BaseSharedContainer<
         number
@@ -470,7 +470,7 @@ Deno.test("pointer primitive ref update and observe", () => {
 
 Deno.test("pointer primitive ref update and observe local", () => {
     const val = 123;
-    const ptrObj = runtime.createTransparentReference(
+    const ptrObj = runtime.createSharedValue(
         val as number,
     ) as BaseSharedContainer<
         number
@@ -520,7 +520,7 @@ Deno.test("pointer primitive ref update and observe local", () => {
 
 Deno.test("pointer primitive ref remote update and observe bind direct", () => {
     const val = 123;
-    const ptrObj = runtime.createTransparentReference(
+    const ptrObj = runtime.createSharedValue(
         val as number,
     ) as BaseSharedContainer<
         number
@@ -561,7 +561,7 @@ Deno.test("pointer primitive ref remote update and observe bind direct", () => {
 
 Deno.test("pointer primitive ref remote update and observe local", () => {
     const val = 123;
-    const ptrObj = runtime.createTransparentReference(
+    const ptrObj = runtime.createSharedValue(
         val as number,
     ) as BaseSharedContainer<
         number
@@ -623,7 +623,7 @@ Deno.test("pointer primitive ref remote update and observe local", () => {
 });
 
 Deno.test("observer immutable", () => {
-    const ref = runtime.dif.createSharedValue(
+    const ref = runtime.dif.constructSharedValue(
         { value: "Immutable" },
         undefined,
         DIFSharedValueMutability.Immutable,
@@ -638,7 +638,7 @@ Deno.test("observer immutable", () => {
 });
 
 Deno.test("pointer observe unobserve", () => {
-    const ref = runtime.dif.createSharedValue(
+    const ref = runtime.dif.constructSharedValue(
         { value: "42" },
         undefined,
         DIFSharedValueMutability.Mutable,

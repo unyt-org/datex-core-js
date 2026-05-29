@@ -14,7 +14,7 @@ function getCurrentRuntimeLocalValue<T>(address: string) {
 }
 
 function createMapReference<K, V>(map: Map<K, V>): [Map<K, V>, string] {
-    const mapPtr = runtime.createTransparentReference(map);
+    const mapPtr = runtime.createSharedValue(map);
     const address = runtime.dif.getPointerAddressForValue(mapPtr)!;
     return [mapPtr, address];
 }

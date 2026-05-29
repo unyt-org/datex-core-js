@@ -185,7 +185,7 @@ export class DIFHandler {
      * @param mutability - The mutability of the pointer.
      * @returns The created pointer address.
      */
-    public createSharedValue(
+    public constructSharedValue(
         difValueContainer: DIFValueContainer,
         mutability: SharedContainerMutability = SharedContainerMutability.Mutable,
         allowedType: DIFTypeDefinition | null = null,
@@ -644,13 +644,13 @@ export class DIFHandler {
      * @param value - The DIFValueContainer to resolve.
      * @returns The resolved value as type T, or a Promise that resolves to type T.
      */
-    public resolveDIFValueContainer<T extends unknown>(
+    public resolveDIFValueContainer<T>(
         value: DIFValueContainer,
-    ): Value<T> {
+    ): T {
         if (typeof value === "object" && value !== null && !Array.isArray(value) && "$" in value) {
-            return this.resolvePointerAddress<T>(
+            return this.resolvePointerAddress(
                 ...splitPointerAddressWithOwnership(value.$),
-            );
+            ) as unknown as T;
         } else {
             return this.resolveDIFValue<T>(value);
         }
@@ -1012,7 +1012,7 @@ export class DIFHandler {
      * but also propagates changes between JS and the DATEX runtime.
      * If a reference for the given value already exists, an error is thrown.
      */
-    public wrapIfNeeded<
+    public createSharedValueFromJSValue<
         V,
         M extends SharedContainerMutability,
     >(
@@ -1028,7 +1028,7 @@ export class DIFHandler {
         }
 
         const difValue = this.convertJSValueToDIFValueContainer(value);
-        const ptrAddress = this.createSharedValue(
+        const ptrAddress = this.constructSharedValue(
             difValue,
             mutability,
             allowedType,

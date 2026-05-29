@@ -8,11 +8,11 @@ import {
     type JSRuntime,
 } from "../datex.ts";
 import { ComHub } from "../network/com-hub.ts";
-import { DIFHandler, type PointerOut } from "../dif/dif-handler.ts";
-import type { DIFSharedValueMutability, DIFTypeDefinition } from "../dif/definitions.ts";
-import type { BaseSharedContainer } from "../refs/shared-container.ts";
+import { DIFHandler } from "../dif/dif-handler.ts";
+import { AsShared, BaseSharedContainer, SharedContainerMutability } from "../shared-container/mod.ts";
 import { unimplemented } from "../utils/exceptions.ts";
 import { FlatInstruction, Instruction, InstructionTree } from "./types.d.ts";
+import { DIFTypeDefinition } from "../dif/types/mod.ts";
 
 // TODO: move to global.ts
 /** auto-generated version - do not edit: */
@@ -186,7 +186,7 @@ export class Runtime {
         if (difValueContainer === null) {
             return undefined as T;
         }
-        return this.#difHandler.resolveDIFValueContainer<T>(difValueContainer);
+        return this.#difHandler.resolveDIFValueContainer(difValueContainer);
     }
 
     /**
@@ -326,40 +326,19 @@ export class Runtime {
      * @param mutability Optional mutability of the reference (default is Mutable).
      * @returns A proxy object representing the pointer in JS.
      */
-    public createTransparentReference<
+    public createSharedValueFromJSValue<
         V,
-        M extends DIFSharedValueMutability = typeof DIFSharedValueMutability.Mutable,
+        M extends SharedContainerMutability,
     >(
-        // deno-lint-ignore ban-types
-        value: V & {},
-        allowedType?: DIFTypeDefinition | null,
-        mutability?: M,
-    ): PointerOut<V, M> {
-        return this.#difHandler.wrapIfNeeded(
+        value: V,
+        allowedType: DIFTypeDefinition | null = null,
+        mutability: M = SharedContainerMutability.Mutable as M,
+    ): AsShared<V, M> {
+        return this.#difHandler.createSharedValueFromJSValue(
             value,
             allowedType,
             mutability,
         );
-    }
-
-    /**
-     * Creates or retrieves a wrapped reference for the given value.
-     * If the value is already a reference, it returns the existing reference.
-     *
-     * @param value
-     * @param allowedType
-     * @param mutability
-     * @returns
-     */
-    public createOrGetWrappedReference<
-        V,
-        M extends DIFSharedValueMutability = typeof DIFSharedValueMutability.Mutable,
-    >(
-        _value: V,
-        _allowedType?: DIFTypeDefinition | null,
-        _mutability?: M,
-    ): BaseSharedContainer<V> {
-        unimplemented();
     }
 
     public startLSP(
