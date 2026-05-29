@@ -4,6 +4,7 @@
  * This module contains all type definitions related to the representation of types in DIF.
  */
 
+import type { SharedContainerMutability } from "../../shared-container/mod.ts";
 import type { CoreLibTypeId } from "../core.ts";
 
 /**
@@ -27,14 +28,34 @@ type DIFTypeDefinitionMap = {
     marker: DIFTypeMarker;
 };
 
+export const DIFLocalMutability = {
+    Immutable: 0,
+    Mutable: 1,
+} as const;
+export type DIFLocalMutability = typeof DIFLocalMutability[keyof typeof DIFLocalMutability];
+
+export const DIFLocalOwnership = {
+    Immutable: 0,
+    Mutable: 1,
+    Owned: null,
+} as const;
+export type DIFLocalOwnership = typeof DIFLocalOwnership[keyof typeof DIFLocalOwnership];
+
+export const DIFSharedContainerOwnership = {
+    Immutable: 0,
+    Mutable: 1,
+    Owned: null,
+} as const;
+export type DIFSharedContainerOwnership = typeof DIFSharedContainerOwnership[keyof typeof DIFSharedContainerOwnership];
+
 export type DIFTypeMetadata = {
     kind: "local";
-    mutability: "mut" | "";
-    referenceMutability?: "&" | "&mut";
+    mutability: DIFLocalMutability;
+    ownership?: DIFLocalOwnership;
 } | {
     kind: "shared";
-    mutability: "" | "mut";
-    ownership: "'mut" | "'" | "";
+    mutability: SharedContainerMutability;
+    ownership: DIFSharedContainerOwnership;
 };
 
 export type DIFTypeDefinitionWithMetadata = [
@@ -42,8 +63,22 @@ export type DIFTypeDefinitionWithMetadata = [
     DIFTypeDefinition,
 ];
 export type SharedContainerContainingNominalType = string; // $address
-export type DIFType = DIFTypeDefinitionWithMetadata | SharedContainerContainingNominalType; // TODO alias / nominal
+export type DIFType = DIFTypeDefinitionWithMetadata | SharedContainerContainingNominalType | CoreLibTypeId; // TODO alias / nominal or core lib type id
 
+/**
+ * Creates an immutable local DIFType for a given DIFTypeDefinition.
+ * @param def The DIFTypeDefinition to create the DIFType for.
+ * @returns A DIFType with the given definition and immutable local metadata.
+ */
+export function defaultDIFTypeForDefinition(def: DIFTypeDefinition): DIFType {
+    return [
+        {
+            kind: "local",
+            mutability: DIFLocalMutability.Immutable,
+        },
+        def,
+    ];
+}
 /**
  * The DIFTypeDefinition represents a structural (only for now) type definition in the DIF format.
  */

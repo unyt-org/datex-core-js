@@ -2,17 +2,17 @@ import {
     create_runtime,
     type DecompileOptions,
     disassemble_dxb_flat,
-    disassemble_dxb_tree,
     disassemble_dxb_to_string,
+    disassemble_dxb_tree,
+    type DisassemblerOptions,
     type JSRuntime,
-    type DisassemblerOptions
 } from "../datex.ts";
 import { ComHub } from "../network/com-hub.ts";
 import { DIFHandler, type PointerOut } from "../dif/dif-handler.ts";
 import type { DIFSharedValueMutability, DIFTypeDefinition } from "../dif/definitions.ts";
-import type { Ref } from "../refs/ref.ts";
+import type { BaseSharedContainer } from "../refs/shared-container.ts";
 import { unimplemented } from "../utils/exceptions.ts";
-import {FlatInstruction, Instruction, InstructionTree} from "./types.d.ts";
+import { FlatInstruction, Instruction, InstructionTree } from "./types.d.ts";
 
 // TODO: move to global.ts
 /** auto-generated version - do not edit: */
@@ -277,7 +277,6 @@ export class Runtime {
         return this.#runtime.compile(datexScript, valuesArray);
     }
 
-
     /**
      * Converts a JavaScript value to a string representation.
      * @param value The value to convert.
@@ -336,7 +335,7 @@ export class Runtime {
         allowedType?: DIFTypeDefinition | null,
         mutability?: M,
     ): PointerOut<V, M> {
-        return this.#difHandler.createTransparentReference(
+        return this.#difHandler.wrapIfNeeded(
             value,
             allowedType,
             mutability,
@@ -359,7 +358,7 @@ export class Runtime {
         _value: V,
         _allowedType?: DIFTypeDefinition | null,
         _mutability?: M,
-    ): Ref<V> {
+    ): BaseSharedContainer<V> {
         unimplemented();
     }
 
@@ -383,8 +382,8 @@ export class Runtime {
      * @param dxb DATEX binary body
      * @returns a tuple of the instruction tree and an optional error message if the disassembly (partially) failed
      */
-    public disassembleDXBFlat(dxb: Uint8Array): [FlatInstruction[], string|null] {
-        return disassemble_dxb_flat(dxb)
+    public disassembleDXBFlat(dxb: Uint8Array): [FlatInstruction[], string | null] {
+        return disassemble_dxb_flat(dxb);
     }
 
     /**
@@ -392,7 +391,7 @@ export class Runtime {
      * @param dxb DATEX binary body
      * @returns a tuple of the instruction tree and an optional error message if the disassembly (partially) failed
      */
-    public disassembleDXBTree(dxb: Uint8Array): [InstructionTree, string|null] {
+    public disassembleDXBTree(dxb: Uint8Array): [InstructionTree, string | null] {
         return disassemble_dxb_tree(dxb);
     }
 
@@ -401,7 +400,7 @@ export class Runtime {
      * @param dxb
      * @param options
      */
-    public disassembleDXBToString(dxb: Uint8Array, options?: DisassemblerOptions|null): string {
-        return disassemble_dxb_to_string(dxb, options)
+    public disassembleDXBToString(dxb: Uint8Array, options?: DisassemblerOptions | null): string {
+        return disassemble_dxb_to_string(dxb, options);
     }
 }

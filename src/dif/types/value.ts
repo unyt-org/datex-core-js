@@ -3,6 +3,7 @@
  * @description
  * This module contains all type definitions related to the representation of values in DIF.
  */
+import type { PointerAddressWithOwnership, SharedContainerMutability } from "../../shared-container/mod.ts";
 import type { CoreLibTypeId } from "../core.ts";
 import type { DIFTypeDefinition } from "./type.ts";
 
@@ -14,7 +15,7 @@ export type DIFValueContainer = DIFPointerAddress | DIFValue;
 /**
  * A DATEX pointer address representation in the DIF format.
  */
-export type DIFPointerAddress = { $: string };
+export type DIFPointerAddress = { $: PointerAddressWithOwnership };
 
 /**
  * A DIF value, which can be directly represented in the DIF format (e.g., primitive types) or a value including
@@ -22,8 +23,8 @@ export type DIFPointerAddress = { $: string };
  */
 export type DIFValue =
     | DIFDirectRepresentationValue
-    | [CoreLibTypeId, CoreValue]
-    | [CoreLibTypeId, CoreValue, DIFTypeDefinition];
+    | [CoreLibTypeId, DIFCoreValue]
+    | [CoreLibTypeId, DIFCoreValue, DIFTypeDefinition];
 
 /**
  * Types of values that can be directly represented in DIF without
@@ -34,29 +35,40 @@ export type DIFDirectRepresentationValue = boolean | string | number | null;
 /**
  * Represents a list of DIFValueContainers.
  */
-export type CoreValueList = Array<DIFValueContainer>;
+export type DIFCoreValueList = Array<DIFValueContainer>;
 
 /**
  * Represents a map of key-value pairs in DIF, where both keys and values are DIFValueContainers.
  */
-export type CoreValueMap = Array<[DIFValueContainer, DIFValueContainer]>;
+export type DIFCoreValueMap = Array<[DIFValueContainer, DIFValueContainer]>;
 
 /**
  * Represents a range of values in DIF, defined by a start and end value container, or as a tuple of two value containers.
  */
-export type CoreValueRange = [DIFValueContainer, DIFValueContainer] | {
+export type DIFCoreValueRange = [DIFValueContainer, DIFValueContainer] | {
     start: DIFValueContainer;
     end: DIFValueContainer;
 };
 /**
  * Represents a core value in DIF, which can be a primitive value, a structured object, a list, or a map.
  */
-export type CoreValue =
-    | CoreValueList // list
-    | CoreValueMap // map
-    | CoreValueRange // range
+export type DIFCoreValue =
+    | DIFCoreValueList // list
+    | DIFCoreValueMap // map
+    | DIFCoreValueRange // range
     | Record<string, DIFValueContainer> // StructuralMapWithStringKeys
     | string // text / endpoint
     | number // integer / decimal
     | boolean // booleans
     | null; // null
+
+/**
+ * Base struct for the shared value container.
+ * The allowed type is optional and can be used to specify the type of value that can be stored in the container.
+ * If the allowed type is not provided, it means that the type is inferred based on the provided value container.
+ */
+export type DIFBaseSharedValueContainer = [
+    DIFValueContainer, // value
+    SharedContainerMutability, // container mutability
+    DIFTypeDefinition, // allowed type
+];

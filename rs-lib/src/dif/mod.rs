@@ -1,25 +1,29 @@
-use std::{
-    cell::{Ref, RefCell, RefMut},
-    rc::Rc,
+use crate::js_utils::{
+    from_dif_js_value, from_js_value, js_error, to_js_value,
+    unwrap_or_report_js_error_debug,
 };
-use std::ops::DerefMut;
-use crate::js_utils::{from_dif_js_value, from_js_value, js_error, to_js_value, unwrap_or_report_js_error_debug};
 use datex_core::{
     dif::{
-        cache::DIFSharedContainerCache,
-        dif_interface::DIFInterface,
+        cache::DIFSharedContainerCache, dif_interface::DIFInterface,
         pointer_address::PointerAddressWithOwnership,
     },
     shared_values::{
-        PointerAddress,
-        base_shared_value_container::BaseSharedValueContainer,
+        PointerAddress, SharedContainerOwnership,
+        base_shared_value_container::{
+            BaseSharedValueContainer,
+            observers::{ObserveOptions, ObserverId, TransceiverId},
+        },
     },
     value_updates::update_data::Update,
     values::value_container::ValueContainer,
 };
-use datex_core::shared_values::base_shared_value_container::observers::{ObserveOptions, ObserverId, TransceiverId};
 use js_sys::Function;
 use serde::{Deserialize, de::IntoDeserializer};
+use std::{
+    cell::{Ref, RefCell, RefMut},
+    ops::DerefMut,
+    rc::Rc,
+};
 use wasm_bindgen::{JsError, JsValue, prelude::wasm_bindgen};
 
 #[wasm_bindgen]
@@ -57,17 +61,16 @@ impl JSDIFInterface {
         callback: &Function,
     ) -> Result<u32, JsError> {
         let transceiver_id = TransceiverId(transceiver_id);
-        let address = PointerAddress::try_from(address)
-            .map_err(js_error)?;
+        let address = PointerAddress::try_from(address).map_err(js_error)?;
         let cb = callback.clone();
-        let observe_options: ObserveOptions = from_js_value(observe_options, self.cache().deref_mut())?;
+        let observe_options: ObserveOptions =
+            from_js_value(observe_options, self.cache().deref_mut())?;
         let self_clone = self.clone();
         let observer = move |update: &Update| {
-            let value = to_js_value(
-                update,
-                &mut self_clone.cache()
+            let value = to_js_value(update, &mut self_clone.cache());
+            let _ = unwrap_or_report_js_error_debug(
+                cb.call1(&JsValue::NULL, &value),
             );
-            let _ = unwrap_or_report_js_error_debug(cb.call1(&JsValue::NULL, &value));
         };
         self.dif_interface
             .borrow_mut()
@@ -81,8 +84,7 @@ impl JSDIFInterface {
         address: &str,
         observer_id: u32,
     ) -> Result<(), JsError> {
-        let address = PointerAddress::try_from(address)
-            .map_err(js_error)?;
+        let address = PointerAddress::try_from(address).map_err(js_error)?;
         self.dif_interface
             .borrow_mut()
             .unobserve_pointer(address, ObserverId(observer_id))
@@ -95,9 +97,9 @@ impl JSDIFInterface {
         observer_id: u32,
         observe_options: JsValue,
     ) -> Result<(), JsError> {
-        let address = PointerAddress::try_from(address)
-            .map_err(js_error)?;
-        let observe_options: ObserveOptions = from_js_value(observe_options, &mut *self.cache())?;
+        let address = PointerAddress::try_from(address).map_err(js_error)?;
+        let observe_options: ObserveOptions =
+            from_js_value(observe_options, &mut *self.cache())?;
         self.dif_interface
             .borrow_mut()
             .update_observer_options(
@@ -116,10 +118,8 @@ impl JSDIFInterface {
         address: &str,
         update: JsValue,
     ) -> Result<JsValue, JsError> {
-        let address = PointerAddress::try_from(address)
-            .map_err(js_error)?;
-        let update: Update =
-            from_js_value(update, &mut self.cache())?;
+        let address = PointerAddress::try_from(address).map_err(js_error)?;
+        let update: Update = from_js_value(update, &mut self.cache())?;
         let result = self
             .dif_interface
             .borrow_mut()
@@ -137,19 +137,19 @@ impl JSDIFInterface {
             from_dif_js_value(callee, &mut self.cache())?;
         let value: ValueContainer =
             from_dif_js_value(value, &mut self.cache())?;
-        Ok(
-            self.dif_interface
-                .borrow_mut()
-                .apply(callee, value)
-                .map_err(js_error)?
-                .map(|res| to_js_value(&res, &mut self.cache()))
-        )
+        Ok(self
+            .dif_interface
+            .borrow_mut()
+            .apply(callee, value)
+            .map_err(js_error)?
+            .map(|res| to_js_value(&res, &mut self.cache())))
     }
 
     pub fn create_pointer(&self, value: JsValue) -> Result<String, JsError> {
         let value: BaseSharedValueContainer =
             from_js_value(value, &mut self.cache())?;
-        Ok(self.dif_interface
+        Ok(self
+            .dif_interface
             .borrow_mut()
             .create_pointer(value)
             .to_string())
@@ -160,13 +160,31 @@ impl JSDIFInterface {
         &self,
         address: &str,
     ) -> Result<JsValue, JsError> {
-        let address = PointerAddress::try_from(address)
-            .map_err(js_error)?;
+        let address = PointerAddress::try_from(address).map_err(js_error)?;
         let result = self
             .dif_interface
             .borrow_mut()
             .resolve_pointer_address(address)
             .map_err(js_error)?;
-        Ok(to_js_value(&*result.base_shared_container(), &mut self.cache()))
+        Ok(to_js_value(
+            &*result.base_shared_container(),
+            &mut self.cache(),
+        ))
+    }
+
+    pub fn has_address_with_ownership(
+        &self,
+        address: &str,
+        ownership: Option<u8>,
+    ) -> Result<bool, JsError> {
+        let pointer_address =
+            PointerAddress::try_from(address).map_err(js_error)?;
+        let ownership: SharedContainerOwnership =
+            SharedContainerOwnership::try_from(ownership)
+                .map_err(|_| js_error("Invalid ownership value"))?;
+        Ok(self
+            .dif_interface
+            .borrow()
+            .has_address_with_ownership(&pointer_address, ownership))
     }
 }

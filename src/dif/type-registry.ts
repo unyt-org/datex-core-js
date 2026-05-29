@@ -2,6 +2,7 @@ import { DEBUG_MODE } from "../global.ts";
 import type { CoreLibTypeId } from "./core.ts";
 import { type DIFTypeDefinition, type DIFUpdateData, DIFUpdateKind } from "./types/mod.ts";
 import { type CustomReferenceMetadata, type DIFHandler, IS_PROXY_ACCESS } from "./dif-handler.ts";
+import { PointerAddress } from "../shared-container/mod";
 
 type ImplMethod = {
     name: string;
@@ -195,7 +196,7 @@ export class TypeBinding<
      * Binds a new JS value to this type binding.
      * @returns
      */
-    public bindValue(value: T, pointerAddress: string): BindResult<T, M> {
+    public bindValue(value: T, pointerAddress: PointerAddress): BindResult<T, M> {
         const newValue = this.#definition.bind.call(
             this,
             value,
@@ -229,7 +230,7 @@ export class TypeBinding<
                     this.#definition.handleSet.call(
                         this,
                         value,
-                        this.#difHandler.resolveDIFPropertySync(
+                        this.#difHandler.resolveDIFProperty(
                             difUpdateData.key,
                         ),
                         this.#difHandler.resolveDIFValueContainerSync(
@@ -265,7 +266,7 @@ export class TypeBinding<
                     this.#definition.handleDelete.call(
                         this,
                         value,
-                        this.#difHandler.resolveDIFPropertySync(
+                        this.#difHandler.resolveDIFProperty(
                             difUpdateData.key,
                         ),
                     );

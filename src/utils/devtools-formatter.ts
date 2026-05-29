@@ -1,6 +1,6 @@
 import { Endpoint } from "../lib/special-core-types/endpoint.ts";
 import { Range } from "../lib/special-core-types/range.ts";
-import { Ref } from "../refs/ref.ts";
+import { BaseSharedContainer } from "../refs/shared-container.ts";
 
 // @ts-ignore devtoolsFormatters
 globalThis.devtoolsFormatters = [
@@ -8,7 +8,7 @@ globalThis.devtoolsFormatters = [
         header(obj: unknown) {
             if (obj instanceof Endpoint) {
                 return ["span", { style: "color: #58d452" }, obj.toString()];
-            } else if (obj instanceof Ref) {
+            } else if (obj instanceof BaseSharedContainer) {
                 return [
                     "span",
                     {},
