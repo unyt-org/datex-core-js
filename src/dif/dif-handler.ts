@@ -8,6 +8,7 @@ import { Ref } from "../refs/ref.ts";
 import { Endpoint } from "../lib/special-core-types/endpoint.ts";
 import { Range } from "../lib/special-core-types/range.ts";
 import {
+    CoreValue,
     type DIFPointerAddress,
     type DIFProperty,
     type DIFTypeDefinition,
@@ -22,6 +23,8 @@ import { CoreLibTypeId } from "./core.ts";
 import { type TypeBinding, TypeRegistry } from "./type-registry.ts";
 import { panic } from "../utils/exceptions.ts";
 import { JsLibTypeAddress } from "./js-lib.ts";
+import { JS_UNDEFINED } from "../lib/special-core-types/undefined.ts";
+import { isJsUndefined } from "../lib/special-core-types/undefined";
 
 export const IS_PROXY_ACCESS = Symbol("IS_PROXY_ACCESS");
 
@@ -343,147 +346,270 @@ export class DIFHandler {
     public resolveDIFValue<T extends unknown>(
         value: DIFValue,
     ): T | Promise<T> {
-        let type = value.type;
-
-        let convertMapToJSObject = false;
-
-        // no type specified since it is inferable from the value
-        if (type === undefined) {
-            if (Array.isArray(value.value)) {
-                // [[x,y,]] -> map
-                if (Array.isArray(value.value[0])) {
-                    type = CoreLibTypeId.map;
-                } // [x,y] or [] -> list
-                else {
-                    type = CoreLibTypeId.list;
-                }
-            } else if (
-                typeof value.value === "object" && value.value !== null
-            ) {
-                type = CoreLibTypeId.map;
-                convertMapToJSObject = true;
-            } // primitive JS value, no type specified
-            else {
-                return value.value as T;
-            }
+        // direct interpretation of trivial types without type annotation
+        if (value === null) {
+            return null as T;
+        } else if (isJsUndefined(value)) {
+            return undefined as T;
+        } else if (typeof value === "string") {
+            return value as T;
+        } else if (typeof value === "boolean") {
+            return value as T;
+        } else if (typeof value === "number") {
+            return value as T;
         }
 
-        // null, boolean and text types values are just returned as is
-        if (
-            type === CoreLibTypeId.boolean ||
-            type == CoreLibTypeId.text ||
-            type === CoreLibTypeId.null
+        // custom interpretation means
+        if (!Array.isArray(value) || value.length < 2 || value.length > 3) {
+            throw new Error(
+                "Invalid DIFValue format: expected an array for non-primitive types",
+            );
+        }
+
+        const [type, core, definition] = value as [CoreLibTypeId, CoreValue] | [
+            CoreLibTypeId,
+            CoreValue,
+            DIFTypeDefinition,
+        ];
+
+        let val: unknown = null;
+        if (type === CoreLibTypeId.null) {
+            if (core !== null) {
+                throw new Error("Expected null value for null type");
+            }
+            val = null;
+        } else if (type === CoreLibTypeId.boolean) {
+            if (typeof core !== "boolean") {
+                throw new Error("Expected boolean value for boolean type");
+            }
+            val = core;
+        } else if (
+            ([
+                CoreLibTypeId.integer_i8,
+                CoreLibTypeId.integer_i16,
+                CoreLibTypeId.integer_i32,
+                CoreLibTypeId.integer_u8,
+                CoreLibTypeId.integer_u16,
+                CoreLibTypeId.integer_u32,
+            ] as CoreLibTypeId[]).includes(type)
         ) {
-            return value.value as T;
-        } // small integers are interpreted as JS numbers
-        else if (
-            typeof type === "string" && (
-                type == CoreLibTypeId.integer ||
-                this.isPointerAddressInAdresses(
-                    type,
-                    CoreTypeAddressRanges.small_signed_integers,
-                ) ||
-                this.isPointerAddressInAdresses(
-                    type,
-                    CoreTypeAddressRanges.small_unsigned_integers,
-                )
-            )
+            if (typeof core !== "number") {
+                throw new Error("Expected number value for integer type");
+            }
+            val = core;
+        } else if (
+            ([
+                CoreLibTypeId.integer_i64,
+                CoreLibTypeId.integer_i128,
+                CoreLibTypeId.integer_u64,
+                CoreLibTypeId.integer_u128,
+                CoreLibTypeId.integer_ibig,
+                CoreLibTypeId.integer,
+            ] as CoreLibTypeId[]).includes(type)
         ) {
-            return Number(value.value as number) as T;
-        } // big integers are interpreted as JS BigInt
-        else if (
-            typeof type === "string" && (
-                this.isPointerAddressInAdresses(
-                    type,
-                    CoreTypeAddressRanges.big_signed_integers,
-                )
-            )
+            if (typeof core !== "string" && typeof core !== "number") {
+                throw new Error("Expected string or number value for big integer type");
+            }
+            val = BigInt(core);
+        } else if (
+            ([
+                CoreLibTypeId.decimal_f32,
+                CoreLibTypeId.decimal_f64,
+                CoreLibTypeId.decimal_dbig,
+                CoreLibTypeId.decimal, // FIXME rational notation 3/4
+            ] as CoreLibTypeId[]).includes(type)
         ) {
-            return BigInt(value.value as number) as T;
-        } // decimal types are interpreted as JS numbers
-        else if (
-            typeof type === "string" &&
-            this.isPointerAddressInAdresses(
-                type,
-                CoreTypeAddressRanges.decimals,
-            )
-        ) {
-            return (Number(value.value) as number) as T;
-        } // endpoint types are resolved to Endpoint instances
-        else if (type === CoreLibTypeId.endpoint) {
-            return Endpoint.get(value.value as string) as T;
-        } else if (type === CoreLibTypeId.range) {
-            const [start, end] = value.value as DIFArray;
-            const result = this.promiseAllOrSync<number>([
+            if (typeof core === "string") {
+                // "nan", "infinity", "-infinity"
+                if (core === "nan") {
+                    val = NaN;
+                } else if (core === "infinity") {
+                    val = Infinity;
+                } else if (core === "-infinity") {
+                    val = -Infinity;
+                } else {
+                    throw new Error(`Expected "nan", "infinity" or "-infinity" for decimal type, got ${core}`);
+                }
+            }
+            if (typeof core === "number") {
+                val = core;
+            } else {
+                throw new Error("Expected number value for decimal type");
+            }
+        } else if (type === CoreLibTypeId.text) {
+            if (typeof core !== "string") {
+                throw new Error("Expected string value for text type");
+            }
+            val = core;
+        } else if (type === CoreLibTypeId.endpoint) {
+            if (typeof core !== "string") {
+                throw new Error("Expected string value for endpoint type");
+            }
+            val = Endpoint.get(core);
+        } else if (type === CoreLibTypeId.Range) {
+            if (!Array.isArray(core) || core.length !== 2) {
+                throw new Error("Expected array of length 2 for range type");
+            }
+            const [start, end] = core as [DIFValueContainer, DIFValueContainer];
+            const res = this.promiseAllOrSync<number>([
                 this.resolveDIFValueContainer(start),
                 this.resolveDIFValueContainer(end),
             ]);
-            if (result instanceof Promise) {
-                return result.then(([start, end]) => {
-                    return new Range(start, end) as T;
-                });
+            if (res instanceof Promise) {
+                val = res.then(([start, end]) => new Range(start, end) as T);
             } else {
-                const [start, end] = result as number[];
-                return new Range(start, end) as T;
+                val = new Range(res[0], res[1]) as T;
             }
-        } else if (type === CoreLibTypeId.list) {
-            return this.promiseAllOrSync(
-                (value.value as DIFArray).map((v) => this.resolveDIFValueContainer(v)),
-            ) as T | Promise<T>;
-        } // map types are resolved from a DIFObject (aka JS Map) or Array of key-value pairs to a JS object
-        else if (type === CoreLibTypeId.map) {
-            if (Array.isArray(value.value)) {
-                const resolvedMap = new Map<unknown, unknown>();
-                for (const [key, val] of (value.value as DIFMap)) {
-                    resolvedMap.set(
-                        this.resolveDIFValueContainer(key),
-                        this.resolveDIFValueContainer(val),
-                    );
-                }
-                // TODO: map promises
-                return resolvedMap as unknown as T | Promise<T>;
-            } else {
-                if (convertMapToJSObject) {
-                    const resolvedObj: { [key: string]: unknown } = {};
-                    for (
-                        const [key, val] of Object.entries(
-                            value.value as DIFObject,
-                        )
-                    ) {
-                        resolvedObj[key] = this.resolveDIFValueContainer(val);
-                    }
-                    return resolvedObj as unknown as T | Promise<T>;
-                } else {
-                    const resolvedMap = new Map<string, unknown>();
-                    for (
-                        const [key, val] of Object.entries(
-                            value.value as DIFObject,
-                        )
-                    ) {
-                        resolvedMap.set(
-                            key,
-                            this.resolveDIFValueContainer(val),
-                        );
-                    }
-                    return resolvedMap as
-                        | T
-                        | Promise<T>;
-                }
+        } else if (type === CoreLibTypeId.List) {
+            if (!Array.isArray(core)) {
+                throw new Error("Expected array value for list type");
             }
-        } // impl types
-        else if (
-            typeof type == "object" &&
-            type.kind === DIFTypeDefinitionKind.ImplType
-        ) {
-            // undefined (null + js.undefined)
-            if (
-                type.def[0] === CoreLibTypeId.null &&
-                type.def[1].length === 1 &&
-                type.def[1][0] == JsLibTypeAddress.undefined
-            ) {
-                return undefined as T;
-            }
+            val = this.promiseAllOrSync((core as DIFValueContainer[]).map((v) => this.resolveDIFValueContainer(v))) as
+                | T
+                | Promise<T>;
         }
+
+        // let type = value.type;
+
+        // let convertMapToJSObject = false;
+
+        // // no type specified since it is inferable from the value
+        // if (type === undefined) {
+        //     if (Array.isArray(value.value)) {
+        //         // [[x,y,]] -> map
+        //         if (Array.isArray(value.value[0])) {
+        //             type = CoreLibTypeId.map;
+        //         } // [x,y] or [] -> list
+        //         else {
+        //             type = CoreLibTypeId.list;
+        //         }
+        //     } else if (
+        //         typeof value.value === "object" && value.value !== null
+        //     ) {
+        //         type = CoreLibTypeId.map;
+        //         convertMapToJSObject = true;
+        //     } // primitive JS value, no type specified
+        //     else {
+        //         return value.value as T;
+        //     }
+        // }
+
+        // // null, boolean and text types values are just returned as is
+        // if (
+        //     type === CoreLibTypeId.boolean ||
+        //     type == CoreLibTypeId.text ||
+        //     type === CoreLibTypeId.null
+        // ) {
+        //     return value.value as T;
+        // } // small integers are interpreted as JS numbers
+        // else if (
+        //     typeof type === "string" && (
+        //         type == CoreLibTypeId.integer ||
+        //         this.isPointerAddressInAdresses(
+        //             type,
+        //             CoreTypeAddressRanges.small_signed_integers,
+        //         ) ||
+        //         this.isPointerAddressInAdresses(
+        //             type,
+        //             CoreTypeAddressRanges.small_unsigned_integers,
+        //         )
+        //     )
+        // ) {
+        //     return Number(value.value as number) as T;
+        // } // big integers are interpreted as JS BigInt
+        // else if (
+        //     typeof type === "string" && (
+        //         this.isPointerAddressInAdresses(
+        //             type,
+        //             CoreTypeAddressRanges.big_signed_integers,
+        //         )
+        //     )
+        // ) {
+        //     return BigInt(value.value as number) as T;
+        // } // decimal types are interpreted as JS numbers
+        // else if (
+        //     typeof type === "string" &&
+        //     this.isPointerAddressInAdresses(
+        //         type,
+        //         CoreTypeAddressRanges.decimals,
+        //     )
+        // ) {
+        //     return (Number(value.value) as number) as T;
+        // } // endpoint types are resolved to Endpoint instances
+        // else if (type === CoreLibTypeId.endpoint) {
+        //     return Endpoint.get(value.value as string) as T;
+        // } else if (type === CoreLibTypeId.range) {
+        //     const [start, end] = value.value as DIFArray;
+        //     const result = this.promiseAllOrSync<number>([
+        //         this.resolveDIFValueContainer(start),
+        //         this.resolveDIFValueContainer(end),
+        //     ]);
+        //     if (result instanceof Promise) {
+        //         return result.then(([start, end]) => {
+        //             return new Range(start, end) as T;
+        //         });
+        //     } else {
+        //         const [start, end] = result as number[];
+        //         return new Range(start, end) as T;
+        //     }
+        // } else if (type === CoreLibTypeId.list) {
+        //     return this.promiseAllOrSync(
+        //         (value.value as DIFArray).map((v) => this.resolveDIFValueContainer(v)),
+        //     ) as T | Promise<T>;
+        // } // map types are resolved from a DIFObject (aka JS Map) or Array of key-value pairs to a JS object
+        // else if (type === CoreLibTypeId.map) {
+        //     if (Array.isArray(value.value)) {
+        //         const resolvedMap = new Map<unknown, unknown>();
+        //         for (const [key, val] of (value.value as DIFMap)) {
+        //             resolvedMap.set(
+        //                 this.resolveDIFValueContainer(key),
+        //                 this.resolveDIFValueContainer(val),
+        //             );
+        //         }
+        //         // TODO: map promises
+        //         return resolvedMap as unknown as T | Promise<T>;
+        //     } else {
+        //         if (convertMapToJSObject) {
+        //             const resolvedObj: { [key: string]: unknown } = {};
+        //             for (
+        //                 const [key, val] of Object.entries(
+        //                     value.value as DIFObject,
+        //                 )
+        //             ) {
+        //                 resolvedObj[key] = this.resolveDIFValueContainer(val);
+        //             }
+        //             return resolvedObj as unknown as T | Promise<T>;
+        //         } else {
+        //             const resolvedMap = new Map<string, unknown>();
+        //             for (
+        //                 const [key, val] of Object.entries(
+        //                     value.value as DIFObject,
+        //                 )
+        //             ) {
+        //                 resolvedMap.set(
+        //                     key,
+        //                     this.resolveDIFValueContainer(val),
+        //                 );
+        //             }
+        //             return resolvedMap as
+        //                 | T
+        //                 | Promise<T>;
+        //         }
+        //     }
+        // } // impl types
+        // else if (
+        //     typeof type == "object" &&
+        //     type.kind === DIFTypeDefinitionKind.ImplType
+        // ) {
+        //     // undefined (null + js.undefined)
+        //     if (
+        //         type.def[0] === CoreLibTypeId.null &&
+        //         type.def[1].length === 1 &&
+        //         type.def[1][0] == JsLibTypeAddress.undefined
+        //     ) {
+        //         return undefined as T;
+        //     }
+        // }
 
         // custom types not implemented yet
         throw new Error("Custom type resolution not implemented yet");
@@ -1117,59 +1243,30 @@ export class DIFHandler {
                 value as WeakKey,
             );
         if (existingReference) {
-            return existingReference.address;
+            return { $: existingReference.address } as DIFPointerAddress;
         }
-        // assuming core values
         // TODO: handle custom types
         if (value === null) {
-            return {
-                value: null,
-            };
+            return null;
         } else if (value === undefined) {
-            return {
-                type: {
-                    kind: DIFTypeDefinitionKind.ImplType,
-                    def: [
-                        CoreLibTypeId.null,
-                        [JsLibTypeAddress.undefined],
-                    ],
-                },
-                value: null,
-            };
-        } else if (typeof value === "boolean") {
-            return {
-                value,
-            };
-        } else if (typeof value === "number") {
-            return {
-                value,
-            };
-        } else if (typeof value === "bigint") {
-            return {
-                type: CoreLibTypeId.integer_ibig,
-                value: value.toString(), // convert bigint to string for DIFValue
-            };
+            return JS_UNDEFINED;
         } else if (typeof value === "string") {
-            return {
-                value,
-            };
+            return value;
+        } else if (typeof value === "boolean") {
+            return value;
+        } else if (typeof value === "number") {
+            return value;
+        } else if (typeof value === "bigint") {
+            return [CoreLibTypeId.integer_ibig, value.toString()] as DIFValue;
         } else if (value instanceof Endpoint) {
-            return {
-                type: CoreLibTypeId.endpoint,
-                value: value.toString(),
-            };
+            return [CoreLibTypeId.endpoint, value.toString()] as DIFValue;
         } else if (value instanceof Range) {
-            return {
-                type: CoreLibTypeId.range,
-                value: [
-                    this.convertJSValueToDIFValueContainer(value.start),
-                    this.convertJSValueToDIFValueContainer(value.end),
-                ],
-            };
+            return [CoreLibTypeId.Range, [
+                this.convertJSValueToDIFValueContainer(value.start),
+                this.convertJSValueToDIFValueContainer(value.end),
+            ]];
         } else if (Array.isArray(value)) {
-            return {
-                value: value.map((v) => this.convertJSValueToDIFValueContainer(v)),
-            };
+            return [CoreLibTypeId.List, value.map((v) => this.convertJSValueToDIFValueContainer(v))] as DIFValue;
         } else if (value instanceof Map) {
             const map: [DIFValueContainer, DIFValueContainer][] = value
                 .entries().map((
@@ -1178,18 +1275,13 @@ export class DIFHandler {
                     this.convertJSValueToDIFValueContainer(k),
                     this.convertJSValueToDIFValueContainer(v),
                 ] satisfies [DIFValueContainer, DIFValueContainer]).toArray();
-            return {
-                type: CoreLibTypeId.map,
-                value: map,
-            };
+            return [CoreLibTypeId.Map, map] as DIFValue;
         } else if (typeof value === "object") {
             const map: Record<string, DIFValueContainer> = {};
             for (const [key, val] of Object.entries(value)) {
                 map[key] = this.convertJSValueToDIFValueContainer(val);
             }
-            return {
-                value: map,
-            };
+            return [CoreLibTypeId.Map, map] as DIFValue;
         }
         throw new Error("Unsupported type for conversion to DIFValue");
     }

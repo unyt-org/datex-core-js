@@ -5,7 +5,6 @@
  */
 
 import type { CoreLibTypeId } from "../core.ts";
-import type { DIFPointerAddress } from "./value.ts";
 
 /**
  * A core lib is directly serialized as number.
@@ -28,7 +27,22 @@ type DIFTypeDefinitionMap = {
     marker: DIFTypeMarker;
 };
 
-export type DIFTypeTypeDefinition = null; // TODO alias / nominal
+export type DIFTypeMetadata = {
+    kind: "local";
+    mutability: "mut" | "";
+    referenceMutability?: "&" | "&mut";
+} | {
+    kind: "shared";
+    mutability: "" | "mut";
+    ownership: "'mut" | "'" | "";
+};
+
+export type DIFTypeDefinitionWithMetadata = [
+    DIFTypeMetadata,
+    DIFTypeDefinition,
+];
+export type SharedContainerContainingNominalType = string; // $address
+export type DIFType = DIFTypeDefinitionWithMetadata | SharedContainerContainingNominalType; // TODO alias / nominal
 
 /**
  * The DIFTypeDefinition represents a structural (only for now) type definition in the DIF format.
@@ -57,26 +71,26 @@ export type DIFLiteralTypeDefinition =
     | [typeof CoreLibTypeId.integer_i128, string]
     | [typeof CoreLibTypeId.integer_ibig, string]
     | [typeof CoreLibTypeId.decimal, string]
-    | [typeof CoreLibTypeId.decimal_f32, string | number]
-    | [typeof CoreLibTypeId.decimal_f64, string | number]
+    | [typeof CoreLibTypeId.decimal_f32, "nan" | "infinity" | "-infinity" | number]
+    | [typeof CoreLibTypeId.decimal_f64, "nan" | "infinity" | "-infinity" | number]
     | [typeof CoreLibTypeId.decimal_dbig, string]
     | [typeof CoreLibTypeId.endpoint, string];
 
-export type DIFListTypeDefinition = DIFTypeTypeDefinition[];
+export type DIFListTypeDefinition = DIFType[];
 
-export type DIFMapTypeDefinition = Array<[DIFTypeTypeDefinition, DIFTypeTypeDefinition]>;
+export type DIFMapTypeDefinition = Array<[DIFType, DIFType]>;
 
-export type DIFRangeTypeDefinition = [DIFTypeTypeDefinition, DIFTypeTypeDefinition];
+export type DIFRangeTypeDefinition = [DIFType, DIFType];
 
-export type DIFNestedTypeDefinition = DIFTypeTypeDefinition;
+export type DIFNestedTypeDefinition = DIFType;
 
-export type DIFImplTypeDefinition = [DIFTypeTypeDefinition, Array<DIFPointerAddress>];
+export type DIFImplTypeDefinition = [DIFType, Array<string>];
 
-export type DIFIntersectionTypeDefinition = Array<DIFTypeTypeDefinition>;
+export type DIFIntersectionTypeDefinition = Array<DIFType>;
 
-export type DIFUnionTypeDefinition = Array<DIFTypeTypeDefinition>;
+export type DIFUnionTypeDefinition = Array<DIFType>;
 
-export type DIFTaggedTypeDefinition = [string, DIFTypeTypeDefinition];
+export type DIFTaggedTypeDefinition = [string, DIFType];
 
 export type DIFTypeMarker = "";
 
@@ -89,6 +103,6 @@ export type DIFCollectionTypeDefinition =
     | DIFCollectionMapTypeDefinition
     | DIFRangeTypeDefinition;
 
-export type DIFCollectionListTypeDefinition = DIFTypeTypeDefinition;
-export type DIFCollectionListSliceTypeDefinition = [DIFTypeTypeDefinition, number];
-export type DIFCollectionMapTypeDefinition = Array<[DIFTypeTypeDefinition, DIFTypeTypeDefinition]>;
+export type DIFCollectionListTypeDefinition = DIFType;
+export type DIFCollectionListSliceTypeDefinition = [DIFType, number];
+export type DIFCollectionMapTypeDefinition = Array<[DIFType, DIFType]>;

@@ -27,7 +27,7 @@ export type DIFValue =
 
 /**
  * Types of values that can be directly represented in DIF without
- * additional type information (e.g., for primitive types like text, f32, boolean, and null).
+ * additional type information (e.g., for primitive types like text, f64, boolean, and null).
  */
 export type DIFDirectRepresentationValue = boolean | string | number | null;
 
