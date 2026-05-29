@@ -1,6 +1,6 @@
 import { DEBUG_MODE } from "../global.ts";
 import type { CoreLibTypeId } from "./core.ts";
-import { type DIFTypeDefinition, type DIFUpdateData, DIFUpdateKind } from "./definitions.ts";
+import { type DIFTypeDefinition, type DIFUpdateData, DIFUpdateKind } from "./types/mod.ts";
 import { type CustomReferenceMetadata, type DIFHandler, IS_PROXY_ACCESS } from "./dif-handler.ts";
 
 type ImplMethod = {

@@ -1,24 +1,23 @@
+/**
+ * @module DIF Handler
+ * Represents the main interface for interacting with the DATEX Core via DIF from JavaScript.
+ */
+
 import { JSDIFInterface, JSRuntime } from "../datex.ts";
 import { Ref } from "../refs/ref.ts";
 import { Endpoint } from "../lib/special-core-types/endpoint.ts";
 import { Range } from "../lib/special-core-types/range.ts";
 import {
-    type DIFArray,
-    type DIFMap,
-    type DIFObject,
     type DIFPointerAddress,
     type DIFProperty,
-    type DIFSharedValue,
-    DIFSharedValueMutability,
     type DIFTypeDefinition,
-    DIFTypeDefinitionKind,
     type DIFUpdate,
     type DIFUpdateData,
     DIFUpdateKind,
     type DIFValue,
     type DIFValueContainer,
     type ObserveOptions,
-} from "./definitions.ts";
+} from "./types/mod.ts";
 import { CoreLibTypeId } from "./core.ts";
 import { type TypeBinding, TypeRegistry } from "./type-registry.ts";
 import { panic } from "../utils/exceptions.ts";

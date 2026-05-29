@@ -1,4 +1,10 @@
 /**
+ * @module DIF Core
+ * @description
+ * This module contains core library specific mappings of core type ids.
+ */
+
+/**
  * Mapping of core types to their respective type id.
  */
 export const CoreLibTypeId = {
