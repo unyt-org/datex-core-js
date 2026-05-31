@@ -1,21 +1,16 @@
-import { Runtime } from "../../src/runtime/runtime.ts";
+import { Runtime } from "datex/runtime/runtime.ts";
 import { assert, assertEquals } from "@std/assert";
 import { assertThrows } from "@std/assert/throws";
-import {
-    type DIFRepresentationValue,
-    type DIFSharedValue,
-    DIFSharedValueMutability,
-    type DIFUpdate,
-    type DIFUpdateData,
-    DIFUpdateKind,
-} from "../../src/dif/definitions.ts";
-import { CoreLibTypeId } from "../../src/dif/core.ts";
-import { assertStrictEquals } from "@std/assert/strict-equals";
-import { BaseSharedContainer } from "datex/refs/shared-container.ts";
-import { difReferenceToDisplayString, difValueContainerToDisplayString } from "../../src/dif/display.ts";
-import { arrayTypeBinding } from "datex/lib/js-core-types/array.ts";
 
-const runtime = await Runtime.create({ endpoint: "@jonas" });
+import { CoreLibTypeId } from "datex/dif/core.ts";
+import { assertStrictEquals } from "@std/assert/strict-equals";
+import { difReferenceToDisplayString, difValueContainerToDisplayString } from "datex/dif/display.ts";
+import { arrayTypeBinding } from "datex/lib/js-core-types/array.ts";
+import { Endpoint } from "datex/lib/mod.ts";
+import { SharedContainerMutability } from "datex/shared-container/mod.ts";
+import { DIFUpdate, DIFUpdateKind } from "datex/dif/types/mod.ts";
+
+const runtime = await Runtime.create({ endpoint: Endpoint.get("@jonas") });
 runtime.dif.type_registry.registerTypeBinding(arrayTypeBinding);
 
 Deno.test("pointer create with observe", () => {
@@ -24,7 +19,7 @@ Deno.test("pointer create with observe", () => {
             value: "Hello, DATEX!",
         },
         undefined,
-        DIFSharedValueMutability.Mutable,
+        SharedContainerMutability.Mutable,
     );
     assertEquals(typeof ref, "string");
 
@@ -58,7 +53,7 @@ Deno.test("pointer create without observe", () => {
             value: "Hello, Datex!",
         },
         undefined,
-        DIFSharedValueMutability.Mutable,
+        SharedContainerMutability.Mutable,
     );
     assertEquals(typeof ref, "string");
 
@@ -82,37 +77,37 @@ Deno.test("pointer create primitive", () => {
     runtime.createSharedValue(
         42,
         undefined,
-        DIFSharedValueMutability.Immutable,
+        SharedContainerMutability.Immutable,
     ) satisfies BaseSharedContainer<42>;
 
     runtime.createSharedValue(
         42,
         undefined,
-        DIFSharedValueMutability.Mutable,
+        SharedContainerMutability.Mutable,
     ) satisfies BaseSharedContainer<number>;
 
     runtime.createSharedValue(
         "hello world",
         undefined,
-        DIFSharedValueMutability.Immutable,
+        SharedContainerMutability.Immutable,
     ) satisfies BaseSharedContainer<"hello world">;
 
     runtime.createSharedValue(
         "hello world",
         undefined,
-        DIFSharedValueMutability.Mutable,
+        SharedContainerMutability.Mutable,
     ) satisfies BaseSharedContainer<string>;
 
     runtime.createSharedValue(
         true,
         undefined,
-        DIFSharedValueMutability.Immutable,
+        SharedContainerMutability.Immutable,
     ) satisfies BaseSharedContainer<true>;
 
     runtime.createSharedValue(
         { x: true } as const,
         undefined,
-        DIFSharedValueMutability.Immutable,
+        SharedContainerMutability.Immutable,
     ) satisfies {
         readonly x: true;
     };
@@ -120,12 +115,12 @@ Deno.test("pointer create primitive", () => {
     const a = runtime.createSharedValue(
         5,
         undefined,
-        DIFSharedValueMutability.Immutable,
+        SharedContainerMutability.Immutable,
     );
     const b = runtime.createSharedValue(
         { x: a },
         undefined,
-        DIFSharedValueMutability.Mutable,
+        SharedContainerMutability.Mutable,
     ) satisfies {
         x: BaseSharedContainer<5>;
     };
@@ -182,7 +177,7 @@ Deno.test("pointer create struct", () => {
          * -> User
          * -> readonly User
          */
-        DIFSharedValueMutability.Mutable,
+        SharedContainerMutability.Mutable,
     );
     const struct = { a: 1.0, b: "text", c: { d: true }, e: { f: innerPtr } };
 
@@ -190,7 +185,7 @@ Deno.test("pointer create struct", () => {
     const ptrObjImmutable = runtime.createSharedValue(
         struct,
         undefined,
-        DIFSharedValueMutability.Immutable,
+        SharedContainerMutability.Immutable,
     );
     ptrObjImmutable.e satisfies { readonly f: BaseSharedContainer<number> };
 
@@ -200,7 +195,7 @@ Deno.test("pointer create struct", () => {
             runtime.createSharedValue(
                 ptrObjImmutable,
                 undefined,
-                DIFSharedValueMutability.Mutable,
+                SharedContainerMutability.Mutable,
             );
         },
         Error,
@@ -213,7 +208,7 @@ Deno.test("pointer create struct", () => {
             runtime.createSharedValue(
                 struct,
                 undefined,
-                DIFSharedValueMutability.Mutable,
+                SharedContainerMutability.Mutable,
             );
         },
         Error,
@@ -267,7 +262,7 @@ Deno.test("pointer create and resolve", () => {
     const ptr = runtime.dif.constructSharedValue(
         { value: "unyt.org" },
         undefined,
-        DIFSharedValueMutability.Mutable,
+        SharedContainerMutability.Mutable,
     );
     const resolved = runtime.dif.resolveDIFValueContainer<string>(
         ptr,
@@ -285,7 +280,7 @@ Deno.test("pointer object create and resolve", () => {
             value: initialDIFValue,
         },
         undefined,
-        DIFSharedValueMutability.Mutable,
+        SharedContainerMutability.Mutable,
     );
     console.log("ptr address", ptr);
     const loadedDIFValue = runtime.dif._handle.resolve_pointer_address(
@@ -297,7 +292,7 @@ Deno.test("pointer object create and resolve", () => {
         loadedDIFValue,
         {
             allowed_type: "0c0000",
-            mut: DIFSharedValueMutability.Mutable,
+            mut: SharedContainerMutability.Mutable,
             value: {
                 value: initialDIFValue,
             },
@@ -415,7 +410,7 @@ Deno.test("immutable pointer primitive ref update", () => {
     const ptrObj = runtime.createSharedValue(
         val as number,
         undefined,
-        DIFSharedValueMutability.Immutable,
+        SharedContainerMutability.Immutable,
     );
     if (!(ptrObj instanceof BaseSharedContainer)) {
         throw new Error("Pointer object is not a Ref");
@@ -626,7 +621,7 @@ Deno.test("observer immutable", () => {
     const ref = runtime.dif.constructSharedValue(
         { value: "Immutable" },
         undefined,
-        DIFSharedValueMutability.Immutable,
+        SharedContainerMutability.Immutable,
     );
     assertThrows(
         () => {
@@ -641,7 +636,7 @@ Deno.test("pointer observe unobserve", () => {
     const ref = runtime.dif.constructSharedValue(
         { value: "42" },
         undefined,
-        DIFSharedValueMutability.Mutable,
+        SharedContainerMutability.Mutable,
     );
     assertThrows(
         () => {

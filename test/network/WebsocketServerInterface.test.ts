@@ -92,7 +92,7 @@ Deno.test("send data between two runtimes", async () => {
     }
 
     const PORT = 8083;
-    const runtimeA = await Runtime.create({ endpoint: "@test_a" });
+    const runtimeA = await Runtime.create({ endpoint: Endpoint.get("@test_a") });
     runtimeA.comHub.registerInterfaceFactory(
         websocketServerDenoComInterfaceFactory,
     );
@@ -101,7 +101,7 @@ Deno.test("send data between two runtimes", async () => {
         { bind_address: `0.0.0.0:${PORT}` },
     );
 
-    const runtimeB = await Runtime.create({ endpoint: "@test_b" });
+    const runtimeB = await Runtime.create({ endpoint: Endpoint.get("@test_b") });
     const clientInterfaceUUID = await runtimeB.comHub.createInterface(
         "websocket-client",
         { url: `ws://localhost:${PORT}` },

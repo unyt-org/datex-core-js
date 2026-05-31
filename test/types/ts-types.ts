@@ -1,6 +1,6 @@
 import { assertEquals } from "@std/assert/equals";
-import { CoreLibTypeId } from "../../src/dif/core.ts";
-import { TS_TYPE } from "../../src/types/ts-types.ts";
+import { CoreLibTypeId } from "datex/dif/core.ts";
+import { TS_TYPE } from "datex/types/ts-types.ts";
 
 Deno.test("convert simple TS type to DIF type", () => {
     const ts_type = TS_TYPE`number`;

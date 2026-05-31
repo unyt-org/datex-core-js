@@ -20,10 +20,11 @@ const TEXT_INPUTS = [
     "{}",
 ];
 
-import { Runtime } from "../../src/runtime/runtime.ts";
+import { Runtime } from "datex/runtime/runtime.ts";
 import { assertEquals } from "@std/assert";
+import { Endpoint } from "datex/lib/mod.ts";
 
-const runtime = await Runtime.create({ endpoint: "@jonas" });
+const runtime = await Runtime.create({ endpoint: Endpoint.get("@jonas") });
 
 for (const input of TEXT_INPUTS) {
     Deno.test(`JSON parse compatibility for input: ${input}`, () => {

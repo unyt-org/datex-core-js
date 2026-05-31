@@ -6,19 +6,19 @@
 import {
     type DIFRepresentationValue,
     type DIFSharedValue,
-    DIFSharedValueMutability,
     type DIFTypeDefinition,
     type DIFValueContainer,
+    SharedContainerMutability,
 } from "./definitions.ts";
 import { CoreLibTypeId } from "./core.ts";
 
 /**
  * Converts a DIF reference mutability to a display string.
  */
-export function mutabilityToDisplayString(mut: DIFSharedValueMutability): string {
-    if (mut === DIFSharedValueMutability.Mutable) {
+export function mutabilityToDisplayString(mut: SharedContainerMutability): string {
+    if (mut === SharedContainerMutability.Mutable) {
         return "&mut ";
-    } else if (mut === DIFSharedValueMutability.Immutable) {
+    } else if (mut === SharedContainerMutability.Immutable) {
         return "&";
     }
     throw new Error("Unknown mutability: " + mut);

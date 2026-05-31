@@ -12,23 +12,23 @@ use datex_core::{
     },
 };
 use datex_crypto_facade::crypto::Crypto;
+use log::info;
 use std::{borrow::Cow, ops::Deref};
 
+use crate::js_utils::to_js_value;
 use datex_core::{
     compiler::{CompileOptions, compile_template},
     crypto::CryptoImpl,
-    dif::dif_interface::DIFInterface,
+    dif::{cache::DIFSharedContainerCache, dif_interface::DIFInterface},
     runtime::{
         Runtime, RuntimeConfig, RuntimeInternal, RuntimeRunner, memory::Memory,
     },
 };
 use serde_wasm_bindgen::from_value;
 use std::{cell::RefCell, fmt::Display, rc::Rc};
-use datex_core::dif::cache::DIFSharedContainerCache;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::{future_to_promise, spawn_local};
 use web_sys::js_sys::Promise;
-use crate::js_utils::to_js_value;
 
 #[wasm_bindgen(getter_with_clone)]
 #[derive(Clone)]
@@ -47,7 +47,10 @@ impl JSRuntime {
     }
 
     pub(crate) async fn run(config: JsValue) -> JSRuntime {
-        let config: RuntimeConfig = from_dif_js_value(config, &mut DIFSharedContainerCache::default())
+        wasm_logger::init(wasm_logger::Config::new(log::Level::Debug));
+        info!("Initializing runtime with config: {:?}", config);
+        let config: RuntimeConfig =
+            from_dif_js_value(config, &mut DIFSharedContainerCache::default())
                 .unwrap();
         let runtime_runner = RuntimeRunner::new(config);
         // Note: JSRuntime::new must be called before runtime run to initialize com interface factories
@@ -70,7 +73,8 @@ impl JSRuntime {
 
     fn new(runtime: Runtime) -> JSRuntime {
         let dif_interface = JSDIFInterface::new(runtime.create_dif_interface());
-        let com_hub = JSComHub::new(runtime.clone(), dif_interface.dif_interface_rc());
+        let com_hub =
+            JSComHub::new(runtime.clone(), dif_interface.dif_interface_rc());
         JSRuntime {
             runtime,
             com_hub,
@@ -275,7 +279,8 @@ impl JSRuntime {
             )
             .await
             .map_err(js_error)?;
-        Ok(result.map(|value| to_js_value(&value, &mut self.dif_interface.cache())))
+        Ok(result
+            .map(|value| to_js_value(&value, &mut self.dif_interface.cache())))
     }
 
     pub fn execute_sync_with_string_result(
@@ -314,7 +319,10 @@ impl JSRuntime {
                 None,
             )
             .map_err(js_error)?;
-        Ok(result.map(|val| to_js_value(&val, &mut self.dif_interface.cache())))
+        Ok(
+            result
+                .map(|val| to_js_value(&val, &mut self.dif_interface.cache())),
+        )
     }
 
     pub fn value_to_string(

@@ -205,6 +205,7 @@ export class JSDIFInterface {
     [Symbol.dispose](): void;
     apply(callee: any, value: any): any | undefined;
     create_pointer(value: any): string;
+    has_address_with_ownership(address: string, ownership?: number | null): boolean;
     observe_pointer(transceiver_id: number, address: string, observe_options: any, callback: Function): number;
     /**
      * Resolve a pointer address synchronously if it's in memory, otherwise return an error

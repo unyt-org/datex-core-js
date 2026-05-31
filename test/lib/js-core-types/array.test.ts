@@ -1,9 +1,10 @@
 import { assertEquals } from "@std/assert/equals";
 import { Runtime } from "datex/runtime/runtime.ts";
-import { DIFUpdateKind } from "datex/dif/definitions.ts";
 import { arrayTypeBinding } from "datex/lib/js-core-types/array.ts";
+import { Endpoint } from "datex/lib/mod.ts";
+import { DIFUpdateKind } from "datex/dif/types/mod.ts";
 
-const runtime = await Runtime.create({ endpoint: "@test" });
+const runtime = await Runtime.create({ endpoint: Endpoint.get("@test") });
 runtime.dif.type_registry.registerTypeBinding(arrayTypeBinding);
 
 function getCurrentRuntimeLocalValue<T>(address: string) {

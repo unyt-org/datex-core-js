@@ -1,10 +1,10 @@
 import { Runtime } from "datex/runtime/runtime.ts";
 import { assertEquals } from "@std/assert";
-import { DIFTypeDefinitionKind, type DIFValue } from "datex/dif/definitions.ts";
-import { JsLibTypeAddress } from "datex/dif/js-lib.ts";
-import { CoreLibTypeId } from "datex/dif/core.ts";
+import type { DIFValue } from "datex/dif/types/value.ts";
+import { Endpoint } from "datex/lib/mod.ts";
+import { JS_UNDEFINED } from "datex/lib/special-core-types/undefined.ts";
 
-const runtime = await Runtime.create({ endpoint: "@jonas" });
+const runtime = await Runtime.create({ endpoint: Endpoint.get("@jonas") });
 
 Deno.test("undefined", () => {
     // convert JS undefined to DIF representation
@@ -12,14 +12,8 @@ Deno.test("undefined", () => {
         undefined,
     ) as DIFValue;
     assertEquals(
-        undefinedDifValue.type,
-        {
-            kind: DIFTypeDefinitionKind.ImplType,
-            def: [
-                CoreLibTypeId.null,
-                [JsLibTypeAddress.undefined],
-            ],
-        },
+        undefinedDifValue,
+        JS_UNDEFINED,
     );
     console.log(undefinedDifValue);
 
@@ -28,10 +22,7 @@ Deno.test("undefined", () => {
         undefinedDifValue,
     ]) as DIFValue;
 
-    assertEquals(executionResult, {
-        value: null,
-        type: undefinedDifValue.type,
-    });
+    assertEquals(executionResult, JS_UNDEFINED);
 
     const executionResult2 = runtime.executeSync<undefined>("?", [undefined]);
     assertEquals(executionResult2, undefined);

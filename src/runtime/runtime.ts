@@ -5,6 +5,7 @@ import {
     disassemble_dxb_to_string,
     disassemble_dxb_tree,
     type DisassemblerOptions,
+    Endpoint,
     type JSRuntime,
 } from "../datex.ts";
 import { ComHub } from "../network/com-hub.ts";
@@ -25,7 +26,7 @@ interface DebugConfig {
 
 /** configuration for the runtime  */
 export type RuntimeConfig = {
-    endpoint?: string;
+    endpoint?: Endpoint;
     interfaces?: { type: string; config: unknown }[];
     env?: Record<string, string>;
 };
@@ -65,7 +66,7 @@ export class Runtime {
     /**
      * Gets the endpoint of the runtime.
      */
-    get endpoint(): string {
+    get endpoint(): Endpoint {
         return this.#runtime.endpoint;
     }
 
