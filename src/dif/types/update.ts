@@ -41,6 +41,11 @@ export type DIFUpdateDataSet = [DIFProperty, DIFValueContainer];
 
 export type DIFUpdateDataListSplice = [number, number, DIFValueContainer[]];
 
+export type DIFUpdateReturn = ["none"] | ["single_value", DIFValueContainer] | [
+    "multiple_values",
+    ...DIFValueContainer[],
+];
+
 export type DIFUpdateData = [
     typeof DIFUpdateKind.Replace,
     ...DIFUpdateDataReplace,

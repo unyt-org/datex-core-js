@@ -32,7 +32,7 @@ import { DIFSharedContainerOwnership } from "./types/type.ts";
 import { splitPointerAddressWithOwnership } from "../shared-container/mod.ts";
 import { combinePointerAddressWithOwnership } from "../shared-container/mod.ts";
 import type { SharedReferenceMutability } from "../shared-container/reference.ts";
-import type { DIFUpdateDataReplace } from "./types/update.ts";
+import type { DIFUpdateDataReplace, DIFUpdateReturn } from "./types/update.ts";
 import { appendEntry, clear, deleteEntry, DIFPropertyKind, listSplice, replace, setEntry } from "./update.ts";
 import { createDIFProperty } from "./update.ts";
 
@@ -211,8 +211,8 @@ export class DIFHandler {
      * @param address - The address of the DIF value to update.
      * @param update_data - The DIFUpdate object containing the update information.
      */
-    public updateSharedValue(address: PointerAddress, update_data: DIFUpdateData) {
-        this.#handle.update(address, [this.#transceiver_id, ...update_data]);
+    public updateSharedValue(address: PointerAddress, update_data: DIFUpdateData): DIFUpdateReturn {
+        return this.#handle.update(address, [this.#transceiver_id, ...update_data]);
     }
 
     /**
