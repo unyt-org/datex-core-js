@@ -44,7 +44,7 @@ export class BaseSharedContainer<T, Mutability extends SharedContainerMutability
     /**
      * Gets the current value of the reference.
      */
-    get value(): T {
+    public get value(): T {
         return this.#value;
     }
 

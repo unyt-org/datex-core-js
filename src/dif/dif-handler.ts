@@ -212,10 +212,7 @@ export class DIFHandler {
      * @param update_data - The DIFUpdate object containing the update information.
      */
     public updateSharedValue(address: PointerAddress, update_data: DIFUpdateData) {
-        this.#handle.update(address, {
-            source_id: this.#transceiver_id,
-            data: update_data,
-        });
+        this.#handle.update(address, [this.#transceiver_id, ...update_data]);
     }
 
     /**

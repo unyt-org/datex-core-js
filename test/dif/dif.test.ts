@@ -7,7 +7,7 @@ import { assertStrictEquals } from "@std/assert/strict-equals";
 import { difBaseSharedContainerToDisplayString, difValueContainerToDisplayString } from "datex/dif/display.ts";
 import { arrayTypeBinding } from "datex/lib/js-core-types/array.ts";
 import { Endpoint } from "datex/lib/mod.ts";
-import { SharedContainerMutability, type SharedRef } from "datex/shared-container/mod.ts";
+import { PointerAddress, SharedContainerMutability, type SharedRef } from "datex/shared-container/mod.ts";
 import {
     type DIFBaseSharedValueContainer,
     DIFSharedContainerOwnership,
@@ -18,6 +18,7 @@ import {
 import { BaseSharedContainer } from "datex/shared-container/base-shared-container.ts";
 import { replace } from "datex/dif/update.ts";
 import type { DIFValue } from "datex/dif/types/value.ts";
+import { FAKE_TRANSCEIVER_ID, performFakeRemoteUpdate, performFakeRemoteUpdateWithSourceId } from "../lib/utils.ts";
 
 const runtime = await Runtime.create({ endpoint: Endpoint.get("@jonas") });
 runtime.dif.type_registry.registerTypeBinding(arrayTypeBinding);
@@ -29,11 +30,11 @@ Deno.test("pointer create with observe", () => {
     );
     assertEquals(typeof ref, "string");
 
-    let observed: DIFUpdate | null = null;
+    const observed: Array<DIFUpdate> = [];
     const observerId = runtime.dif.observeSharedValueBindDirect(ref, (value) => {
         runtime.executeSync('"xy"');
         runtime.dif.unobserveSharedValueBindDirect(ref, observerId);
-        observed = value;
+        observed.push(value);
         // TODO: print error message somewhere (don't throw)
         throw new Error("Should not be called again");
     }, { relay_own_updates: true });
@@ -46,13 +47,8 @@ Deno.test("pointer create with observe", () => {
     );
 
     // if not equal, unobservePointer potentially failed
-    assertEquals(observed, {
-        source_id: runtime.dif._transceiver_id,
-        data: {
-            value: { value: "Hello, Datex 2" },
-            kind: DIFUpdateKind.Replace,
-        },
-    });
+    assertEquals(observed.length, 1);
+    assertEquals(observed[0], [runtime.dif._transceiver_id, DIFUpdateKind.Replace, "Hello, Datex 2"]);
 });
 
 Deno.test("pointer create without observe", () => {
@@ -62,7 +58,7 @@ Deno.test("pointer create without observe", () => {
     );
     assertEquals(typeof ref, "string");
 
-    let observed: DIFUpdate | null = null;
+    let observed: Array<DIFUpdate> = [];
     const observerId = runtime.dif.observeSharedValueBindDirect(ref, (value) => {
         runtime.executeSync("'xy'");
         runtime.dif.unobserveSharedValueBindDirect(ref, observerId);
@@ -256,18 +252,18 @@ Deno.test("pointer create and resolve", () => {
         runtime.dif.convertJSValueToDIFValueContainer("unyt.org"),
         SharedContainerMutability.Mutable,
     );
-    const resolved = runtime.dif.resolveDIFValueContainer<string>(
-        ptr,
-    );
-    assertEquals(resolved, "unyt.org");
+    const resolved = runtime.dif.resolveDIFValueContainer(
+        { $: ptr } as unknown as PointerAddress,
+    ) as BaseSharedContainer<string, SharedContainerMutability.Mutable>;
+    assertEquals(resolved.value, "unyt.org");
 });
 
 Deno.test("pointer object create and resolve", () => {
     const initialDIFValue: DIFValue = [
         CoreLibTypeId.Map,
         [
-            [{ value: "a" }, { value: 123 }],
-            [{ value: "b" }, { value: 456 }],
+            ["a", 123],
+            ["b", 456],
         ],
     ];
     const ptr = runtime.dif.constructSharedValue(initialDIFValue, SharedContainerMutability.Mutable);
@@ -289,11 +285,14 @@ Deno.test("pointer object create and resolve", () => {
 
 Deno.test("pointer object create and cache", () => {
     const val = { a: 123, b: 456 };
-    const ptrObj = runtime.createSharedValueFromJSValue(val);
+    const ptrObj = runtime.createSharedValueFromJSValue(val) as SharedRef<
+        typeof val,
+        SharedContainerMutability.Mutable
+    >;
     console.log("ptrObj", ptrObj);
     assertEquals(
         ptrObj,
-        val as SharedRef<typeof val>,
+        val,
     );
 
     const ptrId = runtime.dif.getPointerAddressForValue(ptrObj);
@@ -307,7 +306,7 @@ Deno.test("pointer object create and cache", () => {
     console.log("loadedObj", loadedObj);
 
     console.log(
-        difValueContainerToDisplayString(
+        difBaseSharedContainerToDisplayString(
             runtime.dif._handle.resolve_pointer_address(ptrId),
         ),
     );
@@ -318,7 +317,7 @@ Deno.test("pointer object create and cache", () => {
 
 Deno.test("pointer map create and cache", () => {
     const val = new Map([[1, 2], [3, 4]]);
-    const ptrMap = runtime.createSharedValueFromJSValue(val);
+    const ptrMap = runtime.createSharedValueFromJSValue(val) as SharedRef<Map<number, number>>;
     assertEquals(ptrMap, val);
     ptrMap.set(5, 6);
     ptrMap satisfies Map<number, number>;
@@ -335,13 +334,13 @@ Deno.test("pointer map create and cache", () => {
 
     // check if cache is used when resolving the pointer again
     // FIXME avoid cache for this check
-    const loadedMap = runtime.dif.resolvePointerAddress(ptrId);
+    const loadedMap = runtime.dif.resolvePointerAddress(DIFSharedContainerOwnership.Mutable, ptrId);
     console.log("loadedMap", loadedMap);
     console.log(
         difBaseSharedContainerToDisplayString(
             runtime.dif._handle.resolve_pointer_address(
                 ptrId,
-            ) as DIFSharedValue,
+            ) as DIFBaseSharedValueContainer,
         ),
     );
 
@@ -356,6 +355,7 @@ Deno.test("pointer primitive ref create and cache", () => {
     if (!(ptrObj instanceof BaseSharedContainer)) {
         throw new Error("Pointer object is not a Ref");
     }
+    console.log(ptrObj);
     console.log("ptrObj", ptrObj);
     assertEquals(ptrObj.value, val);
 
@@ -375,21 +375,20 @@ Deno.test("pointer primitive ref update", () => {
         throw new Error("Pointer object is not a Ref");
     }
     assertEquals(ptrObj.value, val);
-
     // get value of ptrObj from DATEX execution
     let result = runtime.executeSyncWithStringResult(
-        "'$" + ptrObj.pointerAddress,
+        "'" + ptrObj.pointerAddress,
     );
-    assertEquals(result, "shared mut 123f64");
+    assertEquals(result, "'mut 123f64");
 
     // update the ref value
     ptrObj.value = 456;
 
     // get value of ptrObj from DATEX execution
     result = runtime.executeSyncWithStringResult(
-        "'$" + ptrObj.pointerAddress,
+        "'" + ptrObj.pointerAddress,
     );
-    assertEquals(result, "shared mut 456f64");
+    assertEquals(result, "'mut 456f64");
 });
 
 Deno.test("immutable pointer primitive ref update", () => {
@@ -406,9 +405,9 @@ Deno.test("immutable pointer primitive ref update", () => {
 
     // get value of ptrObj from DATEX execution
     const result = runtime.executeSyncWithStringResult(
-        "'$" + ptrObj.pointerAddress,
+        "'" + ptrObj.pointerAddress,
     );
-    assertEquals(result, "shared 123f64");
+    assertEquals(result, "'123f64");
 
     // update the ref value
     assertThrows(
@@ -427,25 +426,20 @@ Deno.test("pointer primitive ref update and observe", () => {
     ) as unknown as BaseSharedContainer<number, SharedContainerMutability.Mutable>;
     assertEquals(ptrObj.value, val);
 
-    let observedUpdate: DIFUpdate | null = null;
+    const observedUpdate: Array<DIFUpdate> = [];
     runtime.dif.observeSharedValueBindDirect(ptrObj.pointerAddress, (update) => {
         console.log("Observed pointer update:", update);
-        observedUpdate = update;
+        observedUpdate.push(update);
     }, { relay_own_updates: true });
 
     // update the ref value
     ptrObj.value = 456;
 
     // check if the update was observed
-    assertEquals(observedUpdate, {
-        source_id: runtime.dif._transceiver_id,
-        data: {
-            kind: DIFUpdateKind.Replace,
-            value: {
-                value: 456,
-            },
-        },
-    });
+    assertEquals(observedUpdate[0], [
+        runtime.dif._transceiver_id,
+        ...replace(runtime.dif.convertJSValueToDIFValueContainer(456)),
+    ]);
 });
 
 Deno.test("pointer primitive ref update and observe local", () => {
@@ -455,12 +449,12 @@ Deno.test("pointer primitive ref update and observe local", () => {
     ) as unknown as BaseSharedContainer<number, SharedContainerMutability.Mutable>;
     assertEquals(ptrObj.value, val);
 
-    let observedUpdate: DIFUpdateData | null = null;
+    let observedUpdate: Array<DIFUpdateData> = [];
     const observerId = runtime.dif.observePointer(
         ptrObj.pointerAddress,
         (update) => {
             console.log("Observed pointer update:", update);
-            observedUpdate = update;
+            observedUpdate.push(update);
         },
     );
     // check if observer is registered
@@ -471,12 +465,8 @@ Deno.test("pointer primitive ref update and observe local", () => {
     ptrObj.value = 456;
 
     // check if the update was observed
-    assertEquals(observedUpdate, {
-        kind: DIFUpdateKind.Replace,
-        value: {
-            value: 456,
-        },
-    });
+    assertEquals(observedUpdate.length, 1);
+    assertEquals(observedUpdate[0], replace(runtime.dif.convertJSValueToDIFValueContainer(456)));
 
     // unobserve
     runtime.dif.unobservePointer(ptrObj.pointerAddress, observerId);
@@ -490,10 +480,10 @@ Deno.test("pointer primitive ref update and observe local", () => {
     );
 
     // update the ref value again
-    observedUpdate = null;
+    observedUpdate = [];
     ptrObj.value = 789;
     // check that no update was observed
-    assertEquals(observedUpdate, null);
+    assertEquals(observedUpdate.length, 0);
 });
 
 Deno.test("pointer primitive ref remote update and observe bind direct", () => {
@@ -503,34 +493,27 @@ Deno.test("pointer primitive ref remote update and observe bind direct", () => {
     ) as unknown as BaseSharedContainer<number, SharedContainerMutability.Mutable>;
     assertEquals(ptrObj.value, val);
 
-    let observedUpdate: DIFUpdate | null = null;
+    const observedUpdate: Array<DIFUpdate> = [];
     runtime.dif.observeSharedValueBindDirect(
         ptrObj.pointerAddress,
         (update) => {
             console.log("Observed pointer update:", update);
-            observedUpdate = update;
+            observedUpdate.push(update);
         },
     );
 
     // fake a remote update from transceiver 42
-    runtime.dif._handle.update(ptrObj.pointerAddress, {
-        source_id: 42,
-        data: {
-            value: { value: 456 },
-            kind: DIFUpdateKind.Replace,
-        },
-    });
-
+    performFakeRemoteUpdate(
+        runtime,
+        ptrObj.pointerAddress,
+        replace(runtime.dif.convertJSValueToDIFValueContainer(456)),
+    );
     // check if the update was observed
-    assertEquals(observedUpdate, {
-        source_id: 42,
-        data: {
-            kind: DIFUpdateKind.Replace,
-            value: {
-                value: 456,
-            },
-        },
-    });
+    assertEquals(observedUpdate.length, 1);
+    assertEquals(observedUpdate[0], [
+        FAKE_TRANSCEIVER_ID,
+        ...replace(runtime.dif.convertJSValueToDIFValueContainer(456)),
+    ]);
 
     assertEquals(ptrObj.value, 456);
 });
@@ -552,21 +535,20 @@ Deno.test("pointer primitive ref remote update and observe local", () => {
     );
 
     // fake a remote update from transceiver 42
-    runtime.dif._handle.update(ptrObj.pointerAddress, {
-        source_id: 42,
-        data: {
-            value: { value: 456 },
-            kind: DIFUpdateKind.Replace,
-        },
-    });
+    performFakeRemoteUpdate(
+        runtime,
+        ptrObj.pointerAddress,
+        replace(runtime.dif.convertJSValueToDIFValueContainer(456)),
+    );
 
     // check if the update was observed
     assertEquals(observedUpdate.length, 1);
     assertEquals(
         observedUpdate[0],
-        replace(
-            runtime.dif.convertJSValueToDIFValueContainer(456),
-        ),
+        [
+            FAKE_TRANSCEIVER_ID,
+            ...replace(runtime.dif.convertJSValueToDIFValueContainer(456)),
+        ],
     );
 
     assertEquals(ptrObj.value, 456);
@@ -574,20 +556,19 @@ Deno.test("pointer primitive ref remote update and observe local", () => {
     observedUpdate = [];
 
     // fake a local update
-    runtime.dif._handle.update(
+    performFakeRemoteUpdateWithSourceId(
+        runtime,
         ptrObj.pointerAddress,
-        {
-            source_id: runtime.dif._transceiver_id,
-            data: {
-                value: { value: 789 },
-                kind: DIFUpdateKind.Replace,
-            },
-        },
+        replace(runtime.dif.convertJSValueToDIFValueContainer(789)),
+        runtime.dif._transceiver_id,
     );
 
     // local observer should still be triggered
     assertEquals(observedUpdate.length, 1);
-    assertEquals(observedUpdate[0], replace(runtime.dif.convertJSValueToDIFValueContainer(789)));
+    assertEquals(observedUpdate[0], [
+        runtime.dif._transceiver_id,
+        ...replace(runtime.dif.convertJSValueToDIFValueContainer(789)),
+    ]);
 
     // local value should not be updated since the update came from own transceiver
     assertEquals(ptrObj.value, 456);
@@ -644,7 +625,8 @@ Deno.test("core text", () => {
 Deno.test("core integer", () => {
     const script = "42";
     const result = runtime.dif.executeSyncDIF(script);
-    assertEquals(result, [CoreLibTypeId.integer, 42]);
+    console.log("result", result);
+    assertEquals(result, [CoreLibTypeId.integer, "42"]);
 });
 
 Deno.test("core boolean", () => {

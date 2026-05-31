@@ -118,27 +118,32 @@ export function difCoreValueToDisplayString(
         case CoreLibTypeId.Map:
             if (Array.isArray(coreValue)) {
                 return `[${
-                    [coreValue as DIFValueContainer[]].map((v) => {
-                        if (Array.isArray(v)) {
-                            return `[${
-                                v.map((vv) => difValueContainerToDisplayString(vv))
-                                    .join(", ")
-                            }]`;
-                        } else {
-                            return difValueContainerToDisplayString(v);
-                        }
-                    }).join(
-                        ", ",
-                    )
+                    (coreValue as [DIFValueContainer, DIFValueContainer][])
+                        .map((value) => {
+                            if (Array.isArray(value)) {
+                                return `[${
+                                    value
+                                        .map((item) => difValueContainerToDisplayString(item))
+                                        .join(", ")
+                                }]`;
+                            }
+
+                            return difValueContainerToDisplayString(value);
+                        })
+                        .join(", ")
                 }]`;
-            } else if (coreValue && typeof coreValue === "object") {
-                return `{ ${
-                    Object.entries(coreValue).map(([k, v]) => `${k}: ${difValueContainerToDisplayString(v)}`).join(", ")
-                } }`;
-            } else {
-                throw new Error("Invalid map value: " + JSON.stringify(coreValue));
             }
 
+            if (coreValue && typeof coreValue === "object") {
+                return `{ ${
+                    Object.entries(coreValue)
+                        .map(
+                            ([key, value]) => `${key}: ${difValueContainerToDisplayString(value)}`,
+                        )
+                        .join(", ")
+                } }`;
+            }
+            throw new Error("Invalid map value: " + JSON.stringify(coreValue));
         default:
             throw new Error("Unknown core lib type id: " + id);
     }
