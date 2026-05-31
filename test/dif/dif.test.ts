@@ -17,7 +17,7 @@ import {
 } from "datex/dif/types/mod.ts";
 import { BaseSharedContainer } from "datex/shared-container/base-shared-container.ts";
 import { replace } from "datex/dif/update.ts";
-import { DIFValue } from "../../src/dif/types/value";
+import { DIFValue } from "datex/dif/types/value.ts";
 
 const runtime = await Runtime.create({ endpoint: Endpoint.get("@jonas") });
 runtime.dif.type_registry.registerTypeBinding(arrayTypeBinding);
