@@ -790,12 +790,14 @@ export class DIFHandler {
 
         let typeBinding: TypeBinding | null = null;
         let metadata: CustomReferenceMetadata | undefined = undefined;
-
+        console.log("Allowed type", allowedType);
         // bind js value (if mutable, nominal type)
         const bindJSValue = mutability !== SharedContainerMutability.Immutable &&
-            typeof allowedType == "string";
+            (typeof allowedType == "string" || typeof allowedType == "number");
         if (bindJSValue && !(wrappedValue instanceof BaseSharedContainer)) {
-            typeBinding = this.type_registry.getTypeBinding(allowedType);
+            typeBinding = typeof allowedType == "number"
+                ? this.type_registry.getTypeBindingByCoreLibTypeId(allowedType)
+                : this.type_registry.getTypeBinding(allowedType);
             if (typeBinding) {
                 const { value, metadata: newMetadata } =
                     (typeBinding as TypeBinding<SharedRef<object, SharedContainerMutability>>)

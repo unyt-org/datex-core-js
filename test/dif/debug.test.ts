@@ -2,6 +2,7 @@ import { Runtime } from "datex/runtime/runtime.ts";
 import { arrayTypeBinding } from "datex/lib/js-core-types/array.ts";
 import { assertEquals, assertNotStrictEquals, assertThrows } from "@std/assert";
 import { Endpoint } from "datex/lib/mod.ts";
+import { SharedContainerMutability } from "datex/shared-container/mod.ts";
 
 const runtime = await Runtime.create({ endpoint: Endpoint.get("@jonas") });
 runtime.dif.type_registry.registerTypeBinding(arrayTypeBinding);
@@ -9,7 +10,7 @@ runtime.dif.type_registry.registerTypeBinding(arrayTypeBinding);
 Deno.test("detect illegal use of moved original value", () => {
     const original = [1, 2];
     // original is "moved" to reference
-    const reference = runtime.createSharedValue(original);
+    const reference = runtime.createSharedValueFromJSValue(original, null, SharedContainerMutability.Mutable);
     assertNotStrictEquals(original, reference);
 
     // should be allowed
