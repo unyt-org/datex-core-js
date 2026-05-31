@@ -4,10 +4,10 @@ import { assertThrows } from "@std/assert/throws";
 
 import { CoreLibTypeId } from "datex/dif/core.ts";
 import { assertStrictEquals } from "@std/assert/strict-equals";
-import { difBaseSharedContainerToDisplayString, difValueContainerToDisplayString } from "datex/dif/display.ts";
+import { difBaseSharedContainerToDisplayString, type difValueContainerToDisplayString } from "datex/dif/display.ts";
 import { arrayTypeBinding } from "datex/lib/js-core-types/array.ts";
 import { Endpoint } from "datex/lib/mod.ts";
-import { PointerAddress, SharedContainerMutability, type SharedRef } from "datex/shared-container/mod.ts";
+import { type PointerAddress, SharedContainerMutability, type SharedRef } from "datex/shared-container/mod.ts";
 import {
     type DIFBaseSharedValueContainer,
     DIFSharedContainerOwnership,

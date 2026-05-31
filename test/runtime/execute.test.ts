@@ -14,20 +14,17 @@ Deno.test("execute sync with string result", async () => {
 Deno.test("execute sync dif value", async () => {
     const runtime = await Runtime.create({ endpoint: Endpoint.get("@jonas") });
     const script = "1 + 2";
-    // NOTE: in an optimized version of DIF, we could also just return a plain number in this case.
-    // For now, all DIF values are returned in the same format to reduce complexity.
     const result = runtime.dif.executeSyncDIF(script);
-    assertEquals(result, [CoreLibTypeId.integer, 3]);
+    assertEquals(result, [CoreLibTypeId.integer, "3"]);
     console.log(result);
 });
 
 Deno.test("execute sync number", async () => {
     const runtime = await Runtime.create({ endpoint: Endpoint.get("@jonas") });
-    const result = runtime.executeSync<number>("1 + 2");
+    const result = runtime.executeSync<number>("1u32 + 2u32");
     assertEquals(result, 3);
 });
 
-// FIXME
 Deno.test("execute sync typed integer", async () => {
     const runtime = await Runtime.create({ endpoint: Endpoint.get("@jonas") });
     const result = runtime.dif.executeSyncDIF(
@@ -38,13 +35,13 @@ Deno.test("execute sync typed integer", async () => {
 
 Deno.test("execute sync normal integer", async () => {
     const runtime = await Runtime.create({ endpoint: Endpoint.get("@jonas") });
-    const result = runtime.executeSync<number>(
+    const result = runtime.executeSync<bigint>(
         "123456781234567891234567812345678",
     );
-    assertEquals(typeof result, "number");
+    assertEquals(typeof result, "bigint");
     assertEquals(
         result,
-        1.234567812345679e+32,
+        123456781234567891234567812345678n,
     );
 });
 
@@ -109,7 +106,7 @@ Deno.test("execute sync endpoint", async () => {
 
 Deno.test("execute sync range", async () => {
     const runtime = await Runtime.create({ endpoint: Endpoint.get("@jonas") });
-    const result = runtime.executeSync<Range>("1..2");
+    const result = runtime.executeSync<Range>("1u32..2u32");
     assertEquals(result.start, 1);
     assertEquals(result.end, 2);
     assertEquals(result, new Range(1, 2));
@@ -117,19 +114,22 @@ Deno.test("execute sync range", async () => {
 
 Deno.test("execute sync pass number from JS", async () => {
     const runtime = await Runtime.create({ endpoint: Endpoint.get("@jonas") });
-    const result = runtime.executeSync<number>("1 + ?", [41]);
-    assertEquals(result, 42);
+    const resultInteger = runtime.executeSync<bigint>("1 + ?", [41]);
+    assertEquals(resultInteger, 42n);
+
+    const resultTypedInteger = runtime.executeSync<number>("1u32 + ?", [41]);
+    assertEquals(resultTypedInteger, 42);
 });
 
 Deno.test("execute sync pass multiple values from JS", async () => {
     const runtime = await Runtime.create({ endpoint: Endpoint.get("@jonas") });
-    const result = runtime.executeSync<number[]>("[?, 2, ?]", [1, 3]);
+    const result = runtime.executeSync<number[]>("[?, 2u32, ?]", [1, 3]);
     assertEquals(result, [1, 2, 3]);
 });
 
 Deno.test("execute sync pass multiple values from JS with template syntax", async () => {
     const runtime = await Runtime.create({ endpoint: Endpoint.get("@jonas") });
-    const result = runtime.executeSync<number[]>`[${1}, 2, ${3}]`;
+    const result = runtime.executeSync<number[]>`[${1}, 2u32, ${3}]`;
     assertEquals(result, [1, 2, 3]);
 });
 
@@ -138,13 +138,4 @@ Deno.test("execute with string result", async () => {
     const script = "1 + 2";
     const result = await runtime.executeWithStringResult(script);
     assertEquals(result, "3");
-    console.log(result);
-});
-
-Deno.test("execute remote with string result", async () => {
-    const runtime = await Runtime.create({ endpoint: Endpoint.get("@jonas") });
-    const script = "1 + 2";
-    const result = await runtime.executeWithStringResult(script);
-    assertEquals(result, "3");
-    console.log(result);
 });
