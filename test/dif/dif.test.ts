@@ -7,17 +7,17 @@ import { assertStrictEquals } from "@std/assert/strict-equals";
 import { difBaseSharedContainerToDisplayString, difValueContainerToDisplayString } from "datex/dif/display.ts";
 import { arrayTypeBinding } from "datex/lib/js-core-types/array.ts";
 import { Endpoint } from "datex/lib/mod.ts";
-import { SharedContainerMutability, SharedRef } from "datex/shared-container/mod.ts";
+import { SharedContainerMutability, type SharedRef } from "datex/shared-container/mod.ts";
 import {
-    DIFBaseSharedValueContainer,
+    type DIFBaseSharedValueContainer,
     DIFSharedContainerOwnership,
-    DIFUpdate,
-    DIFUpdateData,
+    type DIFUpdate,
+    type DIFUpdateData,
     DIFUpdateKind,
 } from "datex/dif/types/mod.ts";
 import { BaseSharedContainer } from "datex/shared-container/base-shared-container.ts";
 import { replace } from "datex/dif/update.ts";
-import { DIFValue } from "datex/dif/types/value.ts";
+import type { DIFValue } from "datex/dif/types/value.ts";
 
 const runtime = await Runtime.create({ endpoint: Endpoint.get("@jonas") });
 runtime.dif.type_registry.registerTypeBinding(arrayTypeBinding);

@@ -6,7 +6,7 @@
 
 import { SharedContainerMutability } from "../shared-container/mod.ts";
 import { CoreLibTypeId } from "./core.ts";
-import {
+import type {
     DIFBaseSharedValueContainer,
     DIFCoreValue,
     DIFTypeDefinition,
@@ -14,7 +14,7 @@ import {
     DIFTypeKey,
     DIFValueContainer,
 } from "./types/mod.ts";
-import { PointerAddress } from "../shared-container/mod.ts";
+import type { PointerAddress } from "../shared-container/mod.ts";
 
 /**
  * Converts a DIF reference mutability to a display string.

@@ -3,11 +3,11 @@
  * Represents the main interface for interacting with the DATEX Core via DIF from JavaScript.
  */
 
-import { JSDIFInterface, JSRuntime } from "../datex.ts";
+import type { JSDIFInterface, JSRuntime } from "../datex.ts";
 import { Endpoint } from "../lib/special-core-types/endpoint.ts";
 import { Range } from "../lib/special-core-types/range.ts";
 import {
-    DIFCoreValue,
+    type DIFCoreValue,
     type DIFPointerAddress,
     type DIFProperty,
     type DIFTypeDefinition,
@@ -21,18 +21,18 @@ import {
 import { CoreLibTypeId } from "./core.ts";
 import { type TypeBinding, TypeRegistry } from "./type-registry.ts";
 import { panic, unreachable } from "../utils/exceptions.ts";
-import { JsLibTypeAddress } from "./js-lib.ts";
+import type { JsLibTypeAddress } from "./js-lib.ts";
 import { isJsUndefined, JS_UNDEFINED } from "../lib/special-core-types/undefined.ts";
-import { DIFBaseSharedValueContainer } from "./types/value.ts";
-import { DIFType } from "./types/type.ts";
+import type { DIFBaseSharedValueContainer } from "./types/value.ts";
+import type { DIFType } from "./types/type.ts";
 import { SharedContainerMutability } from "../shared-container/base-shared-container.ts";
-import { PointerAddress, PointerAddressWithOwnership } from "../shared-container/mod.ts";
+import type { PointerAddress, PointerAddressWithOwnership } from "../shared-container/mod.ts";
 import { type AsShared, BaseSharedContainer, type SharedContainer, type SharedRef } from "../shared-container/mod.ts";
 import { DIFSharedContainerOwnership } from "./types/type.ts";
 import { splitPointerAddressWithOwnership } from "../shared-container/mod.ts";
 import { combinePointerAddressWithOwnership } from "../shared-container/mod.ts";
-import { SharedReferenceMutability } from "../shared-container/reference.ts";
-import { DIFUpdateDataReplace } from "./types/update.ts";
+import type { SharedReferenceMutability } from "../shared-container/reference.ts";
+import type { DIFUpdateDataReplace } from "./types/update.ts";
 import { appendEntry, clear, deleteEntry, DIFPropertyKind, listSplice, replace, setEntry } from "./update.ts";
 import { createDIFProperty } from "./update.ts";
 

@@ -1,6 +1,6 @@
 import type { DIFHandler } from "../dif/dif-handler.ts";
 import { DIFSharedContainerOwnership } from "../dif/types/mod.ts";
-import { AsShared, OwnedSharedContainer, PointerAddress, SharedContainer } from "./mod.ts";
+import { type AsShared, OwnedSharedContainer, type PointerAddress, type SharedContainer } from "./mod.ts";
 import { ReferencedSharedContainer } from "./reference.ts";
 
 export enum SharedContainerMutability {

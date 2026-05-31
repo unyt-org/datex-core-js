@@ -2,10 +2,10 @@ import { assertEquals } from "@std/assert/equals";
 import { Runtime } from "datex/runtime/runtime.ts";
 import { arrayTypeBinding } from "datex/lib/js-core-types/array.ts";
 import { Endpoint } from "datex/lib/mod.ts";
-import { DIFUpdateKind } from "datex/dif/types/mod.ts";
-import { AsShared, PointerAddress, SharedContainerMutability } from "datex/shared-container/mod.ts";
-import { CachedSharedContainer } from "datex/dif/dif-handler.ts";
-import { SharedRef } from "datex/shared-container/mod.ts";
+import type { DIFUpdateKind } from "datex/dif/types/mod.ts";
+import { type AsShared, type PointerAddress, SharedContainerMutability } from "datex/shared-container/mod.ts";
+import type { CachedSharedContainer } from "datex/dif/dif-handler.ts";
+import type { SharedRef } from "datex/shared-container/mod.ts";
 import { performFakeRemoteUpdate } from "../utils.ts";
 import {
     appendEntry,

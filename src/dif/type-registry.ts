@@ -2,7 +2,7 @@ import { DEBUG_MODE } from "../global.ts";
 import type { CoreLibTypeId } from "./core.ts";
 import { type DIFTypeDefinition, type DIFUpdateData, DIFUpdateKind } from "./types/mod.ts";
 import {
-    CachedSharedContainer,
+    type CachedSharedContainer,
     type CustomReferenceMetadata,
     type DIFHandler,
     IS_PROXY_ACCESS,
