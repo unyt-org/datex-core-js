@@ -1,8 +1,13 @@
 import { DEBUG_MODE } from "../global.ts";
 import type { CoreLibTypeId } from "./core.ts";
 import { type DIFTypeDefinition, type DIFUpdateData, DIFUpdateKind } from "./types/mod.ts";
-import { type CustomReferenceMetadata, type DIFHandler, IS_PROXY_ACCESS } from "./dif-handler.ts";
-import { PointerAddress } from "../shared-container/mod";
+import {
+    CachedSharedContainer,
+    type CustomReferenceMetadata,
+    type DIFHandler,
+    IS_PROXY_ACCESS,
+} from "./dif-handler.ts";
+import type { PointerAddress } from "../shared-container/mod.ts";
 
 type ImplMethod = {
     name: string;
@@ -179,8 +184,8 @@ export class TypeBinding<
         return this.#difHandler;
     }
 
-    public getCustomReferenceMetadata(value: T): M {
-        return this.#difHandler.getReferenceMetadataUnsafe<M, T>(value)
+    public getCustomReferenceMetadata(value: CachedSharedContainer): M {
+        return this.#difHandler.getReferenceMetadataUnsafe<M>(value)
             .customMetadata;
     }
 
@@ -221,7 +226,7 @@ export class TypeBinding<
                 pointerAddress,
                 difUpdateData,
             );
-            this.allowOriginalValueAccess(value, () => {
+            this.allowOriginalValueAccess(value as CachedSharedContainer, () => {
                 // call appropriate handler based on update kind
                 if (
                     difUpdateData.kind === DIFUpdateKind.SetEntry &&
@@ -233,7 +238,7 @@ export class TypeBinding<
                         this.#difHandler.resolveDIFProperty(
                             difUpdateData.key,
                         ),
-                        this.#difHandler.resolveDIFValueContainerSync(
+                        this.#difHandler.resolveDIFValueContainer(
                             difUpdateData.value,
                         ),
                     );
@@ -244,7 +249,7 @@ export class TypeBinding<
                     this.#definition.handleAppend.call(
                         this,
                         value,
-                        this.#difHandler.resolveDIFValueContainerSync(
+                        this.#difHandler.resolveDIFValueContainer(
                             difUpdateData.value,
                         ),
                     );
@@ -255,7 +260,7 @@ export class TypeBinding<
                     this.#definition.handleReplace.call(
                         this,
                         value,
-                        this.#difHandler.resolveDIFValueContainerSync(
+                        this.#difHandler.resolveDIFValueContainer(
                             difUpdateData.value,
                         ),
                     );
@@ -284,7 +289,7 @@ export class TypeBinding<
                         value,
                         difUpdateData.start,
                         difUpdateData.delete_count,
-                        difUpdateData.items.map((item) => this.#difHandler.resolveDIFValueContainerSync(item)),
+                        difUpdateData.items.map((item) => this.#difHandler.resolveDIFValueContainer(item)),
                     );
                 }
             });
@@ -312,7 +317,7 @@ export class TypeBinding<
     }
 
     public allowOriginalValueAccess<R>(
-        target: T,
+        target: CachedSharedContainer,
         callback: () => R,
     ): R {
         if (!DEBUG_MODE) {

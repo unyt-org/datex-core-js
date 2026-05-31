@@ -44,7 +44,7 @@ export type ReferenceMetadata<M extends CustomReferenceMetadata> = {
     customMetadata: M;
 };
 
-type CachedSharedContainer =
+export type CachedSharedContainer =
     | SharedRef<object, SharedContainerMutability>
     | BaseSharedContainer<unknown, SharedContainerMutability>;
 

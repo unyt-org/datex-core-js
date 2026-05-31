@@ -258,7 +258,7 @@ Deno.test("pointer create and resolve", () => {
     // TODO: reenable, currently panics because async resolution is not yet implemented
     // assertThrows(
     //     () => {
-    //         runtime.dif.resolveDIFValueContainerSync<string>("abcdef");
+    //         runtime.dif.resolveDIFValueContainer<string>("abcdef");
     //     },
     //     Error,
     //     `Invalid`,
@@ -269,7 +269,7 @@ Deno.test("pointer create and resolve", () => {
         undefined,
         DIFSharedValueMutability.Mutable,
     );
-    const resolved = runtime.dif.resolveDIFValueContainerSync<string>(
+    const resolved = runtime.dif.resolveDIFValueContainer<string>(
         ptr,
     );
     assertEquals(resolved, "unyt.org");

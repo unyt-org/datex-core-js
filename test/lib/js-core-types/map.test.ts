@@ -8,7 +8,7 @@ runtime.dif.type_registry.registerTypeBinding(mapTypeBinding);
 
 function getCurrentRuntimeLocalValue<T>(address: string) {
     return runtime.dif
-        .resolveDIFValueContainerSync(
+        .resolveDIFValueContainer(
             runtime.dif._handle.resolve_pointer_address(address).value,
         ) as T;
 }

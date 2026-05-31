@@ -9,9 +9,8 @@ import {
 } from "../datex.ts";
 import { ComHub } from "../network/com-hub.ts";
 import { DIFHandler } from "../dif/dif-handler.ts";
-import { AsShared, BaseSharedContainer, SharedContainerMutability } from "../shared-container/mod.ts";
-import { unimplemented } from "../utils/exceptions.ts";
-import { FlatInstruction, Instruction, InstructionTree } from "./types.d.ts";
+import { AsShared, SharedContainerMutability } from "../shared-container/mod.ts";
+import { FlatInstruction, InstructionTree } from "./types.d.ts";
 import { DIFTypeDefinition } from "../dif/types/mod.ts";
 
 // TODO: move to global.ts
