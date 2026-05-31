@@ -28,7 +28,7 @@ export class BaseSharedContainer<T, Mutability extends SharedContainerMutability
     /**
      * Gets the address of the pointer storing the reference.
      */
-    get pointerAddress(): PointerAddress {
+    public get pointerAddress(): PointerAddress {
         return this.#pointerAddress;
     }
 

@@ -3,6 +3,20 @@ import { Runtime } from "datex/runtime/runtime.ts";
 import { arrayTypeBinding } from "datex/lib/js-core-types/array.ts";
 import { Endpoint } from "datex/lib/mod.ts";
 import { DIFUpdateKind } from "datex/dif/types/mod.ts";
+import { AsShared, PointerAddress, SharedContainerMutability } from "datex/shared-container/mod.ts";
+import { CachedSharedContainer } from "datex/dif/dif-handler.ts";
+import { SharedRef } from "datex/shared-container/mod.ts";
+import { performFakeRemoteUpdate } from "../utils.ts";
+import {
+    appendEntry,
+    clear,
+    createDIFProperty,
+    deleteEntry,
+    DIFPropertyKind,
+    listSplice,
+    replace,
+    setEntry,
+} from "datex/dif/update.ts";
 
 const runtime = await Runtime.create({ endpoint: Endpoint.get("@test") });
 runtime.dif.type_registry.registerTypeBinding(arrayTypeBinding);
@@ -14,9 +28,12 @@ function getCurrentRuntimeLocalValue<T>(address: string) {
         ) as T;
 }
 
-function createArrayReference<T>(array: T[]): [T[], string] {
-    const arrayPtr = runtime.createSharedValue(array);
-    const address = runtime.dif.getPointerAddressForValue(arrayPtr)!;
+function createArrayReference<T extends Array<unknown>, M extends SharedContainerMutability.Mutable>(
+    array: T,
+    mutability: M = SharedContainerMutability.Mutable as M,
+): [SharedRef<T, M>, PointerAddress] {
+    const arrayPtr = runtime.createSharedValueFromJSValue<T, M>(array, null, mutability) as SharedRef<T, M>;
+    const address = runtime.dif.getPointerAddressForValue(arrayPtr as CachedSharedContainer)!;
     return [arrayPtr, address];
 }
 
@@ -28,14 +45,14 @@ Deno.test("array set external", () => {
     // TODO: property updates are not yet implemented in DATEX Script
     // runtime.executeSync(`${mapPtr}.test = 'newValue'`);
     // fake a remote update from transceiver 42
-    runtime._runtime.dif_interface().update(address, {
-        source_id: 42,
-        data: {
-            key: { kind: "index", value: 0 },
-            value: { value: "newValue" },
-            kind: DIFUpdateKind.SetEntry,
-        },
-    });
+    performFakeRemoteUpdate(
+        runtime,
+        address,
+        setEntry(
+            createDIFProperty(0, DIFPropertyKind.Index),
+            runtime.dif.convertJSValueToDIFValueContainer("newValue"),
+        ),
+    );
     assertEquals(arrayPtr[0], "newValue");
 });
 
@@ -44,13 +61,13 @@ Deno.test("array append external", () => {
     const array = ["value1", "value2", 123];
     const [arrayPtr, address] = createArrayReference(array);
 
-    runtime._runtime.dif_interface().update(address, {
-        source_id: 42,
-        data: {
-            value: { value: "newValueEnd" },
-            kind: DIFUpdateKind.AppendEntry,
-        },
-    });
+    performFakeRemoteUpdate(
+        runtime,
+        address,
+        appendEntry(
+            runtime.dif.convertJSValueToDIFValueContainer("newValueEnd"),
+        ),
+    );
     assertEquals(arrayPtr[3], "newValueEnd");
 });
 
@@ -59,13 +76,7 @@ Deno.test("array delete external", () => {
     const array = ["value1", "value2", 123];
     const [arrayPtr, address] = createArrayReference(array);
 
-    runtime._runtime.dif_interface().update(address, {
-        source_id: 42,
-        data: {
-            kind: DIFUpdateKind.DeleteEntry,
-            key: { kind: "index", value: 0 },
-        },
-    });
+    performFakeRemoteUpdate(runtime, address, deleteEntry(createDIFProperty(0, DIFPropertyKind.Index)));
     assertEquals(arrayPtr, ["value2", 123]);
 });
 
@@ -74,12 +85,8 @@ Deno.test("array clear external", () => {
     const array = ["value1", "value2", 123];
     const [arrayPtr, address] = createArrayReference(array);
 
-    runtime.dif._handle.update(address, {
-        source_id: 42,
-        data: {
-            kind: DIFUpdateKind.Clear,
-        },
-    });
+    performFakeRemoteUpdate(runtime, address, clear());
+
     assertEquals(arrayPtr.length, 0);
 });
 
@@ -89,14 +96,8 @@ Deno.test("array replace external", () => {
     const [arrayPtr, address] = createArrayReference(array);
 
     arrayPtr.push("toBeRemoved");
-    runtime._runtime.dif_interface().update(address, {
-        source_id: 42,
-        data: {
-            value: runtime.dif.convertJSValueToDIFValueContainer(["a", "b", "c"]),
-            kind: DIFUpdateKind.Replace,
-        },
-    });
-    assertEquals(arrayPtr, ["a", "b", "c"]);
+    performFakeRemoteUpdate(runtime, address, replace(runtime.dif.convertJSValueToDIFValueContainer(["a", "b", "c"])));
+    assertEquals(arrayPtr, ["a", "b", "c"] as SharedRef<string[], SharedContainerMutability.Mutable>);
 });
 
 Deno.test("array splice external", () => {
@@ -104,30 +105,26 @@ Deno.test("array splice external", () => {
     const array = ["value1", "value2", 123, "value4"];
     const [arrayPtr, address] = createArrayReference(array);
 
-    runtime._runtime.dif_interface().update(address, {
-        source_id: 42,
-        data: {
-            kind: DIFUpdateKind.ListSplice,
-            start: 1,
-            delete_count: 2,
-            items: [
+    performFakeRemoteUpdate(
+        runtime,
+        address,
+        listSplice(
+            1,
+            2,
+            [
                 runtime.dif.convertJSValueToDIFValueContainer("newValueA"),
                 runtime.dif.convertJSValueToDIFValueContainer("newValueB"),
             ],
-        },
-    });
-    assertEquals(arrayPtr, ["value1", "newValueA", "newValueB", "value4"]);
+        ),
+    );
 
-    runtime._runtime.dif_interface().update(address, {
-        source_id: 42,
-        data: {
-            kind: DIFUpdateKind.ListSplice,
-            start: 2,
-            delete_count: 2,
-            items: [],
-        },
-    });
-    assertEquals(arrayPtr, ["value1", "newValueA"]);
+    assertEquals(
+        arrayPtr,
+        ["value1", "newValueA", "newValueB", "value4"] as SharedRef<string[], SharedContainerMutability.Mutable>,
+    );
+
+    performFakeRemoteUpdate(runtime, address, listSplice(2, 2, []));
+    assertEquals(arrayPtr, ["value1", "newValueA"] as SharedRef<string[], SharedContainerMutability.Mutable>);
 });
 
 Deno.test("array set local", () => {

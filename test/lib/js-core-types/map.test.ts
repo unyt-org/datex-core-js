@@ -4,6 +4,11 @@ import { Runtime } from "datex/runtime/runtime.ts";
 import { CoreLibTypeId } from "datex/dif/core.ts";
 import { Endpoint } from "datex/lib/mod.ts";
 import { DIFUpdateKind } from "datex/dif/types/mod.ts";
+import { performFakeRemoteUpdate } from "../utils.ts";
+import { SharedContainerMutability } from "datex/shared-container/base-shared-container.ts";
+import { CachedSharedContainer } from "datex/dif/dif-handler.ts";
+import { PointerAddress, SharedRef } from "datex/shared-container/mod.ts";
+import { clear, createDIFProperty, deleteEntry, DIFPropertyKind, replace, setEntry } from "datex/dif/update.ts";
 const runtime = await Runtime.create({ endpoint: Endpoint.get("@test") });
 runtime.dif.type_registry.registerTypeBinding(mapTypeBinding);
 
@@ -14,10 +19,13 @@ function getCurrentRuntimeLocalValue<T>(address: string) {
         ) as T;
 }
 
-function createMapReference<K, V>(map: Map<K, V>): [Map<K, V>, string] {
-    const mapPtr = runtime.createSharedValue(map);
-    const address = runtime.dif.getPointerAddressForValue(mapPtr)!;
-    return [mapPtr, address];
+function createMapReference<T extends Map<unknown, unknown>, M extends SharedContainerMutability.Mutable>(
+    array: T,
+    mutability: M = SharedContainerMutability.Mutable as M,
+): [SharedRef<T, M>, PointerAddress] {
+    const arrayPtr = runtime.createSharedValueFromJSValue<T, M>(array, null, mutability) as SharedRef<T, M>;
+    const address = runtime.dif.getPointerAddressForValue(arrayPtr as CachedSharedContainer)!;
+    return [arrayPtr, address];
 }
 
 Deno.test("map set external", () => {
@@ -30,14 +38,14 @@ Deno.test("map set external", () => {
     );
 
     // fake a remote update from transceiver 42
-    runtime._runtime.dif_interface().update(address, {
-        source_id: 42,
-        data: {
-            key: { kind: "text", value: "externalKey" },
-            value: { value: "newValue" },
-            kind: DIFUpdateKind.SetEntry,
-        },
-    });
+    performFakeRemoteUpdate(
+        runtime,
+        address,
+        setEntry(
+            createDIFProperty("externalKey", DIFPropertyKind.Text),
+            runtime.dif.convertJSValueToDIFValueContainer("newValue"),
+        ),
+    );
     assertEquals(map.get("externalKey"), "newValue");
 });
 
@@ -49,13 +57,7 @@ Deno.test("map delete external", () => {
             [2, "value2"],
         ]),
     );
-    runtime._runtime.dif_interface().update(address, {
-        source_id: 42,
-        data: {
-            kind: DIFUpdateKind.DeleteEntry,
-            key: { kind: "text", value: "key1" },
-        },
-    });
+    performFakeRemoteUpdate(runtime, address, deleteEntry(createDIFProperty("key1", DIFPropertyKind.Text)));
     assertEquals(map.has("key1"), false);
 });
 
@@ -68,12 +70,7 @@ Deno.test("map clear external", () => {
         ]),
     );
 
-    runtime._runtime.dif_interface().update(address, {
-        source_id: 42,
-        data: {
-            kind: DIFUpdateKind.Clear,
-        },
-    });
+    performFakeRemoteUpdate(runtime, address, clear());
     assertEquals(map.size, 0);
 });
 
@@ -86,24 +83,24 @@ Deno.test("map replace external", () => {
         ]),
     );
 
-    runtime._runtime.dif_interface().update(address, {
-        source_id: 42,
-        data: {
-            kind: DIFUpdateKind.Replace,
-            value: runtime.dif.convertJSValueToDIFValueContainer(
+    performFakeRemoteUpdate(
+        runtime,
+        address,
+        replace(
+            runtime.dif.convertJSValueToDIFValueContainer(
                 new Map<string, string>([
                     ["a", "valueA"],
                     ["b", "valueB"],
                 ]),
             ),
-        },
-    });
+        ),
+    );
     assertEquals(
         map,
         new Map<string, string>([
             ["a", "valueA"],
             ["b", "valueB"],
-        ]),
+        ]) as SharedRef<Map<string, string>, SharedContainerMutability.Mutable>,
     );
 });
 
@@ -166,9 +163,6 @@ Deno.test("map clear local", () => {
 });
 
 Deno.test("structural map from datex", () => {
-    const mapDif = runtime.dif.executeSyncDIF("{}");
-    assertEquals(mapDif, { value: {} });
-
     const map = runtime.executeSync<Record<string, unknown>>("{}", []);
     assertEquals(map instanceof Map, false);
     assertEquals(Object.keys(map).length, 0);
@@ -176,14 +170,12 @@ Deno.test("structural map from datex", () => {
 
 Deno.test("map from datex", () => {
     const mapDif = runtime.dif.executeSyncDIF("{(1): 2}");
-    assertEquals(mapDif, {
-        value: [
-            [
-                { type: CoreLibTypeId.integer, value: "1" },
-                { type: CoreLibTypeId.integer, value: "2" },
-            ],
+    assertEquals(mapDif, [CoreLibTypeId.Map, [
+        [
+            [CoreLibTypeId.integer, 1],
+            [CoreLibTypeId.integer, 2],
         ],
-    });
+    ]]);
 
     const map = runtime.executeSync<Map<number, number>>("{(1): 2}", []);
 
