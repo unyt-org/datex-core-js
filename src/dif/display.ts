@@ -3,14 +3,18 @@
  * @description
  * This module contains helper functions to convert DIF structures to display strings.
  */
-import {
-    type DIFRepresentationValue,
-    type DIFSharedValue,
-    type DIFTypeDefinition,
-    type DIFValueContainer,
-    SharedContainerMutability,
-} from "./definitions.ts";
+
+import { SharedContainerMutability } from "../shared-container/mod.ts";
 import { CoreLibTypeId } from "./core.ts";
+import {
+    DIFBaseSharedValueContainer,
+    DIFCoreValue,
+    DIFTypeDefinition,
+    DIFTypeDefinitionMap,
+    DIFTypeKey,
+    DIFValueContainer,
+} from "./types/mod.ts";
+import { PointerAddress } from "../shared-container/mod.ts";
 
 /**
  * Converts a DIF reference mutability to a display string.
@@ -27,12 +31,12 @@ export function mutabilityToDisplayString(mut: SharedContainerMutability): strin
 /**
  * Converts a DIF reference to a display string.
  */
-export function difReferenceToDisplayString(
-    reference: DIFSharedValue,
+export function difBaseSharedContainerToDisplayString(
+    reference: DIFBaseSharedValueContainer,
 ): string {
-    const typeString = difTypeDefinitionToDisplayString(reference.allowed_type);
-    const valueString = difValueContainerToDisplayString(reference.value);
-    const mutString = mutabilityToDisplayString(reference.mut);
+    const valueString = difValueContainerToDisplayString(reference[0]);
+    const mutString = mutabilityToDisplayString(reference[1]);
+    const typeString = difTypeDefinitionToDisplayString(reference[2]);
     return `${mutString}${valueString} (allowed: ${typeString})`;
 }
 
@@ -42,48 +46,101 @@ export function difReferenceToDisplayString(
 export function difValueContainerToDisplayString(
     container: DIFValueContainer,
 ): string {
-    if (typeof container === "string") {
-        return addressToDisplayString(container);
-    } else {
-        const typeString = container.type ? difTypeDefinitionToDisplayString(container.type) : null;
-        const valueString = difRepresentationValueToDisplayString(
-            container.value,
+    if (typeof container === "object" && container !== null && "$" in container) {
+        return container.$;
+    } else if (Array.isArray(container)) {
+        const [typeId, value, typeDef] = container;
+        const typeString = typeDef ? difTypeDefinitionToDisplayString(typeDef) : null;
+        const valueString = difCoreValueToDisplayString(
+            typeId,
+            value,
         );
         if (typeString) {
             return `{ type: ${typeString}, value: ${valueString} }`;
         } else {
             return valueString;
         }
+    } else {
+        return JSON.stringify(container);
     }
 }
 
 /**
  * Converts a DIF representation value to a display string.
  */
-export function difRepresentationValueToDisplayString(
-    difRepValue: DIFRepresentationValue,
+export function difCoreValueToDisplayString(
+    id: CoreLibTypeId,
+    coreValue: DIFCoreValue,
 ): string {
-    if (Array.isArray(difRepValue)) {
-        return `[${
-            difRepValue.map((v) => {
-                if (Array.isArray(v)) {
-                    return `[${
-                        v.map((vv) => difValueContainerToDisplayString(vv))
-                            .join(", ")
-                    }]`;
-                } else {
-                    return difValueContainerToDisplayString(v);
-                }
-            }).join(
-                ", ",
-            )
-        }]`;
-    } else if (difRepValue && typeof difRepValue === "object") {
-        return `{ ${
-            Object.entries(difRepValue).map(([k, v]) => `${k}: ${difValueContainerToDisplayString(v)}`).join(", ")
-        } }`;
-    } else {
-        return JSON.stringify(difRepValue);
+    switch (id) {
+        case CoreLibTypeId.boolean:
+        case CoreLibTypeId.text:
+        case CoreLibTypeId.endpoint:
+        case CoreLibTypeId.integer:
+        case CoreLibTypeId.integer_i8:
+        case CoreLibTypeId.integer_i16:
+        case CoreLibTypeId.integer_i32:
+        case CoreLibTypeId.integer_i64:
+        case CoreLibTypeId.integer_i128:
+        case CoreLibTypeId.integer_u8:
+        case CoreLibTypeId.integer_u16:
+        case CoreLibTypeId.integer_u32:
+        case CoreLibTypeId.integer_u64:
+        case CoreLibTypeId.integer_u128:
+        case CoreLibTypeId.integer_ibig:
+        case CoreLibTypeId.decimal_f32:
+        case CoreLibTypeId.decimal_f64:
+        case CoreLibTypeId.decimal_dbig:
+        case CoreLibTypeId.null:
+        case CoreLibTypeId.decimal:
+            return JSON.stringify(coreValue);
+
+        case CoreLibTypeId.Unit:
+            return "()";
+        case CoreLibTypeId.Never:
+            return "never";
+        case CoreLibTypeId.Unknown:
+            return "unknown";
+        case CoreLibTypeId.Range:
+            if (Array.isArray(coreValue)) {
+                return `[${difValueContainerToDisplayString(coreValue[0] as DIFValueContainer)}, ${
+                    difValueContainerToDisplayString(coreValue[1] as DIFValueContainer)
+                }]`;
+            } else if (coreValue && typeof coreValue === "object") {
+                return `{ start: ${difValueContainerToDisplayString(coreValue.start)}, end: ${
+                    difValueContainerToDisplayString(coreValue.end)
+                } }`;
+            } else {
+                throw new Error("Invalid range value: " + JSON.stringify(coreValue));
+            }
+        case CoreLibTypeId.Type:
+            return difTypeDefinitionToDisplayString(coreValue as DIFTypeDefinition);
+        case CoreLibTypeId.Map:
+            if (Array.isArray(coreValue)) {
+                return `[${
+                    [coreValue as DIFValueContainer[]].map((v) => {
+                        if (Array.isArray(v)) {
+                            return `[${
+                                v.map((vv) => difValueContainerToDisplayString(vv))
+                                    .join(", ")
+                            }]`;
+                        } else {
+                            return difValueContainerToDisplayString(v);
+                        }
+                    }).join(
+                        ", ",
+                    )
+                }]`;
+            } else if (coreValue && typeof coreValue === "object") {
+                return `{ ${
+                    Object.entries(coreValue).map(([k, v]) => `${k}: ${difValueContainerToDisplayString(v)}`).join(", ")
+                } }`;
+            } else {
+                throw new Error("Invalid map value: " + JSON.stringify(coreValue));
+            }
+
+        default:
+            throw new Error("Unknown core lib type id: " + id);
     }
 }
 
@@ -93,23 +150,27 @@ export function difRepresentationValueToDisplayString(
 export function difTypeDefinitionToDisplayString(
     difType: DIFTypeDefinition,
 ): string {
-    if (typeof difType === "string") {
-        return addressToDisplayString(difType);
+    if (typeof difType === "number") {
+        return coreLibTypeIdToDisplayString(difType);
     } else {
-        return `{ kind: ${difType.kind}, def: ${JSON.stringify(difType.def)} }`;
+        const [key, def] = Object.entries(difType)[0] as [
+            DIFTypeKey,
+            DIFTypeDefinitionMap[DIFTypeKey],
+        ];
+        return `{ ${key}: ${JSON.stringify(def)} }`;
     }
 }
 
 /**
  * Converts a core type address to a display string.
  */
-export function addressToDisplayString(address: string): string {
-    const found = Object.entries(CoreLibTypeId).find(([_, addr]) => {
-        return addr === address;
-    });
-    if (found) {
-        return found[0];
-    } else {
-        return "$" + address;
-    }
+export function addressToDisplayString(address: PointerAddress): string {
+    return `$${address}`;
+}
+export function coreLibTypeIdToDisplayString(
+    typeId: CoreLibTypeId,
+): string {
+    return Object.entries(CoreLibTypeId).find(
+        ([, value]) => value === typeId,
+    )?.[0] ?? "Unknown";
 }

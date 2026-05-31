@@ -4,7 +4,7 @@ import { assertThrows } from "@std/assert/throws";
 
 import { CoreLibTypeId } from "datex/dif/core.ts";
 import { assertStrictEquals } from "@std/assert/strict-equals";
-import { difReferenceToDisplayString, difValueContainerToDisplayString } from "datex/dif/display.ts";
+import { difBaseSharedContainerToDisplayString, difValueContainerToDisplayString } from "datex/dif/display.ts";
 import { arrayTypeBinding } from "datex/lib/js-core-types/array.ts";
 import { Endpoint } from "datex/lib/mod.ts";
 import { SharedContainerMutability, SharedRef } from "datex/shared-container/mod.ts";
@@ -338,7 +338,7 @@ Deno.test("pointer map create and cache", () => {
     const loadedMap = runtime.dif.resolvePointerAddress(ptrId);
     console.log("loadedMap", loadedMap);
     console.log(
-        difReferenceToDisplayString(
+        difBaseSharedContainerToDisplayString(
             runtime.dif._handle.resolve_pointer_address(
                 ptrId,
             ) as DIFSharedValue,

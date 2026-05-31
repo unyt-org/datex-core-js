@@ -12,7 +12,7 @@ import type { CoreLibTypeId } from "../core.ts";
  */
 type DIFCoreLibTypeDefinition = CoreLibTypeId;
 
-type DIFTypeDefinitionMap = {
+export type DIFTypeDefinitionMap = {
     literal: DIFLiteralTypeDefinition;
     list: DIFListTypeDefinition;
     map: DIFMapTypeDefinition;
@@ -27,6 +27,7 @@ type DIFTypeDefinitionMap = {
     tagged: DIFTaggedTypeDefinition;
     marker: DIFTypeMarker;
 };
+export type DIFTypeKey = keyof DIFTypeDefinitionMap;
 
 export const DIFLocalMutability = {
     Immutable: 0,
