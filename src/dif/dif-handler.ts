@@ -32,6 +32,9 @@ import { DIFSharedContainerOwnership } from "./types/type.ts";
 import { splitPointerAddressWithOwnership } from "../shared-container/mod.ts";
 import { combinePointerAddressWithOwnership } from "../shared-container/mod.ts";
 import { SharedReferenceMutability } from "../shared-container/reference.ts";
+import { DIFUpdateDataReplace } from "./types/update.ts";
+import { appendEntry, clear, deleteEntry, DIFPropertyKind, listSplice, replace, setEntry } from "./update.ts";
+import { createDIFProperty } from "./update.ts";
 
 export const IS_PROXY_ACCESS = Symbol("IS_PROXY_ACCESS");
 
@@ -662,13 +665,16 @@ export class DIFHandler {
     public resolveDIFProperty<T extends unknown>(
         property: DIFProperty,
     ): Value<T> {
-        if (property.kind === "text") {
-            return property.value as T;
-        } else if (property.kind === "index") {
-            return property.value as T;
-        } else {
-            return this.resolveDIFValueContainer(property.value);
+        if (typeof property === "number") {
+            return property as unknown as T;
         }
+        if (typeof property === "string") {
+            return property as unknown as T;
+        }
+        if (typeof property === "object" && property !== null && !Array.isArray(property) && "value" in property) {
+            return this.resolveDIFValueContainer<T>(property.value);
+        }
+        throw new Error("Invalid DIFProperty format");
     }
 
     /**
@@ -816,13 +822,14 @@ export class DIFHandler {
             observerId = this.observeSharedValueBindDirect(
                 pointerAddress,
                 (update) => {
+                    const [sourceId, ...data] = update;
                     // if source_id is not own transceiver id, handle pointer update
-                    if (update.source_id !== this.#transceiver_id) {
+                    if (sourceId !== this.#transceiver_id) {
                         try {
                             this.handlePointerUpdate(
                                 pointerAddress,
                                 wrappedValue,
-                                update.data,
+                                data,
                                 typeBinding,
                             );
                         } catch (e) {
@@ -838,7 +845,7 @@ export class DIFHandler {
                     if (observers) {
                         for (const cb of observers.values()) {
                             try {
-                                cb(update.data);
+                                cb(data);
                             } catch (e) {
                                 console.error(
                                     "Error in pointer observer callback",
@@ -904,9 +911,9 @@ export class DIFHandler {
         const deref = cached.value.deref();
         if (!deref) return false;
 
-        if (deref instanceof BaseSharedContainer && update.kind === DIFUpdateKind.Replace) {
+        if (deref instanceof BaseSharedContainer && update[0] === DIFUpdateKind.Replace) {
             deref.updateValueSilently(this.resolveDIFValueContainer(
-                update.value,
+                update[1],
             ));
         }
         // handle generic updates for values (depending on type interface definition)
@@ -1282,13 +1289,13 @@ export class DIFHandler {
     ) {
         const difKey = this.convertJSValueToDIFValueContainer(key);
         const difValue = this.convertJSValueToDIFValueContainer(value);
-        const update: DIFUpdateData = {
-            kind: DIFUpdateKind.SetEntry,
-            key: { kind: "value", value: difKey },
-            value: difValue,
-        };
-        console.log("Triggering set update", update);
-        this.updateSharedValue(pointerAddress, update);
+        this.updateSharedValue(
+            pointerAddress,
+            setEntry(
+                createDIFProperty(difKey, DIFPropertyKind.ValueContainer),
+                difValue,
+            ),
+        );
     }
 
     /**
@@ -1303,13 +1310,13 @@ export class DIFHandler {
             throw new Error("Index must be a non-negative integer");
         }
         const difValue = this.convertJSValueToDIFValueContainer(value);
-        const update: DIFUpdateData = {
-            kind: DIFUpdateKind.SetEntry,
-            key: { kind: "index", value: Number(index) },
-            value: difValue,
-        };
-        console.log("Triggering index set update", update);
-        this.updateSharedValue(pointerAddress, update);
+        this.updateSharedValue(
+            pointerAddress,
+            setEntry(
+                createDIFProperty(Number(index), DIFPropertyKind.Index),
+                difValue,
+            ),
+        );
     }
 
     /**
@@ -1320,12 +1327,7 @@ export class DIFHandler {
         value: V,
     ) {
         const difValue = this.convertJSValueToDIFValueContainer(value);
-        const update: DIFUpdateData = {
-            kind: DIFUpdateKind.AppendEntry,
-            value: difValue,
-        };
-        console.log("Triggering append update", update);
-        this.updateSharedValue(pointerAddress, update);
+        this.updateSharedValue(pointerAddress, appendEntry(difValue));
     }
 
     /**
@@ -1336,12 +1338,7 @@ export class DIFHandler {
         value: V,
     ) {
         const difValue = this.convertJSValueToDIFValueContainer(value);
-        const update: DIFUpdateData = {
-            kind: DIFUpdateKind.Replace,
-            value: difValue,
-        };
-        console.log("Triggering replace update", update);
-        this.updateSharedValue(pointerAddress, update);
+        this.updateSharedValue(pointerAddress, replace(difValue));
     }
 
     /**
@@ -1352,23 +1349,19 @@ export class DIFHandler {
         key: K,
     ) {
         const difKey = this.convertJSValueToDIFValueContainer(key);
-        const update: DIFUpdateData = {
-            kind: DIFUpdateKind.DeleteEntry,
-            key: { kind: "value", value: difKey },
-        };
-        console.log("Triggering delete update", update);
-        this.updateSharedValue(pointerAddress, update);
+        this.updateSharedValue(
+            pointerAddress,
+            deleteEntry(
+                createDIFProperty(difKey, DIFPropertyKind.ValueContainer),
+            ),
+        );
     }
 
     /**
      * Triggers a 'clear' update for the given pointer address.
      */
     public triggerClear(pointerAddress: PointerAddress) {
-        const update: DIFUpdateData = {
-            kind: DIFUpdateKind.Clear,
-        };
-        console.log("Triggering clear update", update);
-        this.updateSharedValue(pointerAddress, update);
+        this.updateSharedValue(pointerAddress, clear());
     }
 
     /**
@@ -1381,13 +1374,13 @@ export class DIFHandler {
         items: V[],
     ) {
         const difItems = items.map((item) => this.convertJSValueToDIFValueContainer(item));
-        const update: DIFUpdateData = {
-            kind: DIFUpdateKind.ListSplice,
-            start,
-            delete_count: deleteCount,
-            items: difItems,
-        };
-        console.log("Triggering list splice update", update);
-        this.updateSharedValue(pointerAddress, update);
+        this.updateSharedValue(
+            pointerAddress,
+            listSplice(
+                start,
+                deleteCount,
+                difItems,
+            ),
+        );
     }
 }
