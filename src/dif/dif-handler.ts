@@ -8,6 +8,7 @@ import { Endpoint } from "../lib/special-core-types/endpoint.ts";
 import { Range } from "../lib/special-core-types/range.ts";
 import {
     type DIFCoreValue,
+    DIFOptionalValueContainer,
     type DIFPointerAddress,
     type DIFProperty,
     type DIFTypeDefinition,
@@ -35,6 +36,24 @@ import type { SharedReferenceMutability } from "../shared-container/reference.ts
 import type { DIFUpdateDataReplace, DIFUpdateReturn } from "./types/update.ts";
 import { appendEntry, clear, deleteEntry, DIFPropertyKind, listSplice, replace, setEntry } from "./update.ts";
 import { createDIFProperty } from "./update.ts";
+
+/**
+ * Some DIF methods may return an optional ValueContainer, so does the execute_sync, when no result is returned.
+ * DIF must differnticate between null and no result, so we wrap DIFOptionalValueContainer.
+ * @param value - The DIFOptionalValueContainer to collapse.
+ * @returns The contained DIFValueContainer if present, or undefined if the value is not present.
+ */
+function collapseDIFOption(value: DIFOptionalValueContainer): DIFValueContainer | undefined {
+    if (value === null) {
+        return undefined;
+    } else {
+        if (Array.isArray(value) && value.length === 1) {
+            return value[0];
+        } else {
+            throw new Error("Invalid DIFOptionalValueContainer format: expected an array of length 1 or null");
+        }
+    }
+}
 
 export const IS_PROXY_ACCESS = Symbol("IS_PROXY_ACCESS");
 
@@ -154,13 +173,15 @@ export class DIFHandler {
      * @returns A Promise that resolves to the execution result as a DIFContainer.
      * @throws If an error occurs during execution.
      */
-    public executeDIF(
+    public async executeDIF(
         datexScript: string,
         values: unknown[] | null = [],
-    ): Promise<DIFValueContainer> {
-        return this.#runtime.execute(
-            datexScript,
-            this.convertToDIFValues(values),
+    ): Promise<DIFValueContainer | undefined> {
+        return collapseDIFOption(
+            await this.#runtime.execute(
+                datexScript,
+                this.convertToDIFValues(values),
+            ) as DIFOptionalValueContainer,
         );
     }
 
@@ -174,10 +195,12 @@ export class DIFHandler {
     public executeSyncDIF(
         datexScript: string,
         values: unknown[] | null = [],
-    ): DIFValueContainer {
-        return this.#runtime.execute_sync(
-            datexScript,
-            this.convertToDIFValues(values),
+    ): DIFValueContainer | undefined {
+        return collapseDIFOption(
+            this.#runtime.execute_sync(
+                datexScript,
+                this.convertToDIFValues(values),
+            ) as DIFOptionalValueContainer,
         );
     }
 

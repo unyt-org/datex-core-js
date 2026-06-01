@@ -279,8 +279,7 @@ impl JSRuntime {
             )
             .await
             .map_err(js_error)?;
-        Ok(result
-            .map(|value| to_js_value(&value, &mut self.dif_interface.cache())))
+        Ok(to_js_value(&result, &mut self.dif_interface.cache()))
     }
 
     pub fn execute_sync_with_string_result(

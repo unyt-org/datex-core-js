@@ -3,38 +3,54 @@ import { assertEquals } from "@std/assert";
 import { Endpoint } from "datex/lib/special-core-types/endpoint.ts";
 import { CoreLibTypeId } from "datex/dif/core.ts";
 import { Range } from "datex/lib/special-core-types/range.ts";
-Deno.test("execute sync with string result", async () => {
-    const runtime = await Runtime.create({ endpoint: Endpoint.get("@jonas") });
+
+let runtime: Runtime;
+Deno.test.beforeEach(async () => {
+    runtime = await Runtime.create({ endpoint: Endpoint.get("@jonas") });
+});
+
+Deno.test("execute sync with string result", () => {
     const script = "1 + 2";
     const result = runtime.executeSyncWithStringResult(script);
     assertEquals(result, "3");
-    console.log(result);
 });
 
-Deno.test("execute sync dif value", async () => {
-    const runtime = await Runtime.create({ endpoint: Endpoint.get("@jonas") });
+Deno.test("execute sync dif value", () => {
     const script = "1 + 2";
     const result = runtime.dif.executeSyncDIF(script);
     assertEquals(result, [CoreLibTypeId.integer, "3"]);
     console.log(result);
 });
 
-Deno.test("execute sync number", async () => {
-    const runtime = await Runtime.create({ endpoint: Endpoint.get("@jonas") });
+Deno.test("execute sync number", () => {
     const result = runtime.executeSync<number>("1u32 + 2u32");
     assertEquals(result, 3);
 });
 
-Deno.test("execute sync typed integer", async () => {
-    const runtime = await Runtime.create({ endpoint: Endpoint.get("@jonas") });
-    const result = runtime.dif.executeSyncDIF(
-        "42u8",
+Deno.test("execute sync typed integer", () => {
+    assertEquals(
+        runtime.dif.executeSyncDIF(
+            "42u8",
+        ),
+        [CoreLibTypeId.integer_u8, 42],
     );
-    assertEquals(result, [CoreLibTypeId.integer_u8, 42]);
+
+    assertEquals(
+        runtime.dif.executeSyncDIF(
+            "42u32",
+        ),
+        [CoreLibTypeId.integer_u32, 42],
+    );
+
+    assertEquals(
+        runtime.dif.executeSyncDIF(
+            "42i64",
+        ),
+        [CoreLibTypeId.integer_i64, 42],
+    );
 });
 
-Deno.test("execute sync normal integer", async () => {
-    const runtime = await Runtime.create({ endpoint: Endpoint.get("@jonas") });
+Deno.test("execute sync normal integer", () => {
     const result = runtime.executeSync<bigint>(
         "123456781234567891234567812345678",
     );
@@ -45,8 +61,7 @@ Deno.test("execute sync normal integer", async () => {
     );
 });
 
-Deno.test("execute sync bigint", async () => {
-    const runtime = await Runtime.create({ endpoint: Endpoint.get("@jonas") });
+Deno.test("execute sync bigint", () => {
     const result = runtime.executeSync<bigint>(
         "123456781234567891234567812345678ibig",
     );
@@ -57,40 +72,34 @@ Deno.test("execute sync bigint", async () => {
     );
 });
 
-Deno.test("execute sync string", async () => {
-    const runtime = await Runtime.create({ endpoint: Endpoint.get("@jonas") });
+Deno.test("execute sync string", () => {
     const result = runtime.executeSync<string>(`"lol"`);
     assertEquals(result, "lol");
 });
 
-Deno.test("execute sync boolean", async () => {
-    const runtime = await Runtime.create({ endpoint: Endpoint.get("@jonas") });
-    const result = runtime.executeSync<boolean>("true");
-    assertEquals(result, true);
+Deno.test("execute sync boolean", () => {
+    assertEquals(runtime.executeSync<boolean>("true"), true);
+    assertEquals(runtime.executeSync<boolean>("false"), false);
 });
 
-Deno.test("execute sync null", async () => {
-    const runtime = await Runtime.create({ endpoint: Endpoint.get("@jonas") });
+Deno.test("execute sync null", () => {
     const result = runtime.executeSync<null>("null");
     assertEquals(result, null);
 });
 
-Deno.test("execute sync array", async () => {
-    const runtime = await Runtime.create({ endpoint: Endpoint.get("@jonas") });
-    const result = runtime.executeSync<number[]>("[1, 2, 3]");
+Deno.test("execute sync array", () => {
+    const result = runtime.executeSync<number[]>("[1u32, 2u32, 3u32]");
     assertEquals(result, [1, 2, 3]);
 });
 
-Deno.test("execute sync none", async () => {
-    const runtime = await Runtime.create({ endpoint: Endpoint.get("@jonas") });
+Deno.test("execute sync none", () => {
     const result = runtime.executeSync<number[]>("42;");
     assertEquals(result, undefined);
 });
 
-Deno.test("execute sync object", async () => {
-    const runtime = await Runtime.create({ endpoint: Endpoint.get("@jonas") });
+Deno.test("execute sync object", () => {
     const result = runtime.executeSync<Record<string, number | string>>(
-        '{ a: 1, b: "test" }',
+        '{ a: 1u8, b: "test" }',
     );
     assertEquals(
         result,
@@ -98,44 +107,41 @@ Deno.test("execute sync object", async () => {
     );
 });
 
-Deno.test("execute sync endpoint", async () => {
-    const runtime = await Runtime.create({ endpoint: Endpoint.get("@jonas") });
-    const result = runtime.executeSync<Endpoint>("#endpoint");
+Deno.test("execute sync endpoint", () => {
+    const result = runtime.executeSync<Endpoint>("$.endpoint");
     assertEquals(result, Endpoint.get("@jonas"));
 });
 
-Deno.test("execute sync range", async () => {
-    const runtime = await Runtime.create({ endpoint: Endpoint.get("@jonas") });
+Deno.test("execute sync range", () => {
     const result = runtime.executeSync<Range>("1u32..2u32");
     assertEquals(result.start, 1);
     assertEquals(result.end, 2);
     assertEquals(result, new Range(1, 2));
 });
 
-Deno.test("execute sync pass number from JS", async () => {
-    const runtime = await Runtime.create({ endpoint: Endpoint.get("@jonas") });
+Deno.test("execute sync pass number from JS", () => {
     const resultInteger = runtime.executeSync<bigint>("1 + ?", [41]);
     assertEquals(resultInteger, 42n);
 
     const resultTypedInteger = runtime.executeSync<number>("1u32 + ?", [41]);
     assertEquals(resultTypedInteger, 42);
+
+    // The first part of the addition, defines the datatype, JS maps numbers to f64, so the result of the calculation will be a f64
+    const resultFloat = runtime.executeSync<number>("? + 40", [2]);
+    assertEquals(resultFloat, 42);
 });
 
-Deno.test("execute sync pass multiple values from JS", async () => {
-    const runtime = await Runtime.create({ endpoint: Endpoint.get("@jonas") });
+Deno.test("execute sync pass multiple values from JS", () => {
     const result = runtime.executeSync<number[]>("[?, 2u32, ?]", [1, 3]);
     assertEquals(result, [1, 2, 3]);
 });
 
-Deno.test("execute sync pass multiple values from JS with template syntax", async () => {
-    const runtime = await Runtime.create({ endpoint: Endpoint.get("@jonas") });
+Deno.test("execute sync pass multiple values from JS with template syntax", () => {
     const result = runtime.executeSync<number[]>`[${1}, 2u32, ${3}]`;
     assertEquals(result, [1, 2, 3]);
 });
 
-Deno.test("execute with string result", async () => {
-    const runtime = await Runtime.create({ endpoint: Endpoint.get("@jonas") });
+Deno.test("execute with string result", () => {
     const script = "1 + 2";
-    const result = await runtime.executeWithStringResult(script);
-    assertEquals(result, "3");
+    assertEquals(runtime.executeSyncWithStringResult(script), "3");
 });

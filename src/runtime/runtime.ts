@@ -163,27 +163,34 @@ export class Runtime {
     public execute<T = unknown>(
         templateStrings: TemplateStringsArray,
         ...values: unknown[]
-    ): Promise<T>;
+    ): Promise<T | undefined>;
     public execute<T = unknown>(
         datexScriptOrTemplateStrings: string | TemplateStringsArray,
         ...values: unknown[]
-    ): Promise<T> {
-        const { datexScript, valuesArray } = this.#getScriptAndValues(
+    ): Promise<T | undefined> {
+        const { datexScript, valuesArray } = this.#normalizeArguments(
             datexScriptOrTemplateStrings,
             ...values,
         );
-        return this.#executeInternal<T>(datexScript, valuesArray);
+        return this.#executeWithNormalizedArguments<T>(datexScript, valuesArray);
     }
 
-    async #executeInternal<T = unknown>(
+    /**
+     * Execute a DATEX script with injected values and return the result as a Promise of type T.
+     * The result is converted to a JS value. If the script returns no value, it will return `undefined`.
+     * @param datexScript The DATEX script to execute.
+     * @param values The values to inject into the script, passed as an array.
+     * @returns A Promise that resolves to the result of the script execution, converted to type T.
+     */
+    async #executeWithNormalizedArguments<T = unknown>(
         datexScript: string,
         values: unknown[] | null = [],
-    ): Promise<T> {
+    ): Promise<T | undefined> {
         const difValueContainer = await this.#difHandler.executeDIF(
             datexScript,
             values,
         );
-        if (difValueContainer === null) {
+        if (difValueContainer === undefined) {
             return undefined as T;
         }
         return this.#difHandler.resolveDIFValueContainer(difValueContainer);
@@ -222,19 +229,19 @@ export class Runtime {
         ...values: unknown[]
     ): T {
         // determine datexScript and valuesArray based on the type of datexScriptOrTemplateStrings
-        const { datexScript, valuesArray } = this.#getScriptAndValues(
+        const { datexScript, valuesArray } = this.#normalizeArguments(
             datexScriptOrTemplateStrings,
             ...values,
         );
-        return this.#executeSyncInternal<T>(datexScript, valuesArray);
+        return this.#executeSyncWithNormalizedArguments<T>(datexScript, valuesArray);
     }
 
-    #executeSyncInternal<T = unknown>(
+    #executeSyncWithNormalizedArguments<T = unknown>(
         datexScript: string,
         values: unknown[] | null = [],
     ): T {
         const difValue = this.#difHandler.executeSyncDIF(datexScript, values);
-        if (difValue === null) {
+        if (difValue === undefined) {
             return undefined as T;
         }
         const result = this.#difHandler.resolveDIFValueContainer<T>(difValue);
@@ -270,7 +277,7 @@ export class Runtime {
         datexScriptOrTemplateStrings: string | TemplateStringsArray,
         ...values: unknown[]
     ): Promise<Uint8Array> {
-        const { datexScript, valuesArray } = this.#getScriptAndValues(
+        const { datexScript, valuesArray } = this.#normalizeArguments(
             datexScriptOrTemplateStrings,
             ...values,
         );
@@ -297,7 +304,7 @@ export class Runtime {
      * Handles the function arguments to a normal function call or a template function call,
      * always returning a normalized datexScript and valuesArray.
      */
-    #getScriptAndValues(
+    #normalizeArguments(
         datexScriptOrTemplateStrings: string | TemplateStringsArray,
         ...values: unknown[]
     ): { datexScript: string; valuesArray: unknown[] } {

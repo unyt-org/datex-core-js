@@ -8,6 +8,11 @@ import type { CoreLibTypeId } from "../core.ts";
 import type { DIFTypeDefinition } from "./type.ts";
 
 /**
+ * An optional DIF value container, which can either be null or contain a DIFValueContainer. This is used to represent values that may be absent or optional in certain contexts within the DIF system.
+ */
+export type DIFOptionalValueContainer = null | [DIFValueContainer];
+
+/**
  * DIF value container, which can be either a pointer address or a value.
  */
 export type DIFValueContainer = DIFPointerAddress | DIFValue;
