@@ -5,7 +5,6 @@ import {
     disassemble_dxb_to_string,
     disassemble_dxb_tree,
     type DisassemblerOptions,
-    type Endpoint,
     type JSRuntime,
 } from "../datex.ts";
 import { ComHub } from "../network/com-hub.ts";
@@ -13,6 +12,7 @@ import { DIFHandler } from "../dif/dif-handler.ts";
 import { type AsShared, SharedContainerMutability } from "../shared-container/mod.ts";
 import type { FlatInstruction, InstructionTree } from "./types.d.ts";
 import type { DIFTypeDefinition } from "../dif/types/mod.ts";
+import { Endpoint } from "../lib/mod.ts";
 
 // TODO: move to global.ts
 /** auto-generated version - do not edit: */
@@ -67,7 +67,7 @@ export class Runtime {
      * Gets the endpoint of the runtime.
      */
     get endpoint(): Endpoint {
-        return this.#runtime.endpoint;
+        return Endpoint.get(this.#runtime.endpoint);
     }
 
     /**
