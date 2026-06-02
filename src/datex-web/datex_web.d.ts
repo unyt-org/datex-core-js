@@ -237,8 +237,8 @@ export class JSRuntime {
     /**
      * Executes a DATEX script with inserted values, returning the result as DIFValue
      */
-    execute(script: string, inserted_values?: any[] | null): Promise<any | undefined>;
-    execute_sync(script: string, dif_values?: any[] | null): any | undefined;
+    execute(script: string, inserted_values?: any[] | null): Promise<any>;
+    execute_sync(script: string, dif_values?: any[] | null): any;
     execute_sync_with_string_result(script: string, dif_values: any[] | null | undefined, decompile_options: any): string;
     /**
      * Execute a DATEX script with optional inserted values, returning the result as a string

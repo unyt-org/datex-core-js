@@ -22,28 +22,26 @@ import {
 import { CoreLibTypeId } from "./core.ts";
 import { type TypeBinding, TypeRegistry } from "./type-registry.ts";
 import { panic, unreachable } from "../utils/exceptions.ts";
-import type { JsLibTypeAddress } from "./js-lib.ts";
 import { isJsUndefined, JS_UNDEFINED } from "../lib/special-core-types/undefined.ts";
 import type { DIFBaseSharedValueContainer } from "./types/value.ts";
-import type { DIFType } from "./types/type.ts";
 import { SharedContainerMutability } from "../shared-container/base-shared-container.ts";
-import type { PointerAddress, PointerAddressWithOwnership } from "../shared-container/mod.ts";
-import { type AsShared, BaseSharedContainer, type SharedContainer, type SharedRef } from "../shared-container/mod.ts";
+import type { PointerAddress } from "../shared-container/mod.ts";
+import { type AsShared, BaseSharedContainer, type SharedRef } from "../shared-container/mod.ts";
 import { DIFSharedContainerOwnership } from "./types/type.ts";
 import { splitPointerAddressWithOwnership } from "../shared-container/mod.ts";
 import { combinePointerAddressWithOwnership } from "../shared-container/mod.ts";
-import type { SharedReferenceMutability } from "../shared-container/reference.ts";
-import type { DIFUpdateDataReplace, DIFUpdateReturn } from "./types/update.ts";
+import type { DIFUpdateReturn } from "./types/update.ts";
 import { appendEntry, clear, deleteEntry, DIFPropertyKind, listSplice, replace, setEntry } from "./update.ts";
 import { createDIFProperty } from "./update.ts";
 
 /**
  * Some DIF methods may return an optional ValueContainer, so does the execute_sync, when no result is returned.
- * DIF must differnticate between null and no result, so we wrap DIFOptionalValueContainer.
+ * DIF must differentiate between null and no result, so we wrap DIFOptionalValueContainer.
  * @param value - The DIFOptionalValueContainer to collapse.
  * @returns The contained DIFValueContainer if present, or undefined if the value is not present.
  */
 function collapseDIFOption(value: DIFOptionalValueContainer): DIFValueContainer | undefined {
+    console.debug("Collapsing DIF option", value);
     if (value === null) {
         return undefined;
     } else {

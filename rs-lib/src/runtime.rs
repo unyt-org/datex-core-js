@@ -19,6 +19,8 @@ use crate::js_utils::to_js_value;
 use datex_core::{
     compiler::{CompileOptions, compile_template},
     crypto::CryptoImpl,
+    datex_proxy::DatexValueContainerProxyInfallibleSerialize,
+    decompiler::DecompileOptions,
     dif::{cache::DIFSharedContainerCache, dif_interface::DIFInterface},
     runtime::{
         Runtime, RuntimeConfig, RuntimeInternal, RuntimeRunner, memory::Memory,
@@ -48,10 +50,15 @@ impl JSRuntime {
 
     pub(crate) async fn run(config: JsValue) -> JSRuntime {
         wasm_logger::init(wasm_logger::Config::new(log::Level::Debug));
-        info!("Initializing runtime with config: {:?}", config);
         let config: RuntimeConfig =
             from_dif_js_value(config, &mut DIFSharedContainerCache::default())
                 .unwrap();
+        info!(
+            "Initializing runtime with config: {}",
+            config
+                .clone()
+                .to_datex_string(DecompileOptions::colorized_pretty())
+        );
         let runtime_runner = RuntimeRunner::new(config);
         // Note: JSRuntime::new must be called before runtime run to initialize com interface factories
         let js_runtime = JSRuntime::new(runtime_runner.runtime.clone());
@@ -269,7 +276,7 @@ impl JSRuntime {
         &self,
         script: &str,
         inserted_values: Option<Vec<JsValue>>,
-    ) -> Result<Option<JsValue>, JsError> {
+    ) -> Result<JsValue, JsError> {
         let result = self
             .runtime
             .execute(
@@ -279,7 +286,7 @@ impl JSRuntime {
             )
             .await
             .map_err(js_error)?;
-        Ok(to_js_value(&result, &mut self.dif_interface.cache()))
+        Ok(self.optional_value_container_to_optional_js_dif_value(result))
     }
 
     pub fn execute_sync_with_string_result(
@@ -309,7 +316,7 @@ impl JSRuntime {
         &self,
         script: &str,
         dif_values: Option<Vec<JsValue>>,
-    ) -> Result<Option<JsValue>, JsError> {
+    ) -> Result<JsValue, JsError> {
         let result = self
             .runtime
             .execute_sync(
@@ -318,10 +325,7 @@ impl JSRuntime {
                 None,
             )
             .map_err(js_error)?;
-        Ok(
-            result
-                .map(|val| to_js_value(&val, &mut self.dif_interface.cache())),
-        )
+        Ok(self.optional_value_container_to_optional_js_dif_value(result))
     }
 
     pub fn value_to_string(
@@ -358,6 +362,26 @@ impl JSRuntime {
             value,
             &mut self.dif_interface.cache(),
         )
+    }
+
+    /**
+     * Convert an optional ValueContainer to an optional JsValue in the DIF format:
+     *  * no result (None) is represented as null
+     *  * a result (Some) is represented as [value] (wrapped in an array to differentiate from null)
+     */
+    fn optional_value_container_to_optional_js_dif_value(
+        &self,
+        value: Option<ValueContainer>,
+    ) -> JsValue {
+        match value {
+            Some(value) => {
+                let inner_value =
+                    to_js_value(&value, &mut self.dif_interface.cache());
+                // wrap in array
+                js_array(&[inner_value])
+            }
+            None => JsValue::NULL,
+        }
     }
 
     /// Get a handle to the DIF interface of the runtime
