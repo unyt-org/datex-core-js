@@ -53,6 +53,29 @@ function collapseDIFOption(value: DIFOptionalValueContainer): DIFValueContainer 
     }
 }
 
+/**
+ * Converts special float string representations ("nan", "infinity", "-infinity") to the JS values NaN, Infinity and -Infinity respectively.
+ * @param value - The string representation of the float value.
+ * @returns The corresponding JS number value for the special float representation.
+ * @throws If the input value is not a valid special float representation.
+ */
+function specialDIFFloatToNumber(value: string): number {
+    if (!isSpecialDIFFloatString) {
+        throw new Error(`Expected a special float string ("nan", "infinity", "-infinity"), got ${value}`);
+    }
+    if (value === "nan") {
+        return NaN;
+    } else if (value === "infinity") {
+        return Infinity;
+    } else if (value === "-infinity") {
+        return -Infinity;
+    }
+    unreachable(`Invalid special float string: ${value}`);
+}
+function isSpecialDIFFloatString(value: string): boolean {
+    return ["nan", "infinity", "-infinity"].includes(value);
+}
+
 export const IS_PROXY_ACCESS = Symbol("IS_PROXY_ACCESS");
 
 export type CustomReferenceMetadata = Record<string | symbol, unknown> & {
@@ -461,25 +484,36 @@ export class DIFHandler {
             val = BigInt(core);
         } else if (
             ([
-                CoreLibTypeId.decimal_f32,
-                CoreLibTypeId.decimal_f64,
                 CoreLibTypeId.decimal_dbig,
                 CoreLibTypeId.decimal, // FIXME rational notation 3/4
             ] as CoreLibTypeId[]).includes(type)
         ) {
-            if (typeof core === "string") {
-                // "nan", "infinity", "-infinity"
-                if (core === "nan") {
-                    val = NaN;
-                } else if (core === "infinity") {
-                    val = Infinity;
-                } else if (core === "-infinity") {
-                    val = -Infinity;
-                } else {
-                    throw new Error(`Expected "nan", "infinity" or "-infinity" for decimal type, got ${core}`);
-                }
+            console.log("Resolving decimal type with core value", core);
+            if (typeof core !== "string") {
+                throw new Error(
+                    "Expected string value for decimal big type" + typeof core + " " + JSON.stringify(core),
+                );
             }
-            if (typeof core === "number") {
+            if (isSpecialDIFFloatString(core)) {
+                val = specialDIFFloatToNumber(core);
+            } // FIXME this is a temporary solution until we have a proper decimal implementation
+            else if (core.includes("/")) {
+                const [numerator, denominator] = core.split("/").map((part) => part.trim());
+                val = parseFloat(numerator) / parseFloat(denominator);
+            } else if (core.includes(".")) {
+                val = parseFloat(core);
+            } else {
+                throw new Error("Expected a valid decimal string for decimal big type");
+            }
+        } else if (
+            ([
+                CoreLibTypeId.decimal_f32,
+                CoreLibTypeId.decimal_f64,
+            ] as CoreLibTypeId[]).includes(type)
+        ) {
+            if (typeof core === "string") {
+                val = specialDIFFloatToNumber(core);
+            } else if (typeof core === "number") {
                 val = core;
             } else {
                 throw new Error("Expected number value for decimal type");
