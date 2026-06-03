@@ -51,13 +51,13 @@ Deno.test("execute sync typed integer", () => {
 });
 
 Deno.test("execute sync normal integer", () => {
-    const result = runtime.executeSync<bigint>(
-        "123456781234567891234567812345678",
+    const result = runtime.executeSync<number>(
+        "123456781",
     );
-    assertEquals(typeof result, "bigint");
+    assertEquals(typeof result, "number");
     assertEquals(
         result,
-        123456781234567891234567812345678n,
+        123456781,
     );
 });
 
@@ -99,7 +99,7 @@ Deno.test("execute sync none", () => {
 
 Deno.test("execute sync object", () => {
     const result = runtime.executeSync<Record<string, number | string>>(
-        '{ a: 1u8, b: "test" }',
+        '{ a: 1, b: "test" }',
     );
     assertEquals(
         result,
@@ -113,17 +113,17 @@ Deno.test("execute sync endpoint", () => {
 });
 
 Deno.test("execute sync range", () => {
-    const result = runtime.executeSync<Range>("1u32..2u32");
+    const result = runtime.executeSync<Range>("1..2");
     assertEquals(result.start, 1);
     assertEquals(result.end, 2);
     assertEquals(result, new Range(1, 2));
 });
 
 Deno.test("execute sync pass number from JS", () => {
-    const resultInteger = runtime.executeSync<bigint>("1 + ?", [41]);
+    const resultInteger = runtime.executeSync<bigint>("1ibig + ?", [41]);
     assertEquals(resultInteger, 42n);
 
-    const resultTypedInteger = runtime.executeSync<number>("1u32 + ?", [41]);
+    const resultTypedInteger = runtime.executeSync<number>("1 + ?", [41]);
     assertEquals(resultTypedInteger, 42);
 
     // The first part of the addition, defines the datatype, JS maps numbers to f64, so the result of the calculation will be a f64

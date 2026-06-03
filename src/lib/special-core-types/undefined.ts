@@ -19,7 +19,7 @@ function isJsUndefinedImplTypeDefinition(impl: unknown): impl is DIFImplTypeDefi
 }
 
 export const JS_UNDEFINED_TYPE_DEFINITION: DIFTypeDefinition = {
-    impl: JS_UNDEFINED_IMPL_TYPE_DEFINITION,
+    impl_type: JS_UNDEFINED_IMPL_TYPE_DEFINITION,
 };
 
 export const JS_UNDEFINED: DIFValue = [CoreLibTypeId.null, null, JS_UNDEFINED_TYPE_DEFINITION];

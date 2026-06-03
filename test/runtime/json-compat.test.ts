@@ -7,9 +7,9 @@
  * Test inputs that are used to verify JSON compatibility.
  */
 const TEXT_INPUTS = [
-    // "42",
-    // "-10",
-    // "3.14",
+    "42",
+    "-10",
+    "3.14",
     '"Hello, World!"',
     "true",
     "false",

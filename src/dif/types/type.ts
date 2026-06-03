@@ -21,11 +21,11 @@ export type DIFTypeDefinitionMap = {
     shared: DIFSharedTypeDefinition;
     nested: DIFNestedTypeDefinition;
     callable: DIFCallableTypeDefinition;
-    impl: DIFImplTypeDefinition;
+    impl_type: DIFImplTypeDefinition;
     intersection: DIFIntersectionTypeDefinition;
     union: DIFUnionTypeDefinition;
-    tagged: DIFTaggedTypeDefinition;
-    marker: DIFTypeMarker;
+    tagged_type: DIFTaggedTypeDefinition;
+    marker_type: DIFTypeMarker;
 };
 export type DIFTypeKey = keyof DIFTypeDefinitionMap;
 

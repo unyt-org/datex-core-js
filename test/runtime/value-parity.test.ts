@@ -44,22 +44,22 @@ const TEST_VALUES = [
     new Range(1, 2),
 ] as const;
 
-// initialization of the test cases
-const valueTypeCounter = new Map<string, number>();
-for (const value of TEST_VALUES) {
-    // class name or primitive type
-    const valueType = value === null ? "null" : typeof value === "undefined" ? "undefined" : value?.constructor.name;
-    // increment counter for this type
-    const count = valueTypeCounter.get(valueType) || 0;
-    valueTypeCounter.set(valueType, count + 1);
-    Deno.test(`test value parity for value of type ${valueType} #${count + 1}`, async () => {
+Deno.test(`test value parity for various JS values`, async (t) => {
+    for (const value of TEST_VALUES) {
         const runtime = await Runtime.create({
-            endpoint: "@jonas",
+            endpoint: Endpoint.get("@jonas"),
         });
-        const result = runtime.executeSync<typeof value>(
-            "?",
-            [value],
-        );
-        assertEquals(result, value);
-    });
-}
+        const valueType = value === null
+            ? "null"
+            : typeof value === "undefined"
+            ? "undefined"
+            : value?.constructor.name;
+        await t.step(`Testing value: ${valueType}`, () => {
+            const result = runtime.executeSync<typeof value>(
+                "?",
+                [value],
+            );
+            assertEquals(result, value);
+        });
+    }
+});

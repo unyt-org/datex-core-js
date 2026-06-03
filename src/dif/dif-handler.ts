@@ -462,20 +462,23 @@ export class DIFHandler {
                 CoreLibTypeId.integer_u8,
                 CoreLibTypeId.integer_u16,
                 CoreLibTypeId.integer_u32,
+                CoreLibTypeId.integer_i64,
             ] as CoreLibTypeId[]).includes(type)
         ) {
             if (typeof core !== "number") {
                 throw new Error("Expected number value for integer type");
             }
             val = core;
+        } else if (type === CoreLibTypeId.integer) {
+            if (typeof core === "string") {
+                val = parseInt(core, 10);
+            } else throw new Error("Expected number value for integer type");
         } else if (
             ([
-                CoreLibTypeId.integer_i64,
                 CoreLibTypeId.integer_i128,
                 CoreLibTypeId.integer_u64,
                 CoreLibTypeId.integer_u128,
                 CoreLibTypeId.integer_ibig,
-                CoreLibTypeId.integer,
             ] as CoreLibTypeId[]).includes(type)
         ) {
             if (typeof core !== "string" && typeof core !== "number") {
@@ -488,7 +491,6 @@ export class DIFHandler {
                 CoreLibTypeId.decimal, // FIXME rational notation 3/4
             ] as CoreLibTypeId[]).includes(type)
         ) {
-            console.log("Resolving decimal type with core value", core);
             if (typeof core !== "string") {
                 throw new Error(
                     "Expected string value for decimal big type" + typeof core + " " + JSON.stringify(core),
