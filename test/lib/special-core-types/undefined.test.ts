@@ -6,24 +6,18 @@ import { JS_UNDEFINED } from "datex/lib/special-core-types/undefined.ts";
 
 const runtime = await Runtime.create({ endpoint: Endpoint.get("@jonas") });
 
-Deno.test("undefined", () => {
-    // convert JS undefined to DIF representation
+Deno.test("undefined DIF representation", () => {
     const undefinedDifValue = runtime.dif.convertJSValueToDIFValueContainer(
         undefined,
     ) as DIFValue;
+
     assertEquals(
         undefinedDifValue,
         JS_UNDEFINED,
     );
-    console.log(undefinedDifValue);
+});
 
-    // pass undefined to runtime and return value
-    const executionResult = runtime._runtime.execute_sync("?", [
-        undefinedDifValue,
-    ]) as DIFValue;
-
-    assertEquals(executionResult, JS_UNDEFINED);
-
-    const executionResult2 = runtime.executeSync<undefined>("?", [undefined]);
-    assertEquals(executionResult2, undefined);
+Deno.test("undefined execution", () => {
+    const executionResult = runtime.executeSync<undefined>("?", [undefined]);
+    assertEquals(executionResult, undefined);
 });

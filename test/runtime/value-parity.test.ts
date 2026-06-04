@@ -30,10 +30,10 @@ const TEST_VALUES = [
     [],
     { a: 1, b: "test" },
     {},
+
     // non-JSON values
-    // TODO: map type gets lost during DATEX execution, special JS map marker type needed here
-    // new Map([["key", "value"]]),
-    // new Map(),
+    new Map([["key", "value"]]),
+    new Map(),
     new Map([[1, 2]]),
     undefined,
     NaN,
