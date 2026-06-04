@@ -229,67 +229,67 @@ export class TypeBinding<
             this.allowOriginalValueAccess(value as CachedSharedContainer, () => {
                 // call appropriate handler based on update kind
                 if (
-                    difUpdateData.kind === DIFUpdateKind.SetEntry &&
+                    difUpdateData[0] === DIFUpdateKind.SetEntry &&
                     this.#definition.handleSet
                 ) {
                     this.#definition.handleSet.call(
                         this,
                         value,
                         this.#difHandler.resolveDIFProperty(
-                            difUpdateData.key,
+                            difUpdateData[1],
                         ),
                         this.#difHandler.resolveDIFValueContainer(
-                            difUpdateData.value,
+                            difUpdateData[2],
                         ),
                     );
                 } else if (
-                    difUpdateData.kind === DIFUpdateKind.AppendEntry &&
+                    difUpdateData[0] === DIFUpdateKind.AppendEntry &&
                     this.#definition.handleAppend
                 ) {
                     this.#definition.handleAppend.call(
                         this,
                         value,
                         this.#difHandler.resolveDIFValueContainer(
-                            difUpdateData.value,
+                            difUpdateData[1],
                         ),
                     );
                 } else if (
-                    difUpdateData.kind === DIFUpdateKind.Replace &&
+                    difUpdateData[0] === DIFUpdateKind.Replace &&
                     this.#definition.handleReplace
                 ) {
                     this.#definition.handleReplace.call(
                         this,
                         value,
                         this.#difHandler.resolveDIFValueContainer(
-                            difUpdateData.value,
+                            difUpdateData[1],
                         ),
                     );
                 } else if (
-                    difUpdateData.kind === DIFUpdateKind.DeleteEntry &&
+                    difUpdateData[0] === DIFUpdateKind.DeleteEntry &&
                     this.#definition.handleDelete
                 ) {
                     this.#definition.handleDelete.call(
                         this,
                         value,
                         this.#difHandler.resolveDIFProperty(
-                            difUpdateData.key,
+                            difUpdateData[1],
                         ),
                     );
                 } else if (
-                    difUpdateData.kind === DIFUpdateKind.Clear &&
+                    difUpdateData[0] === DIFUpdateKind.Clear &&
                     this.#definition.handleClear
                 ) {
                     this.#definition.handleClear.call(this, value);
                 } else if (
-                    difUpdateData.kind === DIFUpdateKind.ListSplice &&
+                    difUpdateData[0] === DIFUpdateKind.ListSplice &&
                     this.#definition.handleListSplice
                 ) {
                     this.#definition.handleListSplice.call(
                         this,
                         value,
-                        difUpdateData.start,
-                        difUpdateData.delete_count,
-                        difUpdateData.items.map((item) => this.#difHandler.resolveDIFValueContainer(item)),
+                        difUpdateData[1],
+                        difUpdateData[2],
+                        difUpdateData[3].map((item) => this.#difHandler.resolveDIFValueContainer(item)),
                     );
                 }
             });

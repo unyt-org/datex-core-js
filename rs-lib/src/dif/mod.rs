@@ -14,16 +14,16 @@ use datex_core::{
             observers::{ObserveOptions, ObserverId, TransceiverId},
         },
     },
-    value_updates::update_data::Update,
+    value_updates::{update_data::Update, update_handler::UpdateHandler},
     values::value_container::ValueContainer,
 };
 use js_sys::Function;
-use serde::{Deserialize, de::IntoDeserializer};
 use std::{
-    cell::{Ref, RefCell, RefMut},
+    cell::{RefCell, RefMut},
     ops::DerefMut,
     rc::Rc,
 };
+use datex_core::dif::error::DIFUpdateError;
 use wasm_bindgen::{JsError, JsValue, prelude::wasm_bindgen};
 
 #[wasm_bindgen]
@@ -120,11 +120,19 @@ impl JSDIFInterface {
     ) -> Result<JsValue, JsError> {
         let address = PointerAddress::try_from(address).map_err(js_error)?;
         let update: Update = from_js_value(update, &mut self.cache())?;
-        let result = self
+
+        let shared_container = self
             .dif_interface
-            .borrow_mut()
-            .update(address, update)
+            .borrow()
+            .try_get_shared_container_mutable_reference(&address)
             .map_err(js_error)?;
+        let mut base_container = shared_container.base_shared_container_mut();
+
+        let result = base_container
+            .update(update)
+            .map_err(DIFUpdateError::UpdateError)
+            .map_err(js_error)?;
+
         Ok(to_js_value(&result, &mut self.cache()))
     }
 

@@ -18,12 +18,12 @@ export type DIFProperty =
  * Kinds of updates that can be applied to a DIF value.
  */
 export const DIFUpdateKind = {
-    Replace: "replace",
-    AppendEntry: "append_entry",
-    SetEntry: "set_entry",
-    DeleteEntry: "delete_entry",
-    Clear: "clear",
-    ListSplice: "list_splice",
+    Replace: "Replace",
+    AppendEntry: "AppendEntry",
+    SetEntry: "SetEntry",
+    DeleteEntry: "DeleteEntry",
+    Clear: "Clear",
+    ListSplice: "ListSplice",
 } as const;
 /** A DIF update kind. */
 export type DIFUpdateKind = typeof DIFUpdateKind[keyof typeof DIFUpdateKind];
