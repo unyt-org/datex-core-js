@@ -24,7 +24,7 @@ runtime.dif.type_registry.registerTypeBinding(arrayTypeBinding);
 function getCurrentRuntimeLocalValue<T>(address: string) {
     return runtime.dif
         .resolveDIFValueContainer(
-            runtime.dif._handle.resolve_pointer_address(address).value,
+            runtime.dif._handle.resolve_pointer_address(address)[0],
         ) as T;
 }
 
@@ -54,6 +54,12 @@ Deno.test("array set external", () => {
             runtime.dif.convertJSValueToDIFValueContainer("newValue"),
         ),
     );
+    // get current value of array via dif
+    const runtimeCurrentValue = getCurrentRuntimeLocalValue<string[]>(address);
+
+    // current runtime value should reflect the update
+    assertEquals(runtimeCurrentValue[0], "newValue");
+    // the js side value should also be updated
     assertEquals(arrayRef[0], "newValue");
 });
 
