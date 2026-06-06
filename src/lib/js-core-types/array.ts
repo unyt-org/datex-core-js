@@ -3,6 +3,7 @@ import { type CustomReferenceMetadata, type DIFHandler, IS_PROXY_ACCESS } from "
 import type { TypeBindingDefinition } from "../../dif/type-registry.ts";
 import { interceptAccessors } from "../../dif/utils.ts";
 import { DEBUG_MODE } from "../../global.ts";
+import type { PointerAddress } from "../../shared-container/mod.ts";
 import { Option } from "../../utils/option.ts";
 
 type ArrayMethods<V> = {
@@ -141,7 +142,7 @@ export const arrayTypeBinding: TypeBindingDefinition<Array<unknown>> = {
  */
 function getArrayMethods<V>(
     array: V[],
-    pointerAddress: string,
+    pointerAddress: PointerAddress,
     difHandler: DIFHandler,
     metadata: CustomReferenceMetadata,
 ): ArrayMethods<V> {
@@ -183,7 +184,7 @@ function getArrayMethods<V>(
 function generateInterceptedArrayPush<V>(
     array: V[],
     originalPush: Array<V>["push"],
-    pointerAddress: string,
+    pointerAddress: PointerAddress,
     difHandler: DIFHandler,
 ) {
     return (...items: V[]) => {
@@ -199,7 +200,7 @@ function generateInterceptedArrayPush<V>(
 
 function generateInterceptedArrayUnshift<V>(
     originalUnshift: Array<V>["unshift"],
-    pointerAddress: string,
+    pointerAddress: PointerAddress,
     difHandler: DIFHandler,
     metadata: CustomReferenceMetadata,
 ) {
@@ -222,7 +223,7 @@ function generateInterceptedArrayUnshift<V>(
 function generateInterceptedArraySplice<V>(
     array: V[],
     originalSplice: Array<V>["splice"],
-    pointerAddress: string,
+    pointerAddress: PointerAddress,
     difHandler: DIFHandler,
     metadata: CustomReferenceMetadata,
 ) {
@@ -245,7 +246,7 @@ function generateInterceptedArraySplice<V>(
 function generateInterceptedArrayFill<V>(
     array: V[],
     originalFill: Array<V>["fill"],
-    pointerAddress: string,
+    pointerAddress: PointerAddress,
     difHandler: DIFHandler,
     metadata: CustomReferenceMetadata,
 ) {
@@ -283,7 +284,7 @@ function triggerArrayFillEmpty(
     array: unknown[],
     from: number,
     to: number,
-    pointerAddress: string,
+    pointerAddress: PointerAddress,
     difHandler: DIFHandler,
 ) {
     const originalLength = array.length;

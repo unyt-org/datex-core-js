@@ -51,11 +51,11 @@ export type TypeBindingDefinition<
     M extends CustomReferenceMetadata = CustomReferenceMetadata,
 > = {
     coreLibTypeId?: CoreLibTypeId;
-    pointerAddress?: string;
+    pointerAddress?: PointerAddress;
     bind(
         this: TypeBindingContext<M>,
         value: T,
-        pointerAddress: string,
+        pointerAddress: PointerAddress,
     ): BindResult<T, M>;
     handleSet?(
         this: TypeBindingContext<M>,

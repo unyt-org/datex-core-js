@@ -3,7 +3,6 @@ import { mapTypeBinding } from "datex/lib/js-core-types/map.ts";
 import { Runtime } from "datex/runtime/runtime.ts";
 import { CoreLibTypeId } from "datex/dif/core.ts";
 import { Endpoint } from "datex/lib/mod.ts";
-import type { DIFUpdateKind } from "datex/dif/types/mod.ts";
 import { performFakeRemoteUpdate } from "../utils.ts";
 import { SharedContainerMutability } from "datex/shared-container/base-shared-container.ts";
 import type { CachedSharedContainer } from "datex/dif/dif-handler.ts";
