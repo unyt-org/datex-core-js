@@ -17,6 +17,7 @@ import { assertEquals } from "@std/assert";
  */
 const TEST_VALUES = [
     // simple JSON values
+    undefined,
     42,
     -10,
     3.14,

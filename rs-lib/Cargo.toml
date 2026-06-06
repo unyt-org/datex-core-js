@@ -45,7 +45,7 @@ js-sys = "=0.3.89"
 
 
 # webrtc
-futures = { version = "0.3", default-features = false }           # = "0.11", 
+futures = { version = "0.3", default-features = false }                         # = "0.11", 
 futures-timer = { version = "3", features = ["wasm-bindgen"] }
 uuid = { version = "1.15.1", features = ["js"], optional = true }
 futures-channel = "0.3.31"
@@ -56,6 +56,8 @@ gloo-timers = "0.3.0"
 cfg-if = "1.0.1"
 console_error_panic_hook = "0.1.7"
 wasm-logger = "0.2.0"
+strum = { version = "0.27.1", default-features = false, features = ["derive"] }
+
 
 # webrtc
 # tokio = { version = "1.43.0", default-features = false, features = [] }

@@ -22,8 +22,17 @@ export const JS_UNDEFINED_TYPE_DEFINITION: DIFTypeDefinition = {
     impl_type: JS_UNDEFINED_IMPL_TYPE_DEFINITION,
 };
 
+export function isJsUndefinedTypeDefinition(typeDef: DIFTypeDefinition): boolean {
+    return (
+        typeof typeDef === "object" &&
+        typeDef !== null &&
+        "impl_type" in typeDef &&
+        isJsUndefinedImplTypeDefinition(typeDef.impl_type)
+    );
+}
+
 export const JS_UNDEFINED: DIFValue = [CoreLibTypeId.null, null, JS_UNDEFINED_TYPE_DEFINITION];
 export function isJsUndefined(value: DIFValue): boolean {
     return Array.isArray(value) && value.length === 3 && value[0] === CoreLibTypeId.null && value[1] === null &&
-        isJsUndefinedImplTypeDefinition(value[2]);
+        isJsUndefinedTypeDefinition(value[2]);
 }

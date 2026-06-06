@@ -1,15 +1,17 @@
+import type { PointerAddress } from "../shared-container/mod.ts";
+
 /**
  * Creates a reserved pointer address for a js lib type with the given id.
  * The endpoint is the broadcast (reserved) endpoint. This can be used for builtin types.
  * @param id Id of the js lib type. Must be a non-negative integer that fits into 5 bytes.
  * @returns The reserved pointer address for the js lib type with the given id.
  */
-export function createReservedPointerAddress(id: number): string {
-    const idHex = id.toString(16);
+export function createReservedPointerAddress(id: number): PointerAddress {
+    const idHex = id.toString(16).toLowerCase();
     if (!Number.isInteger(id) || id < 0 || idHex.length > 10) {
         throw new Error("invalid id");
     }
-    return "FF".repeat(21) + idHex.padStart(10, "0");
+    return "ff".repeat(21) + idHex.padStart(10, "0") as PointerAddress;
 }
 
 export const JsLibTypeAddress = {

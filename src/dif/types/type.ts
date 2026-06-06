@@ -4,7 +4,7 @@
  * This module contains all type definitions related to the representation of types in DIF.
  */
 
-import type { SharedContainerMutability } from "../../shared-container/mod.ts";
+import type { PointerAddress, SharedContainerMutability } from "../../shared-container/mod.ts";
 import type { CoreLibTypeId } from "../core.ts";
 
 /**
@@ -120,7 +120,7 @@ export type DIFRangeTypeDefinition = [DIFType, DIFType];
 
 export type DIFNestedTypeDefinition = DIFType;
 
-export type DIFImplTypeDefinition = [DIFType, Array<string>];
+export type DIFImplTypeDefinition = [DIFType, Array<PointerAddress>];
 
 export type DIFIntersectionTypeDefinition = Array<DIFType>;
 
