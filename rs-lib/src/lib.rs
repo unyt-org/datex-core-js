@@ -24,10 +24,10 @@ mod dif;
 pub mod network;
 
 pub mod js_utils;
-pub mod utils;
-
 #[cfg(feature = "repl")]
 pub mod repl;
+pub mod ts;
+pub mod utils;
 
 #[cfg(feature = "lsp")]
 pub mod lsp;

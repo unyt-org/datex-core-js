@@ -5,9 +5,10 @@ import * as uuid from "@std/uuid";
 import { isNodeOrBun } from "../is-node.ts";
 import { websocketServerDenoComInterfaceFactory } from "datex/network/interfaces/websocket-server-deno.ts";
 import { sleep } from "../utils.ts";
+import { Endpoint } from "datex/lib/mod.ts";
 
 Deno.test("add and close interface", async () => {
-    const runtime = await Runtime.create({ endpoint: "@unyt" }, { log_level: "debug" });
+    const runtime = await Runtime.create({ endpoint: Endpoint.get("@unyt") }, { log_level: "debug" });
     runtime.comHub.registerInterfaceFactory(
         websocketServerDenoComInterfaceFactory,
     );
@@ -38,8 +39,8 @@ Deno.test("connect two runtimes", async () => {
     }
 
     const PORT = 8082;
-    const runtimeA = await Runtime.create({ endpoint: "@test_a" }, { log_level: "debug" });
-    const runtimeB = await Runtime.create({ endpoint: "@test_b" }, { log_level: "debug" });
+    const runtimeA = await Runtime.create({ endpoint: Endpoint.get("@test_a") }, { log_level: "debug" });
+    const runtimeB = await Runtime.create({ endpoint: Endpoint.get("@test_b") }, { log_level: "debug" });
 
     runtimeA.comHub.registerInterfaceFactory(
         websocketServerDenoComInterfaceFactory,

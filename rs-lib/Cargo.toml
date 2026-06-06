@@ -59,6 +59,12 @@ wasm-logger = "0.2.0"
 strum = { version = "0.27.1", default-features = false, features = ["derive"] }
 
 
+# swc
+swc_common = "23"
+swc_ecma_ast = "25"
+swc_ecma_codegen = "28"
+num-bigint = { version = "0.4", default-features = false }
+
 # webrtc
 # tokio = { version = "1.43.0", default-features = false, features = [] }
 [dependencies.web-sys]
