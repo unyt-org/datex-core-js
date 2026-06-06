@@ -10,7 +10,8 @@ use datex_core::{
         type_definition::{
             callable::CallableTypeDefinition,
             intersection::IntersectionTypeDefinition, list::ListTypeDefinition,
-            map::MapTypeDefinition, union::UnionTypeDefinition,
+            map::MapTypeDefinition, tagged_type::TaggedTypeDefinition,
+            union::UnionTypeDefinition,
         },
         visitor::TypeFolder,
     },
@@ -342,6 +343,25 @@ fn ts_object_type(entries: Vec<(Box<TsType>, Box<TsType>)>) -> Box<TsType> {
         })
         .collect::<Vec<_>>();
 
+    ts_type_literal(members)
+}
+
+fn ts_string_property(name: &str, ty: Box<TsType>) -> TsTypeElement {
+    TsTypeElement::TsPropertySignature(TsPropertySignature {
+        span: DUMMY_SP,
+        readonly: false,
+        key: Box::new(Expr::Lit(Lit::Str(Str {
+            span: DUMMY_SP,
+            value: name.into(),
+            raw: None,
+        }))),
+        computed: false,
+        optional: false,
+        type_ann: Some(ts_type_ann(ty)),
+    })
+}
+
+fn ts_type_literal(members: Vec<TsTypeElement>) -> Box<TsType> {
     Box::new(TsType::TsTypeLit(swc_ecma_ast::TsTypeLit {
         span: DUMMY_SP,
         members,
@@ -597,21 +617,41 @@ impl TypeFolder for TsTypeFolder {
             },
         }
     }
+
+    fn fold_tagged_type(
+        &mut self,
+        source: &TaggedTypeDefinition,
+        payload: Option<Self::Output>,
+    ) -> Result<Self::Output, Self::Error> {
+        let mut members = vec![ts_string_property(
+            "tag",
+            ts_string_literal(source.tag.clone()),
+        )];
+
+        if let Some(payload) = payload {
+            members.push(ts_string_property("value", payload));
+        }
+
+        Ok(ts_type_literal(members))
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::ts::TsTypeFolder;
+    use crate::ts::{TsTypeFolder, ts_string_literal};
     use datex_core::{
         datex_proxy::DatexProxyTypes, macros::Datex, runtime::memory::Memory,
         values::core_values::endpoint::Endpoint,
     };
 
+    use log::info;
     use swc_common::DUMMY_SP;
     use swc_ecma_ast::{
         Decl, Expr, Ident, Lit, ModuleItem, Stmt, Str, TsEntityName,
-        TsKeywordType, TsKeywordTypeKind, TsPropertySignature, TsType,
+        TsKeywordType, TsKeywordTypeKind, TsLit, TsLitType,
+        TsPropertySignature, TsTupleElement, TsTupleType, TsType,
         TsTypeAliasDecl, TsTypeAnn, TsTypeElement, TsTypeLit, TsTypeRef,
+        TsUnionType,
     };
 
     fn ident(name: &str) -> Ident {
@@ -677,12 +717,89 @@ mod tests {
         }
         .into()
     }
+    fn type_union(types: Vec<Box<TsType>>) -> Box<TsType> {
+        Box::new(
+            TsUnionType {
+                span: DUMMY_SP,
+                types,
+            }
+            .into(),
+        )
+    }
+    fn string_literal(value: &str) -> Box<TsType> {
+        Box::new(TsType::TsLitType(TsLitType {
+            span: DUMMY_SP,
+            lit: TsLit::Str(Str {
+                span: DUMMY_SP,
+                value: value.into(),
+                raw: None,
+            }),
+        }))
+    }
+
+    fn tuple(elements: Vec<Box<TsType>>) -> Box<TsType> {
+        Box::new(TsType::TsTupleType(TsTupleType {
+            span: DUMMY_SP,
+            elem_types: elements
+                .into_iter()
+                .map(|ty| TsTupleElement {
+                    span: DUMMY_SP,
+                    label: None,
+                    ty,
+                })
+                .collect(),
+        }))
+    }
 
     #[derive(Datex, Debug, Clone, PartialEq)]
     struct Example {
         a: u8,
         b: String,
         c: Endpoint,
+    }
+
+    #[derive(Datex, Debug, Clone, PartialEq)]
+    enum ExampleEnum {
+        VariantA { x: i32, y: String },
+        VariantB(u8, Endpoint),
+        VariantC,
+    }
+
+    #[test]
+    fn enum_type() {
+        let ty = ExampleEnum::datex_type(&mut Memory::default());
+        let ast = TsTypeFolder::new().fold(&ty).unwrap();
+        println!("AST: {}", ast.to_typescript());
+        assert_eq!(ast.root, type_ref("ExampleEnum"),);
+        assert_eq!(
+            ast.module.body,
+            vec![type_alias(
+                "ExampleEnum",
+                type_union(vec![
+                    type_literal(vec![
+                        property("tag", string_literal("VariantA"),),
+                        property(
+                            "value",
+                            type_literal(vec![
+                                property("x", number()),
+                                property("y", string()),
+                            ]),
+                        ),
+                    ]),
+                    type_literal(vec![
+                        property("tag", string_literal("VariantB"),),
+                        property(
+                            "value",
+                            tuple(vec![number(), type_ref("Endpoint"),]),
+                        ),
+                    ]),
+                    type_literal(vec![property(
+                        "tag",
+                        string_literal("VariantC"),
+                    ),]),
+                ]),
+            ),],
+        );
     }
 
     #[test]
