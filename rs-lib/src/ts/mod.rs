@@ -769,7 +769,6 @@ mod tests {
     fn enum_type() {
         let ty = ExampleEnum::datex_type(&mut Memory::default());
         let ast = TsTypeFolder::new().fold(&ty).unwrap();
-        println!("AST: {}", ast.to_typescript());
         assert_eq!(ast.root, type_ref("ExampleEnum"),);
         assert_eq!(
             ast.module.body,
