@@ -8,8 +8,7 @@ import { Endpoint } from "../lib/special-core-types/endpoint.ts";
 import { Range } from "../lib/special-core-types/range.ts";
 import {
     type DIFCoreValue,
-    DIFOptionalValueContainer,
-    type DIFPointerAddress,
+    type DIFOptionalValueContainer,
     type DIFProperty,
     type DIFTypeDefinition,
     type DIFUpdate,
@@ -576,7 +575,7 @@ export class DIFHandler {
         return val as T;
 
         // custom types not implemented yet
-        throw new Error("Custom type resolution not implemented yet");
+        // throw new Error("Custom type resolution not implemented yet");
     }
 
     /**

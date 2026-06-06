@@ -1,7 +1,7 @@
 import { CoreLibTypeId } from "../../dif/core.ts";
 import { JsLibTypeAddress } from "../../dif/js-lib.ts";
 import type { TypeBindingDefinition } from "../../dif/type-registry.ts";
-import { DIFImplTypeDefinition, DIFTypeDefinition } from "../../dif/types/mod.ts";
+import type { DIFImplTypeDefinition, DIFTypeDefinition } from "../../dif/types/mod.ts";
 
 const ORIGINAL_SET = Symbol("ORIGINAL_SET");
 const ORIGINAL_DELETE = Symbol("ORIGINAL_DELETE");
