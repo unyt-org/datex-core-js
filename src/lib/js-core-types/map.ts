@@ -1,5 +1,7 @@
 import { CoreLibTypeId } from "../../dif/core.ts";
+import { JsLibTypeAddress } from "../../dif/js-lib.ts";
 import type { TypeBindingDefinition } from "../../dif/type-registry.ts";
+import { DIFImplTypeDefinition, DIFTypeDefinition } from "../../dif/types/mod.ts";
 
 const ORIGINAL_SET = Symbol("ORIGINAL_SET");
 const ORIGINAL_DELETE = Symbol("ORIGINAL_DELETE");
@@ -82,3 +84,31 @@ export const mapTypeBinding: TypeBindingDefinition<
         }
     },
 };
+
+const JS_MAP_IMPL_TYPE_DEFINITION: DIFImplTypeDefinition = [
+    CoreLibTypeId.Map,
+    [JsLibTypeAddress.map],
+];
+function isJsMapImplTypeDefinition(impl: unknown): impl is DIFImplTypeDefinition {
+    return (
+        Array.isArray(impl) &&
+        impl.length === 2 &&
+        impl[0] === CoreLibTypeId.Map &&
+        Array.isArray(impl[1]) &&
+        impl[1].length === 1 &&
+        impl[1][0] === JsLibTypeAddress.map
+    );
+}
+
+export const JS_MAP_TYPE_DEFINITION: DIFTypeDefinition = {
+    impl_type: JS_MAP_IMPL_TYPE_DEFINITION,
+};
+
+export function isJsMapTypeDefinition(typeDef: DIFTypeDefinition): boolean {
+    return (
+        typeof typeDef === "object" &&
+        typeDef !== null &&
+        "impl_type" in typeDef &&
+        isJsMapImplTypeDefinition(typeDef.impl_type)
+    );
+}

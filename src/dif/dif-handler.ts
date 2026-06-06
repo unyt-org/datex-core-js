@@ -33,6 +33,8 @@ import { combinePointerAddressWithOwnership } from "../shared-container/mod.ts";
 import type { DIFUpdateReturn } from "./types/update.ts";
 import { appendEntry, clear, deleteEntry, DIFPropertyKind, listSplice, replace, setEntry } from "./update.ts";
 import { createDIFProperty } from "./update.ts";
+import { JsLibTypeAddress } from "./js-lib.ts";
+import { isJsMapTypeDefinition } from "../lib/mod.ts";
 
 /**
  * Some DIF methods may return an optional ValueContainer, so does the execute_sync, when no result is returned.
@@ -562,6 +564,9 @@ export class DIFHandler {
                     obj[key] = this.resolveDIFValueContainer(value);
                 }
                 val = obj as T;
+                if (definition && isJsMapTypeDefinition(definition)) {
+                    val = new Map(Object.entries(obj)) as T;
+                }
             } else {
                 throw new Error("Expected array of key-value pairs or object for map type");
             }
@@ -1186,7 +1191,9 @@ export class DIFHandler {
                     this.convertJSValueToDIFValueContainer(k),
                     this.convertJSValueToDIFValueContainer(v),
                 ] satisfies [DIFValueContainer, DIFValueContainer]).toArray();
-            return [CoreLibTypeId.Map, map] as DIFValue;
+            return [CoreLibTypeId.Map, map, {
+                impl_type: [CoreLibTypeId.Map, [JsLibTypeAddress.map]],
+            }] as DIFValue;
         } else if (typeof value === "object") {
             const map: Record<string, DIFValueContainer> = {};
             for (const [key, val] of Object.entries(value)) {

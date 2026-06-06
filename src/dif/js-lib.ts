@@ -16,6 +16,7 @@ export function createReservedPointerAddress(id: number): PointerAddress {
 
 export const JsLibTypeAddress = {
     undefined: createReservedPointerAddress(0),
+    map: createReservedPointerAddress(1),
 } as const;
 
 /**

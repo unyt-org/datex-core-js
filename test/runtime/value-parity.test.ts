@@ -17,39 +17,42 @@ import { assertEquals } from "@std/assert";
  */
 const TEST_VALUES = [
     // simple JSON values
-    // undefined,
-    // 42,
-    // -10,
-    // 3.14,
-    // "Hello, World!",
-    // true,
-    // false,
-    // null,
-    // 0,
-    // // arrays and objects
-    // [1, 2, 3],
-    // [],
-    // { a: 1, b: "test" },
-    // {},
+    undefined,
+    42,
+    -10,
+    3.14,
+    "Hello, World!",
+    true,
+    false,
+    null,
+    0,
+
+    // arrays and objects
+    [1, 2, 3],
+    [],
+    { a: 1, b: "test" },
+    {},
 
     // non-JSON values
     new Map([["key", "value"]]),
-    // new Map(),
-    // new Map([[1, 2]]),
-    // undefined,
-    // NaN,
-    // Infinity,
-    // -Infinity,
-    // 2000n,
-    // Endpoint.get("@test"),
-    // new Range(1, 2),
+    new Map(),
+    new Map([[1, 2]]),
+    undefined,
+    NaN,
+    Infinity,
+    -Infinity,
+    2000n,
+
+    // DATEX specific values
+    Endpoint.get("@test"),
+    new Range(1, 2),
 ] as const;
 
 Deno.test(`test value parity for various JS values`, async (t) => {
+    const runtime = await Runtime.create({
+        endpoint: Endpoint.get("@jonas"),
+    });
     for (const value of TEST_VALUES) {
-        const runtime = await Runtime.create({
-            endpoint: Endpoint.get("@jonas"),
-        });
         const valueType = value === null
             ? "null"
             : typeof value === "undefined"
