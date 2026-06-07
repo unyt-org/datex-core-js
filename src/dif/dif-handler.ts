@@ -8,6 +8,7 @@ import { Endpoint } from "../lib/special-core-types/endpoint.ts";
 import { Range } from "../lib/special-core-types/range.ts";
 import {
     type DIFCoreValue,
+    DIFImplTypeDefinition,
     type DIFOptionalValueContainer,
     type DIFProperty,
     type DIFTypeDefinition,
@@ -257,6 +258,7 @@ export class DIFHandler {
      * @param update_data - The DIFUpdate object containing the update information.
      */
     public updateSharedValue(address: PointerAddress, update_data: DIFUpdateData): DIFUpdateReturn {
+        console.log(`Updating shared value at address ${address} with update:`, update_data);
         return this.#handle.update(address, [this.#transceiver_id, ...update_data]);
     }
 
@@ -433,6 +435,7 @@ export class DIFHandler {
 
         // custom interpretation means
         if (!Array.isArray(value) || value.length < 2 || value.length > 3) {
+            console.log("value", value);
             throw new Error(
                 "Invalid DIFValue format: expected an array for non-primitive types",
             );
@@ -672,7 +675,7 @@ export class DIFHandler {
      * @returns
      */
     public getOriginalValueFromProxy<T extends WeakKey>(
-        proxy: CachedSharedContainer,
+        proxy: CachedSharedContainer & T,
     ): T | null {
         const address = this.getPointerAddressForValue(proxy);
         if (address) {
@@ -736,12 +739,22 @@ export class DIFHandler {
         let metadata: CustomReferenceMetadata | undefined = undefined;
         console.log("Allowed type", allowedType);
         // bind js value (if mutable, nominal type)
+
+        const implType = typeof allowedType === "object" && allowedType !== null && "impl_type" in allowedType
+            ? allowedType.impl_type
+            : null;
+        if (implType && implType[0] === CoreLibTypeId.Map) {
+            // FIXME can we make this cleaner, or do we need it more generic?
+            allowedType = implType[0];
+        }
+
         const bindJSValue = mutability !== SharedContainerMutability.Immutable &&
-            (typeof allowedType == "string" || typeof allowedType == "number");
+            (typeof allowedType === "string" || typeof allowedType === "number");
+
         if (bindJSValue && !(wrappedValue instanceof BaseSharedContainer)) {
             typeBinding = typeof allowedType == "number"
                 ? this.type_registry.getTypeBindingByCoreLibTypeId(allowedType)
-                : this.type_registry.getTypeBinding(allowedType);
+                : this.type_registry.getTypeBinding(allowedType as unknown as string); // TS Bug
             if (typeBinding) {
                 const { value, metadata: newMetadata } =
                     (typeBinding as TypeBinding<SharedRef<object, SharedContainerMutability>>)
@@ -818,7 +831,7 @@ export class DIFHandler {
      * @param update - The DIFUpdateData containing the update information.
      * @returns True if the pointer was found and updated, false otherwise.
      */
-    protected handlePointerUpdate<T extends WeakKey>(
+    protected handlePointerUpdate<T extends object>(
         pointerAddress: string,
         value: T,
         update: DIFUpdateData,
@@ -838,11 +851,11 @@ export class DIFHandler {
         update: DIFUpdateData,
         typeBinding: null,
     ): boolean;
-    protected handlePointerUpdate<T>(
+    protected handlePointerUpdate<T extends object>(
         pointerAddress: PointerAddress,
         value: T,
         update: DIFUpdateData,
-        typeBinding?: TypeBinding<WeakKey & T> | null,
+        typeBinding?: TypeBinding<T> | null,
     ): boolean {
         const cached = this.#cache.get(pointerAddress);
         if (!cached) return false;

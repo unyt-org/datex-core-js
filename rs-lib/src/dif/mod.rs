@@ -5,7 +5,7 @@ use crate::js_utils::{
 use datex_core::{
     dif::{
         cache::DIFSharedContainerCache, dif_interface::DIFInterface,
-        pointer_address::PointerAddressWithOwnership,
+        error::DIFUpdateError, pointer_address::PointerAddressWithOwnership,
     },
     shared_values::{
         PointerAddress, SharedContainerOwnership,
@@ -23,8 +23,8 @@ use std::{
     ops::DerefMut,
     rc::Rc,
 };
-use datex_core::dif::error::DIFUpdateError;
 use wasm_bindgen::{JsError, JsValue, prelude::wasm_bindgen};
+use web_sys::console::info;
 
 #[wasm_bindgen]
 #[derive(Clone)]

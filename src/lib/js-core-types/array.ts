@@ -108,7 +108,8 @@ export const arrayTypeBinding: TypeBindingDefinition<Array<unknown>> = {
         };
     },
     handleAppend(target, value) {
-        target.push(value);
+        this.difHandler.getOriginalValueFromProxy(target)!.push(value);
+        // target.push(value);
     },
     handleSet(target, key: unknown, value: unknown) {
         this.difHandler.getOriginalValueFromProxy(target)![key as number] = value;

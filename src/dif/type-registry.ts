@@ -7,7 +7,7 @@ import {
     type DIFHandler,
     IS_PROXY_ACCESS,
 } from "./dif-handler.ts";
-import type { PointerAddress } from "../shared-container/mod.ts";
+import type { PointerAddress, SharedContainerMutability, SharedRef } from "../shared-container/mod.ts";
 
 type ImplMethod = {
     name: string;
@@ -47,33 +47,33 @@ export type BindResult<T, M extends CustomReferenceMetadata> = {
 };
 
 export type TypeBindingDefinition<
-    T,
+    T extends object,
     M extends CustomReferenceMetadata = CustomReferenceMetadata,
 > = {
     coreLibTypeId?: CoreLibTypeId;
     pointerAddress?: PointerAddress;
     bind(
         this: TypeBindingContext<M>,
-        value: T,
+        value: SharedRef<T, SharedContainerMutability>,
         pointerAddress: PointerAddress,
     ): BindResult<T, M>;
     handleSet?(
         this: TypeBindingContext<M>,
-        target: T,
+        target: SharedRef<T, SharedContainerMutability>,
         key: unknown,
         value: unknown,
     ): void;
-    handleAppend?(this: TypeBindingContext<M>, target: T, value: unknown): void;
+    handleAppend?(this: TypeBindingContext<M>, target: SharedRef<T, SharedContainerMutability>, value: unknown): void;
     handleReplace?(
         this: TypeBindingContext<M>,
-        parent: T,
+        parent: SharedRef<T, SharedContainerMutability>,
         newValue: unknown,
     ): void;
-    handleDelete?(this: TypeBindingContext<M>, target: T, key: unknown): void;
-    handleClear?(this: TypeBindingContext<M>, target: T): void;
+    handleDelete?(this: TypeBindingContext<M>, target: SharedRef<T, SharedContainerMutability>, key: unknown): void;
+    handleClear?(this: TypeBindingContext<M>, target: SharedRef<T, SharedContainerMutability>): void;
     handleListSplice?(
         this: TypeBindingContext<M>,
-        target: T,
+        target: SharedRef<T, SharedContainerMutability>,
         start: number,
         deleteCount: number,
         items: unknown[],
@@ -123,12 +123,12 @@ export class TypeRegistry {
      * Binds an existing nominal type to a JS mirror implementation.
      * @param typePointerAddress The address of the type pointer in the Datex runtime.
      */
-    public registerTypeBinding<T>(
+    public registerTypeBinding<T extends object>(
         typeBindingDefinition: TypeBindingDefinition<T>,
     ) {
         const binding = new TypeBinding(
             typeBindingDefinition as TypeBindingDefinition<
-                WeakKey,
+                object,
                 CustomReferenceMetadata
             >,
             this.#difHandler,
@@ -174,7 +174,7 @@ export class TypeRegistry {
 }
 
 export class TypeBinding<
-    T extends WeakKey = WeakKey,
+    T extends object = object,
     M extends CustomReferenceMetadata = CustomReferenceMetadata,
 > {
     #difHandler: DIFHandler;
@@ -204,7 +204,7 @@ export class TypeBinding<
     public bindValue(value: T, pointerAddress: PointerAddress): BindResult<T, M> {
         const newValue = this.#definition.bind.call(
             this,
-            value,
+            value as SharedRef<T, SharedContainerMutability>,
             pointerAddress,
         );
         return newValue;
@@ -214,13 +214,14 @@ export class TypeBinding<
      * Sets up observers for the given value and pointer address if there are update handlers defined for this type binding.
      */
     public handleDifUpdate(
-        value: T,
+        val: T,
         pointerAddress: string,
         difUpdateData: DIFUpdateData,
     ): void {
         const updateHandlerTypes = this.getUpdateHandlerTypes();
         // add observer if there are update handlers
         if (updateHandlerTypes.size > 0) {
+            const value = val as SharedRef<T, SharedContainerMutability>;
             console.log(
                 "got update for pointer:",
                 pointerAddress,
@@ -284,6 +285,7 @@ export class TypeBinding<
                     difUpdateData[0] === DIFUpdateKind.ListSplice &&
                     this.#definition.handleListSplice
                 ) {
+                    console.log("handling list splice with items:", difUpdateData);
                     this.#definition.handleListSplice.call(
                         this,
                         value,

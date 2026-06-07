@@ -49,6 +49,7 @@ impl JSRuntime {
     }
 
     pub(crate) async fn run(config: JsValue) -> JSRuntime {
+        // FIXME remove
         wasm_logger::init(wasm_logger::Config::new(log::Level::Debug));
         let config: RuntimeConfig =
             from_dif_js_value(config, &mut DIFSharedContainerCache::default())

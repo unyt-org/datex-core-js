@@ -14,7 +14,7 @@ runtime.dif.type_registry.registerTypeBinding(mapTypeBinding);
 function getCurrentRuntimeLocalValue<T>(address: string) {
     return runtime.dif
         .resolveDIFValueContainer(
-            runtime.dif._handle.resolve_pointer_address(address).value,
+            runtime.dif._handle.resolve_pointer_address(address)[0],
         ) as T;
 }
 

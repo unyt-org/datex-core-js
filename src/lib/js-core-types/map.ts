@@ -41,6 +41,8 @@ export const mapTypeBinding: TypeBindingDefinition<
             },
             clear: {
                 value: () => {
+                    console.warn("triggering clear for pointer address:", pointerAddress);
+
                     this.difHandler.triggerClear(pointerAddress);
                     return originalClear.call(value);
                 },
