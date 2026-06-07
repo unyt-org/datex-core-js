@@ -13,47 +13,28 @@ mod utils;
 
 /// A TypeScript export, consisting of a type, a name and optional documentation comments
 pub struct TsExport<'a> {
-    pub ty: &'a Type,
+    pub ty: Type,
     pub name: &'a str,
     pub docs: Option<&'a str>,
 }
 
-struct ResolvedExport {
-    ty: Type,
-    name: &'static str,
-    docs: Option<&'static str>,
-}
-
 pub fn resolve_registry_types(memory: &mut Memory) -> HashMap<PathBuf, String> {
-    let mut exports_by_file: HashMap<&'static str, Vec<ResolvedExport>> =
+    let mut exports_by_file: HashMap<&'static str, Vec<TsExport>> =
         HashMap::new();
-
     for registration in all_datex_registrations() {
         let metadata = &registration.metadata;
-
         let Some(path) = metadata.export_ts else {
             continue;
         };
-
-        exports_by_file
-            .entry(path)
-            .or_default()
-            .push(ResolvedExport {
-                ty: registration.resolve(memory),
-                name: metadata.name,
-                docs: metadata.docs,
-            });
+        exports_by_file.entry(path).or_default().push(TsExport {
+            ty: registration.resolve(memory),
+            name: metadata.name,
+            docs: metadata.docs,
+        });
     }
     let mut result = HashMap::new();
     for (path, exports) in exports_by_file {
-        let ast = TsTypeFolder::new()
-            .fold_module(exports.iter().map(|export| TsExport {
-                ty: &export.ty,
-                name: export.name,
-                docs: export.docs,
-            }))
-            .unwrap();
-
+        let ast = TsTypeFolder::new().fold_module(exports).unwrap();
         result.insert(path.into(), ast.to_typescript());
     }
     result
@@ -61,35 +42,14 @@ pub fn resolve_registry_types(memory: &mut Memory) -> HashMap<PathBuf, String> {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
 
     use datex_core::{
-        datex_proxy::DatexProxyTypes,
-        datex_registry::{all_datex_registrations, all_datex_types},
-        macros::Datex,
-        runtime::memory::Memory,
-        types::r#type::Type,
+        datex_proxy::DatexProxyTypes, macros::Datex, runtime::memory::Memory,
         values::core_values::endpoint::Endpoint,
     };
 
-    use log::info;
-    use swc_common::DUMMY_SP;
-    use swc_ecma_ast::{
-        Decl, Expr, Ident, Lit, ModuleItem, Stmt, Str, TsEntityName,
-        TsKeywordType, TsKeywordTypeKind, TsLit, TsLitType,
-        TsPropertySignature, TsTupleElement, TsTupleType, TsType,
-        TsTypeAliasDecl, TsTypeAnn, TsTypeElement, TsTypeLit, TsTypeRef,
-        TsUnionType,
-    };
-
     use crate::ts::{
-        resolve_registry_types,
-        swc::{
-            ts_number, ts_string, ts_string_literal, ts_string_property,
-            ts_tuple, ts_type_alias, ts_type_literal, ts_type_reference,
-            ts_union,
-        },
-        type_folder::TsTypeFolder,
+        resolve_registry_types, swc::*, type_folder::TsTypeFolder,
     };
 
     #[derive(Datex, Debug, Clone, PartialEq)]

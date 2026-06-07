@@ -101,8 +101,7 @@ impl TsTypeFolder {
     ) -> Result<TsModuleAst, ()> {
         for export in exports {
             self.add_docs(export.name, export.docs);
-
-            datex_core::types::visitor::fold_type(&mut self, export.ty)?;
+            datex_core::types::visitor::fold_type(&mut self, &export.ty)?;
         }
 
         Ok(self.into_module_ast())
