@@ -373,15 +373,10 @@ impl TypeFolder for TsTypeFolder {
         source: &TaggedTypeDefinition,
         payload: Option<Self::Output>,
     ) -> Result<Self::Output, Self::Error> {
-        let mut members = vec![ts_string_property(
-            "tag",
-            ts_string_literal(source.tag.clone()),
-        )];
-
+        let mut generics = vec![ts_string_literal(source.tag.clone())];
         if let Some(payload) = payload {
-            members.push(ts_string_property("value", payload));
+            generics.push(payload);
         }
-
-        Ok(ts_type_literal(members))
+        Ok(ts_type_reference("Tagged", generics))
     }
 }

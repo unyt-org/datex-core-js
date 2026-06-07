@@ -50,7 +50,6 @@ pub fn ts_keyword(kind: TsKeywordTypeKind) -> Box<TsType> {
         kind,
     }))
 }
-
 pub fn ts_type_alias(name: &str, definition: Box<TsType>) -> ModuleItem {
     TsTypeAliasDecl {
         span: DUMMY_SP,

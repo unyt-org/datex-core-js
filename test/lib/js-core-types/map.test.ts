@@ -171,8 +171,8 @@ Deno.test("map from datex", () => {
     const mapDif = runtime.dif.executeSyncDIF("{(1): 2}");
     assertEquals(mapDif, [CoreLibTypeId.Map, [
         [
-            [CoreLibTypeId.integer, 1],
-            [CoreLibTypeId.integer, 2],
+            [CoreLibTypeId.integer, "1"],
+            [CoreLibTypeId.integer, "2"],
         ],
     ]]);
 

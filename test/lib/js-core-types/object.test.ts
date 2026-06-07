@@ -28,3 +28,9 @@ Deno.test("JS empty object", () => {
     assert(obj !== null && typeof obj === "object", "Result should be an object");
     assertEquals(obj as Record<string, unknown>, {});
 });
+
+Deno.test("object from datex", () => {
+    const obj = runtime.executeSync<Record<string, unknown>>("{x: 2, y: 5}");
+    assert(obj !== null && typeof obj === "object", "Result should be an object");
+    assertEquals(obj as Record<string, unknown>, { x: 2, y: 5 });
+});

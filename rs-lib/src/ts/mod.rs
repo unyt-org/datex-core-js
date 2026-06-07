@@ -66,10 +66,37 @@ mod tests {
         VariantC,
     }
 
+    /**
+    *
+    *
+    * type ExampleEnum = {
+           tag: "VariantA";
+           value: {
+               x: number;
+               y: string;
+           };
+       } | {
+           tag: "VariantB";
+           value: [number, Endpoint];
+       } | {
+           tag: "VariantC";
+       };
+    *
+    *
+    * type ExampleEnum = TaggedValue<"VariantA", {
+           x: number;
+           y: string;
+       }> | TaggedValue<
+           "VariantB", [number, Endpoint]
+       >
+       | TaggedValue<"VariantC">;
+    */
+
     #[test]
     fn enum_type() {
         let ty = ExampleEnum::datex_type(&mut Memory::default());
         let ast = TsTypeFolder::new().fold_inline(&ty).unwrap();
+        println!("{}", ast.to_typescript());
         assert_eq!(ast.root, ts_type_reference("ExampleEnum", vec![]),);
         assert_eq!(
             ast.module.body,
