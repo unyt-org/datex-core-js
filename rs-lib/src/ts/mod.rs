@@ -23,14 +23,14 @@ pub fn resolve_registry_types(memory: &mut Memory) -> HashMap<PathBuf, String> {
         HashMap::new();
     for registration in all_datex_registrations() {
         let metadata = &registration.metadata;
-        let Some(path) = metadata.export_ts else {
-            continue;
-        };
-        exports_by_file.entry(path).or_default().push(TsExport {
-            ty: registration.resolve(memory),
-            name: metadata.name,
-            docs: metadata.docs,
-        });
+        exports_by_file
+            .entry(registration.metadata.namespace)
+            .or_default()
+            .push(TsExport {
+                ty: registration.resolve(memory),
+                name: metadata.name,
+                docs: metadata.docs,
+            });
     }
     let mut result = HashMap::new();
     for (path, exports) in exports_by_file {

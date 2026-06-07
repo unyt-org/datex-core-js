@@ -1,6 +1,8 @@
+use std::ops::Deref;
+
 use datex_core::{
-    derive_setup_data,
     global::dxb_block::DXBBlock,
+    macros::Datex,
     network::{
         com_hub::errors::ComInterfaceCreateError,
         com_interfaces::{
@@ -25,10 +27,16 @@ use web_sys::{
     js_sys::Uint8Array,
 };
 
-derive_setup_data!(
-    SerialClientInterfaceSetupDataJS,
-    SerialClientInterfaceSetupData
-);
+#[derive(Datex)]
+pub struct SerialClientInterfaceSetupDataJS(SerialClientInterfaceSetupData);
+
+impl Deref for SerialClientInterfaceSetupDataJS {
+    type Target = SerialClientInterfaceSetupData;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 
 impl SerialClientInterfaceSetupDataJS {
     async fn create_interface(

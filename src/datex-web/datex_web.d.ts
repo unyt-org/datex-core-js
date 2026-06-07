@@ -177,8 +177,6 @@ export type FormattingMode = { type: "Compact" } | { type: "Pretty"; indent: num
 
 export type IndentType = "Spaces" | "Tabs";
 
-export type InterfacePriority = "None" | { Priority: number };
-
 export type NetworkTraceHopDirection = "Outgoing" | "Incoming";
 
 
