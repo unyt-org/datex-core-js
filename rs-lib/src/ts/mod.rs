@@ -640,7 +640,8 @@ impl TypeFolder for TsTypeFolder {
 mod tests {
     use crate::ts::{TsTypeFolder, ts_string_literal};
     use datex_core::{
-        datex_proxy::DatexProxyTypes, macros::Datex, runtime::memory::Memory,
+        datex_proxy::DatexProxyTypes, datex_registry::all_datex_types,
+        macros::Datex, runtime::memory::Memory,
         values::core_values::endpoint::Endpoint,
     };
 
@@ -847,5 +848,20 @@ mod tests {
                 ),
             ],
         );
+    }
+
+    // TODO WASM bingen file writer here
+    #[test]
+    fn types() {
+        let mut memory = Memory::default();
+        let types = all_datex_types(&mut memory);
+        for ty in types {
+            let ast = TsTypeFolder::new().fold(&ty).unwrap();
+            println!(
+                "TypeScript definition for {:?}:\n{}",
+                ty.name().unwrap(),
+                ast.declarations_to_typescript()
+            );
+        }
     }
 }
