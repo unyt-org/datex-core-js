@@ -1,11 +1,10 @@
 import type {
-    ComHubMetadata,
     ComInterfaceConfiguration,
     JSComHub,
     NetworkTraceResult,
 } from "../datex-web/datex_web.d.ts";
-import type { DIFValueContainer } from "../dif/definitions.ts";
 import type { Runtime } from "../runtime/runtime.ts";
+import {DIFValueContainer} from "../dif/types/value.ts";
 
 export type ComInterfaceFactory<SetupData = unknown> = {
     interfaceType: string;
@@ -39,7 +38,11 @@ export class ComHub {
             factoryDefinition.interfaceType,
             async (setupData: DIFValueContainer) => {
                 const setupDataJS = await this.#runtime.dif.resolveDIFValueContainer<SetupData>(setupData);
-                return factoryDefinition.factory(setupDataJS);
+                const data = await factoryDefinition.factory(setupDataJS);
+                return {
+                    ...data,
+                    properties: this.#runtime.dif.convertJSValueToDIFValueContainer(data.properties),
+                }
             },
         );
     }

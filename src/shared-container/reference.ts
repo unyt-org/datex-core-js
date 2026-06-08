@@ -1,4 +1,5 @@
 import type { BaseSharedContainer, SharedContainerMutability } from "./base-shared-container.ts";
+import { PointerAddress } from "datex/shared-container/mod.ts";
 
 export enum SharedReferenceMutability {
     Immutable = 0,
@@ -20,11 +21,26 @@ export class ReferencedSharedContainer<
         this.#referenceMutability = referenceMutability;
     }
 
-    get value(): T {
+    /**
+     * Gets the address of the pointer storing the reference.
+     */
+    public get pointerAddress(): PointerAddress {
+        return this.#baseSharedContainer.pointerAddress;
+    }
+
+    /**
+     * Gets the current value of the reference.
+     */
+    public get value(): T {
         return this.#baseSharedContainer.value;
     }
 
-    set value(newValue: T) {
+    /**
+     * Replaces the current value of the reference with a new value.
+     * Also notifies all observers of the pointer about the change.
+     * @throws If the reference is immutable or the new value is of an incompatible type.
+     */
+    set value(newValue: Mutability extends SharedContainerMutability.Mutable ? T : never) {
         this.#baseSharedContainer.value = newValue;
     }
 
@@ -39,9 +55,9 @@ export class ReferencedSharedContainer<
     public deriveImmutableReference(): ReferencedSharedContainer<
         T,
         Mutability,
-        typeof SharedReferenceMutability.Immutable
+        SharedReferenceMutability.Immutable
     > {
-        return new ReferencedSharedContainer<T, Mutability, typeof SharedReferenceMutability.Immutable>(
+        return new ReferencedSharedContainer<T, Mutability, SharedReferenceMutability.Immutable>(
             this.#baseSharedContainer,
             SharedReferenceMutability.Immutable,
         );

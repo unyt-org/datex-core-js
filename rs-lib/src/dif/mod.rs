@@ -111,7 +111,7 @@ impl JSDIFInterface {
     }
 
     /// Applies a DIF update on a shared container at the given address, using the provided update data.
-    /// TODO: Can we optimize this, by not returning the update result data back to JS, as it adds unnecesarry overhead, as
+    /// TODO: Can we optimize this, by not returning the update result data back to JS, as it adds unnecessary overhead, as
     /// we can access the values in JS before update.
     pub fn update(
         &mut self,
@@ -120,18 +120,15 @@ impl JSDIFInterface {
     ) -> Result<JsValue, JsError> {
         let address = PointerAddress::try_from(address).map_err(js_error)?;
         let update: Update = from_js_value(update, &mut self.cache())?;
+        let update_clone = update.clone();
 
-        let shared_container = self
-            .dif_interface
-            .borrow()
-            .try_get_shared_container_mutable_reference(&address)
-            .map_err(js_error)?;
-        let mut base_container = shared_container.base_shared_container_mut();
+        let result = self.dif_interface.borrow().update(&address, update).map_err(js_error)?;
+        let observer_callbacks = self.dif_interface.borrow().get_current_observers(&address, update_clone.source_id).map_err(js_error)?;
 
-        let result = base_container
-            .update(update)
-            .map_err(DIFUpdateError::UpdateError)
-            .map_err(js_error)?;
+        // Call each observer synchronously
+        for callback in observer_callbacks {
+            callback(&update_clone);
+        }
 
         Ok(to_js_value(&result, &mut self.cache()))
     }

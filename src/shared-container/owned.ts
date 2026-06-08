@@ -1,5 +1,6 @@
 import { ReferencedSharedContainer, SharedReferenceMutability } from "./reference.ts";
 import type { BaseSharedContainer, SharedContainerMutability } from "./base-shared-container.ts";
+import { PointerAddress } from "datex/shared-container/mod.ts";
 
 export class OwnedSharedContainer<T, Mutability extends SharedContainerMutability> {
     #baseSharedContainer: BaseSharedContainer<T, Mutability>;
@@ -9,22 +10,44 @@ export class OwnedSharedContainer<T, Mutability extends SharedContainerMutabilit
     }
 
     /**
+     * Gets the address of the pointer storing the reference.
+     */
+    public get pointerAddress(): PointerAddress {
+        return this.#baseSharedContainer.pointerAddress;
+    }
+
+    /**
+     * Gets the current value of the reference.
+     */
+    public get value(): T {
+        return this.#baseSharedContainer.value;
+    }
+
+    /**
+     * Replaces the current value of the reference with a new value.
+     * Also notifies all observers of the pointer about the change.
+     * @throws If the reference is immutable or the new value is of an incompatible type.
+     */
+    set value(newValue: Mutability extends SharedContainerMutability.Mutable ? T : never) {
+        this.#baseSharedContainer.value = newValue;
+    }
+
+    /**
      * Derives a new mutable reference from the current reference if the current reference is mutable.
      * Otherwise returns an error
      * @returns A new mutable reference derived from the current reference if the current reference is mutable, otherwise throws an error.
      */
-    public deriveMutableReference(): Mutability extends typeof SharedReferenceMutability.Mutable
-        ? ReferencedSharedContainer<
+    public deriveMutableReference(): Mutability extends SharedContainerMutability.Mutable ? ReferencedSharedContainer<
             T,
             Mutability,
-            typeof SharedReferenceMutability.Mutable
+            SharedReferenceMutability.Mutable
         >
         : never {
         if (this.#baseSharedContainer.isContainerMutable()) {
             return new ReferencedSharedContainer<
                 T,
                 Mutability,
-                typeof SharedReferenceMutability.Mutable
+                SharedReferenceMutability.Mutable
             >(
                 this.#baseSharedContainer,
                 SharedReferenceMutability.Mutable,
@@ -42,12 +65,12 @@ export class OwnedSharedContainer<T, Mutability extends SharedContainerMutabilit
     public deriveImmutableReference(): ReferencedSharedContainer<
         T,
         Mutability,
-        typeof SharedReferenceMutability.Immutable
+        SharedReferenceMutability.Immutable
     > {
         return new ReferencedSharedContainer<
             T,
             Mutability,
-            typeof SharedReferenceMutability.Immutable
+            SharedReferenceMutability.Immutable
         >(this.#baseSharedContainer, SharedReferenceMutability.Immutable);
     }
 }

@@ -48,7 +48,6 @@ export type SharedContainer<T, Mutability extends SharedContainerMutability = Sh
     | ReferencedSharedContainer<T, Mutability, typeof SharedReferenceMutability.Immutable>
     | ReferencedSharedContainer<T, Mutability, typeof SharedReferenceMutability.Mutable>;
 
-declare const SharedOwnedTag: unique symbol;
 declare const SharedReferencedTag: unique symbol;
 
 /**
@@ -78,3 +77,7 @@ type SharedReferenceInner<
 export type AsShared<T, Mutability extends SharedContainerMutability> = T extends object
     ? SharedRef<T, Mutability> | SharedContainer<T, Mutability>
     : SharedContainer<T, Mutability>;
+
+export type AsSharedMaybeOwned<T, Mutability extends SharedContainerMutability> = T extends object
+    ? SharedRef<T, Mutability> | OwnedSharedContainer<T, Mutability>
+    : OwnedSharedContainer<T, Mutability>;

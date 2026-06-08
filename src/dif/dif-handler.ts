@@ -25,7 +25,7 @@ import { panic, unreachable } from "../utils/exceptions.ts";
 import { isJsUndefined, JS_UNDEFINED } from "../lib/special-core-types/undefined.ts";
 import type { DIFBaseSharedValueContainer } from "./types/value.ts";
 import { SharedContainerMutability } from "../shared-container/base-shared-container.ts";
-import type { PointerAddress } from "../shared-container/mod.ts";
+import type { AsSharedMaybeOwned, PointerAddress } from "../shared-container/mod.ts";
 import { type AsShared, BaseSharedContainer, type SharedRef } from "../shared-container/mod.ts";
 import { DIFSharedContainerOwnership } from "./types/type.ts";
 import { splitPointerAddressWithOwnership } from "../shared-container/mod.ts";
@@ -35,6 +35,7 @@ import { appendEntry, clear, deleteEntry, DIFPropertyKind, listSplice, replace, 
 import { createDIFProperty } from "./update.ts";
 import { JsLibTypeAddress } from "./js-lib.ts";
 import { isJsMapTypeDefinition } from "../lib/mod.ts";
+import { OwnedSharedContainer } from "datex/shared-container/owned.ts";
 
 /**
  * Some DIF methods may return an optional ValueContainer, so does the execute_sync, when no result is returned.
@@ -43,7 +44,6 @@ import { isJsMapTypeDefinition } from "../lib/mod.ts";
  * @returns The contained DIFValueContainer if present, or undefined if the value is not present.
  */
 function collapseDIFOption(value: DIFOptionalValueContainer): DIFValueContainer | undefined {
-    console.debug("Collapsing DIF option", value);
     if (value === null) {
         return undefined;
     } else {
@@ -62,7 +62,7 @@ function collapseDIFOption(value: DIFOptionalValueContainer): DIFValueContainer 
  * @throws If the input value is not a valid special float representation.
  */
 function specialDIFFloatToNumber(value: string): number {
-    if (!isSpecialDIFFloatString) {
+    if (!isSpecialDIFFloatString(value)) {
         throw new Error(`Expected a special float string ("nan", "infinity", "-infinity"), got ${value}`);
     }
     if (value === "nan") {
@@ -258,7 +258,6 @@ export class DIFHandler {
      * @param update_data - The DIFUpdate object containing the update information.
      */
     public updateSharedValue(address: PointerAddress, update_data: DIFUpdateData): DIFUpdateReturn {
-        console.log(`Updating shared value at address ${address} with update:`, update_data);
         return this.#handle.update(address, [this.#transceiver_id, ...update_data]);
     }
 
@@ -737,7 +736,6 @@ export class DIFHandler {
 
         let typeBinding: TypeBinding | null = null;
         let metadata: CustomReferenceMetadata | undefined = undefined;
-        console.log("Allowed type", allowedType);
         // bind js value (if mutable, nominal type)
 
         const implType = typeof allowedType === "object" && allowedType !== null && "impl_type" in allowedType
@@ -979,7 +977,7 @@ export class DIFHandler {
         value: V,
         allowedType: DIFTypeDefinition | null = null,
         mutability: M = SharedContainerMutability.Mutable as M,
-    ): AsShared<V, M> {
+    ): AsSharedMaybeOwned<V, M> {
         const pointerAddress = this.getPointerAddressForValue(value as unknown as CachedSharedContainer);
         if (pointerAddress) {
             throw new Error(
@@ -999,13 +997,18 @@ export class DIFHandler {
                 ptrAddress,
             ) as DIFBaseSharedValueContainer)[2];
         }
-        return this.initSharedValue(
+        const base = this.initSharedValue(
             ptrAddress,
             value,
             mutability,
             DIFSharedContainerOwnership.Owned,
             allowedType,
         );
+        if (base instanceof BaseSharedContainer) {
+            return new OwnedSharedContainer(base) as AsSharedMaybeOwned<V, M>;
+        } else {
+            return base as AsSharedMaybeOwned<V, M>;
+        }
     }
 
     protected isPrimitiveValue(

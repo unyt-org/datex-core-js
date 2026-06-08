@@ -50,7 +50,7 @@ Deno.test("websocket basic connect", async () => {
         return;
     }
     const port = 8484;
-    const runtime = await Runtime.create({ endpoint: "@unyt" }, {
+    const runtime = await Runtime.create({ endpoint: Endpoint.get("@unyt") }, {
         log_level: "debug",
     });
 

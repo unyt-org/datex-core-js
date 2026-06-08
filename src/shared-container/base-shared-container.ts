@@ -53,7 +53,11 @@ export class BaseSharedContainer<T, Mutability extends SharedContainerMutability
      * Also notifies all observers of the pointer about the change.
      * @throws If the reference is immutable or the new value is of an incompatible type.
      */
-    set value(newValue: T) {
+    set value(newValue: Mutability extends SharedContainerMutability.Mutable ? T : never) {
+        if (!this.isContainerMutable()) {
+            throw new Error("Cannot set value of an immutable reference.");
+        }
+
         const oldValue = this.#value;
         if (oldValue === newValue) return;
 

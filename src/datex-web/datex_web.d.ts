@@ -212,7 +212,7 @@ export class JSDIFInterface {
     unobserve_pointer(address: string, observer_id: number): void;
     /**
      * Applies a DIF update on a shared container at the given address, using the provided update data.
-     * TODO: Can we optimize this, by not returning the update result data back to JS, as it adds unnecesarry overhead, as
+     * TODO: Can we optimize this, by not returning the update result data back to JS, as it adds unnecessary overhead, as
      * we can access the values in JS before update.
      */
     update(address: string, update: any): any;

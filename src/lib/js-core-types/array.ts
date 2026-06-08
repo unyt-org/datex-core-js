@@ -79,7 +79,10 @@ export const arrayTypeBinding: TypeBindingDefinition<Array<unknown>> = {
                     } else if (prop === "length") {
                         // if length is reduced, trigger delete for removed items
                         const newLength = Number(value);
-                        if (newLength < target.length) {
+                        // explicit length value 0 is treated as a full clear
+                        if (newLength == 0) {
+                            self.difHandler.triggerClear(pointerAddress);
+                        } else if (newLength < target.length) {
                             self.difHandler.triggerListSplice(
                                 pointerAddress,
                                 newLength,
@@ -122,8 +125,9 @@ export const arrayTypeBinding: TypeBindingDefinition<Array<unknown>> = {
         this.difHandler.getOriginalValueFromProxy(target)!.length = 0;
     },
     handleReplace(target, newValue: unknown[]) {
-        this.difHandler.getOriginalValueFromProxy(target)!.length = 0;
-        target.push(...newValue);
+        const original = this.difHandler.getOriginalValueFromProxy(target)!;
+        original.length = 0;
+        original.push(...newValue);
     },
     handleListSplice(
         target,

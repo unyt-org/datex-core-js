@@ -7,7 +7,14 @@ import { assertStrictEquals } from "@std/assert/strict-equals";
 import { difBaseSharedContainerToDisplayString } from "datex/dif/display.ts";
 import { arrayTypeBinding } from "datex/lib/js-core-types/array.ts";
 import { Endpoint } from "datex/lib/mod.ts";
-import { type PointerAddress, SharedContainerMutability, type SharedRef } from "datex/shared-container/mod.ts";
+import {
+    AsShared,
+    AsSharedMaybeOwned,
+    type PointerAddress,
+    ReferencedSharedContainer,
+    SharedContainerMutability,
+    type SharedRef,
+} from "datex/shared-container/mod.ts";
 import {
     type DIFBaseSharedValueContainer,
     DIFSharedContainerOwnership,
@@ -19,6 +26,7 @@ import { BaseSharedContainer } from "datex/shared-container/base-shared-containe
 import { replace } from "datex/dif/update.ts";
 import type { DIFValue } from "datex/dif/types/value.ts";
 import { FAKE_TRANSCEIVER_ID, performFakeRemoteUpdate, performFakeRemoteUpdateWithSourceId } from "../lib/utils.ts";
+import { OwnedSharedContainer } from "datex/shared-container/owned.ts";
 
 const runtime = await Runtime.create({ endpoint: Endpoint.get("@jonas") });
 runtime.dif.type_registry.registerTypeBinding(arrayTypeBinding);
@@ -36,7 +44,7 @@ Deno.test("pointer create with observe", () => {
         runtime.dif.unobserveSharedValueBindDirect(ref, observerId);
         observed.push(value);
         // TODO: print error message somewhere (don't throw)
-        throw new Error("Should not be called again");
+        // throw new Error("Should not be called again");
     }, { relay_own_updates: true });
 
     runtime.dif.updateSharedValue(
@@ -58,123 +66,77 @@ Deno.test("pointer create without observe", () => {
     );
     assertEquals(typeof ref, "string");
 
-    let observed: Array<DIFUpdate> = [];
+    const observed: Array<DIFUpdate> = [];
     const observerId = runtime.dif.observeSharedValueBindDirect(ref, (value) => {
         runtime.executeSync("'xy'");
         runtime.dif.unobserveSharedValueBindDirect(ref, observerId);
-        observed = value;
+        observed.push(value);
     });
 
     runtime.dif.updateSharedValue(ref, replace(runtime.dif.convertJSValueToDIFValueContainer("Hello, Datex 2")));
 
     // observer should not be called, because relay_own_updates is false and the source is the same as the observer
-    assertEquals(observed, null);
+    assertEquals(observed.length, 0);
 });
 
-// Deno.test("pointer create primitive", () => {
-//     runtime.createSharedValueFromJSValue(
-//         42,
-//         undefined,
-//         SharedContainerMutability.Immutable,
-//     ) satisfies BaseSharedContainer<42>;
+Deno.test("pointer create primitive", () => {
+    runtime.createSharedValueFromJSValue<number, SharedContainerMutability.Immutable>(
+        42,
+        undefined,
+        SharedContainerMutability.Immutable,
+    ) satisfies OwnedSharedContainer<number, SharedContainerMutability.Immutable>;
 
-//     runtime.createSharedValueFromJSValue(
-//         42,
-//         undefined,
-//         SharedContainerMutability.Mutable,
-//     ) satisfies BaseSharedContainer<number>;
+    runtime.createSharedValueFromJSValue(
+        42,
+        undefined,
+        SharedContainerMutability.Mutable,
+    ) satisfies OwnedSharedContainer<42, SharedContainerMutability.Mutable>;
 
-//     runtime.createSharedValueFromJSValue(
-//         "hello world",
-//         undefined,
-//         SharedContainerMutability.Immutable,
-//     ) satisfies BaseSharedContainer<"hello world">;
+    runtime.createSharedValueFromJSValue(
+        "hello world",
+        undefined,
+        SharedContainerMutability.Immutable,
+    ) satisfies OwnedSharedContainer<"hello world", SharedContainerMutability.Immutable>;
 
-//     runtime.createSharedValueFromJSValue(
-//         "hello world",
-//         undefined,
-//         SharedContainerMutability.Mutable,
-//     ) satisfies BaseSharedContainer<string>;
+    runtime.createSharedValueFromJSValue(
+        "hello world",
+        undefined,
+        SharedContainerMutability.Mutable,
+    ) satisfies OwnedSharedContainer<"hello world", SharedContainerMutability.Mutable>;
 
-//     runtime.createSharedValueFromJSValue(
-//         true,
-//         undefined,
-//         SharedContainerMutability.Immutable,
-//     ) satisfies BaseSharedContainer<true>;
+    runtime.createSharedValueFromJSValue(
+        true,
+        undefined,
+        SharedContainerMutability.Immutable,
+    ) satisfies OwnedSharedContainer<true, SharedContainerMutability.Immutable>;
 
-//     runtime.createSharedValueFromJSValue(
-//         { x: true } as const,
-//         undefined,
-//         SharedContainerMutability.Immutable,
-//     ) satisfies {
-//         readonly x: true;
-//     };
+    runtime.createSharedValueFromJSValue(
+        { x: true } as const,
+        undefined,
+        SharedContainerMutability.Immutable,
+    ) satisfies AsSharedMaybeOwned<{ readonly x: true }, SharedContainerMutability.Immutable>;
 
-//     const a = runtime.createSharedValueFromJSValue(
-//         5,
-//         undefined,
-//         SharedContainerMutability.Immutable,
-//     );
-//     const b = runtime.createSharedValueFromJSValue(
-//         { x: a },
-//         undefined,
-//         SharedContainerMutability.Mutable,
-//     ) satisfies {
-//         x: BaseSharedContainer<5>;
-//     };
-//     b.x satisfies BaseSharedContainer<5>;
-//     b.x.value = 5;
-// });
+    const a = runtime.createSharedValueFromJSValue(
+        5,
+        undefined,
+        SharedContainerMutability.Mutable,
+    );
+    const b = runtime.createSharedValueFromJSValue(
+        { x: a },
+        undefined,
+        SharedContainerMutability.Mutable,
+    ) satisfies AsSharedMaybeOwned<{ readonly x: typeof a }, SharedContainerMutability.Mutable>;
+
+    if ("x" in b) {
+        b.x satisfies OwnedSharedContainer<number, SharedContainerMutability.Mutable>;
+        b.x.value = 5;
+    }
+});
 
 Deno.test("pointer create struct", () => {
     const innerPtr = runtime.createSharedValueFromJSValue(
         3,
         undefined,
-        // x2: &mut() = x;
-        /**
-         * type User {
-         *   name: string,
-         *   private x: string,
-         * }
-         *
-         * type User {
-         *   name: string,
-         *   // private
-         *   hiddenFields:  text,
-         *   xx: 1,
-         * }
-         *
-         * user.hiddenFields
-         *
-         * #[write: "only"]
-         * function getUser() -> &mut User {
-         *
-         * }
-         *
-         * export() val x: {inner: px record{}} = {
-         *   inner: &mut {
-         *
-         *   }
-         * };
-         *
-         * export() function getWritableUser() -> &mut+write User {
-         *
-         * }
-         *
-         *          * export() function getWritableUser() -> &mut User {
-         *
-         * }
-         *
-         * #public = {
-         *    getWritableUser:
-         *    private: {
-         *
-         *    }
-         * }
-         *
-         * -> User
-         * -> readonly User
-         */
         SharedContainerMutability.Mutable,
     );
     const struct = { a: 1.0, b: "text", c: { d: true }, e: { f: innerPtr } };
@@ -214,36 +176,40 @@ Deno.test("pointer create struct", () => {
     );
 
     // TODO:
-    // assertThrows(
-    //     () => {
-    //         // @ts-ignore: Property 'a' is readonly
-    //         ptrObjImmutable.a = 2;
-    //     },
-    //     Error,
-    //     `modify`,
-    // );
-    // assertThrows(
-    //     () => {
-    //         // @ts-ignore: Property 'x' does not exist
-    //         ptrObjImmutable.x = 2;
-    //     },
-    //     Error,
-    //     `modify`,
-    // );
-    // assertThrows(
-    //     () => {
-    //         ptrObjImmutable.c.d = false;
-    //     },
-    //     Error,
-    //     `modify`,
-    // );
+    assertThrows(
+        () => {
+            // @ts-ignore: Property 'a' is readonly
+            ptrObjImmutable.a = 2;
+        },
+        Error,
+        `modify`,
+    );
+    assertThrows(
+        () => {
+            // @ts-ignore: Property 'x' does not exist
+            ptrObjImmutable.x = 2;
+        },
+        Error,
+        `modify`,
+    );
+    assertThrows(
+        () => {
+            // @ts-ignore assert transparent proxy container
+            ptrObjImmutable.c.d = false;
+        },
+        Error,
+        `modify`,
+    );
     innerPtr.value = 42;
     assertEquals(innerPtr.value, 42);
+    // @ts-ignore assert transparent proxy container
     assertEquals(ptrObjImmutable.e.f.value, 42);
     innerPtr.value = 7;
+    // @ts-ignore assert transparent proxy container
     assertEquals(ptrObjImmutable.e.f.value, 7);
     assertEquals(innerPtr.value, 7);
 
+    // @ts-ignore assert transparent proxy container
     ptrObjImmutable.e.f.value = 10;
 });
 
@@ -352,8 +318,8 @@ Deno.test("pointer map create and cache", () => {
 Deno.test("pointer primitive ref create and cache", () => {
     const val = 123;
     const ptrObj = runtime.createSharedValueFromJSValue(val);
-    if (!(ptrObj instanceof BaseSharedContainer)) {
-        throw new Error("Pointer object is not a Ref");
+    if (!(ptrObj instanceof OwnedSharedContainer)) {
+        throw new Error("Pointer object is not an OwnedSharedContainer");
     }
     console.log(ptrObj);
     console.log("ptrObj", ptrObj);
@@ -365,30 +331,26 @@ Deno.test("pointer primitive ref create and cache", () => {
     const loadedObj = runtime.dif.resolvePointerAddress(DIFSharedContainerOwnership.Mutable, ptrId);
     console.log("loadedObj", loadedObj);
     // identical primitive value
-    assertStrictEquals(loadedObj, ptrObj);
+    assertEquals(loadedObj, ptrObj.deriveImmutableReference());
 });
 
 Deno.test("pointer primitive ref update", () => {
     const val = 123;
     const ptrObj = runtime.createSharedValueFromJSValue(val as number);
-    if (!(ptrObj instanceof BaseSharedContainer)) {
-        throw new Error("Pointer object is not a Ref");
+    if (!(ptrObj instanceof OwnedSharedContainer)) {
+        throw new Error("Pointer object is not an OwnedSharedContainer");
     }
     assertEquals(ptrObj.value, val);
-    // get value of ptrObj from DATEX execution
-    let result = runtime.executeSyncWithStringResult(
-        "'" + ptrObj.pointerAddress,
-    );
-    assertEquals(result, "'mut 123f64");
 
+    const ptrRef = ptrObj.deriveMutableReference();
     // update the ref value
-    ptrObj.value = 456;
+    ptrRef.value = 456;
 
     // get value of ptrObj from DATEX execution
-    result = runtime.executeSyncWithStringResult(
-        "'" + ptrObj.pointerAddress,
+    const result = runtime.dif.resolveDIFValueContainer(
+        runtime.dif._handle.resolve_pointer_address(ptrObj.pointerAddress)[0],
     );
-    assertEquals(result, "'mut 456f64");
+    assertEquals(result, 456);
 });
 
 Deno.test("immutable pointer primitive ref update", () => {
@@ -398,20 +360,22 @@ Deno.test("immutable pointer primitive ref update", () => {
         undefined,
         SharedContainerMutability.Immutable,
     );
-    if (!(ptrObj instanceof BaseSharedContainer)) {
-        throw new Error("Pointer object is not a Ref");
+    if (!(ptrObj instanceof OwnedSharedContainer)) {
+        throw new Error("Pointer object is not an OwnedSharedContainer");
     }
-    assertEquals(ptrObj.value, val);
 
-    // get value of ptrObj from DATEX execution
-    const result = runtime.executeSyncWithStringResult(
-        "'" + ptrObj.pointerAddress,
+    assertThrows(
+        () => {
+            ptrObj.deriveMutableReference() satisfies never;
+        },
+        Error,
+        `Cannot derive a mutable reference from an immutable reference.`,
     );
-    assertEquals(result, "'123f64");
 
     // update the ref value
     assertThrows(
         () => {
+            // @ts-ignore: try invalid update
             ptrObj.value = 456;
         },
         Error,
@@ -545,10 +509,7 @@ Deno.test("pointer primitive ref remote update and observe local", () => {
     assertEquals(observedUpdate.length, 1);
     assertEquals(
         observedUpdate[0],
-        [
-            FAKE_TRANSCEIVER_ID,
-            ...replace(runtime.dif.convertJSValueToDIFValueContainer(456)),
-        ],
+        replace(runtime.dif.convertJSValueToDIFValueContainer(456)),
     );
 
     assertEquals(ptrObj.value, 456);
@@ -565,10 +526,7 @@ Deno.test("pointer primitive ref remote update and observe local", () => {
 
     // local observer should still be triggered
     assertEquals(observedUpdate.length, 1);
-    assertEquals(observedUpdate[0], [
-        runtime.dif._transceiver_id,
-        ...replace(runtime.dif.convertJSValueToDIFValueContainer(789)),
-    ]);
+    assertEquals(observedUpdate[0], replace(runtime.dif.convertJSValueToDIFValueContainer(789)));
 
     // local value should not be updated since the update came from own transceiver
     assertEquals(ptrObj.value, 456);

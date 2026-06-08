@@ -1,7 +1,5 @@
 use datex_core::{
-    dif::{
-        dif_interface::DIFInterface,
-    },
+    dif::{cache::DIFSharedContainerCache, dif_interface::DIFInterface},
     global::dxb_block::DXBBlock,
     network::{
         com_hub::{
@@ -25,20 +23,21 @@ use datex_core::{
     runtime::Runtime,
     utils::uuid::UUID,
     values::{
-        core_values::endpoint::Endpoint, value_container::ValueContainer,
+        core_values::endpoint::Endpoint, value::Value,
+        value_container::ValueContainer,
     },
 };
 use js_sys::{Function, JsFunction1, Object, Promise, Reflect};
 use log::{error, info};
 use serde_wasm_bindgen::from_value;
 use std::{cell::RefCell, ops::Deref, rc::Rc, str::FromStr};
-use datex_core::dif::cache::DIFSharedContainerCache;
-use datex_core::values::value::Value;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::{JsFuture, future_to_promise};
 use web_sys::js_sys::{self};
 
-use crate::js_utils::{from_dif_js_value, from_js_value, to_dif_js_value, to_js_value};
+use crate::js_utils::{
+    from_dif_js_value, from_js_value, to_dif_js_value, to_js_value,
+};
 
 #[wasm_bindgen]
 #[derive(Clone)]
@@ -123,7 +122,6 @@ impl JSComHub {
             interface_type,
             Rc::new(move |setup_data| {
                 let factory = factory.clone();
-                let runtime = runtime.clone();
                 let dif_interface = dif_interface.clone();
 
                 Box::pin(async move {
@@ -246,14 +244,12 @@ impl JSComHub {
     fn parse_com_interface_configuration(
         interface_configuration: &JsValue,
         cache: &mut DIFSharedContainerCache,
-    ) -> Result<
-        (ComInterfaceProperties, bool, JsReadableStream),
-        JsValue,
-    > {
+    ) -> Result<(ComInterfaceProperties, bool, JsReadableStream), JsValue> {
         let properties =
             Reflect::get(interface_configuration, &"properties".into())?;
 
-        let properties: ComInterfaceProperties = from_dif_js_value(properties, cache)?;
+        let properties: ComInterfaceProperties =
+            from_dif_js_value(properties, cache)?;
 
         // get bool has_single_socket from interface_configuration
         let has_single_socket =
@@ -341,9 +337,11 @@ impl JSComHub {
         setup_data: JsValue,
         priority: Option<u16>,
     ) -> Result<String, JsError> {
-        let setup_data =
-            from_dif_js_value(setup_data, &mut self.dif_interface.borrow_mut().cache)
-                .map_err(|e| JsError::new(&format!("{e:?}")))?;
+        let setup_data = from_dif_js_value(
+            setup_data,
+            &mut self.dif_interface.borrow_mut().cache,
+        )
+        .map_err(|e| JsError::new(&format!("{e:?}")))?;
         let interface = self
             .create_interface_internal(interface_type, setup_data, priority)
             .await
