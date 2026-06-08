@@ -1,5 +1,6 @@
 import type { ComInterfaceFactory } from "../com-hub.ts";
 import type { SocketConfiguration, WebSocketServerInterfaceSetupData } from "../../datex.ts";
+import { tagged } from "datex/lib/special-core-types/tagged.ts";
 
 /**
  * Utility function to create a WebSocket server communication interface factory from a given server factory function.
@@ -23,13 +24,13 @@ export function createWebsocketServerComInterfaceFactory(
                     interface_type: "websocket-server",
                     channel: "websocket",
                     name: setupData.bind_address,
-                    direction: "InOut",
+                    direction: tagged("InOut"),
                     round_trip_time: 0,
                     max_bandwidth: 0,
                     continuous_connection: false,
                     allow_redirects: false,
                     is_secure_channel: false,
-                    reconnection_config: "NoReconnect",
+                    reconnection_config: tagged("NoReconnect"),
                     auto_identify: true,
                     connectable_interfaces: [], // TODO add websocket client connections
                 },
@@ -40,7 +41,7 @@ export function createWebsocketServerComInterfaceFactory(
                             const incoming_data_stream = await createSocketDataIterator(socket);
                             controller.enqueue({
                                 properties: {
-                                    direction: "InOut",
+                                    direction: tagged("InOut"),
                                     channel_factor: 1,
                                     connection_timestamp: Date.now(),
                                     direct_endpoint: undefined,
