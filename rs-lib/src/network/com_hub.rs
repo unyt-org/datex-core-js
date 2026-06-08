@@ -130,8 +130,8 @@ impl JSComHub {
                             &JsValue::UNDEFINED,
                             &to_js_value(
                                 &setup_data,
-                                &mut dif_interface.borrow_mut().cache
-                            )
+                                &mut dif_interface.borrow_mut().cache,
+                            ),
                         )
                         .map_err(|e| {
                             error!("Error calling interface factory: {:?}", e);
@@ -228,13 +228,13 @@ impl JSComHub {
                                     })),
                                     Some(async move || {
                                         let _ = JsFuture::from(socket_data_reader_clone.cancel()).await;
-                                    })
+                                    }),
                                 ));
                             }
                         },
                         Some(async move || {
                             let _ = JsFuture::from(new_sockets_reader_clone.cancel()).await;
-                        })
+                        }),
                     ))
                 })
             }),
@@ -262,7 +262,7 @@ impl JSComHub {
             interface_configuration,
             &"new_sockets_iterator".into(),
         )
-        .map(|v| v.unchecked_into::<web_sys::ReadableStream>())?;
+            .map(|v| v.unchecked_into::<web_sys::ReadableStream>())?;
 
         Ok((
             properties,
@@ -341,7 +341,7 @@ impl JSComHub {
             setup_data,
             &mut self.dif_interface.borrow_mut().cache,
         )
-        .map_err(|e| JsError::new(&format!("{e:?}")))?;
+            .map_err(|e| JsError::new(&format!("{e:?}")))?;
         let interface = self
             .create_interface_internal(interface_type, setup_data, priority)
             .await

@@ -21,7 +21,7 @@ import {
 } from "./types/mod.ts";
 import { CoreLibTypeId } from "./core.ts";
 import { type TypeBinding, TypeRegistry } from "./type-registry.ts";
-import { panic, unreachable } from "../utils/exceptions.ts";
+import { panic, unimplemented, unreachable } from "../utils/exceptions.ts";
 import { isJsUndefined, JS_UNDEFINED } from "../lib/special-core-types/undefined.ts";
 import type { DIFBaseSharedValueContainer } from "./types/value.ts";
 import { SharedContainerMutability } from "../shared-container/base-shared-container.ts";
@@ -35,7 +35,8 @@ import { appendEntry, clear, deleteEntry, DIFPropertyKind, listSplice, replace, 
 import { createDIFProperty } from "./update.ts";
 import { JsLibTypeAddress } from "./js-lib.ts";
 import { isJsMapTypeDefinition } from "../lib/mod.ts";
-import { OwnedSharedContainer } from "datex/shared-container/owned.ts";
+import { OwnedSharedContainer } from "../shared-container/owned.ts";
+import { EMPTY_TAG, Tagged } from "../lib/special-core-types/tagged.ts";
 
 /**
  * Some DIF methods may return an optional ValueContainer, so does the execute_sync, when no result is returned.
@@ -570,6 +571,18 @@ export class DIFHandler {
                 }
             } else {
                 throw new Error("Expected array of key-value pairs or object for map type");
+            }
+        }
+
+        // for tagged type definition, wrap in Tagged
+        if (definition && typeof definition === "object" && "tagged_type" in definition) {
+            const [tag, innerType] = definition.tagged_type;
+            // special case: empty tag
+            if (val === null && innerType === CoreLibTypeId.Unit) {
+                val = new Tagged(tag, EMPTY_TAG);
+            } else {
+                // TODO: handle other innerTypes if not default type
+                val = new Tagged(tag, val) as T;
             }
         }
 
@@ -1159,6 +1172,7 @@ export class DIFHandler {
     public static convertJSValueToDIFValueContainer<T extends unknown>(
         value: T,
         difHandlerInstance?: DIFHandler,
+        forceExplicitFormat = false,
     ): DIFValueContainer {
         // if the value is a registered reference, return its address
         const existingReference = difHandlerInstance &&
@@ -1178,19 +1192,40 @@ export class DIFHandler {
         }
         // TODO: handle custom types
         if (value === null) {
-            return null;
+            return forceExplicitFormat ? [CoreLibTypeId.null, null] as DIFValue : null;
         } else if (value === undefined) {
             return JS_UNDEFINED;
         } else if (typeof value === "string") {
-            return value;
+            return forceExplicitFormat ? [CoreLibTypeId.text, value] as DIFValue : value;
         } else if (typeof value === "boolean") {
-            return value;
+            return forceExplicitFormat ? [CoreLibTypeId.boolean, value] as DIFValue : value;
         } else if (typeof value === "number") {
-            return value;
+            return forceExplicitFormat ? [CoreLibTypeId.decimal_f64, value] as DIFValue : value;
         } else if (typeof value === "bigint") {
             return [CoreLibTypeId.integer_ibig, value.toString()] as DIFValue;
         } else if (value instanceof Endpoint) {
             return [CoreLibTypeId.endpoint, value.toString()] as DIFValue;
+        } else if (value instanceof Tagged) {
+            // special case: empty tagged value
+            if (value.value === EMPTY_TAG) {
+                return [CoreLibTypeId.null, null, {
+                    tagged_type: [value.tag, CoreLibTypeId.Unit],
+                }] as DIFValue;
+            }
+            const inner = this.convertJSValueToDIFValueContainer(value.value, difHandlerInstance, true);
+            if (inner instanceof Array) {
+                return [inner[0], inner[1], {
+                    tagged_type: [value.tag, inner[2] || inner[0]], // TODO: nullable type
+                }] as DIFValue;
+            } else if (typeof inner === "object" && inner !== null) {
+                unimplemented(
+                    "Support nested shared reference value in tagged value",
+                );
+            } else {
+                unreachable(
+                    "convertJSValueToDIFValueContainer with forceExplicitFormat should return an array or object",
+                );
+            }
         } else if (value instanceof Range) {
             return [CoreLibTypeId.Range, [
                 this.convertJSValueToDIFValueContainer(value.start),
