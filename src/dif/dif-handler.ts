@@ -36,6 +36,7 @@ import { JsLibTypeAddress } from "./js-lib.ts";
 import { isJsMapTypeDefinition } from "../lib/mod.ts";
 import { OwnedSharedContainer } from "../shared-container/owned.ts";
 import { EMPTY_TAG, Tagged } from "../lib/special-core-types/tagged.ts";
+import { ibig } from "./helpers/mod.ts";
 
 /**
  * Some DIF methods may return an optional ValueContainer, so does the execute_sync, when no result is returned.
@@ -1201,7 +1202,7 @@ export class DIFHandler {
         } else if (typeof value === "number") {
             return forceExplicitFormat ? [CoreLibTypeId.decimal_f64, value] as DIFValue : value;
         } else if (typeof value === "bigint") {
-            return [CoreLibTypeId.integer_ibig, value.toString()] as DIFValue;
+            return ibig(value);
         } else if (value instanceof Endpoint) {
             return [CoreLibTypeId.endpoint, value.toString()] as DIFValue;
         } else if (value instanceof Tagged) {

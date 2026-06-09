@@ -1,8 +1,8 @@
 import { Runtime } from "datex/runtime/runtime.ts";
 import { assertEquals } from "@std/assert";
 import { Endpoint } from "datex/lib/special-core-types/endpoint.ts";
-import { CoreLibTypeId } from "datex/dif/core.ts";
 import { Range } from "datex/lib/special-core-types/range.ts";
+import { i64, integer, u32, u8 } from "datex/dif/helpers/typed-integer.ts";
 
 let runtime: Runtime;
 Deno.test.beforeEach(async () => {
@@ -18,7 +18,7 @@ Deno.test("execute sync with string result", () => {
 Deno.test("execute sync dif value", () => {
     const script = "1 + 2";
     const result = runtime.dif.executeSyncDIF(script);
-    assertEquals(result, [CoreLibTypeId.integer, "3"]);
+    assertEquals(result, integer(3));
     console.log(result);
 });
 
@@ -32,21 +32,21 @@ Deno.test("execute sync typed integer", () => {
         runtime.dif.executeSyncDIF(
             "42u8",
         ),
-        [CoreLibTypeId.integer_u8, 42],
+        u8(42),
     );
 
     assertEquals(
         runtime.dif.executeSyncDIF(
             "42u32",
         ),
-        [CoreLibTypeId.integer_u32, 42],
+        u32(42),
     );
 
     assertEquals(
         runtime.dif.executeSyncDIF(
             "42i64",
         ),
-        [CoreLibTypeId.integer_i64, 42],
+        i64(42),
     );
 });
 

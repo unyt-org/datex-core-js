@@ -8,6 +8,7 @@ import { SharedContainerMutability } from "datex/shared-container/base-shared-co
 import type { CachedSharedContainer } from "datex/dif/dif-handler.ts";
 import type { PointerAddress, SharedRef } from "datex/shared-container/mod.ts";
 import { clear, createDIFProperty, deleteEntry, DIFPropertyKind, replace, setEntry } from "datex/dif/update.ts";
+import { integer } from "datex/dif/helpers/typed-integer.ts";
 const runtime = await Runtime.create({ endpoint: Endpoint.get("@test") });
 runtime.dif.type_registry.registerTypeBinding(mapTypeBinding);
 
@@ -171,8 +172,8 @@ Deno.test("map from datex", () => {
     const mapDif = runtime.dif.executeSyncDIF("{(1): 2}");
     assertEquals(mapDif, [CoreLibTypeId.Map, [
         [
-            [CoreLibTypeId.integer, "1"],
-            [CoreLibTypeId.integer, "2"],
+            integer(1),
+            integer(2),
         ],
     ]]);
 

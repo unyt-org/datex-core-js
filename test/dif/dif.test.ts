@@ -25,6 +25,7 @@ import { replace } from "datex/dif/update.ts";
 import type { DIFValue } from "datex/dif/types/value.ts";
 import { FAKE_TRANSCEIVER_ID, performFakeRemoteUpdate, performFakeRemoteUpdateWithSourceId } from "../lib/utils.ts";
 import { OwnedSharedContainer } from "datex/shared-container/owned.ts";
+import { integer, u8 } from "datex/dif/helpers/typed-integer.ts";
 
 const runtime = await Runtime.create({ endpoint: Endpoint.get("@jonas") });
 runtime.dif.type_registry.registerTypeBinding(arrayTypeBinding);
@@ -582,7 +583,7 @@ Deno.test("core integer", () => {
     const script = "42";
     const result = runtime.dif.executeSyncDIF(script);
     console.log("result", result);
-    assertEquals(result, [CoreLibTypeId.integer, "42"]);
+    assertEquals(result, integer(42));
 });
 
 Deno.test("core boolean", () => {
@@ -600,5 +601,5 @@ Deno.test("core null", () => {
 Deno.test("core integer variants", () => {
     const script = "42u8";
     const result = runtime.dif.executeSyncDIF(script);
-    assertEquals(result, [CoreLibTypeId.integer_u8, 42]);
+    assertEquals(result, u8(42));
 });

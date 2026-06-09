@@ -262,7 +262,7 @@ impl JSComHub {
             interface_configuration,
             &"new_sockets_iterator".into(),
         )
-            .map(|v| v.unchecked_into::<web_sys::ReadableStream>())?;
+        .map(|v| v.unchecked_into::<web_sys::ReadableStream>())?;
 
         Ok((
             properties,
@@ -341,7 +341,7 @@ impl JSComHub {
             setup_data,
             &mut self.dif_interface.borrow_mut().cache,
         )
-            .map_err(|e| JsError::new(&format!("{e:?}")))?;
+        .map_err(|e| JsError::new(&format!("{e:?}")))?;
         let interface = self
             .create_interface_internal(interface_type, setup_data, priority)
             .await
