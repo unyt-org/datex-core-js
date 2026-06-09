@@ -8,10 +8,8 @@ import { difBaseSharedContainerToDisplayString } from "datex/dif/display.ts";
 import { arrayTypeBinding } from "datex/lib/js-core-types/array.ts";
 import { Endpoint } from "datex/lib/mod.ts";
 import {
-    AsShared,
-    AsSharedMaybeOwned,
+    type AsSharedMaybeOwned,
     type PointerAddress,
-    ReferencedSharedContainer,
     SharedContainerMutability,
     type SharedRef,
 } from "datex/shared-container/mod.ts";
@@ -22,7 +20,7 @@ import {
     type DIFUpdateData,
     DIFUpdateKind,
 } from "datex/dif/types/mod.ts";
-import { BaseSharedContainer } from "datex/shared-container/base-shared-container.ts";
+import type { BaseSharedContainer } from "datex/shared-container/base-shared-container.ts";
 import { replace } from "datex/dif/update.ts";
 import type { DIFValue } from "datex/dif/types/value.ts";
 import { FAKE_TRANSCEIVER_ID, performFakeRemoteUpdate, performFakeRemoteUpdateWithSourceId } from "../lib/utils.ts";

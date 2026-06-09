@@ -1,10 +1,6 @@
-import type {
-    ComInterfaceConfiguration,
-    JSComHub,
-    NetworkTraceResult,
-} from "../datex-web/datex_web.d.ts";
+import type { ComInterfaceConfiguration, JSComHub, NetworkTraceResult } from "../datex-web/datex_web.d.ts";
 import type { Runtime } from "../runtime/runtime.ts";
-import {DIFValueContainer} from "../dif/types/value.ts";
+import type { DIFValueContainer } from "../dif/types/value.ts";
 
 export type ComInterfaceFactory<SetupData = unknown> = {
     interfaceType: string;
@@ -42,7 +38,7 @@ export class ComHub {
                 return {
                     ...data,
                     properties: this.#runtime.dif.convertJSValueToDIFValueContainer(data.properties),
-                }
+                };
             },
         );
     }

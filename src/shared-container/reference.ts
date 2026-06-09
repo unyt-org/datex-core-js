@@ -1,5 +1,5 @@
 import type { BaseSharedContainer, SharedContainerMutability } from "./base-shared-container.ts";
-import { PointerAddress } from "datex/shared-container/mod.ts";
+import type { PointerAddress } from "datex/shared-container/mod.ts";
 
 export enum SharedReferenceMutability {
     Immutable = 0,

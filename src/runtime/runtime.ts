@@ -9,7 +9,7 @@ import {
 } from "../datex.ts";
 import { ComHub } from "../network/com-hub.ts";
 import { DIFHandler } from "../dif/dif-handler.ts";
-import { type AsShared, AsSharedMaybeOwned, SharedContainerMutability } from "../shared-container/mod.ts";
+import { type AsSharedMaybeOwned, SharedContainerMutability } from "../shared-container/mod.ts";
 import type { FlatInstruction, InstructionTree } from "./types.d.ts";
 import type { DIFTypeDefinition } from "../dif/types/mod.ts";
 import { Endpoint } from "../lib/mod.ts";

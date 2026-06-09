@@ -8,7 +8,6 @@ import { Endpoint } from "../lib/special-core-types/endpoint.ts";
 import { Range } from "../lib/special-core-types/range.ts";
 import {
     type DIFCoreValue,
-    DIFImplTypeDefinition,
     type DIFOptionalValueContainer,
     type DIFProperty,
     type DIFTypeDefinition,
