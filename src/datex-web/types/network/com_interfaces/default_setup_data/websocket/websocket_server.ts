@@ -1,0 +1,8 @@
+// @generated file -- do not edit
+// deno-lint-ignore-file
+// deno-fmt-ignore-file
+
+export type WebSocketServerInterfaceSetupData = {
+    bind_address: string;
+    accept_addresses: null | unknown[];
+};

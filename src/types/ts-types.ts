@@ -1,5 +1,5 @@
-import type { DIFTypeDefinition } from "../dif/definitions.ts";
 import { CoreLibTypeId } from "../dif/core.ts";
+import type { DIFTypeDefinition } from "../dif/types/type.ts";
 
 /**
  * Template function for creating TypeScript types that are converted to DIF type containers.

@@ -6,3 +6,4 @@
 
 export * from "./endpoint.ts";
 export * from "./range.ts";
+export * from "./tagged.ts";

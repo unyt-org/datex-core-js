@@ -1,0 +1,30 @@
+// @generated file -- do not edit
+// deno-lint-ignore-file
+// deno-fmt-ignore-file
+
+import type { Endpoint, Tagged } from "../../../../lib/mod.ts";
+
+export type NetworkTraceResult = {
+    sender: Endpoint;
+    receiver: Endpoint;
+    hops: unknown[];
+    round_trip_time: unknown;
+};
+
+export type NetworkTraceHopSocket = {
+    interface_type: string;
+    interface_name: null | string;
+    channel: string;
+    socket_uuid: string;
+};
+
+export type NetworkTraceHopDirection = Tagged<"Outgoing"> | Tagged<"Incoming">;
+
+export type NetworkTraceHop = {
+    endpoint: Endpoint;
+    distance: number;
+    socket: NetworkTraceHopSocket;
+    direction: NetworkTraceHopDirection;
+    fork_nr: string;
+    bounce_back: boolean;
+};

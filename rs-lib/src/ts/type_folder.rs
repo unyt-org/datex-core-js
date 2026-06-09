@@ -1,5 +1,11 @@
-use datex_core::{
+use core::fmt;
+use std::{
     collections::HashMap,
+    fmt::Display,
+    path::{Path, PathBuf},
+};
+
+use datex_core::{
     libs::core::type_id::{
         CoreLibBaseTypeId, CoreLibTypeId, CoreLibVariantTypeId,
     },
@@ -16,37 +22,104 @@ use datex_core::{
         },
         visitor::TypeFolder,
     },
-    values::core_values::{
-        boolean::Boolean, integer::typed_integer::TypedInteger,
-    },
+    values::core_values::integer::typed_integer::TypedInteger,
 };
-use num_bigint::BigInt as NumBigInt;
-
 use swc_common::DUMMY_SP;
-use swc_ecma_ast::{
-    BigInt, BindingIdent, Bool, Expr, Ident, Lit, Module, ModuleItem, Number,
-    Pat, RestPat, Str, TsArrayType, TsEntityName, TsFnParam, TsFnType,
-    TsIntersectionType, TsKeywordType, TsKeywordTypeKind, TsLit, TsLitType,
-    TsPropertySignature, TsTupleElement, TsTupleType, TsType, TsTypeAliasDecl,
-    TsTypeAnn, TsTypeElement, TsTypeParamInstantiation, TsTypeRef, TsUnionType,
-};
+use swc_ecma_ast::{TsType, TsTypeAliasDecl};
 
 use crate::ts::{
     TsExport,
-    ast::{TsAst, TsDeclaration, TsModuleAst},
+    ast::{TsAst, TsDeclaration},
     swc::*,
+    utils::{rebase_known_type_source, relative_module_specifier},
 };
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum AliasState {
     Visiting,
-    Complete(Box<TsType>),
+    Complete,
+}
+#[derive(Debug, Clone)]
+struct ExportRegistration {
+    file: PathBuf,
+    docs: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum TsTypeFolderError {
+    DuplicateExport {
+        name: String,
+        first_file: PathBuf,
+        second_file: PathBuf,
+    },
+    DuplicateDeclaration {
+        name: String,
+        file: PathBuf,
+    },
+    MissingExport {
+        name: String,
+    },
+    KnownTypeConflictsWithExport {
+        name: String,
+    },
+    NoActiveFile {
+        referenced_type: String,
+    },
+    IncompleteAlias {
+        name: String,
+    },
+}
+
+impl Display for TsTypeFolderError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::DuplicateExport {
+                name,
+                first_file,
+                second_file,
+            } => write!(
+                f,
+                "TypeScript alias `{name}` is exported by both `{}` and `{}`",
+                first_file.display(),
+                second_file.display(),
+            ),
+            Self::DuplicateDeclaration { name, file } => write!(
+                f,
+                "TypeScript alias `{name}` was declared more than once in `{}`",
+                file.display(),
+            ),
+            Self::MissingExport { name } => write!(
+                f,
+                "TypeScript alias `{name}` is referenced but was not exported",
+            ),
+            Self::KnownTypeConflictsWithExport { name } => write!(
+                f,
+                "TypeScript alias `{name}` is both an exported alias and a registered external type",
+            ),
+            Self::NoActiveFile { referenced_type } => write!(
+                f,
+                "TypeScript type `{referenced_type}` was referenced without an active output file",
+            ),
+            Self::IncompleteAlias { name } => write!(
+                f,
+                "TypeScript alias `{name}` was registered but did not produce a complete declaration",
+            ),
+        }
+    }
 }
 
 #[derive(Debug, Default)]
 pub struct TsTypeFolder {
+    /// Exported alias -> owning file and docs.
+    exports: HashMap<String, ExportRegistration>,
+    /// Every declared named alias and its current state.
     aliases: HashMap<String, AliasState>,
-    declaration_order: Vec<String>,
-    docs: HashMap<String, String>,
+    /// External type name -> module specifier.
+    known_types: HashMap<String, String>,
+
+    current_file: Option<PathBuf>,
+    file_stack: Vec<Option<PathBuf>>,
+    ast: TsAst,
 }
 
 impl TsTypeFolder {
@@ -54,120 +127,242 @@ impl TsTypeFolder {
         Self::default()
     }
 
-    fn into_module(self) -> Module {
-        let body = self
-            .declaration_order
-            .into_iter()
-            .filter_map(|name| {
-                let AliasState::Complete(type_ann) =
-                    self.aliases.get(&name)?.clone()
-                else {
-                    return None;
-                };
-
-                Some(
-                    TsTypeAliasDecl {
-                        span: DUMMY_SP,
-                        declare: false,
-                        id: ts_ident(&name),
-                        type_params: None,
-                        type_ann,
-                    }
-                    .into(),
-                )
-            })
-            .collect::<Vec<ModuleItem>>();
-
-        Module {
-            span: DUMMY_SP,
-            body,
-            shebang: None,
-        }
-    }
-
-    pub fn fold_inline(mut self, ty: &Type) -> Result<TsAst, ()> {
-        let root = datex_core::types::visitor::fold_type(&mut self, ty)?;
-
-        Ok(TsAst {
-            module: self.into_module(),
-            root,
-        })
-    }
-
-    /// Generate a complete TypeScript file.
-    pub fn fold_module<'a>(
+    /// Register external TypeScript types.
+    ///
+    /// Only referenced types are imported.
+    pub fn with_known_types<I, S>(
         mut self,
-        exports: impl IntoIterator<Item = TsExport<'a>>,
-    ) -> Result<TsModuleAst, ()> {
-        for export in exports {
-            self.add_docs(export.name, export.docs);
-            datex_core::types::visitor::fold_type(&mut self, &export.ty)?;
+        source: impl Into<String>,
+        types: I,
+    ) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<String>,
+    {
+        let source = source.into();
+        for ty in types {
+            self.known_types.insert(ty.into(), source.clone());
         }
-
-        Ok(self.into_module_ast())
+        self
     }
 
-    fn add_docs(&mut self, name: &str, docs: Option<&str>) {
-        let Some(docs) = docs else {
-            return;
-        };
-        if docs.trim().is_empty() {
-            return;
-        }
-        match self.docs.get(name) {
-            Some(existing) if existing != docs => {
-                panic!(
-                    "Conflicting documentation for TypeScript alias `{name}`"
-                );
-            }
-            Some(_) => {}
-            None => {
-                self.docs.insert(name.to_string(), docs.to_string());
-            }
-        }
+    pub fn ast(&self) -> &TsAst {
+        &self.ast
     }
 
-    fn into_module_ast(self) -> TsModuleAst {
-        let declarations = self
-            .declaration_order
+    /// Fold all files through this folder instance.
+    ///
+    /// Registration happens before traversal, so aliases can safely reference
+    /// types owned by other generated files.
+    pub fn fold_modules<'a, P, I>(
+        &mut self,
+        modules: I,
+    ) -> Result<&TsAst, TsTypeFolderError>
+    where
+        P: Into<PathBuf>,
+        I: IntoIterator<Item = (P, Vec<TsExport<'a>>)>,
+    {
+        self.reset_generation_state();
+
+        let modules = modules
             .into_iter()
-            .filter_map(|name| {
-                let AliasState::Complete(type_ann) =
-                    self.aliases.get(&name)?.clone()
-                else {
-                    return None;
-                };
+            .map(|(path, exports)| (path.into(), exports))
+            .collect::<Vec<_>>();
 
-                Some(TsDeclaration {
-                    docs: self.docs.get(&name).cloned(),
-                    declaration: TsTypeAliasDecl {
-                        span: DUMMY_SP,
-                        declare: false,
-                        id: ts_ident(&name),
-                        type_params: None,
-                        type_ann,
-                    },
+        for (file, exports) in &modules {
+            self.ast.ensure_file(file.clone());
+
+            for export in exports {
+                self.register_export(file, export)?;
+            }
+        }
+
+        //fold through the same graph builder
+        for (file, exports) in &modules {
+            self.current_file = Some(file.clone());
+            for export in exports {
+                let definition =
+                    datex_core::types::visitor::fold_type(self, &export.ty)?;
+                self.ensure_declared(export.name, definition)?;
+            }
+        }
+
+        self.current_file = None;
+
+        // every registered export must resolve to one declaration
+        for name in self.exports.keys() {
+            if !matches!(self.aliases.get(name), Some(AliasState::Complete)) {
+                return Err(TsTypeFolderError::IncompleteAlias {
+                    name: name.clone(),
+                });
+            }
+        }
+        Ok(&self.ast)
+    }
+
+    /// Reset state to fold an entirely new set of modules with the same folder.
+    fn reset_generation_state(&mut self) {
+        self.exports.clear();
+        self.aliases.clear();
+        self.current_file = None;
+        self.file_stack.clear();
+        self.ast.clear();
+    }
+
+    /// Register an exported alias and its owning file.
+    fn register_export(
+        &mut self,
+        file: &Path,
+        export: &TsExport<'_>,
+    ) -> Result<(), TsTypeFolderError> {
+        if self.known_types.contains_key(export.name) {
+            return Err(TsTypeFolderError::KnownTypeConflictsWithExport {
+                name: export.name.to_string(),
+            });
+        }
+        let registration = ExportRegistration {
+            file: file.to_path_buf(),
+            docs: export.docs.map(str::to_string),
+        };
+        if let Some(previous) =
+            self.exports.insert(export.name.to_string(), registration)
+        {
+            return Err(TsTypeFolderError::DuplicateExport {
+                name: export.name.to_string(),
+                first_file: previous.file,
+                second_file: file.to_path_buf(),
+            });
+        }
+        Ok(())
+    }
+
+    /// Ensure that an exported alias has a complete declaration in the AST,
+    /// otherswise produce it from the provided definition.
+    fn ensure_declared(
+        &mut self,
+        name: &str,
+        definition: Box<TsType>,
+    ) -> Result<(), TsTypeFolderError> {
+        match self.aliases.get(name) {
+            Some(AliasState::Complete) => Ok(()),
+            Some(AliasState::Visiting) => {
+                Err(TsTypeFolderError::IncompleteAlias {
+                    name: name.to_string(),
                 })
-            })
-            .collect();
+            }
+            None => self.complete_alias(name, definition),
+        }
+    }
 
-        TsModuleAst { declarations }
+    /// Complete an alias declaration and add it to the AST.
+    fn complete_alias(
+        &mut self,
+        name: &str,
+        definition: Box<TsType>,
+    ) -> Result<(), TsTypeFolderError> {
+        let registration =
+            self.exports.get(name).cloned().ok_or_else(|| {
+                TsTypeFolderError::MissingExport {
+                    name: name.to_string(),
+                }
+            })?;
+
+        self.aliases.insert(name.to_string(), AliasState::Complete);
+
+        let inserted = self.ast.add_declaration(
+            &registration.file,
+            name.to_string(),
+            TsDeclaration {
+                docs: registration.docs,
+                declaration: TsTypeAliasDecl {
+                    span: DUMMY_SP,
+                    declare: false,
+                    id: ts_ident(name),
+                    type_params: None,
+                    type_ann: definition,
+                },
+            },
+        );
+
+        if !inserted {
+            return Err(TsTypeFolderError::DuplicateDeclaration {
+                name: name.to_string(),
+                file: registration.file,
+            });
+        }
+        Ok(())
+    }
+
+    /// Record a reference to an exported alias, adding an import if necessary.
+    fn record_export_reference(
+        &mut self,
+        name: &str,
+    ) -> Result<(), TsTypeFolderError> {
+        let target_file = self
+            .exports
+            .get(name)
+            .map(|registration| registration.file.clone())
+            .ok_or_else(|| TsTypeFolderError::MissingExport {
+                name: name.to_string(),
+            })?;
+        let current_file = self.current_file.clone().ok_or_else(|| {
+            TsTypeFolderError::NoActiveFile {
+                referenced_type: name.to_string(),
+            }
+        })?;
+        if current_file != target_file {
+            self.ast.add_import(
+                &current_file,
+                relative_module_specifier(&current_file, &target_file),
+                name,
+            );
+        }
+        Ok(())
+    }
+
+    /// Produce a reference to an external type, adding an import if necessary.
+    fn external_type_reference(
+        &mut self,
+        name: &str,
+        generics: Vec<Box<TsType>>,
+    ) -> Result<Box<TsType>, TsTypeFolderError> {
+        if let Some(source) = self.known_types.get(name).cloned() {
+            let current_file = self.current_file.clone().ok_or_else(|| {
+                TsTypeFolderError::NoActiveFile {
+                    referenced_type: name.to_string(),
+                }
+            })?;
+
+            let source = rebase_known_type_source(&current_file, &source);
+
+            self.ast.add_import(&current_file, source, name);
+        }
+
+        Ok(ts_type_reference(name, generics))
     }
 }
 
 impl TypeFolder for TsTypeFolder {
     type Output = Box<TsType>;
-    type Error = ();
+    type Error = TsTypeFolderError;
 
     fn begin_named_alias(&mut self, name: &str) -> Result<bool, Self::Error> {
+        let target_file = self
+            .exports
+            .get(name)
+            .map(|registration| registration.file.clone())
+            .ok_or_else(|| TsTypeFolderError::MissingExport {
+                name: name.to_string(),
+            })?;
+
         match self.aliases.get(name) {
+            Some(_) => Ok(false),
             None => {
                 self.aliases.insert(name.to_string(), AliasState::Visiting);
-
+                self.file_stack.push(self.current_file.clone());
+                self.current_file = Some(target_file);
                 Ok(true)
             }
-
-            Some(AliasState::Visiting | AliasState::Complete(_)) => Ok(false),
         }
     }
 
@@ -176,24 +371,16 @@ impl TypeFolder for TsTypeFolder {
         name: &str,
         definition: Self::Output,
     ) -> Result<(), Self::Error> {
-        self.aliases
-            .insert(name.to_string(), AliasState::Complete(definition));
-
-        if !self
-            .declaration_order
-            .iter()
-            .any(|existing| existing == name)
-        {
-            self.declaration_order.push(name.to_string());
-        }
-
-        Ok(())
+        let result = self.complete_alias(name, definition);
+        self.current_file = self.file_stack.pop().flatten();
+        result
     }
 
     fn fold_named_alias_reference(
         &mut self,
         name: &str,
     ) -> Result<Self::Output, Self::Error> {
+        self.record_export_reference(name)?;
         Ok(ts_type_reference(name, vec![]))
     }
 
@@ -205,11 +392,9 @@ impl TypeFolder for TsTypeFolder {
             LiteralTypeDefinition::Text(text) => {
                 ts_string_literal(text.0.to_string())
             }
-
             LiteralTypeDefinition::Integer(integer) => {
                 ts_number_literal(integer.as_f64())
             }
-
             LiteralTypeDefinition::TypedInteger(integer) => match integer {
                 TypedInteger::I8(_)
                 | TypedInteger::I16(_)
@@ -236,10 +421,11 @@ impl TypeFolder for TsTypeFolder {
                 ts_boolean_literal(boolean)
             }
 
-            LiteralTypeDefinition::Endpoint(endpoint) => ts_type_reference(
-                "Endpoint",
-                vec![ts_string_literal(endpoint.to_string())],
-            ),
+            LiteralTypeDefinition::Endpoint(endpoint) => self
+                .external_type_reference(
+                    "Endpoint",
+                    vec![ts_string_literal(endpoint.to_string())],
+                )?,
         })
     }
 
@@ -289,7 +475,7 @@ impl TypeFolder for TsTypeFolder {
         parameters: Vec<(Option<String>, Self::Output)>,
         rest_parameter: Option<(Option<String>, Self::Output)>,
         return_type: Option<Self::Output>,
-        yeet_type: Option<Self::Output>,
+        _yeet_type: Option<Self::Output>, // FIXME
     ) -> Result<Self::Output, Self::Error> {
         let mut parameters = parameters
             .into_iter()
@@ -301,16 +487,12 @@ impl TypeFolder for TsTypeFolder {
                 )
             })
             .collect::<Vec<_>>();
-
         if let Some((name, ty)) = rest_parameter {
             parameters.push(ts_rest_parameter(
                 name.unwrap_or_else(|| "rest".to_string()),
                 ty,
             ));
         }
-
-        let _ = yeet_type;
-
         Ok(ts_function_type(
             parameters,
             return_type.unwrap_or_else(ts_void),
@@ -343,7 +525,7 @@ impl TypeFolder for TsTypeFolder {
                 CoreLibBaseTypeId::Decimal => Ok(ts_number()),
                 CoreLibBaseTypeId::Null => Ok(ts_null()),
                 CoreLibBaseTypeId::Endpoint => {
-                    Ok(ts_type_reference("Endpoint", vec![]))
+                    self.external_type_reference("Endpoint", vec![])
                 }
                 CoreLibBaseTypeId::Unit => Ok(ts_void()),
                 CoreLibBaseTypeId::Never => Ok(ts_never()),
@@ -357,10 +539,14 @@ impl TypeFolder for TsTypeFolder {
                     vec![ts_rest_parameter("args", ts_array(ts_unknown()))],
                     ts_unknown(),
                 )),
-                CoreLibBaseTypeId::Range => Ok(ts_unknown()),
-                CoreLibBaseTypeId::Type => Ok(ts_unknown()),
+                CoreLibBaseTypeId::Range => self.external_type_reference(
+                    "Range",
+                    vec![ts_unknown(), ts_unknown()],
+                ),
+                CoreLibBaseTypeId::Type => {
+                    self.external_type_reference("Type", vec![ts_unknown()])
+                }
             },
-
             CoreLibTypeId::Variant(variant) => match variant {
                 CoreLibVariantTypeId::Decimal(_)
                 | CoreLibVariantTypeId::Integer(_) => Ok(ts_number()),
@@ -377,6 +563,6 @@ impl TypeFolder for TsTypeFolder {
         if let Some(payload) = payload {
             generics.push(payload);
         }
-        Ok(ts_type_reference("Tagged", generics))
+        self.external_type_reference("Tagged", generics)
     }
 }

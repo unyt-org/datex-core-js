@@ -28,6 +28,10 @@ await runWasmBindgen({
     outDir,
 });
 
+await generateTsTypes({
+    outDir,
+});
+
 await generateJsMainFile({
     name,
     outDir,
@@ -105,7 +109,7 @@ async function runWasmBindgen(args: {
 }) {
     // make sure wasm-bindgen cli is installed
     const wasmBindgenInstallProcess = new Deno.Command("cargo", {
-        args: ["install", "wasm-bindgen-cli", "--version", "0.2.112"],
+        args: ["install", "wasm-bindgen-cli", "--version", "0.2.123"],
     }).spawn();
     const installRes = await wasmBindgenInstallProcess.status;
     if (!installRes.success) {
@@ -162,6 +166,28 @@ async function runWasmBindgen(args: {
         jsInternalFilePath,
         `// @generated file from wasmbuild -- do not edit\n// deno-lint-ignore-file\n// deno-fmt-ignore-file\n\n${jsInternalFileContent}`,
     );
+}
+
+async function generateTsTypes(args: {
+    outDir: string;
+}) {
+    const cargoRunProcess = new Deno.Command("cargo", {
+        args: [
+            "run",
+            "-p",
+            "rs-lib-generate",
+            "--",
+            `${args.outDir}/types`,
+        ],
+        env: {
+            RUSTFLAGS: Deno.env.get("RUSTFLAGS") ?? "",
+        },
+    }).spawn();
+    const res = await cargoRunProcess.status;
+    if (!res.success) {
+        console.error(`❌ Generating TS types failed.`);
+        Deno.exit(1);
+    }
 }
 
 async function generateJsMainFile(args: {

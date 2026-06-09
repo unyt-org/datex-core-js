@@ -1,6 +1,8 @@
-import type { ComInterfaceConfiguration, JSComHub, NetworkTraceResult } from "../datex-web/datex_web.d.ts";
 import type { Runtime } from "../runtime/runtime.ts";
 import type { DIFValueContainer } from "../dif/types/value.ts";
+import type { JSComHub } from "../datex.ts";
+import type { ComHubMetadata } from "../datex-web/types/network/com_hub/metadata.ts";
+import type { NetworkTraceResult } from "../datex-web/types/network/com_hub/network_tracing.ts";
 
 export type ComInterfaceFactory<SetupData = unknown> = {
     interfaceType: string;

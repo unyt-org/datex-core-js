@@ -1,31 +1,10 @@
-use datex_core::{
-    libs::core::type_id::{
-        CoreLibBaseTypeId, CoreLibTypeId, CoreLibVariantTypeId,
-    },
-    types::{
-        literal_type_definition::LiteralTypeDefinition,
-        shared_container_containing_nominal_type::SharedContainerContainingNominalType,
-        shared_container_containing_type::SharedContainerContainingType,
-        r#type::Type,
-        type_definition::{
-            callable::CallableTypeDefinition,
-            intersection::IntersectionTypeDefinition, list::ListTypeDefinition,
-            map::MapTypeDefinition, tagged_type::TaggedTypeDefinition,
-            union::UnionTypeDefinition,
-        },
-        visitor::TypeFolder,
-    },
-    values::core_values::{
-        boolean::Boolean, integer::typed_integer::TypedInteger,
-    },
-};
+use datex_core::values::core_values::boolean::Boolean;
 use num_bigint::BigInt as NumBigInt;
-use std::collections::HashMap;
 
 use swc_common::DUMMY_SP;
 use swc_ecma_ast::{
-    BigInt, BindingIdent, Bool, Expr, Ident, Lit, Module, ModuleItem, Number,
-    Pat, RestPat, Str, TsArrayType, TsEntityName, TsFnParam, TsFnType,
+    BigInt, BindingIdent, Bool, Expr, Ident, Lit, ModuleItem, Number, Pat,
+    RestPat, Str, TsArrayType, TsEntityName, TsFnParam, TsFnType,
     TsIntersectionType, TsKeywordType, TsKeywordTypeKind, TsLit, TsLitType,
     TsPropertySignature, TsTupleElement, TsTupleType, TsType, TsTypeAliasDecl,
     TsTypeAnn, TsTypeElement, TsTypeParamInstantiation, TsTypeRef, TsUnionType,

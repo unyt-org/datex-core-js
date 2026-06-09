@@ -1,6 +1,6 @@
 import { Endpoint } from "../lib/special-core-types/endpoint.ts";
 import { Range } from "../lib/special-core-types/range.ts";
-import { BaseSharedContainer } from "../refs/shared-container.ts";
+import { BaseSharedContainer } from "../shared-container/mod.ts";
 
 // @ts-ignore devtoolsFormatters
 globalThis.devtoolsFormatters = [

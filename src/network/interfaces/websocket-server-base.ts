@@ -1,6 +1,6 @@
 import type { ComInterfaceFactory } from "../com-hub.ts";
-import type { SocketConfiguration, WebSocketServerInterfaceSetupData } from "../../datex.ts";
 import { tagged } from "datex/lib/special-core-types/tagged.ts";
+import type { WebSocketServerInterfaceSetupData } from "../../datex-web/types/network/com_interfaces/default_setup_data/websocket/websocket_server.ts";
 
 /**
  * Utility function to create a WebSocket server communication interface factory from a given server factory function.

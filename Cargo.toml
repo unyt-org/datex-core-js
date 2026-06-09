@@ -1,5 +1,3 @@
 [workspace]
-members = [
-  "rs-lib",
-]
+members = ["rs-lib", "rs-lib-generate"]
 resolver = "3"
