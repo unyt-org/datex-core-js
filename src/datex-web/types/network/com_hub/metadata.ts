@@ -8,13 +8,13 @@ import type { DynamicEndpointProperties } from "./managers/socket_manager.ts";
 
 export type ComHubMetadata = {
     endpoint: Endpoint;
-    interfaces: ComHubMetadataInterface[];
+    interfaces: unknown[];
 };
 
 export type ComHubMetadataInterface = {
     uuid: string;
     properties: ComInterfaceProperties;
-    sockets: ComHubMetadataInterfaceSocket[];
+    sockets: unknown[];
     is_waiting_for_socket_connections: boolean;
 };
 
