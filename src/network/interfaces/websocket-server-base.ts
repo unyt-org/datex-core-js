@@ -1,6 +1,7 @@
-import type { ComInterfaceFactory } from "../com-hub.ts";
+import type { ComInterfaceFactory, SocketConfiguration } from "../com-hub.ts";
 import { tagged } from "datex/lib/special-core-types/tagged.ts";
 import type { WebSocketServerInterfaceSetupData } from "../../datex-web/types/network/com_interfaces/default_setup_data/websocket/websocket_server.ts";
+import { DIFHandler } from "datex/dif/dif-handler.ts";
 
 /**
  * Utility function to create a WebSocket server communication interface factory from a given server factory function.
@@ -40,12 +41,11 @@ export function createWebsocketServerComInterfaceFactory(
                         async transform(socket, controller) {
                             const incoming_data_stream = await createSocketDataIterator(socket);
                             controller.enqueue({
-                                properties: {
+                                properties: DIFHandler.convertJSValueToDIFValueContainer({
                                     direction: tagged("InOut"),
                                     channel_factor: 1,
-                                    connection_timestamp: Date.now(),
-                                    direct_endpoint: undefined,
-                                },
+                                    direct_endpoint: null,
+                                }),
                                 iterator: incoming_data_stream,
                                 send_callback: (data: ArrayBuffer) => {
                                     socket.send(data);

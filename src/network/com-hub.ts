@@ -3,10 +3,17 @@ import type { DIFValueContainer } from "../dif/types/value.ts";
 import type { JSComHub } from "../datex.ts";
 import type { ComHubMetadata } from "../datex-web/types/network/com_hub/metadata.ts";
 import type { NetworkTraceResult } from "../datex-web/types/network/com_hub/network_tracing.ts";
+import { SocketPropertiesPartial } from "datex/datex-web/types/network/com_hub.ts";
 
 export type ComInterfaceFactory<SetupData = unknown> = {
     interfaceType: string;
     factory: ComInterfaceFactoryFn<SetupData>;
+};
+
+export type SocketConfiguration = {
+    properties: DIFValueContainer<SocketPropertiesPartial>;
+    iterator: ReadableStream<ArrayBufferLike>;
+    send_callback: (data: ArrayBuffer) => void;
 };
 
 export type ComInterfaceFactoryFn<SetupData = unknown> = (

@@ -1173,7 +1173,7 @@ export class DIFHandler {
         value: T,
         difHandlerInstance?: DIFHandler,
         forceExplicitFormat = false,
-    ): DIFValueContainer {
+    ): DIFValueContainer<T> {
         // if the value is a registered reference, return its address
         const existingReference = difHandlerInstance &&
             difHandlerInstance.tryGetReferenceMetadata(
@@ -1261,7 +1261,7 @@ export class DIFHandler {
      */
     public convertJSValueToDIFValueContainer<T extends unknown>(
         value: T,
-    ): DIFValueContainer {
+    ): DIFValueContainer<T> {
         return DIFHandler.convertJSValueToDIFValueContainer(
             value,
             this,

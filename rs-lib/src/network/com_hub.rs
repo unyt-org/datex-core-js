@@ -1,6 +1,10 @@
 use datex_core::{
-    dif::{cache::DIFSharedContainerCache, dif_interface::DIFInterface},
+    dif::{
+        cache::DIFSharedContainerCache,
+        dif_interface::{self, DIFInterface},
+    },
     global::dxb_block::DXBBlock,
+    macros::Datex,
     network::{
         com_hub::{
             ComHub, InterfacePriority,
@@ -16,7 +20,7 @@ use datex_core::{
                 ComInterfaceConfiguration, SendCallback, SendFailure,
                 SendSuccess, SocketConfiguration, SocketProperties,
             },
-            properties::ComInterfaceProperties,
+            properties::{ComInterfaceProperties, InterfaceDirection},
             socket::ComInterfaceSocketUUID,
         },
     },
@@ -177,13 +181,19 @@ impl JSComHub {
                                     return;
                                 }
 
-                                let (socket_properties, socket_iterator, send_callback) = match JSComHub::parse_socket_configuration(&read_result.get_value()) {
+                                let mut dif_interface = dif_interface.borrow_mut();
+                                let cache = &mut dif_interface.cache;
+
+                                let (socket_properties, socket_iterator, send_callback) = match JSComHub::parse_socket_configuration(&read_result.get_value(), cache) {
                                     Ok(result) => result,
                                     Err(e) => {
                                         error!("Error parse_socket_configuration: {:?}", e);
                                         return yield Err(());
                                     }
                                 };
+
+                                drop(dif_interface);
+
                                 let send_callback = Rc::new(send_callback);
                                 let socket_data_reader = socket_iterator.get_reader()
                                     .unchecked_into::<web_sys::ReadableStreamDefaultReader>();
@@ -273,6 +283,7 @@ impl JSComHub {
 
     fn parse_socket_configuration(
         socket_configuration: &JsValue,
+        cache: &mut DIFSharedContainerCache,
     ) -> Result<
         (SocketProperties, JsReadableStream, Function),
         serde_wasm_bindgen::Error,
@@ -281,14 +292,27 @@ impl JSComHub {
             Reflect::get(socket_configuration, &"properties".into())
                 .and_then(|v| v.dyn_into::<Object>())?;
 
-        // add uuid to properties since it is not set by the user but is required for the SocketProperties struct
-        Reflect::set(
-            &properties,
-            &"uuid".into(),
-            &ComInterfaceSocketUUID::new().to_string().into(),
-        )?;
+        #[derive(Debug, Clone, Datex)]
+        pub struct SocketPropertiesPartial {
+            pub direction: InterfaceDirection,
+            pub channel_factor: u32,
+            pub direct_endpoint: Option<Endpoint>,
+        }
 
-        let properties: SocketProperties = from_value(properties.into())?;
+        let properties: SocketPropertiesPartial =
+            from_dif_js_value(properties, cache).map_err(|e| {
+                serde_wasm_bindgen::Error::new(&format!(
+                    "Error parsing socket properties: {:?}",
+                    e
+                ))
+            })?;
+
+        // add uuid to properties since it is not set by the user but is required for the SocketProperties struct
+        let properties = SocketProperties::new_with_direct_endpoint(
+            properties.direction,
+            properties.channel_factor,
+            properties.direct_endpoint.unwrap_or_default(),
+        );
 
         // get iterator from socket_configuration
         // NOTE: dyn_into does not work here, maybe a bug in js_sys?

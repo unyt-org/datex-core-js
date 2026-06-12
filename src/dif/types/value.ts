@@ -15,7 +15,7 @@ export type DIFOptionalValueContainer = null | [DIFValueContainer];
 /**
  * DIF value container, which can be either a pointer address or a value.
  */
-export type DIFValueContainer = DIFPointerAddress | DIFValue;
+export type DIFValueContainer<T = unknown> = DIFPointerAddress | DIFValue;
 
 /**
  * A DATEX pointer address representation in the DIF format.
