@@ -5,7 +5,7 @@ import * as uuid from "@std/uuid";
 import { isNodeOrBun } from "../is-node.ts";
 import { websocketServerDenoComInterfaceFactory } from "datex/network/interfaces/websocket-server-deno.ts";
 import { sleep } from "../utils.ts";
-import { Endpoint } from "datex/lib/mod.ts";
+import { Endpoint, tagged } from "datex/lib/mod.ts";
 
 Deno.test("add and close interface", async () => {
     const runtime = await Runtime.create({ endpoint: Endpoint.get("@unyt") }, { log_level: "debug" });
@@ -65,18 +65,18 @@ Deno.test("connect two runtimes", async () => {
     const serverInterfaceMetadata = runtimeA.comHub.getMetadata().interfaces
         .find((v) => v.uuid === serverInterfaceUUID);
     assert(serverInterfaceMetadata !== undefined);
-    const serverSocketMetadata = serverInterfaceMetadata.sockets.find((v) => v.endpoint === "@test_b");
+    const serverSocketMetadata = serverInterfaceMetadata.sockets.find((v) => v.endpoint === Endpoint.get("@test_b"));
     assert(serverSocketMetadata !== undefined);
-    assertEquals(serverSocketMetadata.direction, "InOut");
+    assertEquals(serverSocketMetadata.direction, tagged("InOut"));
     assertEquals(serverSocketMetadata.properties!.is_direct, true);
     assertEquals(serverSocketMetadata.properties!.distance, 1);
 
     const clientInterfaceMetaData = runtimeB.comHub.getMetadata().interfaces
         .find((v) => v.uuid === clientInterfaceUUID);
     assert(clientInterfaceMetaData !== undefined);
-    const clientSocketMetadata = clientInterfaceMetaData.sockets.find((v) => v.endpoint === "@test_a");
+    const clientSocketMetadata = clientInterfaceMetaData.sockets.find((v) => v.endpoint === Endpoint.get("@test_a"));
     assert(clientSocketMetadata !== undefined);
-    assertEquals(clientSocketMetadata.direction, "InOut");
+    assertEquals(clientSocketMetadata.direction, tagged("InOut"));
     assertEquals(clientSocketMetadata.properties!.is_direct, true);
     assertEquals(clientSocketMetadata.properties!.distance, 1);
 
