@@ -94,7 +94,7 @@ export class ComHub {
 
     public getMetadata(): ComHubMetadata {
         // as any required because get_metadata only exists in debug builds
-        return this.#jsComHub.get_metadata();
+        return this.#runtime.dif.resolveDIFValueContainer(this.#jsComHub.get_metadata()) as ComHubMetadata;
     }
 
     /**

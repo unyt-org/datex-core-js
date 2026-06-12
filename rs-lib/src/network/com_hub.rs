@@ -308,10 +308,10 @@ impl JSComHub {
             })?;
 
         // add uuid to properties since it is not set by the user but is required for the SocketProperties struct
-        let properties = SocketProperties::new_with_direct_endpoint(
+        let properties = SocketProperties::new_with_maybe_direct_endpoint(
             properties.direction,
             properties.channel_factor,
-            properties.direct_endpoint.unwrap_or_default(),
+            properties.direct_endpoint,
         );
 
         // get iterator from socket_configuration
