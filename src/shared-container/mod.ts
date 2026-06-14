@@ -43,7 +43,7 @@ export function combinePointerAddressWithOwnership(
 /**
  * Represents a shared container, which can be either an owned container or a referenced container.
  */
-export type SharedContainer<T, Mutability extends SharedContainerMutability = SharedContainerMutability.Immutable> =
+export type SharedContainer<T, Mutability extends SharedContainerMutability = SharedContainerMutability> =
     | OwnedSharedContainer<T, Mutability>
     | ReferencedSharedContainer<T, Mutability, typeof SharedReferenceMutability.Immutable>
     | ReferencedSharedContainer<T, Mutability, typeof SharedReferenceMutability.Mutable>;

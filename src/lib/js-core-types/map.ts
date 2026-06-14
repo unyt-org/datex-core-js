@@ -2,6 +2,7 @@ import { CoreLibTypeId } from "../../dif/core.ts";
 import { JsLibTypeAddress } from "../../dif/js-lib.ts";
 import type { TypeBindingDefinition } from "../../dif/type-registry.ts";
 import type { DIFImplTypeDefinition, DIFTypeDefinition } from "../../dif/types/mod.ts";
+import type { SharedRef } from "datex/shared-container/mod.ts";
 
 const ORIGINAL_SET = Symbol("ORIGINAL_SET");
 const ORIGINAL_DELETE = Symbol("ORIGINAL_DELETE");
@@ -19,14 +20,14 @@ export const mapTypeBinding: TypeBindingDefinition<
 > = {
     coreLibTypeId: CoreLibTypeId.Map,
     bind(value, pointerAddress) {
-        const originalSet = value.set.bind(value);
+        const originalSet = value.set.bind(value) as (key: unknown, value: unknown) => SharedRef<Map<unknown, unknown>>;
         const originalDelete = value.delete.bind(value);
         const originalClear = value.clear.bind(value);
         Object.defineProperties(value, {
             set: {
-                value: (key: unknown, value: unknown) => {
-                    this.difHandler.triggerSet(pointerAddress, key, value);
-                    return originalSet.call(value, key, value);
+                value: (key: unknown, val: unknown) => {
+                    this.difHandler.triggerSet(pointerAddress, key, val);
+                    return originalSet.call(value, key, val);
                 },
                 configurable: true,
                 writable: true,
