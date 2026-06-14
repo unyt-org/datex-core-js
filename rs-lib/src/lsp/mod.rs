@@ -1,11 +1,11 @@
-use futures::StreamExt;
-use wasm_bindgen::{JsCast, JsValue, prelude::Closure};
-use datex_core::runtime::Runtime;
-use datex_core::lsp::io::{Reader, Writer};
-use futures::channel::mpsc;
+use datex_core::{
+    lsp::io::{Reader, Writer},
+    runtime::Runtime,
+};
+use futures::{StreamExt, channel::mpsc};
 use js_sys::Uint8Array;
+use wasm_bindgen::{JsCast, JsValue, prelude::Closure};
 use wasm_bindgen_futures::spawn_local;
-
 
 pub fn start_lsp(
     runtime: Runtime,

@@ -122,8 +122,16 @@ impl JSDIFInterface {
         let update: Update = from_js_value(update, &mut self.cache())?;
         let update_clone = update.clone();
 
-        let result = self.dif_interface.borrow().update(&address, update).map_err(js_error)?;
-        let observer_callbacks = self.dif_interface.borrow().get_current_observers(&address, update_clone.source_id).map_err(js_error)?;
+        let result = self
+            .dif_interface
+            .borrow()
+            .update(&address, update)
+            .map_err(js_error)?;
+        let observer_callbacks = self
+            .dif_interface
+            .borrow()
+            .get_current_observers(&address, update_clone.source_id)
+            .map_err(js_error)?;
 
         // Call each observer synchronously
         for callback in observer_callbacks {

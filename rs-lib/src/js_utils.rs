@@ -1,10 +1,13 @@
 use core::fmt::{Debug, Display};
 use datex_core::{
+    datex_proxy::{
+        DatexValueContainerProxyDeserialize,
+        DatexValueContainerProxyInfallibleSerialize,
+    },
     dif::{cache::DIFSharedContainerCache, serde_context::SerdeContext},
+    utils::serde_serialize_seed::SerializeSeed,
+    values::value_container::ValueContainer,
 };
-use datex_core::datex_proxy::{DatexValueContainerProxyDeserialize, DatexValueContainerProxyInfallibleSerialize};
-use datex_core::utils::serde_serialize_seed::SerializeSeed;
-use datex_core::values::value_container::ValueContainer;
 use serde::{
     Serialize,
     de::{DeserializeOwned, DeserializeSeed},
@@ -34,7 +37,6 @@ pub fn unwrap_or_report_js_error_display<T, E: Display>(
         }
     }
 }
-
 
 /// Unwraps a Result, and if it's an Err, reports it as a JavaScript error and returns None.
 /// Works for errors that implement Debug
@@ -118,8 +120,11 @@ where
     SerdeContext<'de, T>: DeserializeSeed<'de, Value = T>,
 {
     let context = SerdeContext::<T>::new(cache);
-    DeserializeSeed::deserialize(context, serde_wasm_bindgen::Deserializer::from(value.into()))
-        .map_err(js_error)
+    DeserializeSeed::deserialize(
+        context,
+        serde_wasm_bindgen::Deserializer::from(value.into()),
+    )
+    .map_err(js_error)
 }
 
 /// Convert a DIF format JsValue to a #[Datex] struct
@@ -128,8 +133,12 @@ pub fn from_dif_js_value<T: DatexValueContainerProxyDeserialize>(
     cache: &mut DIFSharedContainerCache,
 ) -> Result<T, JsError> {
     let value_container: ValueContainer = from_js_value(value, cache)?;
-    T::try_from_value_container(value_container)
-        .map_err(|e| js_error(format!("Failed to convert ValueContainer to target type: {:?}", e)))
+    T::try_from_value_container(value_container).map_err(|e| {
+        js_error(format!(
+            "Failed to convert ValueContainer to target type: {:?}",
+            e
+        ))
+    })
 }
 
 /// Convert a DIF-serializable Rust value (e.g. [Value], [ValueContainer]) to a JsValue, using the DIF cache for resolving shared containers
@@ -142,10 +151,7 @@ where
 {
     let mut context = SerdeContext::<T>::new(cache);
     context
-        .serialize(
-            value,
-            &serde_wasm_bindgen::Serializer::json_compatible(),
-        )
+        .serialize(value, &serde_wasm_bindgen::Serializer::json_compatible())
         .unwrap()
 }
 
