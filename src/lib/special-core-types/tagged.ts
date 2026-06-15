@@ -31,9 +31,16 @@ export class Tagged<Tag extends string, const Value = typeof EMPTY_TAG> {
 /**
  * Creates a new Tagged instance with the given tag and value.
  */
-export function tagged<Tag extends string, const Value = typeof EMPTY_TAG>(
+export function tagged<Tag extends string>(
     tag: Tag,
-    value: Value = EMPTY_TAG as Value,
-): Tagged<Tag, Value> {
-    return new Tagged(tag, value);
+): Tagged<Tag, typeof EMPTY_TAG>;
+export function tagged<Tag extends string, const Value>(
+    tag: Tag,
+    value: Value,
+): Tagged<Tag, Value>;
+export function tagged<Tag extends string>(
+    tag: Tag,
+    value: unknown = EMPTY_TAG,
+): Tagged<Tag, never> {
+    return new Tagged(tag, value) as Tagged<Tag, never>;
 }
