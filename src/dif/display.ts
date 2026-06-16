@@ -172,6 +172,12 @@ export function difTypeDefinitionToDisplayString(
 export function addressToDisplayString(address: PointerAddress): string {
     return `$${address}`;
 }
+
+/**
+ * Converts a core lib type id to a display string.
+ * @param typeId The core lib type id to convert.
+ * @returns The display string for the given core lib type id.
+ */
 export function coreLibTypeIdToDisplayString(
     typeId: CoreLibTypeId,
 ): string {

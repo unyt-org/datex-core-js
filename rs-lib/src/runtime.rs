@@ -257,6 +257,12 @@ impl JSRuntime {
         inserted_values: Option<Vec<JsValue>>,
         decompile_options: JsValue,
     ) -> Result<String, JsError> {
+        let decompile_options: DecompileOptions = from_dif_js_value(
+            decompile_options,
+            &mut DIFSharedContainerCache::default(),
+        )
+        .unwrap_or_default();
+
         let val = &self.js_values_to_value_containers(inserted_values)?;
         let result = self
             .runtime
@@ -265,10 +271,7 @@ impl JSRuntime {
             .map_err(js_error)?;
         match result {
             None => Ok("".to_string()),
-            Some(result) => Ok(decompile_value(
-                &result,
-                from_value(decompile_options).unwrap_or_default(),
-            )),
+            Some(result) => Ok(decompile_value(&result, decompile_options)),
         }
     }
 
@@ -296,6 +299,12 @@ impl JSRuntime {
         dif_values: Option<Vec<JsValue>>,
         decompile_options: JsValue,
     ) -> Result<String, JsError> {
+        let decompile_options: DecompileOptions = from_dif_js_value(
+            decompile_options,
+            &mut DIFSharedContainerCache::default(),
+        )
+        .unwrap_or_default();
+
         let input = self
             .runtime
             .execute_sync(
@@ -306,10 +315,7 @@ impl JSRuntime {
             .map_err(js_error)?;
         match input {
             None => Ok("".to_string()),
-            Some(result) => Ok(decompile_value(
-                &result,
-                from_value(decompile_options).unwrap_or_default(),
-            )),
+            Some(result) => Ok(decompile_value(&result, decompile_options)),
         }
     }
 
@@ -335,10 +341,12 @@ impl JSRuntime {
         decompile_options: JsValue,
     ) -> Result<String, JsError> {
         let value_container = self.js_value_to_value_container(dif_value)?;
-        Ok(decompile_value(
-            &value_container,
-            from_value(decompile_options).unwrap_or_default(),
-        ))
+        let decompile_options: DecompileOptions = from_dif_js_value(
+            decompile_options,
+            &mut DIFSharedContainerCache::default(),
+        )
+        .unwrap_or_default();
+        Ok(decompile_value(&value_container, decompile_options))
     }
 
     /// Converts a list of [JsValue]s to a list of [ValueContainer], using the DIF cache for resolving shared containers if necessary

@@ -1,3 +1,6 @@
+/**
+ * Helper methods for creating update data dif structures.
+ */
 import type { DIFProperty, DIFValueContainer } from "./types/mod.ts";
 import { type DIFUpdateData, DIFUpdateKind } from "./types/update.ts";
 

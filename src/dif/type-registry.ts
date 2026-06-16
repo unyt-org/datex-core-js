@@ -1,3 +1,7 @@
+/**
+ * This module implements the TypeRegistry and TypeBinding classes which allow registering custom type definitions and bindings to JS implementations.
+ */
+
 import { DEBUG_MODE } from "../global.ts";
 import type { CoreLibTypeId } from "./core.ts";
 import { type DIFTypeDefinition, type DIFUpdateData, DIFUpdateKind } from "./types/mod.ts";

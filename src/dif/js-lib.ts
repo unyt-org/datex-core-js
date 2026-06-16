@@ -14,6 +14,10 @@ export function createReservedPointerAddress(id: number): PointerAddress {
     return "ff".repeat(21) + idHex.padStart(10, "0") as PointerAddress;
 }
 
+/**
+ * Mapping of js lib types to their unique reserved internal pointer addresses.
+ * These addresses are used to identify impl types dedicated to special js lib types.
+ */
 export const JsLibTypeAddress = {
     undefined: createReservedPointerAddress(0),
     map: createReservedPointerAddress(1),

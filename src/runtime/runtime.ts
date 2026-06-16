@@ -296,7 +296,7 @@ export class Runtime {
     ): string {
         return this.#runtime.value_to_string(
             this.#difHandler.convertJSValueToDIFValueContainer(value),
-            decompileOptions,
+            this.#difHandler.convertJSValueToDIFValueContainer(decompileOptions),
         );
     }
 

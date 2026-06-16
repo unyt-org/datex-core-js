@@ -4,14 +4,19 @@
 
 import type { Tagged } from "../../../lib/mod.ts";
 
+export type IndentType = Tagged<"Spaces"> | Tagged<"Tabs">;
+
+export type FormattingMode = Tagged<"Compact"> | Tagged<"Pretty", {
+    indent: number;
+    indent_type: IndentType;
+}>;
+
 export type FormattingOptions = {
-    mode: unknown;
+    mode: FormattingMode;
     json_compat: boolean;
     colorized: boolean;
     add_variant_suffix: boolean;
 };
-
-export type IndentType = Tagged<"Spaces"> | Tagged<"Tabs">;
 
 export type DecompileOptions = {
     formatting_options: FormattingOptions;

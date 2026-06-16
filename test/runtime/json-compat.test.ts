@@ -22,7 +22,8 @@ const TEXT_INPUTS = [
 
 import { Runtime } from "datex/runtime/runtime.ts";
 import { assertEquals } from "@std/assert";
-import { Endpoint } from "datex/lib/mod.ts";
+import { Endpoint, Tagged } from "datex/lib/mod.ts";
+import type { FormattingMode } from "../../src/datex-web/types/decompiler/options.ts";
 
 const runtime = await Runtime.create({ endpoint: Endpoint.get("@jonas") });
 
@@ -41,7 +42,12 @@ Deno.test(`JSON stringify compatibility`, async (t) => {
         await t.step(`Testing input: ${input}`, () => {
             const value = JSON.parse(input);
             const stringFromRuntime = runtime.valueToString(value, {
-                formatting_options: { json_compat: true },
+                formatting_options: {
+                    json_compat: true,
+                    add_variant_suffix: false,
+                    mode: new Tagged("Compact") as FormattingMode,
+                    colorized: false,
+                },
                 resolve_slots: false,
             });
             const stringFromJSON = JSON.stringify(value);
