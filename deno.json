@@ -16,6 +16,7 @@
         ]
     },
     "tasks": {
+        "types": "cargo run -p rs-lib-generate -- ./src/datex-web/types",
         "debug": "deno run -A scripts/build-wasm.ts --profile debug",
         "release": "deno run -A scripts/build-wasm.ts --profile release",
         "debug-unsecure": "deno run -A scripts/build-wasm.ts --profile debug --features allow_unsigned_blocks",
