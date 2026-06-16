@@ -3,6 +3,7 @@
 // deno-fmt-ignore-file
 
 import type { Tagged } from "../../../../../lib/mod.ts";
+import type { RuntimeConfigInterface } from "../../../runtime/config.ts";
 
 export type InterfaceDirection = Tagged<"In"> | Tagged<"Out"> | Tagged<"InOut">;
 
@@ -28,5 +29,5 @@ export type ComInterfaceProperties = {
     is_secure_channel: boolean;
     reconnection_config: ReconnectionConfig;
     auto_identify: boolean;
-    connectable_interfaces: null | unknown[];
+    connectable_interfaces: null | RuntimeConfigInterface[];
 };

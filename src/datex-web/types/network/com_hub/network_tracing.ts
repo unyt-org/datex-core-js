@@ -4,13 +4,6 @@
 
 import type { Endpoint, Tagged } from "../../../../lib/mod.ts";
 
-export type NetworkTraceResult = {
-    sender: Endpoint;
-    receiver: Endpoint;
-    hops: unknown[];
-    round_trip_time: unknown;
-};
-
 export type NetworkTraceHopSocket = {
     interface_type: string;
     interface_name: null | string;
@@ -27,4 +20,11 @@ export type NetworkTraceHop = {
     direction: NetworkTraceHopDirection;
     fork_nr: string;
     bounce_back: boolean;
+};
+
+export type NetworkTraceResult = {
+    sender: Endpoint;
+    receiver: Endpoint;
+    hops: NetworkTraceHop[];
+    round_trip_time: unknown;
 };

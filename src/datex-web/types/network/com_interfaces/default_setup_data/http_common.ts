@@ -5,8 +5,8 @@
 import type { Tagged } from "../../../../../lib/mod.ts";
 
 export type TLSMode = Tagged<"HandledExternally"> | Tagged<"WithCertificate", {
-    private_key: unknown[];
-    certificate: unknown[];
+    private_key: number[];
+    certificate: number[];
 }>;
 
 export type AcceptAddress = {
