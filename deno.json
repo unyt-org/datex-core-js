@@ -76,12 +76,16 @@
             "command": "deno fmt && cargo fmt"
         },
         "lint": {
-            "description": "Run auto-fixing Deno lint and Rust clippy checks.",
-            "command": "deno lint --fix && cargo clippy --fix --allow-dirty --allow-staged"
+            "description": "Report Deno lint and Rust clippy issues without applying fixes.",
+            "command": "deno lint && cargo clippy --all-targets --all-features"
         },
         "check": {
-            "description": "Type-check source and test TypeScript files.",
+            "description": "Type-check TypeScript sources and tests.",
             "command": "deno check -I ./src ./test"
+        },
+        "fix": {
+            "description": "Apply automatic formatting and lint fixes for Deno and Rust.",
+            "command": "deno fmt && cargo fmt && deno lint --fix && cargo clippy --fix --all-features --allow-dirty --allow-staged"
         }
     },
     "fmt": {
