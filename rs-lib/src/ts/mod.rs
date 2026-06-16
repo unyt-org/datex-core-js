@@ -30,6 +30,11 @@ pub fn resolve_registry_types<'a>(
             .unwrap_or(metadata.namespace)
             .to_string();
 
+        if metadata.name.contains("ComHubMetadataInterface") {
+            println!("Found registration: {}", metadata.name);
+            println!("{}", registration.resolve(memory));
+        }
+
         exports_by_file
             .entry(namespace.into())
             .or_default()

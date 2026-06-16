@@ -16,6 +16,7 @@ use datex_core::{
         r#type::Type,
         type_definition::{
             callable::CallableTypeDefinition,
+            collection::type_definition::list::ListCollectionTypeDefinition,
             intersection::IntersectionTypeDefinition, list::ListTypeDefinition,
             map::MapTypeDefinition, tagged_type::TaggedTypeDefinition,
             union::UnionTypeDefinition,
@@ -434,7 +435,7 @@ impl TypeFolder for TsTypeFolder {
         _source: &ListTypeDefinition,
         elements: Vec<Self::Output>,
     ) -> Result<Self::Output, Self::Error> {
-        Ok(ts_tuple(elements))
+        Ok(ts_array(ts_union(elements)))
     }
 
     fn fold_map(
@@ -564,5 +565,13 @@ impl TypeFolder for TsTypeFolder {
             generics.push(payload);
         }
         self.external_type_reference("Tagged", generics)
+    }
+
+    fn fold_list_collection(
+        &mut self,
+        source: &ListCollectionTypeDefinition,
+        item: Self::Output,
+    ) -> Result<Self::Output, Self::Error> {
+        Ok(ts_array(item))
     }
 }
