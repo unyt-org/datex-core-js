@@ -16,9 +16,17 @@ use datex_core::{
         r#type::Type,
         type_definition::{
             callable::CallableTypeDefinition,
-            collection::type_definition::list::ListCollectionTypeDefinition,
-            intersection::IntersectionTypeDefinition, list::ListTypeDefinition,
-            map::MapTypeDefinition, tagged_type::TaggedTypeDefinition,
+            collection::type_definition::{
+                list::ListCollectionTypeDefinition,
+                list_slice::ListSliceCollectionTypeDefinition,
+                map::MapCollectionTypeDefinition,
+            },
+            impl_type::ImplTypeDefinition,
+            intersection::IntersectionTypeDefinition,
+            list::ListTypeDefinition,
+            map::MapTypeDefinition,
+            range::RangeTypeDefinition,
+            tagged_type::TaggedTypeDefinition,
             union::UnionTypeDefinition,
         },
         visitor::TypeFolder,
@@ -178,7 +186,7 @@ impl TsTypeFolder {
             }
         }
 
-        //fold through the same graph builder
+        // fold through the same graph builder
         for (file, exports) in &modules {
             self.current_file = Some(file.clone());
             for export in exports {
@@ -335,7 +343,6 @@ impl TsTypeFolder {
             })?;
 
             let source = rebase_known_type_source(&current_file, &source);
-
             self.ast.add_import(&current_file, source, name);
         }
 
@@ -413,15 +420,12 @@ impl TypeFolder for TsTypeFolder {
             LiteralTypeDefinition::Decimal(decimal) => {
                 ts_number_literal(decimal.into_f64())
             }
-
             LiteralTypeDefinition::TypedDecimal(decimal) => {
                 ts_number_literal(decimal.as_f64())
             }
-
             LiteralTypeDefinition::Boolean(boolean) => {
                 ts_boolean_literal(boolean)
             }
-
             LiteralTypeDefinition::Endpoint(endpoint) => self
                 .external_type_reference(
                     "Endpoint",
@@ -573,5 +577,156 @@ impl TypeFolder for TsTypeFolder {
         item: Self::Output,
     ) -> Result<Self::Output, Self::Error> {
         Ok(ts_array(item))
+    }
+
+    fn fold_range(
+        &mut self,
+        source: &RangeTypeDefinition,
+        start: Self::Output,
+        end: Self::Output,
+    ) -> Result<Self::Output, Self::Error> {
+        self.external_type_reference("Range", vec![start, end])
+    }
+
+    fn fold_impl_type(
+        &mut self,
+        source: &ImplTypeDefinition,
+        ty: Self::Output,
+    ) -> Result<Self::Output, Self::Error> {
+        todo!()
+    }
+
+    fn fold_list_slice_collection(
+        &mut self,
+        source: &ListSliceCollectionTypeDefinition,
+        item: Self::Output,
+    ) -> Result<Self::Output, Self::Error> {
+        let size = source.size;
+        self.external_type_reference(
+            "ListSlice",
+            vec![item, ts_number_literal(size as f64)],
+        )
+    }
+
+    fn fold_map_collection(
+        &mut self,
+        source: &MapCollectionTypeDefinition,
+        key: Self::Output,
+        value: Self::Output,
+    ) -> Result<Self::Output, Self::Error> {
+        Ok(ts_type_reference("Record", vec![key, value]))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+
+    use crate::ts::{TsExport, TsTypeFolder};
+    use datex_core::{
+        datex_proxy::DatexProxyTypes, macros::Datex, runtime::memory::Memory,
+        types::r#type::Type,
+    };
+    use dedent::dedent;
+
+    /// Helper function to fold a type into a TypeScript AST and convert it to a string.
+    fn to_typescript(ty: Type) -> String {
+        let mut folder = TsTypeFolder::new();
+        let ast = folder
+            .fold_modules([(
+                "test.ts",
+                vec![TsExport {
+                    name: "Test",
+                    ty,
+                    docs: None,
+                }],
+            )])
+            .unwrap();
+        ast.files
+            .iter()
+            .next()
+            .map(|(_, file_ast)| file_ast.to_typescript())
+            .expect("Expected exactly one file in AST")
+    }
+
+    #[test]
+    fn simple_types() {
+        #[derive(Datex)]
+        struct Test {
+            a: String,
+            b: i32,
+        }
+
+        assert_eq!(
+            to_typescript(Test::datex_type(&mut Memory::default())),
+            dedent!(
+                r#"
+                export type Test = {
+                    a: string;
+                    b: number;
+                };
+                "#
+            )
+        );
+    }
+
+    #[test]
+    fn list_and_map() {
+        #[derive(Datex)]
+        struct Test {
+            a: Vec<String>,
+            b: HashMap<String, i32>,
+        }
+
+        assert_eq!(
+            to_typescript(Test::datex_type(&mut Memory::default())),
+            dedent!(
+                r#"
+                export type Test = {
+                    a: string[];
+                    b: Record<string, number>;
+                };
+                "#
+            )
+        );
+    }
+
+    #[test]
+    fn option() {
+        #[derive(Datex)]
+        struct Test {
+            a: Option<String>,
+        }
+
+        assert_eq!(
+            to_typescript(Test::datex_type(&mut Memory::default())),
+            dedent!(
+                r#"
+                export type Test = {
+                    a: string | null;
+                };
+                "#
+            )
+        );
+    }
+
+    #[test]
+    fn tagged() {
+        #[derive(Datex)]
+        enum Test {
+            A { x: i32 },
+            B,
+        }
+
+        assert_eq!(
+            to_typescript(Test::datex_type(&mut Memory::default())),
+            dedent!(
+                r#"
+                export type Test = Tagged<"A", {
+                    x: number;
+                }> | Tagged<"B">;
+                "#
+            )
+        );
     }
 }
