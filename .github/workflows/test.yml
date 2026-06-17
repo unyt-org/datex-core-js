@@ -15,7 +15,7 @@ jobs:
               with:
                   deno-version: v2.x
             - name: Build
-              run: deno task debug-no-opt
+              run: deno task build:debug:no-opt
             - name: Upload build artifacts
               uses: actions/upload-artifact@v4
               with:
@@ -68,7 +68,7 @@ jobs:
                   deno-version: v2.x
 
             - name: Run Tests
-              run: deno task test-no-build
+              run: deno task test:no-build
 
     publish-jsr-dry-run:
         runs-on: ubuntu-latest
@@ -116,7 +116,7 @@ jobs:
                   registry-url: "https://registry.npmjs.org"
 
             - name: Build for NPM
-              run: deno task build-npm
+              run: deno task build:npm
 
             - name: Publish to NPM
               env:
