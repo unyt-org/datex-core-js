@@ -23,8 +23,7 @@ use std::{
     ops::DerefMut,
     rc::Rc,
 };
-use wasm_bindgen::{JsError, JsValue, prelude::wasm_bindgen};
-use web_sys::console::info;
+use wasm_bindgen::{JsError, JsValue, prelude::*};
 
 #[wasm_bindgen]
 #[derive(Clone)]
@@ -39,7 +38,7 @@ impl JSDIFInterface {
             dif_interface: Rc::new(RefCell::new(dif_interface)),
         }
     }
-    pub fn cache(&self) -> RefMut<DIFSharedContainerCache> {
+    pub fn cache(&'_ self) -> RefMut<'_, DIFSharedContainerCache> {
         RefMut::map(self.dif_interface.borrow_mut(), |interface| {
             &mut interface.cache
         })
