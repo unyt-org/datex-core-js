@@ -4,7 +4,7 @@ use crate::js_utils::{
 };
 use datex_core::{
     dif::{
-        cache::DIFSharedContainerCache, dif_interface::DIFInterface,
+        dif_interface::DIFInterface,
         error::DIFUpdateError, pointer_address::PointerAddressWithOwnership,
     },
     shared_values::{
@@ -23,6 +23,7 @@ use std::{
     ops::DerefMut,
     rc::Rc,
 };
+use datex_core::runtime::cache::shared_values_cache::SharedValuesCache;
 use wasm_bindgen::{JsError, JsValue, prelude::*};
 
 #[wasm_bindgen]
@@ -38,7 +39,7 @@ impl JSDIFInterface {
             dif_interface: Rc::new(RefCell::new(dif_interface)),
         }
     }
-    pub fn cache(&'_ self) -> RefMut<'_, DIFSharedContainerCache> {
+    pub fn cache(&'_ self) -> RefMut<'_, SharedValuesCache> {
         RefMut::map(self.dif_interface.borrow_mut(), |interface| {
             &mut interface.cache
         })

@@ -21,13 +21,14 @@ use datex_core::{
     crypto::CryptoImpl,
     datex_proxy::DatexValueContainerProxyInfallibleSerialize,
     decompiler::DecompileOptions,
-    dif::{cache::DIFSharedContainerCache, dif_interface::DIFInterface},
+    dif::{dif_interface::DIFInterface},
     runtime::{
-        Runtime, RuntimeConfig, RuntimeInternal, RuntimeRunner, memory::Memory,
+        Runtime, RuntimeConfig, RuntimeInternal, RuntimeRunner,
     },
 };
 use serde_wasm_bindgen::from_value;
 use std::{cell::RefCell, fmt::Display, rc::Rc};
+use datex_core::runtime::cache::shared_values_cache::SharedValuesCache;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::{future_to_promise, spawn_local};
 use web_sys::js_sys::Promise;
@@ -52,7 +53,7 @@ impl JSRuntime {
         // FIXME remove
         wasm_logger::init(wasm_logger::Config::new(log::Level::Debug));
         let config: RuntimeConfig =
-            from_dif_js_value(config, &mut DIFSharedContainerCache::default())
+            from_dif_js_value(config, &mut SharedValuesCache::default())
                 .unwrap();
         info!(
             "Initializing runtime with config: {}",
@@ -259,7 +260,7 @@ impl JSRuntime {
     ) -> Result<String, JsError> {
         let decompile_options: DecompileOptions = from_dif_js_value(
             decompile_options,
-            &mut DIFSharedContainerCache::default(),
+            &mut SharedValuesCache::default(),
         )
         .unwrap_or_default();
 
@@ -301,7 +302,7 @@ impl JSRuntime {
     ) -> Result<String, JsError> {
         let decompile_options: DecompileOptions = from_dif_js_value(
             decompile_options,
-            &mut DIFSharedContainerCache::default(),
+            &mut SharedValuesCache::default(),
         )
         .unwrap_or_default();
 
@@ -343,7 +344,7 @@ impl JSRuntime {
         let value_container = self.js_value_to_value_container(dif_value)?;
         let decompile_options: DecompileOptions = from_dif_js_value(
             decompile_options,
-            &mut DIFSharedContainerCache::default(),
+            &mut SharedValuesCache::default(),
         )
         .unwrap_or_default();
         Ok(decompile_value(&value_container, decompile_options))
@@ -404,18 +405,18 @@ impl JSRuntime {
         script: &str,
         inserted_values: Option<Vec<JsValue>>,
     ) -> Result<Vec<u8>, JsValue> {
-        let (bytes, _) = compile_template(
+        let (dxb, _) = compile_template(
             script,
             self.js_values_to_value_containers(inserted_values)?
                 .into_iter()
                 .map(Some)
-                .collect::<Vec<_>>()
-                .as_slice(),
+                .collect::<Vec<_>>(),
             CompileOptions::default(),
             self.runtime.clone(),
         )
         .map_err(js_error)?;
-        Ok(bytes)
+        // TODO: handle dxb.values?
+        Ok(dxb.dxb)
     }
 
     /// Start the LSP server, returning a JS function to send messages to Rust

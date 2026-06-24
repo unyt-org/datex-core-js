@@ -1,6 +1,5 @@
 use datex_core::{
     dif::{
-        cache::DIFSharedContainerCache,
         dif_interface::{self, DIFInterface},
     },
     global::dxb_block::DXBBlock,
@@ -35,6 +34,7 @@ use js_sys::{Function, JsFunction1, Object, Promise, Reflect};
 use log::{error, info};
 use serde_wasm_bindgen::from_value;
 use std::{cell::RefCell, ops::Deref, rc::Rc, str::FromStr};
+use datex_core::runtime::cache::shared_values_cache::SharedValuesCache;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::{JsFuture, future_to_promise};
 use web_sys::js_sys::{self};
@@ -253,7 +253,7 @@ impl JSComHub {
 
     fn parse_com_interface_configuration(
         interface_configuration: &JsValue,
-        cache: &mut DIFSharedContainerCache,
+        cache: &mut SharedValuesCache,
     ) -> Result<(ComInterfaceProperties, bool, JsReadableStream), JsValue> {
         let properties =
             Reflect::get(interface_configuration, &"properties".into())?;
@@ -283,7 +283,7 @@ impl JSComHub {
 
     fn parse_socket_configuration(
         socket_configuration: &JsValue,
-        cache: &mut DIFSharedContainerCache,
+        cache: &mut SharedValuesCache,
     ) -> Result<
         (SocketProperties, JsReadableStream, Function),
         serde_wasm_bindgen::Error,

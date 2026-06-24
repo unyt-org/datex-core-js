@@ -1,4 +1,4 @@
-use datex_web::ts::{Memory, TsTypeFolder, resolve_registry_types};
+use datex_web::ts::{SharedReferencesCache, TsTypeFolder, resolve_registry_types};
 use std::{env, fs, path::PathBuf};
 
 const GENERATED_FILE_HEADER: &str = "\
@@ -20,7 +20,7 @@ fn main() {
 
     let mut folder = TsTypeFolder::new()
         .with_known_types("../../lib/mod.ts", ["Endpoint", "Tagged", "Type"]);
-    let memory = &mut Memory::default();
+    let memory = &mut SharedReferencesCache::default();
     let resolved = resolve_registry_types(memory, &mut folder);
     if resolved.is_err() {
         eprintln!("Failed to resolve registry types: {:#?}", resolved.err());

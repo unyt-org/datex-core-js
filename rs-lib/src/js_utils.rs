@@ -4,10 +4,11 @@ use datex_core::{
         DatexValueContainerProxyDeserialize,
         DatexValueContainerProxyInfallibleSerialize,
     },
-    dif::{cache::DIFSharedContainerCache, serde_context::SerdeContext},
+    dif::{serde_context::SerdeContext},
     utils::serde_serialize_seed::SerializeSeed,
     values::value_container::ValueContainer,
 };
+use datex_core::runtime::cache::shared_values_cache::SharedValuesCache;
 use serde::{
     Serialize,
     de::{DeserializeOwned, DeserializeSeed},
@@ -114,7 +115,7 @@ impl<T, E: std::error::Error + 'static> ToJsError<T> for Result<T, E> {
 /// Converts a JSValue to a DIF-serializable Rust value (e.g. [Value], [ValueContainer])
 pub fn from_js_value<'de, T>(
     value: impl Into<JsValue>,
-    cache: &'de mut DIFSharedContainerCache,
+    cache: &'de mut SharedValuesCache,
 ) -> Result<T, JsError>
 where
     SerdeContext<'de, T>: DeserializeSeed<'de, Value = T>,
@@ -130,7 +131,7 @@ where
 /// Convert a DIF format JsValue to a #[Datex] struct
 pub fn from_dif_js_value<T: DatexValueContainerProxyDeserialize>(
     value: impl Into<JsValue>,
-    cache: &mut DIFSharedContainerCache,
+    cache: &mut SharedValuesCache,
 ) -> Result<T, JsError> {
     let value_container: ValueContainer = from_js_value(value, cache)?;
     T::try_from_value_container(value_container).map_err(|e| {
@@ -144,7 +145,7 @@ pub fn from_dif_js_value<T: DatexValueContainerProxyDeserialize>(
 /// Convert a DIF-serializable Rust value (e.g. [Value], [ValueContainer]) to a JsValue, using the DIF cache for resolving shared containers
 pub fn to_js_value<'ctx, T>(
     value: &T,
-    cache: &'ctx mut DIFSharedContainerCache,
+    cache: &'ctx mut SharedValuesCache,
 ) -> JsValue
 where
     SerdeContext<'ctx, T>: SerializeSeed<Value = T>,
@@ -158,7 +159,7 @@ where
 /// Convert a serializable #[Datex] struct to a JsValue, using the DIF cache for resolving shared containers
 pub fn to_dif_js_value<T: DatexValueContainerProxyInfallibleSerialize>(
     value: T,
-    cache: &mut DIFSharedContainerCache,
+    cache: &mut SharedValuesCache,
 ) -> JsValue {
     to_js_value(&value.to_value_container(), cache)
 }

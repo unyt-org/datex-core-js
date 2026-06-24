@@ -3,7 +3,9 @@ use std::{collections::BTreeMap, path::PathBuf};
 pub use crate::ts::type_folder::TsTypeFolder;
 use crate::ts::{ast::TsAst, type_folder::TsTypeFolderError};
 use datex_core::datex_registry::all_datex_registrations;
-pub use datex_core::{runtime::memory::Memory, types::r#type::Type};
+pub use datex_core::{types::r#type::Type};
+pub use datex_core::runtime::cache::shared_references_cache::SharedReferencesCache;
+
 mod ast;
 mod swc;
 mod type_folder;
@@ -16,7 +18,7 @@ pub struct TsExport<'a> {
 }
 
 pub fn resolve_registry_types<'a>(
-    memory: &mut Memory,
+    memory: &mut SharedReferencesCache,
     folder: &'a mut TsTypeFolder,
 ) -> Result<&'a TsAst, TsTypeFolderError> {
     let mut exports_by_file = BTreeMap::<PathBuf, Vec<TsExport<'_>>>::new();
@@ -50,10 +52,12 @@ mod tests {
         swc::*,
     };
     use datex_core::{
-        datex_proxy::DatexProxyTypes, macros::Datex, runtime::memory::Memory,
+        datex_proxy::DatexProxyTypes, macros::Datex,
         values::core_values::endpoint::Endpoint,
     };
     use std::collections::{BTreeMap, BTreeSet};
+    use datex_core::runtime::cache::shared_references_cache::SharedReferencesCache;
+
     fn names(values: &[&str]) -> BTreeSet<String> {
         values.iter().map(|value| (*value).to_string()).collect()
     }
@@ -74,7 +78,7 @@ mod tests {
 
     #[test]
     fn external_and_cross_file_imports() {
-        let memory = &mut Memory::default();
+        let memory = &mut SharedReferencesCache::default();
         let dependency = Dependency::datex_type(memory);
         let root = Root::datex_type(memory);
         let mut folder = folder();
@@ -168,7 +172,7 @@ mod tests {
 
     #[test]
     fn error_missing_export_for_ref() {
-        let memory = &mut Memory::default();
+        let memory = &mut SharedReferencesCache::default();
         let root = Root::datex_type(memory);
         let mut folder = folder();
 
@@ -193,7 +197,7 @@ mod tests {
 
     #[test]
     fn error_double_export() {
-        let memory = &mut Memory::default();
+        let memory = &mut SharedReferencesCache::default();
         let dependency_a = Dependency::datex_type(memory);
         let dependency_b = Dependency::datex_type(memory);
         let mut folder = folder();
@@ -234,7 +238,7 @@ mod tests {
             value: String,
         }
 
-        let memory = &mut Memory::default();
+        let memory = &mut SharedReferencesCache::default();
         let plain = Plain::datex_type(memory);
         let mut folder = folder();
         let ast = folder
@@ -272,7 +276,7 @@ mod tests {
 
     #[test]
     fn complex_cross_file_import() {
-        let memory = &mut Memory::default();
+        let memory = &mut SharedReferencesCache::default();
         let example = Example::datex_type(memory);
         let wrapped_example = WrappedExample::datex_type(memory);
         let mut folder = TsTypeFolder::new()
@@ -360,7 +364,7 @@ mod tests {
 
     #[test]
     fn print_all() {
-        let memory = &mut Memory::default();
+        let memory = &mut SharedReferencesCache::default();
         let mut folder = folder();
         let ast = resolve_registry_types(memory, &mut folder).unwrap();
 
