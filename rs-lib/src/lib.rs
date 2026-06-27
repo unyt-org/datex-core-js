@@ -11,10 +11,11 @@ use serde_wasm_bindgen::from_value;
 use datex_core::{
     compiler::{CompileOptions, compile_script, compile_template},
     decompiler::decompile_body,
-    disassembler::{disassemble_body, disassemble_body_to_string},
+    disassembler::{disassemble_body},
     global::protocol_structures::instructions::NestedInstructionResolutionStrategy,
     runtime::execution::{ExecutionInput, ExecutionOptions, execute_dxb_sync},
 };
+use datex_core::disassembler::get_disassembled_with_options;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
@@ -110,6 +111,6 @@ pub fn disassemble_dxb_flat(dxb: Vec<u8>) -> JsValue {
 #[wasm_bindgen]
 pub fn disassemble_dxb_to_string(dxb: Vec<u8>, options: JsValue) -> JsValue {
     let options = from_value(options).unwrap_or_default();
-    serde_wasm_bindgen::to_value(&disassemble_body_to_string(&dxb, options))
+    serde_wasm_bindgen::to_value(&get_disassembled_with_options(&dxb, options))
         .unwrap()
 }
