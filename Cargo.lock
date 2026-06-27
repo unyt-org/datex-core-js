@@ -52,9 +52,9 @@ dependencies = [
 
 [[package]]
 name = "anyhow"
-version = "1.0.102"
+version = "1.0.103"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7f202df86484c868dbad7eaa557ef785d5c66295e41b460ef922eca0723b842c"
+checksum = "2a4385e2e34eb35d6b3efe798b9eb88096925d87726c0798709bf56d9ed84af3"
 
 [[package]]
 name = "ariadne"
@@ -278,9 +278,9 @@ checksum = "c8efb64bd706a16a1bdde310ae86b351e4d21550d98d056f22f8a7f7a2183fec"
 
 [[package]]
 name = "bytes"
-version = "1.11.1"
+version = "1.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1e748733b7cbc798e1434b6ac524f0c1ff2ab456fe201501e6497c8417a4fc33"
+checksum = "8ae3f5d315924270530207e2a68396c3cc547f6dca3fbdca317cfb1a51edb593"
 
 [[package]]
 name = "bytes-str"
@@ -309,9 +309,9 @@ dependencies = [
 
 [[package]]
 name = "cc"
-version = "1.2.64"
+version = "1.2.65"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dad887fd958be91b5098c0248def011f4523ab786cd411be668777e55063501f"
+checksum = "e228eec9be7c17ccb640b59b36a5cd805ea2a564a4c5e162c2f659fea30d3b96"
 dependencies = [
  "find-msvc-tools",
  "shlex",
@@ -423,7 +423,7 @@ dependencies = [
 [[package]]
 name = "datex-core"
 version = "0.0.12"
-source = "git+https://github.com/unyt-org/datex?branch=feat%2Fpointer-sync#b4fa35e993e32d2f0c71fbc6846d631f3f33251d"
+source = "git+https://github.com/unyt-org/datex?branch=feat%2Fpointer-sync#063ab081c3af74eeba622f3a2d4c4606f91f14b1"
 dependencies = [
  "ariadne",
  "async-select",
@@ -476,7 +476,7 @@ dependencies = [
 [[package]]
 name = "datex-crypto-facade"
 version = "0.0.2"
-source = "git+https://github.com/unyt-org/datex?branch=feat%2Fpointer-sync#b4fa35e993e32d2f0c71fbc6846d631f3f33251d"
+source = "git+https://github.com/unyt-org/datex?branch=feat%2Fpointer-sync#063ab081c3af74eeba622f3a2d4c4606f91f14b1"
 dependencies = [
  "bs58",
 ]
@@ -484,7 +484,7 @@ dependencies = [
 [[package]]
 name = "datex-crypto-web"
 version = "0.0.2"
-source = "git+https://github.com/unyt-org/datex?branch=feat%2Fpointer-sync#b4fa35e993e32d2f0c71fbc6846d631f3f33251d"
+source = "git+https://github.com/unyt-org/datex?branch=feat%2Fpointer-sync#063ab081c3af74eeba622f3a2d4c4606f91f14b1"
 dependencies = [
  "datex-crypto-facade",
  "wasm-bindgen",
@@ -495,7 +495,7 @@ dependencies = [
 [[package]]
 name = "datex-macros-internal"
 version = "0.0.2"
-source = "git+https://github.com/unyt-org/datex?branch=feat%2Fpointer-sync#b4fa35e993e32d2f0c71fbc6846d631f3f33251d"
+source = "git+https://github.com/unyt-org/datex?branch=feat%2Fpointer-sync#063ab081c3af74eeba622f3a2d4c4606f91f14b1"
 dependencies = [
  "pathdiff",
  "proc-macro-crate",
@@ -1121,9 +1121,9 @@ dependencies = [
 
 [[package]]
 name = "log"
-version = "0.4.32"
+version = "0.4.33"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "953f07c43838f8e6f9758cab68bf5bed85465e7587ebe0b823f1bcd81978ad3a"
+checksum = "0ceec5bc11778974d1bcb055b18002eba7f4b3518b6a0081b3af5f21666da9ad"
 dependencies = [
  "serde_core",
 ]
@@ -1537,9 +1537,9 @@ dependencies = [
 
 [[package]]
 name = "quote"
-version = "1.0.45"
+version = "1.0.46"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "41f2619966050689382d2b44f664f4bc593e129785a36d6ee376ddf37259b924"
+checksum = "dfbc457d0c7a0759a614551b11a6409e5951f6c7537be1f1b7682b9ae9230368"
 dependencies = [
  "proc-macro2",
 ]
@@ -2038,9 +2038,9 @@ dependencies = [
 
 [[package]]
 name = "swc_common"
-version = "23.0.1"
+version = "23.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "353daaf5e6c2ad90efd4ff52270173074ded88fdba5a40f302c7c3a9b1c037fb"
+checksum = "176fb11b1abd0a175e8ac47d4b061c5c8a9ae13b9196f30d44fe5db9cb7dfcbd"
 dependencies = [
  "anyhow",
  "ast_node",
@@ -2082,9 +2082,9 @@ dependencies = [
 
 [[package]]
 name = "swc_ecma_codegen"
-version = "28.0.1"
+version = "28.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "974430a6e2668306f87bb83d8603447d7616da1c84270409e9b463ea613cb38a"
+checksum = "a5a2fbf46c8cc66e112b6d8226ae0dacc6b983589df6192b38c7669d7721e02a"
 dependencies = [
  "ascii",
  "compact_str",
@@ -2251,9 +2251,9 @@ dependencies = [
 
 [[package]]
 name = "time"
-version = "0.3.49"
+version = "0.3.51"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "711a53c2d47bbd818258c498c8dbfe186a2526c631495cfe7e078567f86b8469"
+checksum = "85c17d80feb7334b40c484e45ed1a5273dfd8bfda537c3be2e74a06a6686f327"
 dependencies = [
  "deranged",
  "num-conv",
@@ -2271,9 +2271,9 @@ checksum = "9e1c906769ad99c88eaa54e728060edef082f8e358ff32030cb7c7d315e81109"
 
 [[package]]
 name = "time-macros"
-version = "0.2.29"
+version = "0.2.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "71c652a3727a9cbb9a02f707f530b618ce00d0ccd762009c8c23bd191df3c17d"
+checksum = "dcef1a61bdb119096e153208ec5cbec23944ce8bca13be5c7f60c634f7403935"
 dependencies = [
  "num-conv",
  "time-core",
@@ -2452,9 +2452,9 @@ checksum = "b6c140620e7ffbb22c2dee59cafe6084a59b5ffc27a8859a5f0d494b5d52b6be"
 
 [[package]]
 name = "uuid"
-version = "1.23.3"
+version = "1.23.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "144d6b123cef80b301b8f72a9e2ca4370ddec21950d0a103dd22c437006d2db7"
+checksum = "bf80a72845275afea99e7f2b434723d3bc7e38470fcd1c7ed39a599c73319a53"
 dependencies = [
  "js-sys",
  "wasm-bindgen",
