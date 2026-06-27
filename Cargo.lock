@@ -423,7 +423,7 @@ dependencies = [
 [[package]]
 name = "datex-core"
 version = "0.0.12"
-source = "git+https://github.com/unyt-org/datex?branch=feat%2Fpointer-sync#063ab081c3af74eeba622f3a2d4c4606f91f14b1"
+source = "git+https://github.com/unyt-org/datex?branch=feat%2Fpointer-sync#eb890b5dd4f728afb8dfe72c21817ebc29cd9863"
 dependencies = [
  "ariadne",
  "async-select",
@@ -476,7 +476,7 @@ dependencies = [
 [[package]]
 name = "datex-crypto-facade"
 version = "0.0.2"
-source = "git+https://github.com/unyt-org/datex?branch=feat%2Fpointer-sync#063ab081c3af74eeba622f3a2d4c4606f91f14b1"
+source = "git+https://github.com/unyt-org/datex?branch=feat%2Fpointer-sync#eb890b5dd4f728afb8dfe72c21817ebc29cd9863"
 dependencies = [
  "bs58",
 ]
@@ -484,7 +484,7 @@ dependencies = [
 [[package]]
 name = "datex-crypto-web"
 version = "0.0.2"
-source = "git+https://github.com/unyt-org/datex?branch=feat%2Fpointer-sync#063ab081c3af74eeba622f3a2d4c4606f91f14b1"
+source = "git+https://github.com/unyt-org/datex?branch=feat%2Fpointer-sync#eb890b5dd4f728afb8dfe72c21817ebc29cd9863"
 dependencies = [
  "datex-crypto-facade",
  "wasm-bindgen",
@@ -495,7 +495,7 @@ dependencies = [
 [[package]]
 name = "datex-macros-internal"
 version = "0.0.2"
-source = "git+https://github.com/unyt-org/datex?branch=feat%2Fpointer-sync#063ab081c3af74eeba622f3a2d4c4606f91f14b1"
+source = "git+https://github.com/unyt-org/datex?branch=feat%2Fpointer-sync#eb890b5dd4f728afb8dfe72c21817ebc29cd9863"
 dependencies = [
  "pathdiff",
  "proc-macro-crate",
