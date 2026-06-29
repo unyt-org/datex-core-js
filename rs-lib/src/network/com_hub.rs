@@ -1,7 +1,5 @@
 use datex_core::{
-    dif::{
-        dif_interface::{self, DIFInterface},
-    },
+    dif::dif_interface::{self, DIFInterface},
     global::dxb_block::DXBBlock,
     macros::Datex,
     network::{
@@ -23,7 +21,7 @@ use datex_core::{
             socket::ComInterfaceSocketUUID,
         },
     },
-    runtime::Runtime,
+    runtime::{Runtime, cache::shared_values_cache::SharedValuesCache},
     utils::uuid::UUID,
     values::{
         core_values::endpoint::Endpoint, value::Value,
@@ -34,7 +32,6 @@ use js_sys::{Function, JsFunction1, Object, Promise, Reflect};
 use log::{error, info};
 use serde_wasm_bindgen::from_value;
 use std::{cell::RefCell, ops::Deref, rc::Rc, str::FromStr};
-use datex_core::runtime::cache::shared_values_cache::SharedValuesCache;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::{JsFuture, future_to_promise};
 use web_sys::js_sys::{self};
@@ -343,8 +340,8 @@ impl JSComHub {
         #[cfg(feature = "serial-client")]
         self.com_hub().register_async_interface_factory::<crate::network::com_interfaces::serial::serial_client::SerialClientInterfaceSetupDataJS>();
 
-        // #[cfg(feature = "webrtc")]
-        // self.com_hub().register_async_interface_factory::<crate::network::com_interfaces::webrtc_js_interface::WebRTCJSInterface>();
+        #[cfg(feature = "webrtc")]
+        self.com_hub().register_async_interface_factory::<crate::network::com_interfaces::webrtc::WebRTCInterfaceSetupDataJS>();
     }
 
     pub fn register_interface_factory(
