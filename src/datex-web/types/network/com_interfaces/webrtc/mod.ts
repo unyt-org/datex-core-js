@@ -2,8 +2,12 @@
 // deno-lint-ignore-file
 // deno-fmt-ignore-file
 
-import type { WebRTCInterfaceSetupData } from "../default_setup_data/webrtc/mod.ts";
+import type { RTCIceServerDX, WebRTCRoleDX } from "../default_setup_data/webrtc/mod.ts";
 
 export type WebRTCInterfaceSetupDataJS = {
-    setup: WebRTCInterfaceSetupData;
+    role: WebRTCRoleDX;
+    data_channel_label: string;
+    ice_servers: RTCIceServerDX[];
+    negotiated_data_channel_id: null | number;
+    ordered: boolean;
 };

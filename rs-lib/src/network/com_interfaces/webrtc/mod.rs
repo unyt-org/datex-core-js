@@ -54,17 +54,13 @@ impl WebRTCSignaling for JSSignaling {
 
 
 #[derive(Datex)]
-pub struct WebRTCInterfaceSetupDataJS {
-    setup: WebRTCInterfaceSetupData,
-    #[datex(skip)]
-    signaling: Option<Rc<dyn WebRTCSignaling>>,
-}
+pub struct WebRTCInterfaceSetupDataJS(WebRTCInterfaceSetupData);
 
 impl Deref for WebRTCInterfaceSetupDataJS {
     type Target = WebRTCInterfaceSetupData;
 
     fn deref(&self) -> &Self::Target {
-        &self.setup
+        &self.0
     }
 }
 
@@ -73,15 +69,13 @@ impl WebRTCInterfaceSetupDataJS {
         setup: WebRTCInterfaceSetupData,
         signaling: Rc<dyn WebRTCSignaling>,
     ) -> Self {
-        Self { setup, signaling: Some(signaling) }
+        Self(setup)
     }
 
     async fn create_interface(
         self,
     ) -> Result<ComInterfaceConfiguration, ComInterfaceCreateError> {
-        Ok(create_webrtc_interface_js(self.setup, self.signaling.expect("xx"))
-            .await
-            .expect("Failed to create WebRTC interface"))
+        todo!()
     }
 }
 
