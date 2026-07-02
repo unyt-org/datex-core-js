@@ -16,7 +16,7 @@ import type { DecompileOptions } from "datex/datex-web/types/decompiler/options.
 
 // TODO: move to global.ts
 /** auto-generated version - do not edit: */
-const VERSION: string = "0.0.15";
+const VERSION: string = "0.0.16";
 
 /** debug flags for the runtime */
 interface DebugConfig {

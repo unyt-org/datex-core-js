@@ -510,7 +510,7 @@ dependencies = [
 
 [[package]]
 name = "datex-web"
-version = "0.0.15"
+version = "0.0.16"
 dependencies = [
  "async-trait",
  "cfg-if",
