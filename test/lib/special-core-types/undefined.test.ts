@@ -1,38 +1,38 @@
 import { Runtime } from "datex/runtime/runtime.ts";
-import { assertEquals } from "@std/assert";
-import { DIFTypeDefinitionKind, type DIFValue } from "datex/dif/definitions.ts";
-import { JsLibTypeAddress } from "datex/dif/js-lib.ts";
-import { CoreTypeAddress } from "datex/dif/core.ts";
+import { assert, assertEquals } from "@std/assert";
+import type { DIFValue } from "datex/dif/types/value.ts";
+import { Endpoint } from "datex/lib/mod.ts";
+import {
+    isJsUndefined,
+    isJsUndefinedTypeDefinition,
+    JS_UNDEFINED,
+    JS_UNDEFINED_TYPE_DEFINITION,
+} from "datex/lib/special-core-types/undefined.ts";
 
-const runtime = await Runtime.create({ endpoint: "@jonas" });
+const runtime = await Runtime.create({ endpoint: Endpoint.get("@jonas") });
 
-Deno.test("undefined", () => {
-    // convert JS undefined to DIF representation
+Deno.test("undefined type definition", () => {
+    assert(
+        isJsUndefinedTypeDefinition(JS_UNDEFINED_TYPE_DEFINITION),
+        "JS_UNDEFINED_TYPE_DEFINITION should have the correct impl type definition",
+    );
+});
+Deno.test("undefined value", () => {
+    assert(isJsUndefined(JS_UNDEFINED), "JS_UNDEFINED should be recognized as undefined");
+});
+
+Deno.test("undefined DIF representation", () => {
     const undefinedDifValue = runtime.dif.convertJSValueToDIFValueContainer(
         undefined,
     ) as DIFValue;
+
     assertEquals(
-        undefinedDifValue.type,
-        {
-            kind: DIFTypeDefinitionKind.ImplType,
-            def: [
-                CoreTypeAddress.null,
-                [JsLibTypeAddress.undefined],
-            ],
-        },
-    );
-    console.log(undefinedDifValue);
-
-    // pass undefined to runtime and return value
-    const executionResult = runtime._runtime.execute_sync("?", [
         undefinedDifValue,
-    ]) as DIFValue;
+        JS_UNDEFINED,
+    );
+});
 
-    assertEquals(executionResult, {
-        value: null,
-        type: undefinedDifValue.type,
-    });
-
-    const executionResult2 = runtime.executeSync<undefined>("?", [undefined]);
-    assertEquals(executionResult2, undefined);
+Deno.test("undefined execution", () => {
+    const executionResult = runtime.executeSync<undefined>("?", [undefined]);
+    assertEquals(executionResult, undefined);
 });

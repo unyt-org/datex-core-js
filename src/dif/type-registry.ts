@@ -1,6 +1,17 @@
+/**
+ * This module implements the TypeRegistry and TypeBinding classes which allow registering custom type definitions and bindings to JS implementations.
+ */
+
 import { DEBUG_MODE } from "../global.ts";
-import { type DIFTypeDefinition, type DIFUpdateData, DIFUpdateKind } from "./definitions.ts";
-import { type CustomReferenceMetadata, type DIFHandler, IS_PROXY_ACCESS } from "./dif-handler.ts";
+import type { CoreLibTypeId } from "./core.ts";
+import { type DIFTypeDefinition, type DIFUpdateData, DIFUpdateKind } from "./types/mod.ts";
+import {
+    type CachedSharedContainer,
+    type CustomReferenceMetadata,
+    type DIFHandler,
+    IS_PROXY_ACCESS,
+} from "./dif-handler.ts";
+import type { PointerAddress, SharedContainerMutability, SharedRef } from "../shared-container/mod.ts";
 
 type ImplMethod = {
     name: string;
@@ -40,32 +51,33 @@ export type BindResult<T, M extends CustomReferenceMetadata> = {
 };
 
 export type TypeBindingDefinition<
-    T,
+    T extends object,
     M extends CustomReferenceMetadata = CustomReferenceMetadata,
 > = {
-    typeAddress: string;
+    coreLibTypeId?: CoreLibTypeId;
+    pointerAddress?: PointerAddress;
     bind(
         this: TypeBindingContext<M>,
-        value: T,
-        pointerAddress: string,
+        value: SharedRef<T, SharedContainerMutability>,
+        pointerAddress: PointerAddress,
     ): BindResult<T, M>;
     handleSet?(
         this: TypeBindingContext<M>,
-        target: T,
+        target: SharedRef<T, SharedContainerMutability>,
         key: unknown,
         value: unknown,
     ): void;
-    handleAppend?(this: TypeBindingContext<M>, target: T, value: unknown): void;
+    handleAppend?(this: TypeBindingContext<M>, target: SharedRef<T, SharedContainerMutability>, value: unknown): void;
     handleReplace?(
         this: TypeBindingContext<M>,
-        parent: T,
+        parent: SharedRef<T, SharedContainerMutability>,
         newValue: unknown,
     ): void;
-    handleDelete?(this: TypeBindingContext<M>, target: T, key: unknown): void;
-    handleClear?(this: TypeBindingContext<M>, target: T): void;
+    handleDelete?(this: TypeBindingContext<M>, target: SharedRef<T, SharedContainerMutability>, key: unknown): void;
+    handleClear?(this: TypeBindingContext<M>, target: SharedRef<T, SharedContainerMutability>): void;
     handleListSplice?(
         this: TypeBindingContext<M>,
-        target: T,
+        target: SharedRef<T, SharedContainerMutability>,
         start: number,
         deleteCount: number,
         items: unknown[],
@@ -96,7 +108,8 @@ export type TypeBindingDefinition<
 
 export class TypeRegistry {
     #difHandler: DIFHandler;
-    #typeBindings: Map<string, TypeBinding> = new Map();
+    #typePointerAddressBindings: Map<string, TypeBinding> = new Map();
+    #coreLibTypeIdBindings: Map<CoreLibTypeId, TypeBinding> = new Map();
 
     constructor(difHandler: DIFHandler) {
         this.#difHandler = difHandler;
@@ -114,48 +127,58 @@ export class TypeRegistry {
      * Binds an existing nominal type to a JS mirror implementation.
      * @param typePointerAddress The address of the type pointer in the Datex runtime.
      */
-    public registerTypeBinding<T>(
+    public registerTypeBinding<T extends object>(
         typeBindingDefinition: TypeBindingDefinition<T>,
     ) {
-        this.#typeBindings.set(
-            typeBindingDefinition.typeAddress,
-            new TypeBinding(
-                typeBindingDefinition as TypeBindingDefinition<
-                    WeakKey,
-                    CustomReferenceMetadata
-                >,
-                this.#difHandler,
-            ),
+        const binding = new TypeBinding(
+            typeBindingDefinition as TypeBindingDefinition<
+                object,
+                CustomReferenceMetadata
+            >,
+            this.#difHandler,
         );
+        if (typeBindingDefinition.pointerAddress != null) {
+            this.#typePointerAddressBindings.set(
+                typeBindingDefinition.pointerAddress,
+                binding,
+            );
+        } else if (typeBindingDefinition.coreLibTypeId != null) {
+            this.#coreLibTypeIdBindings.set(
+                typeBindingDefinition.coreLibTypeId,
+                binding,
+            );
+        } else {
+            throw new Error(
+                "TypeBindingDefinition must have either pointerAddress or coreLibTypeId defined",
+            );
+        }
     }
 
     /**
-     * @private
      * Gets the type binding for a given type pointer address.
-     */
-    _getTypeBinding(
-        typePointerAddress: string,
-    ): TypeBinding | null {
-        return this.#typeBindings.get(typePointerAddress) || null;
-    }
-
-    /**
-     * Gets the type binding for a given type pointer address.
+     * @param typePointerAddress The pointer address of the type in the Datex runtime.
+     * @returns The corresponding TypeBinding or null if no binding is found for the given pointer address.
      */
     public getTypeBinding(
         typePointerAddress: string,
     ): TypeBinding | null {
-        const typeBinding = this.#typeBindings.get(typePointerAddress);
-        if (typeBinding) {
-            return typeBinding;
-        } else {
-            return null;
-        }
+        return this.#typePointerAddressBindings.get(typePointerAddress) || null;
+    }
+
+    /**
+     * Gets the type binding for a given core library type id.
+     * @param coreLibTypeId
+     * @returns
+     */
+    public getTypeBindingByCoreLibTypeId(
+        coreLibTypeId: CoreLibTypeId,
+    ): TypeBinding | null {
+        return this.#coreLibTypeIdBindings.get(coreLibTypeId) || null;
     }
 }
 
 export class TypeBinding<
-    T extends WeakKey = WeakKey,
+    T extends object = object,
     M extends CustomReferenceMetadata = CustomReferenceMetadata,
 > {
     #difHandler: DIFHandler;
@@ -165,8 +188,8 @@ export class TypeBinding<
         return this.#difHandler;
     }
 
-    public getCustomReferenceMetadata(value: T): M {
-        return this.#difHandler.getReferenceMetadataUnsafe<M, T>(value)
+    public getCustomReferenceMetadata(value: CachedSharedContainer): M {
+        return this.#difHandler.getReferenceMetadataUnsafe<M>(value)
             .customMetadata;
     }
 
@@ -182,10 +205,10 @@ export class TypeBinding<
      * Binds a new JS value to this type binding.
      * @returns
      */
-    public bindValue(value: T, pointerAddress: string): BindResult<T, M> {
+    public bindValue(value: T, pointerAddress: PointerAddress): BindResult<T, M> {
         const newValue = this.#definition.bind.call(
             this,
-            value,
+            value as SharedRef<T, SharedContainerMutability>,
             pointerAddress,
         );
         return newValue;
@@ -195,82 +218,84 @@ export class TypeBinding<
      * Sets up observers for the given value and pointer address if there are update handlers defined for this type binding.
      */
     public handleDifUpdate(
-        value: T,
+        val: T,
         pointerAddress: string,
         difUpdateData: DIFUpdateData,
     ): void {
         const updateHandlerTypes = this.getUpdateHandlerTypes();
         // add observer if there are update handlers
         if (updateHandlerTypes.size > 0) {
+            const value = val as SharedRef<T, SharedContainerMutability>;
             console.log(
                 "got update for pointer:",
                 pointerAddress,
                 difUpdateData,
             );
-            this.allowOriginalValueAccess(value, () => {
+            this.allowOriginalValueAccess(value as CachedSharedContainer, () => {
                 // call appropriate handler based on update kind
                 if (
-                    difUpdateData.kind === DIFUpdateKind.Set &&
+                    difUpdateData[0] === DIFUpdateKind.SetEntry &&
                     this.#definition.handleSet
                 ) {
                     this.#definition.handleSet.call(
                         this,
                         value,
-                        this.#difHandler.resolveDIFPropertySync(
-                            difUpdateData.key,
+                        this.#difHandler.resolveDIFProperty(
+                            difUpdateData[1],
                         ),
-                        this.#difHandler.resolveDIFValueContainerSync(
-                            difUpdateData.value,
+                        this.#difHandler.resolveDIFValueContainer(
+                            difUpdateData[2],
                         ),
                     );
                 } else if (
-                    difUpdateData.kind === DIFUpdateKind.Append &&
+                    difUpdateData[0] === DIFUpdateKind.AppendEntry &&
                     this.#definition.handleAppend
                 ) {
                     this.#definition.handleAppend.call(
                         this,
                         value,
-                        this.#difHandler.resolveDIFValueContainerSync(
-                            difUpdateData.value,
+                        this.#difHandler.resolveDIFValueContainer(
+                            difUpdateData[1],
                         ),
                     );
                 } else if (
-                    difUpdateData.kind === DIFUpdateKind.Replace &&
+                    difUpdateData[0] === DIFUpdateKind.Replace &&
                     this.#definition.handleReplace
                 ) {
                     this.#definition.handleReplace.call(
                         this,
                         value,
-                        this.#difHandler.resolveDIFValueContainerSync(
-                            difUpdateData.value,
+                        this.#difHandler.resolveDIFValueContainer(
+                            difUpdateData[1],
                         ),
                     );
                 } else if (
-                    difUpdateData.kind === DIFUpdateKind.Delete &&
+                    difUpdateData[0] === DIFUpdateKind.DeleteEntry &&
                     this.#definition.handleDelete
                 ) {
                     this.#definition.handleDelete.call(
                         this,
                         value,
-                        this.#difHandler.resolveDIFPropertySync(
-                            difUpdateData.key,
+                        this.#difHandler.resolveDIFProperty(
+                            difUpdateData[1],
                         ),
                     );
                 } else if (
-                    difUpdateData.kind === DIFUpdateKind.Clear &&
+                    difUpdateData[0] === DIFUpdateKind.Clear &&
                     this.#definition.handleClear
                 ) {
                     this.#definition.handleClear.call(this, value);
                 } else if (
-                    difUpdateData.kind === DIFUpdateKind.ListSplice &&
+                    difUpdateData[0] === DIFUpdateKind.ListSplice &&
                     this.#definition.handleListSplice
                 ) {
+                    console.log("handling list splice with items:", difUpdateData);
                     this.#definition.handleListSplice.call(
                         this,
                         value,
-                        difUpdateData.start,
-                        difUpdateData.delete_count,
-                        difUpdateData.items.map((item) => this.#difHandler.resolveDIFValueContainerSync(item)),
+                        difUpdateData[1],
+                        difUpdateData[2],
+                        difUpdateData[3].map((item) => this.#difHandler.resolveDIFValueContainer(item)),
                     );
                 }
             });
@@ -280,16 +305,16 @@ export class TypeBinding<
     public getUpdateHandlerTypes(): Set<DIFUpdateKind> {
         const updateHandlerTypes = new Set<DIFUpdateKind>();
         if (this.#definition.handleSet) {
-            updateHandlerTypes.add(DIFUpdateKind.Set);
+            updateHandlerTypes.add(DIFUpdateKind.SetEntry);
         }
         if (this.#definition.handleAppend) {
-            updateHandlerTypes.add(DIFUpdateKind.Append);
+            updateHandlerTypes.add(DIFUpdateKind.AppendEntry);
         }
         if (this.#definition.handleReplace) {
             updateHandlerTypes.add(DIFUpdateKind.Replace);
         }
         if (this.#definition.handleDelete) {
-            updateHandlerTypes.add(DIFUpdateKind.Delete);
+            updateHandlerTypes.add(DIFUpdateKind.DeleteEntry);
         }
         if (this.#definition.handleClear) {
             updateHandlerTypes.add(DIFUpdateKind.Clear);
@@ -298,7 +323,7 @@ export class TypeBinding<
     }
 
     public allowOriginalValueAccess<R>(
-        target: T,
+        target: CachedSharedContainer,
         callback: () => R,
     ): R {
         if (!DEBUG_MODE) {

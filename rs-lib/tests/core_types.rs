@@ -1,7 +1,8 @@
-use datex_core::{
-    libs::core::{CoreLibPointerId, create_core_lib_types},
-    shared_values::pointer_address::PointerAddress,
+use datex_core::libs::core::{
+    core_lib_id::CoreLibIdIndex,
+    type_id::{CoreLibBaseTypeId, CoreLibVariantTypeId},
 };
+use strum::IntoEnumIterator;
 
 #[test]
 #[ignore]
@@ -10,22 +11,18 @@ use datex_core::{
 ///
 /// `cargo test create_core_type_ts_mapping -- --show-output --ignored`
 fn create_core_type_ts_mapping() {
-    let core_lib = create_core_lib_types();
-    let mut core_lib: Vec<(CoreLibPointerId, PointerAddress)> = core_lib
-        .keys()
-        .map(|key| (key.clone(), PointerAddress::from(key.clone())))
-        .collect();
-    core_lib.sort_by_key(|(key, _)| {
-        PointerAddress::from(key.clone()).bytes().to_vec()
-    });
+    println!("export const CoreLibTypeId = {{");
 
-    println!("export const CoreTypeAddress = {{");
-    for (core_lib_id, address) in core_lib {
-        println!(
-            "    {}: \"{}\",",
-            core_lib_id.to_string().replace("/", "_"),
-            address.to_string().strip_prefix("$").unwrap()
-        );
+    for base_id in CoreLibBaseTypeId::iter() {
+        println!("    {}: {},", base_id, CoreLibIdIndex::from(base_id).0);
+        for variant_id in CoreLibVariantTypeId::variant_ids(&base_id) {
+            println!(
+                "    {}_{}: {},",
+                base_id,
+                variant_id.variant_name(),
+                CoreLibIdIndex::from(variant_id).0
+            );
+        }
     }
     println!("}} as const;");
 }

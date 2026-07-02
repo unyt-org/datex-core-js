@@ -17,6 +17,7 @@ import { assertEquals } from "@std/assert";
  */
 const TEST_VALUES = [
     // simple JSON values
+    undefined,
     42,
     -10,
     3.14,
@@ -25,41 +26,44 @@ const TEST_VALUES = [
     false,
     null,
     0,
+
     // arrays and objects
     [1, 2, 3],
     [],
     { a: 1, b: "test" },
     {},
+
     // non-JSON values
-    // TODO: map type gets lost during DATEX execution, special JS map marker type needed here
-    // new Map([["key", "value"]]),
-    // new Map(),
+    new Map([["key", "value"]]),
+    new Map(),
     new Map([[1, 2]]),
     undefined,
     NaN,
     Infinity,
     -Infinity,
     2000n,
+
+    // DATEX specific values
     Endpoint.get("@test"),
     new Range(1, 2),
 ] as const;
 
-// initialization of the test cases
-const valueTypeCounter = new Map<string, number>();
-for (const value of TEST_VALUES) {
-    // class name or primitive type
-    const valueType = value === null ? "null" : typeof value === "undefined" ? "undefined" : value?.constructor.name;
-    // increment counter for this type
-    const count = valueTypeCounter.get(valueType) || 0;
-    valueTypeCounter.set(valueType, count + 1);
-    Deno.test(`test value parity for value of type ${valueType} #${count + 1}`, async () => {
-        const runtime = await Runtime.create({
-            endpoint: "@jonas",
-        });
-        const result = runtime.executeSync<typeof value>(
-            "?",
-            [value],
-        );
-        assertEquals(result, value);
+Deno.test(`test value parity for various JS values`, async (t) => {
+    const runtime = await Runtime.create({
+        endpoint: Endpoint.get("@jonas"),
     });
-}
+    for (const value of TEST_VALUES) {
+        const valueType = value === null
+            ? "null"
+            : typeof value === "undefined"
+            ? "undefined"
+            : value?.constructor.name;
+        await t.step(`Testing value: ${valueType}`, () => {
+            const result = runtime.executeSync<typeof value>(
+                "?",
+                [value],
+            );
+            assertEquals(result, value);
+        });
+    }
+});

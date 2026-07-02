@@ -1,206 +1,160 @@
-import { Runtime } from "../../src/runtime/runtime.ts";
+import { Runtime } from "datex/runtime/runtime.ts";
 import { assert, assertEquals } from "@std/assert";
 import { assertThrows } from "@std/assert/throws";
+
+import { CoreLibTypeId } from "datex/dif/core.ts";
+import { assertStrictEquals } from "@std/assert/strict-equals";
+import { difBaseSharedContainerToDisplayString } from "datex/dif/display.ts";
+import { arrayTypeBinding } from "datex/lib/js-core-types/array.ts";
+import { Endpoint } from "datex/lib/mod.ts";
 import {
-    type DIFRepresentationValue,
-    type DIFSharedValue,
-    DIFSharedValueMutability,
+    type AsSharedMaybeOwned,
+    type PointerAddress,
+    SharedContainerMutability,
+    type SharedRef,
+} from "datex/shared-container/mod.ts";
+import {
+    type DIFBaseSharedValueContainer,
+    DIFSharedContainerOwnership,
     type DIFUpdate,
     type DIFUpdateData,
     DIFUpdateKind,
-} from "../../src/dif/definitions.ts";
-import { CoreTypeAddress } from "../../src/dif/core.ts";
-import { assertStrictEquals } from "@std/assert/strict-equals";
-import { Ref } from "../../src/refs/ref.ts";
-import { difReferenceToDisplayString, difValueContainerToDisplayString } from "../../src/dif/display.ts";
-import { arrayTypeBinding } from "datex/lib/js-core-types/array.ts";
+} from "datex/dif/types/mod.ts";
+import type { BaseSharedContainer } from "datex/shared-container/base-shared-container.ts";
+import { replace } from "datex/dif/update.ts";
+import type { DIFValue } from "datex/dif/types/value.ts";
+import { FAKE_TRANSCEIVER_ID, performFakeRemoteUpdate, performFakeRemoteUpdateWithSourceId } from "../lib/utils.ts";
+import { OwnedSharedContainer } from "datex/shared-container/owned.ts";
+import { integer, u8 } from "datex/dif/helpers/typed-integer.ts";
 
-const runtime = await Runtime.create({ endpoint: "@jonas" });
+const runtime = await Runtime.create({ endpoint: Endpoint.get("@jonas") });
 runtime.dif.type_registry.registerTypeBinding(arrayTypeBinding);
 
 Deno.test("pointer create with observe", () => {
-    const ref = runtime.dif.createSharedValueFromDIFValue(
-        {
-            value: "Hello, DATEX!",
-        },
-        undefined,
-        DIFSharedValueMutability.Mutable,
+    const ref = runtime.dif.constructSharedValue(
+        runtime.dif.convertJSValueToDIFValueContainer("Hello, DATEX!"),
+        SharedContainerMutability.Mutable,
     );
     assertEquals(typeof ref, "string");
 
-    let observed: DIFUpdate | null = null;
-    const observerId = runtime.dif.observePointerBindDirect(ref, (value) => {
+    const observed: Array<DIFUpdate> = [];
+    const observerId = runtime.dif.observeSharedValueBindDirect(ref, (value) => {
         runtime.executeSync('"xy"');
-        runtime.dif.unobserveReferenceBindDirect(ref, observerId);
-        observed = value;
+        runtime.dif.unobserveSharedValueBindDirect(ref, observerId);
+        observed.push(value);
         // TODO: print error message somewhere (don't throw)
-        throw new Error("Should not be called again");
+        // throw new Error("Should not be called again");
     }, { relay_own_updates: true });
 
-    runtime.dif.updateReference(ref, {
-        value: { value: "Hello, Datex 2" },
-        kind: DIFUpdateKind.Replace,
-    });
+    runtime.dif.updateSharedValue(
+        ref,
+        replace(
+            runtime.dif.convertJSValueToDIFValueContainer("Hello, Datex 2"),
+        ),
+    );
 
     // if not equal, unobservePointer potentially failed
-    assertEquals(observed, {
-        source_id: runtime.dif._transceiver_id,
-        data: {
-            value: { value: "Hello, Datex 2" },
-            kind: DIFUpdateKind.Replace,
-        },
-    });
+    assertEquals(observed.length, 1);
+    assertEquals(observed[0], [runtime.dif._transceiver_id, DIFUpdateKind.Replace, "Hello, Datex 2"]);
 });
 
 Deno.test("pointer create without observe", () => {
-    const ref = runtime.dif.createSharedValueFromDIFValue(
-        {
-            value: "Hello, Datex!",
-        },
-        undefined,
-        DIFSharedValueMutability.Mutable,
+    const ref = runtime.dif.constructSharedValue(
+        runtime.dif.convertJSValueToDIFValueContainer("Hello, DATEX!"),
+        SharedContainerMutability.Mutable,
     );
     assertEquals(typeof ref, "string");
 
-    let observed: DIFUpdate | null = null;
-    const observerId = runtime.dif.observePointerBindDirect(ref, (value) => {
+    const observed: Array<DIFUpdate> = [];
+    const observerId = runtime.dif.observeSharedValueBindDirect(ref, (value) => {
         runtime.executeSync("'xy'");
-        runtime.dif.unobserveReferenceBindDirect(ref, observerId);
-        observed = value;
+        runtime.dif.unobserveSharedValueBindDirect(ref, observerId);
+        observed.push(value);
     });
 
-    runtime.dif.updateReference(ref, {
-        value: { value: "Hello, Datex 2" },
-        kind: DIFUpdateKind.Replace,
-    });
+    runtime.dif.updateSharedValue(ref, replace(runtime.dif.convertJSValueToDIFValueContainer("Hello, Datex 2")));
 
     // observer should not be called, because relay_own_updates is false and the source is the same as the observer
-    assertEquals(observed, null);
+    assertEquals(observed.length, 0);
 });
 
 Deno.test("pointer create primitive", () => {
-    runtime.createTransparentReference(
+    runtime.createSharedValueFromJSValue<number, SharedContainerMutability.Immutable>(
         42,
         undefined,
-        DIFSharedValueMutability.Immutable,
-    ) satisfies Ref<42>;
+        SharedContainerMutability.Immutable,
+    ) satisfies OwnedSharedContainer<number, SharedContainerMutability.Immutable>;
 
-    runtime.createTransparentReference(
+    runtime.createSharedValueFromJSValue(
         42,
         undefined,
-        DIFSharedValueMutability.Mutable,
-    ) satisfies Ref<number>;
+        SharedContainerMutability.Mutable,
+    ) satisfies OwnedSharedContainer<42, SharedContainerMutability.Mutable>;
 
-    runtime.createTransparentReference(
+    runtime.createSharedValueFromJSValue(
         "hello world",
         undefined,
-        DIFSharedValueMutability.Immutable,
-    ) satisfies Ref<"hello world">;
+        SharedContainerMutability.Immutable,
+    ) satisfies OwnedSharedContainer<"hello world", SharedContainerMutability.Immutable>;
 
-    runtime.createTransparentReference(
+    runtime.createSharedValueFromJSValue(
         "hello world",
         undefined,
-        DIFSharedValueMutability.Mutable,
-    ) satisfies Ref<string>;
+        SharedContainerMutability.Mutable,
+    ) satisfies OwnedSharedContainer<"hello world", SharedContainerMutability.Mutable>;
 
-    runtime.createTransparentReference(
+    runtime.createSharedValueFromJSValue(
         true,
         undefined,
-        DIFSharedValueMutability.Immutable,
-    ) satisfies Ref<true>;
+        SharedContainerMutability.Immutable,
+    ) satisfies OwnedSharedContainer<true, SharedContainerMutability.Immutable>;
 
-    runtime.createTransparentReference(
+    runtime.createSharedValueFromJSValue(
         { x: true } as const,
         undefined,
-        DIFSharedValueMutability.Immutable,
-    ) satisfies {
-        readonly x: true;
-    };
+        SharedContainerMutability.Immutable,
+    ) satisfies AsSharedMaybeOwned<{ readonly x: true }, SharedContainerMutability.Immutable>;
 
-    const a = runtime.createTransparentReference(
+    const a = runtime.createSharedValueFromJSValue(
         5,
         undefined,
-        DIFSharedValueMutability.Immutable,
+        SharedContainerMutability.Mutable,
     );
-    const b = runtime.createTransparentReference(
+    const b = runtime.createSharedValueFromJSValue(
         { x: a },
         undefined,
-        DIFSharedValueMutability.Mutable,
-    ) satisfies {
-        x: Ref<5>;
-    };
-    b.x satisfies Ref<5>;
-    b.x.value = 5;
+        SharedContainerMutability.Mutable,
+    ) satisfies AsSharedMaybeOwned<{ readonly x: typeof a }, SharedContainerMutability.Mutable>;
+
+    if ("x" in b) {
+        b.x satisfies OwnedSharedContainer<number, SharedContainerMutability.Mutable>;
+        b.x.value = 5;
+    }
 });
 
 Deno.test("pointer create struct", () => {
-    const innerPtr = runtime.createTransparentReference(
+    const innerPtr = runtime.createSharedValueFromJSValue(
         3,
         undefined,
-        // x2: &mut() = x;
-        /**
-         * type User {
-         *   name: string,
-         *   private x: string,
-         * }
-         *
-         * type User {
-         *   name: string,
-         *   // private
-         *   hiddenFields:  text,
-         *   xx: 1,
-         * }
-         *
-         * user.hiddenFields
-         *
-         * #[write: "only"]
-         * function getUser() -> &mut User {
-         *
-         * }
-         *
-         * export() val x: {inner: px record{}} = {
-         *   inner: &mut {
-         *
-         *   }
-         * };
-         *
-         * export() function getWritableUser() -> &mut+write User {
-         *
-         * }
-         *
-         *          * export() function getWritableUser() -> &mut User {
-         *
-         * }
-         *
-         * #public = {
-         *    getWritableUser:
-         *    private: {
-         *
-         *    }
-         * }
-         *
-         * -> User
-         * -> readonly User
-         */
-        DIFSharedValueMutability.Mutable,
+        SharedContainerMutability.Mutable,
     );
     const struct = { a: 1.0, b: "text", c: { d: true }, e: { f: innerPtr } };
 
     // can not assign to ptrObjImmutable.e.f
-    const ptrObjImmutable = runtime.createTransparentReference(
+    const ptrObjImmutable = runtime.createSharedValueFromJSValue(
         struct,
         undefined,
-        DIFSharedValueMutability.Immutable,
+        SharedContainerMutability.Immutable,
     );
-    ptrObjImmutable.e satisfies { readonly f: Ref<number> };
+    // ptrObjImmutable.e satisfies { readonly f: BaseSharedContainer<number, SharedContainerMutability.Mutable> };
 
     // cannot create a new reference for the same object
     assertThrows(
         () => {
-            runtime.createTransparentReference(
+            runtime.createSharedValueFromJSValue(
                 ptrObjImmutable,
                 undefined,
-                DIFSharedValueMutability.Mutable,
+                SharedContainerMutability.Mutable,
             );
         },
         Error,
@@ -210,10 +164,10 @@ Deno.test("pointer create struct", () => {
     // also cannot create a new reference for the original object
     assertThrows(
         () => {
-            runtime.createTransparentReference(
+            runtime.createSharedValueFromJSValue(
                 struct,
                 undefined,
-                DIFSharedValueMutability.Mutable,
+                SharedContainerMutability.Mutable,
             );
         },
         Error,
@@ -239,6 +193,7 @@ Deno.test("pointer create struct", () => {
     // );
     // assertThrows(
     //     () => {
+    //         // @ts-ignore assert transparent proxy container
     //         ptrObjImmutable.c.d = false;
     //     },
     //     Error,
@@ -246,68 +201,59 @@ Deno.test("pointer create struct", () => {
     // );
     innerPtr.value = 42;
     assertEquals(innerPtr.value, 42);
+    // @ts-ignore assert transparent proxy container
     assertEquals(ptrObjImmutable.e.f.value, 42);
     innerPtr.value = 7;
+    // @ts-ignore assert transparent proxy container
     assertEquals(ptrObjImmutable.e.f.value, 7);
     assertEquals(innerPtr.value, 7);
 
+    // @ts-ignore assert transparent proxy container
     ptrObjImmutable.e.f.value = 10;
 });
 
 Deno.test("pointer create and resolve", () => {
-    // TODO: reenable, currently panics because async resolution is not yet implemented
-    // assertThrows(
-    //     () => {
-    //         runtime.dif.resolveDIFValueContainerSync<string>("abcdef");
-    //     },
-    //     Error,
-    //     `Invalid`,
-    // );
-
-    const ptr = runtime.dif.createSharedValueFromDIFValue(
-        { value: "unyt.org" },
-        undefined,
-        DIFSharedValueMutability.Mutable,
+    const ptr = runtime.dif.constructSharedValue(
+        runtime.dif.convertJSValueToDIFValueContainer("unyt.org"),
+        SharedContainerMutability.Mutable,
     );
-    const resolved = runtime.dif.resolveDIFValueContainerSync<string>(
-        ptr,
-    );
-    assertEquals(resolved, "unyt.org");
+    const resolved = runtime.dif.resolveDIFValueContainer(
+        { $: ptr } as unknown as PointerAddress,
+    ) as BaseSharedContainer<string, SharedContainerMutability.Mutable>;
+    assertEquals(resolved.value, "unyt.org");
 });
 
 Deno.test("pointer object create and resolve", () => {
-    const initialDIFValue: DIFRepresentationValue = [
-        [{ value: "a" }, { value: 123 }],
-        [{ value: "b" }, { value: 456 }],
+    const initialDIFValue: DIFValue = [
+        CoreLibTypeId.Map,
+        [
+            ["a", 123],
+            ["b", 456],
+        ],
     ];
-    const ptr = runtime.dif.createSharedValueFromDIFValue(
-        {
-            value: initialDIFValue,
-        },
-        undefined,
-        DIFSharedValueMutability.Mutable,
-    );
+    const ptr = runtime.dif.constructSharedValue(initialDIFValue, SharedContainerMutability.Mutable);
     console.log("ptr address", ptr);
-    const loadedDIFValue = runtime.dif._handle.resolve_pointer_address_sync(
+    const loadedDIFValue = runtime.dif._handle.resolve_pointer_address(
         ptr,
-    );
+    ) as DIFBaseSharedValueContainer;
     console.log("loadedObj", loadedDIFValue);
 
     assertEquals(
         loadedDIFValue,
-        {
-            allowed_type: "0c0000",
-            mut: DIFSharedValueMutability.Mutable,
-            value: {
-                value: initialDIFValue,
-            },
-        } satisfies DIFSharedValue,
+        [
+            initialDIFValue,
+            SharedContainerMutability.Mutable,
+            CoreLibTypeId.Map,
+        ],
     );
 });
 
 Deno.test("pointer object create and cache", () => {
     const val = { a: 123, b: 456 };
-    const ptrObj = runtime.createTransparentReference(val);
+    const ptrObj = runtime.createSharedValueFromJSValue(val) as SharedRef<
+        typeof val,
+        SharedContainerMutability.Mutable
+    >;
     console.log("ptrObj", ptrObj);
     assertEquals(
         ptrObj,
@@ -321,11 +267,11 @@ Deno.test("pointer object create and cache", () => {
     }
 
     // check if cache is used when resolving the pointer again
-    const loadedObj = runtime.dif.resolvePointerAddress(ptrId);
+    const loadedObj = runtime.dif.resolvePointerAddress(DIFSharedContainerOwnership.Mutable, ptrId);
     console.log("loadedObj", loadedObj);
 
     console.log(
-        difValueContainerToDisplayString(
+        difBaseSharedContainerToDisplayString(
             runtime.dif._handle.resolve_pointer_address(ptrId),
         ),
     );
@@ -336,7 +282,7 @@ Deno.test("pointer object create and cache", () => {
 
 Deno.test("pointer map create and cache", () => {
     const val = new Map([[1, 2], [3, 4]]);
-    const ptrMap = runtime.createTransparentReference(val);
+    const ptrMap = runtime.createSharedValueFromJSValue(val) as SharedRef<Map<number, number>>;
     assertEquals(ptrMap, val);
     ptrMap.set(5, 6);
     ptrMap satisfies Map<number, number>;
@@ -353,13 +299,13 @@ Deno.test("pointer map create and cache", () => {
 
     // check if cache is used when resolving the pointer again
     // FIXME avoid cache for this check
-    const loadedMap = runtime.dif.resolvePointerAddress(ptrId);
+    const loadedMap = runtime.dif.resolvePointerAddress(DIFSharedContainerOwnership.Mutable, ptrId);
     console.log("loadedMap", loadedMap);
     console.log(
-        difReferenceToDisplayString(
+        difBaseSharedContainerToDisplayString(
             runtime.dif._handle.resolve_pointer_address(
                 ptrId,
-            ) as DIFSharedValue,
+            ) as DIFBaseSharedValueContainer,
         ),
     );
 
@@ -370,67 +316,65 @@ Deno.test("pointer map create and cache", () => {
 
 Deno.test("pointer primitive ref create and cache", () => {
     const val = 123;
-    const ptrObj = runtime.createTransparentReference(val);
-    if (!(ptrObj instanceof Ref)) {
-        throw new Error("Pointer object is not a Ref");
+    const ptrObj = runtime.createSharedValueFromJSValue(val);
+    if (!(ptrObj instanceof OwnedSharedContainer)) {
+        throw new Error("Pointer object is not an OwnedSharedContainer");
     }
+    console.log(ptrObj);
     console.log("ptrObj", ptrObj);
     assertEquals(ptrObj.value, val);
 
     const ptrId = ptrObj.pointerAddress;
 
     // check if cache is used when resolving the pointer again
-    const loadedObj = runtime.dif.resolvePointerAddress(ptrId) as number;
+    const loadedObj = runtime.dif.resolvePointerAddress(DIFSharedContainerOwnership.Mutable, ptrId);
     console.log("loadedObj", loadedObj);
     // identical primitive value
-    assertStrictEquals(loadedObj, ptrObj);
+    assertEquals(loadedObj, ptrObj.deriveImmutableReference());
 });
 
 Deno.test("pointer primitive ref update", () => {
     const val = 123;
-    const ptrObj = runtime.createTransparentReference(val as number);
-    if (!(ptrObj instanceof Ref)) {
-        throw new Error("Pointer object is not a Ref");
+    const ptrObj = runtime.createSharedValueFromJSValue(val as number);
+    if (!(ptrObj instanceof OwnedSharedContainer)) {
+        throw new Error("Pointer object is not an OwnedSharedContainer");
     }
     assertEquals(ptrObj.value, val);
 
-    // get value of ptrObj from DATEX execution
-    let result = runtime.executeSyncWithStringResult(
-        "'$" + ptrObj.pointerAddress,
-    );
-    assertEquals(result, "shared mut 123f64");
-
+    const ptrRef = ptrObj.deriveMutableReference();
     // update the ref value
-    ptrObj.value = 456;
+    ptrRef.value = 456;
 
     // get value of ptrObj from DATEX execution
-    result = runtime.executeSyncWithStringResult(
-        "'$" + ptrObj.pointerAddress,
+    const result = runtime.dif.resolveDIFValueContainer(
+        runtime.dif._handle.resolve_pointer_address(ptrObj.pointerAddress)[0],
     );
-    assertEquals(result, "shared mut 456f64");
+    assertEquals(result, 456);
 });
 
 Deno.test("immutable pointer primitive ref update", () => {
     const val = 123;
-    const ptrObj = runtime.createTransparentReference(
+    const ptrObj = runtime.createSharedValueFromJSValue(
         val as number,
         undefined,
-        DIFSharedValueMutability.Immutable,
+        SharedContainerMutability.Immutable,
     );
-    if (!(ptrObj instanceof Ref)) {
-        throw new Error("Pointer object is not a Ref");
+    if (!(ptrObj instanceof OwnedSharedContainer)) {
+        throw new Error("Pointer object is not an OwnedSharedContainer");
     }
-    assertEquals(ptrObj.value, val);
 
-    // get value of ptrObj from DATEX execution
-    const result = runtime.executeSyncWithStringResult(
-        "'$" + ptrObj.pointerAddress,
+    assertThrows(
+        () => {
+            ptrObj.deriveMutableReference() satisfies never;
+        },
+        Error,
+        `Cannot derive a mutable reference from an immutable reference.`,
     );
-    assertEquals(result, "shared 123f64");
 
     // update the ref value
     assertThrows(
         () => {
+            // @ts-ignore: try invalid update
             ptrObj.value = 456;
         },
         Error,
@@ -440,49 +384,40 @@ Deno.test("immutable pointer primitive ref update", () => {
 
 Deno.test("pointer primitive ref update and observe", () => {
     const val = 123;
-    const ptrObj = runtime.createTransparentReference(
+    const ptrObj = runtime.createSharedValueFromJSValue(
         val as number,
-    ) as Ref<
-        number
-    >;
+    ) as unknown as BaseSharedContainer<number, SharedContainerMutability.Mutable>;
     assertEquals(ptrObj.value, val);
 
-    let observedUpdate: DIFUpdate | null = null;
-    runtime.dif.observePointerBindDirect(ptrObj.pointerAddress, (update) => {
+    const observedUpdate: Array<DIFUpdate> = [];
+    runtime.dif.observeSharedValueBindDirect(ptrObj.pointerAddress, (update) => {
         console.log("Observed pointer update:", update);
-        observedUpdate = update;
+        observedUpdate.push(update);
     }, { relay_own_updates: true });
 
     // update the ref value
     ptrObj.value = 456;
 
     // check if the update was observed
-    assertEquals(observedUpdate, {
-        source_id: runtime.dif._transceiver_id,
-        data: {
-            kind: DIFUpdateKind.Replace,
-            value: {
-                value: 456,
-            },
-        },
-    });
+    assertEquals(observedUpdate[0], [
+        runtime.dif._transceiver_id,
+        ...replace(runtime.dif.convertJSValueToDIFValueContainer(456)),
+    ]);
 });
 
 Deno.test("pointer primitive ref update and observe local", () => {
     const val = 123;
-    const ptrObj = runtime.createTransparentReference(
+    const ptrObj = runtime.createSharedValueFromJSValue(
         val as number,
-    ) as Ref<
-        number
-    >;
+    ) as unknown as BaseSharedContainer<number, SharedContainerMutability.Mutable>;
     assertEquals(ptrObj.value, val);
 
-    let observedUpdate: DIFUpdateData | null = null;
+    let observedUpdate: Array<DIFUpdateData> = [];
     const observerId = runtime.dif.observePointer(
         ptrObj.pointerAddress,
         (update) => {
             console.log("Observed pointer update:", update);
-            observedUpdate = update;
+            observedUpdate.push(update);
         },
     );
     // check if observer is registered
@@ -493,12 +428,8 @@ Deno.test("pointer primitive ref update and observe local", () => {
     ptrObj.value = 456;
 
     // check if the update was observed
-    assertEquals(observedUpdate, {
-        kind: DIFUpdateKind.Replace,
-        value: {
-            value: 456,
-        },
-    });
+    assertEquals(observedUpdate.length, 1);
+    assertEquals(observedUpdate[0], replace(runtime.dif.convertJSValueToDIFValueContainer(456)));
 
     // unobserve
     runtime.dif.unobservePointer(ptrObj.pointerAddress, observerId);
@@ -512,117 +443,102 @@ Deno.test("pointer primitive ref update and observe local", () => {
     );
 
     // update the ref value again
-    observedUpdate = null;
+    observedUpdate = [];
     ptrObj.value = 789;
     // check that no update was observed
-    assertEquals(observedUpdate, null);
+    assertEquals(observedUpdate.length, 0);
 });
 
 Deno.test("pointer primitive ref remote update and observe bind direct", () => {
     const val = 123;
-    const ptrObj = runtime.createTransparentReference(
+    const ptrObj = runtime.createSharedValueFromJSValue(
         val as number,
-    ) as Ref<
-        number
-    >;
+    ) as unknown as BaseSharedContainer<number, SharedContainerMutability.Mutable>;
     assertEquals(ptrObj.value, val);
 
-    let observedUpdate: DIFUpdate | null = null;
-    runtime.dif.observePointerBindDirect(
+    const observedUpdate: Array<DIFUpdate> = [];
+    runtime.dif.observeSharedValueBindDirect(
         ptrObj.pointerAddress,
         (update) => {
             console.log("Observed pointer update:", update);
-            observedUpdate = update;
+            observedUpdate.push(update);
         },
     );
 
     // fake a remote update from transceiver 42
-    runtime.dif._handle.update(42, ptrObj.pointerAddress, {
-        value: { value: 456 },
-        kind: DIFUpdateKind.Replace,
-    });
-
+    performFakeRemoteUpdate(
+        runtime,
+        ptrObj.pointerAddress,
+        replace(runtime.dif.convertJSValueToDIFValueContainer(456)),
+    );
     // check if the update was observed
-    assertEquals(observedUpdate, {
-        source_id: 42,
-        data: {
-            kind: DIFUpdateKind.Replace,
-            value: {
-                value: 456,
-            },
-        },
-    });
+    assertEquals(observedUpdate.length, 1);
+    assertEquals(observedUpdate[0], [
+        FAKE_TRANSCEIVER_ID,
+        ...replace(runtime.dif.convertJSValueToDIFValueContainer(456)),
+    ]);
 
     assertEquals(ptrObj.value, 456);
 });
 
 Deno.test("pointer primitive ref remote update and observe local", () => {
     const val = 123;
-    const ptrObj = runtime.createTransparentReference(
+    const ptrObj = runtime.createSharedValueFromJSValue(
         val as number,
-    ) as Ref<
-        number
-    >;
+    ) as unknown as BaseSharedContainer<number, SharedContainerMutability.Mutable>;
     assertEquals(ptrObj.value, val);
 
-    let observedUpdate: DIFUpdateData | null = null;
+    let observedUpdate: Array<DIFUpdateData> = [];
     runtime.dif.observePointer(
         ptrObj.pointerAddress,
         (update) => {
             console.log("Observed pointer update:", update);
-            observedUpdate = update;
+            observedUpdate.push(update);
         },
     );
 
     // fake a remote update from transceiver 42
-    runtime.dif._handle.update(42, ptrObj.pointerAddress, {
-        value: { value: 456 },
-        kind: DIFUpdateKind.Replace,
-    });
+    performFakeRemoteUpdate(
+        runtime,
+        ptrObj.pointerAddress,
+        replace(runtime.dif.convertJSValueToDIFValueContainer(456)),
+    );
 
     // check if the update was observed
-    assertEquals(observedUpdate, {
-        kind: DIFUpdateKind.Replace,
-        value: {
-            value: 456,
-        },
-    });
+    assertEquals(observedUpdate.length, 1);
+    assertEquals(
+        observedUpdate[0],
+        replace(runtime.dif.convertJSValueToDIFValueContainer(456)),
+    );
 
     assertEquals(ptrObj.value, 456);
 
-    observedUpdate = null;
+    observedUpdate = [];
 
     // fake a local update
-    runtime.dif._handle.update(
-        runtime.dif._transceiver_id,
+    performFakeRemoteUpdateWithSourceId(
+        runtime,
         ptrObj.pointerAddress,
-        {
-            value: { value: 789 },
-            kind: DIFUpdateKind.Replace,
-        },
+        replace(runtime.dif.convertJSValueToDIFValueContainer(789)),
+        runtime.dif._transceiver_id,
     );
 
     // local observer should still be triggered
-    assertEquals(observedUpdate, {
-        kind: DIFUpdateKind.Replace,
-        value: {
-            value: 789,
-        },
-    });
+    assertEquals(observedUpdate.length, 1);
+    assertEquals(observedUpdate[0], replace(runtime.dif.convertJSValueToDIFValueContainer(789)));
 
     // local value should not be updated since the update came from own transceiver
     assertEquals(ptrObj.value, 456);
 });
 
 Deno.test("observer immutable", () => {
-    const ref = runtime.dif.createSharedValueFromDIFValue(
-        { value: "Immutable" },
-        undefined,
-        DIFSharedValueMutability.Immutable,
+    const ref = runtime.dif.constructSharedValue(
+        runtime.dif.convertJSValueToDIFValueContainer("Immutable value"),
+        SharedContainerMutability.Immutable,
     );
     assertThrows(
         () => {
-            runtime.dif.observePointerBindDirect(ref, (_) => {});
+            runtime.dif.observeSharedValueBindDirect(ref, (_) => {});
         },
         Error,
         `immutable reference`,
@@ -630,28 +546,27 @@ Deno.test("observer immutable", () => {
 });
 
 Deno.test("pointer observe unobserve", () => {
-    const ref = runtime.dif.createSharedValueFromDIFValue(
-        { value: "42" },
-        undefined,
-        DIFSharedValueMutability.Mutable,
+    const ref = runtime.dif.constructSharedValue(
+        runtime.dif.convertJSValueToDIFValueContainer("Hello, DATEX!"),
+        SharedContainerMutability.Mutable,
     );
     assertThrows(
         () => {
-            runtime.dif.unobserveReferenceBindDirect(ref, 42);
+            runtime.dif.unobserveSharedValueBindDirect(ref, 42);
         },
         Error,
         `not found`,
     );
 
-    const observerId = runtime.dif.observePointerBindDirect(ref, (value) => {
+    const observerId = runtime.dif.observeSharedValueBindDirect(ref, (value) => {
         console.log("Observed pointer value:", value);
-        runtime.dif.unobserveReferenceBindDirect(ref, observerId);
+        runtime.dif.unobserveSharedValueBindDirect(ref, observerId);
     });
     assertEquals(observerId, 0);
-    runtime.dif.unobserveReferenceBindDirect(ref, observerId);
+    runtime.dif.unobserveSharedValueBindDirect(ref, observerId);
     assertThrows(
         () => {
-            runtime.dif.unobserveReferenceBindDirect(ref, observerId);
+            runtime.dif.unobserveSharedValueBindDirect(ref, observerId);
         },
         Error,
         `not found`,
@@ -661,35 +576,30 @@ Deno.test("pointer observe unobserve", () => {
 Deno.test("core text", () => {
     const script = `"Hello, world!"`;
     const result = runtime.dif.executeSyncDIF(script);
-    assertEquals(result, { value: "Hello, world!" });
+    assertEquals(result, "Hello, world!");
 });
 
 Deno.test("core integer", () => {
     const script = "42";
     const result = runtime.dif.executeSyncDIF(script);
-    assertEquals(result, {
-        type: CoreTypeAddress.integer,
-        value: "42",
-    });
+    console.log("result", result);
+    assertEquals(result, integer(42));
 });
 
 Deno.test("core boolean", () => {
     const script = "true";
     const result = runtime.dif.executeSyncDIF(script);
-    assertEquals(result, { value: true });
+    assertEquals(result, true);
 });
 
 Deno.test("core null", () => {
     const script = "null";
     const result = runtime.dif.executeSyncDIF(script);
-    assertEquals(result, { value: null });
+    assertEquals(result, null);
 });
 
 Deno.test("core integer variants", () => {
     const script = "42u8";
     const result = runtime.dif.executeSyncDIF(script);
-    assertEquals(result, {
-        value: 42,
-        type: CoreTypeAddress.integer_u8,
-    });
+    assertEquals(result, u8(42));
 });

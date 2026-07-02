@@ -8,7 +8,7 @@ export class Repl {
 
     public async execute(script: string): Promise<string> {
         const result = await this.#repl.execute(script);
-        const jsValue = this.runtime.dif.resolveDIFValueContainerSync(result);
+        const jsValue = this.runtime.dif.resolveDIFValueContainer(result);
         return this.runtime.valueToString(jsValue);
     }
 }

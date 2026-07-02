@@ -30,11 +30,11 @@ jobs:
 
             - name: Build
               run: |
-                  deno task release
+                  deno task build:release
 
             - name: Generate datex.js bundle for pages (without inline WASM)
               run: |
-                  deno task build-bundle
+                  deno task build:bundle
 
             - name: Set up GitHub Pages directory with datex.js and WASM
               run: |
@@ -44,7 +44,7 @@ jobs:
 
             - name: Generate datex.js bundle for release artifact (with inline WASM)
               run: |
-                  deno task build-bundle --inline-wasm
+                  deno task build:bundle --inline-wasm
 
             - name: Create Tag
               id: create_tag

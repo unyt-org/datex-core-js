@@ -1,5 +1,8 @@
-import { CoreTypeAddress } from "../../dif/core.ts";
+import { CoreLibTypeId } from "../../dif/core.ts";
+import { JsLibTypeAddress } from "../../dif/js-lib.ts";
 import type { TypeBindingDefinition } from "../../dif/type-registry.ts";
+import type { DIFImplTypeDefinition, DIFTypeDefinition } from "../../dif/types/mod.ts";
+import type { SharedRef } from "datex/shared-container/mod.ts";
 
 const ORIGINAL_SET = Symbol("ORIGINAL_SET");
 const ORIGINAL_DELETE = Symbol("ORIGINAL_DELETE");
@@ -15,16 +18,16 @@ export const mapTypeBinding: TypeBindingDefinition<
     Map<unknown, unknown>,
     MapMetadata
 > = {
-    typeAddress: CoreTypeAddress.map,
+    coreLibTypeId: CoreLibTypeId.Map,
     bind(value, pointerAddress) {
-        const originalSet = value.set.bind(value);
+        const originalSet = value.set.bind(value) as (key: unknown, value: unknown) => SharedRef<Map<unknown, unknown>>;
         const originalDelete = value.delete.bind(value);
         const originalClear = value.clear.bind(value);
         Object.defineProperties(value, {
             set: {
-                value: (key: unknown, value: unknown) => {
-                    this.difHandler.triggerSet(pointerAddress, key, value);
-                    return originalSet.call(value, key, value);
+                value: (key: unknown, val: unknown) => {
+                    this.difHandler.triggerSet(pointerAddress, key, val);
+                    return originalSet.call(value, key, val);
                 },
                 configurable: true,
                 writable: true,
@@ -39,6 +42,8 @@ export const mapTypeBinding: TypeBindingDefinition<
             },
             clear: {
                 value: () => {
+                    console.warn("triggering clear for pointer address:", pointerAddress);
+
                     this.difHandler.triggerClear(pointerAddress);
                     return originalClear.call(value);
                 },
@@ -82,3 +87,31 @@ export const mapTypeBinding: TypeBindingDefinition<
         }
     },
 };
+
+const JS_MAP_IMPL_TYPE_DEFINITION: DIFImplTypeDefinition = [
+    CoreLibTypeId.Map,
+    [JsLibTypeAddress.map],
+];
+function isJsMapImplTypeDefinition(impl: unknown): impl is DIFImplTypeDefinition {
+    return (
+        Array.isArray(impl) &&
+        impl.length === 2 &&
+        impl[0] === CoreLibTypeId.Map &&
+        Array.isArray(impl[1]) &&
+        impl[1].length === 1 &&
+        impl[1][0] === JsLibTypeAddress.map
+    );
+}
+
+export const JS_MAP_TYPE_DEFINITION: DIFTypeDefinition = {
+    impl_type: JS_MAP_IMPL_TYPE_DEFINITION,
+};
+
+export function isJsMapTypeDefinition(typeDef: DIFTypeDefinition): boolean {
+    return (
+        typeof typeDef === "object" &&
+        typeDef !== null &&
+        "impl_type" in typeDef &&
+        isJsMapImplTypeDefinition(typeDef.impl_type)
+    );
+}

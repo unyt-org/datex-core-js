@@ -1,11 +1,12 @@
 use datex_core::{
-    derive_setup_data,
+    macros::Datex,
     network::com_interfaces::com_interface::factory::ComInterfaceAsyncFactory,
 };
-use futures_channel::oneshot;
+use futures::channel::oneshot;
 use gloo_timers::future::TimeoutFuture;
 use std::{
     cell::RefCell,
+    ops::Deref,
     rc::Rc,
     sync::{Arc, Mutex},
     time::Duration,
@@ -32,15 +33,22 @@ use datex_core::{
         },
     },
 };
-use log::info;
 use url::Url;
 use wasm_bindgen::{JsCast, prelude::Closure};
 use web_sys::js_sys;
 
-derive_setup_data!(
-    WebSocketClientInterfaceSetupDataJS,
-    WebSocketClientInterfaceSetupData
+#[derive(Datex)]
+pub struct WebSocketClientInterfaceSetupDataJS(
+    WebSocketClientInterfaceSetupData,
 );
+
+impl Deref for WebSocketClientInterfaceSetupDataJS {
+    type Target = WebSocketClientInterfaceSetupData;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 
 impl WebSocketClientInterfaceSetupDataJS {
     const OPEN_TIMEOUT_MS: Duration = Duration::from_secs(15);
