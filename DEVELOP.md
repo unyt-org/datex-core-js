@@ -11,13 +11,13 @@ This project has a strong dependency on [DATEX](https://github.com/unyt-org/date
 To generate a WASM binary and JS glue code, run the following command:
 
 ```sh
-deno task release
+deno task build:release
 ```
 
 To generate a debug build, run:
 
 ```sh
-deno task debug
+deno task build:debug
 ```
 
 Note that the project is built with **Rust Nightly** ([`rustc 1.95.0-nightly`](https://releases.rs/docs/1.95.0/))
@@ -42,7 +42,7 @@ datex-core = {
 
 The JS build can be tested by running `deno task test`. This compiles the library, generates the WASM binary and JS glue
 code, and runs all tests in the [`test`](./test/) directory. If you only want to run the tests without rebuilding the
-rust library, you can run `deno task test-no-build`.
+rust library, you can run `deno task test:no-build`.
 
 ## Browser demo
 
@@ -54,5 +54,5 @@ developer console via the global `Datex` variable.
 
 **Important steps before creating a release**:
 
-- Run `deno task release` to ensure that the generated d.ts files contain the types for the release build.
+- Run `deno task build:release` to ensure that the generated d.ts files contain the types for the release build.
 - Set the `datex` crate to the correct version in the `Cargo.toml` file.

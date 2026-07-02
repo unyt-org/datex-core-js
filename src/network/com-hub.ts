@@ -1,15 +1,38 @@
-import type {
-    ComHubMetadata,
-    ComInterfaceConfiguration,
-    JSComHub,
-    NetworkTraceResult,
-} from "../datex-web/datex_web.d.ts";
-import type { DIFValueContainer } from "../dif/definitions.ts";
 import type { Runtime } from "../runtime/runtime.ts";
+import type { DIFValueContainer } from "../dif/types/value.ts";
+import type { JSComHub } from "../datex.ts";
+import type { ComHubMetadata } from "../datex-web/types/network/com_hub/metadata.ts";
+import type { NetworkTraceResult } from "../datex-web/types/network/com_hub/network_tracing.ts";
+import type { SocketPropertiesPartial } from "../datex-web/types/network/com_hub.ts";
+import type { ComInterfaceProperties } from "../datex-web/types/network/com_interfaces/com_interface/properties.ts";
 
 export type ComInterfaceFactory<SetupData = unknown> = {
     interfaceType: string;
     factory: ComInterfaceFactoryFn<SetupData>;
+};
+
+export type SocketConfiguration = {
+    properties: DIFValueContainer<SocketPropertiesPartial>;
+    iterator: ReadableStream<ArrayBufferLike>;
+    send_callback: (data: ArrayBuffer) => void;
+};
+
+export type ComInterfaceConfiguration = {
+    /**
+     * The properties of the interface instance
+     */
+    properties: ComInterfaceProperties;
+    /**
+     * Indicates that this interface only establishes a single socket connection
+     * And stops the sockets iterator after yielding the first socket configuration.
+     * When set to true, the first socket connection is awaited on interface creation.
+     */
+    has_single_socket: boolean;
+    new_sockets_iterator: ReadableStream<SocketConfiguration>;
+    /**
+     * An optional asynchronous callback that is called by the com hub when the interface is closed
+     */
+    close_async_callback?: never;
 };
 
 export type ComInterfaceFactoryFn<SetupData = unknown> = (
@@ -39,7 +62,11 @@ export class ComHub {
             factoryDefinition.interfaceType,
             async (setupData: DIFValueContainer) => {
                 const setupDataJS = await this.#runtime.dif.resolveDIFValueContainer<SetupData>(setupData);
-                return factoryDefinition.factory(setupDataJS);
+                const data = await factoryDefinition.factory(setupDataJS);
+                return {
+                    ...data,
+                    properties: this.#runtime.dif.convertJSValueToDIFValueContainer(data.properties),
+                };
             },
         );
     }
@@ -86,7 +113,7 @@ export class ComHub {
 
     public getMetadata(): ComHubMetadata {
         // as any required because get_metadata only exists in debug builds
-        return this.#jsComHub.get_metadata();
+        return this.#runtime.dif.resolveDIFValueContainer(this.#jsComHub.get_metadata()) as ComHubMetadata;
     }
 
     /**

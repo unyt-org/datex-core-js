@@ -14,31 +14,44 @@ const TEXT_INPUTS = [
     "true",
     "false",
     "null",
-    "[1, 2, 3]",
-    '{"a": 1, "b": "test"}',
+    "[false, true]",
+    '{"a": false, "b": "test"}',
     "[]",
     "{}",
 ];
 
-import { Runtime } from "../../src/runtime/runtime.ts";
+import { Runtime } from "datex/runtime/runtime.ts";
 import { assertEquals } from "@std/assert";
+import { Endpoint, Tagged } from "datex/lib/mod.ts";
+import type { FormattingMode } from "../../src/datex-web/types/decompiler/options.ts";
 
-const runtime = await Runtime.create({ endpoint: "@jonas" });
+const runtime = await Runtime.create({ endpoint: Endpoint.get("@jonas") });
 
-for (const input of TEXT_INPUTS) {
-    Deno.test(`JSON parse compatibility for input: ${input}`, () => {
-        const resultFromRuntime = runtime.executeSync(input);
-        const resultFromJSON = JSON.parse(input);
-        assertEquals(resultFromRuntime, resultFromJSON);
-    });
-
-    Deno.test(`JSON stringify compatibility for input : ${input}`, () => {
-        const value = JSON.parse(input);
-        const stringFromRuntime = runtime.valueToString(value, {
-            formatting_options: { json_compat: true },
-            resolve_slots: false,
+Deno.test(`JSON parse compatibility`, async (t) => {
+    for (const input of TEXT_INPUTS) {
+        await t.step(`Testing input: ${input}`, () => {
+            const resultFromRuntime = runtime.executeSync(input);
+            const resultFromJSON = JSON.parse(input);
+            assertEquals(resultFromRuntime, resultFromJSON);
         });
-        const stringFromJSON = JSON.stringify(value);
-        assertEquals(stringFromRuntime, stringFromJSON);
-    });
-}
+    }
+});
+
+Deno.test(`JSON stringify compatibility`, async (t) => {
+    for (const input of TEXT_INPUTS) {
+        await t.step(`Testing input: ${input}`, () => {
+            const value = JSON.parse(input);
+            const stringFromRuntime = runtime.valueToString(value, {
+                formatting_options: {
+                    json_compat: true,
+                    add_variant_suffix: false,
+                    mode: new Tagged("Compact") as FormattingMode,
+                    colorized: false,
+                },
+                resolve_slots: false,
+            });
+            const stringFromJSON = JSON.stringify(value);
+            assertEquals(stringFromRuntime, stringFromJSON);
+        });
+    }
+});

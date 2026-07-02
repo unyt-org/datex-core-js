@@ -12,12 +12,14 @@
  * ```
  */
 
+import { Endpoint } from "./lib/mod.ts";
 import { Runtime, type RuntimeConfig } from "./runtime/runtime.ts";
 
 /**
  * The default configuration for the Datex runtime.
  */
 const defaultConfig: RuntimeConfig = {
+    endpoint: Endpoint.get("@unyt"),
     interfaces: [{
         type: "websocket-client",
         config: { url: "wss://example.unyt.land" },

@@ -1,5 +1,7 @@
-import type { ComInterfaceFactory } from "../com-hub.ts";
-import type { SocketConfiguration, WebSocketServerInterfaceSetupData } from "../../datex.ts";
+import type { ComInterfaceFactory, SocketConfiguration } from "../com-hub.ts";
+import { tagged } from "datex/lib/special-core-types/tagged.ts";
+import type { WebSocketServerInterfaceSetupData } from "../../datex-web/types/network/com_interfaces/default_setup_data/websocket/websocket_server.ts";
+import { DIFHandler } from "datex/dif/dif-handler.ts";
 
 /**
  * Utility function to create a WebSocket server communication interface factory from a given server factory function.
@@ -23,13 +25,13 @@ export function createWebsocketServerComInterfaceFactory(
                     interface_type: "websocket-server",
                     channel: "websocket",
                     name: setupData.bind_address,
-                    direction: "InOut",
+                    direction: tagged("InOut"),
                     round_trip_time: 0,
                     max_bandwidth: 0,
                     continuous_connection: false,
                     allow_redirects: false,
                     is_secure_channel: false,
-                    reconnection_config: "NoReconnect",
+                    reconnection_config: tagged("NoReconnect"),
                     auto_identify: true,
                     connectable_interfaces: [], // TODO add websocket client connections
                 },
@@ -39,12 +41,11 @@ export function createWebsocketServerComInterfaceFactory(
                         async transform(socket, controller) {
                             const incoming_data_stream = await createSocketDataIterator(socket);
                             controller.enqueue({
-                                properties: {
-                                    direction: "InOut",
+                                properties: DIFHandler.convertJSValueToDIFValueContainer({
+                                    direction: tagged("InOut"),
                                     channel_factor: 1,
-                                    connection_timestamp: Date.now(),
-                                    direct_endpoint: undefined,
-                                },
+                                    direct_endpoint: null,
+                                }),
                                 iterator: incoming_data_stream,
                                 send_callback: (data: ArrayBuffer) => {
                                     socket.send(data);

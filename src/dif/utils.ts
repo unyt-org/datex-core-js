@@ -1,3 +1,6 @@
+/**
+ * Utility functions DIF
+ */
 import type { Option } from "../utils/option.ts";
 
 export function getAllKeys(obj: object): Set<(string | symbol)> {

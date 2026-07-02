@@ -1,0 +1,13 @@
+[package]
+name = "rs-lib-generate"
+version = "0.0.1"
+authors = [
+    "Benedikt Strehle <benedikt@unyt.org>",
+    "Jonas Strehle <jonas@unyt.org>",
+]
+license = "../LICENSE"
+edition = "2024"
+publish = false
+
+[dependencies]
+datex-web = { path = "../rs-lib", version = "0.0.15" }

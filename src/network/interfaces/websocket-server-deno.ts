@@ -1,4 +1,5 @@
-import type { WebSocketServerInterfaceSetupData } from "../../datex.ts";
+import type { WebSocketServerInterfaceSetupData } from "../../datex-web/types/network/com_interfaces/default_setup_data/websocket/websocket_server.ts";
+
 import { createWebsocketServerComInterfaceFactory } from "./websocket-server-base.ts";
 import type { ComInterfaceFactory } from "../com-hub.ts";
 

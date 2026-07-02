@@ -1,5 +1,5 @@
-import type { DIFTypeDefinition } from "../dif/definitions.ts";
-import { CoreTypeAddress } from "../dif/core.ts";
+import { CoreLibTypeId } from "../dif/core.ts";
+import type { DIFTypeDefinition } from "../dif/types/type.ts";
 
 /**
  * Template function for creating TypeScript types that are converted to DIF type containers.
@@ -28,13 +28,13 @@ export function TS_TYPE(
 function convertTSTypeToDIFType(ts_type_str: string): DIFTypeDefinition {
     ts_type_str = ts_type_str.trim();
     if (ts_type_str === "number") {
-        return CoreTypeAddress.decimal_f64;
+        return CoreLibTypeId.decimal_f64;
     } else if (ts_type_str === "string") {
-        return CoreTypeAddress.text;
+        return CoreLibTypeId.text;
     } else if (ts_type_str === "null") {
-        return CoreTypeAddress.null;
+        return CoreLibTypeId.null;
     } else if (ts_type_str === "boolean") {
-        return CoreTypeAddress.boolean;
+        return CoreLibTypeId.boolean;
     } else {
         throw new Error(
             `TS type conversion not implemented for: ${ts_type_str}`,

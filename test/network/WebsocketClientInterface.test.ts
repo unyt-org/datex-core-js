@@ -1,11 +1,12 @@
 import { assert, assertRejects } from "@std/assert";
 import { createMockupServer, type MockupServerInstance } from "./WebsocketMockupServer.ts";
-import { Runtime } from "../../src/runtime/runtime.ts";
+import { Runtime } from "datex/runtime/runtime.ts";
 import { sleep } from "../utils.ts";
 import { isNodeOrBun } from "../is-node.ts";
+import { Endpoint } from "datex/lib/mod.ts";
 
 Deno.test("invalid url construct", async () => {
-    const runtime = await Runtime.create({ endpoint: "@unyt" });
+    const runtime = await Runtime.create({ endpoint: Endpoint.get("@unyt") });
     await assertRejects(
         async () =>
             await runtime.comHub.createInterface("websocket-client", {
@@ -16,7 +17,7 @@ Deno.test("invalid url construct", async () => {
 });
 
 Deno.test("invalid url scheme construct", async () => {
-    const runtime = await Runtime.create({ endpoint: "@unyt" });
+    const runtime = await Runtime.create({ endpoint: Endpoint.get("@unyt") });
     await assertRejects(
         async () =>
             await runtime.comHub.createInterface("websocket-client", {
@@ -27,7 +28,7 @@ Deno.test("invalid url scheme construct", async () => {
 });
 
 Deno.test("websocket connect fail", async () => {
-    const runtime = await Runtime.create({ endpoint: "@unyt" });
+    const runtime = await Runtime.create({ endpoint: Endpoint.get("@unyt") });
     await assertRejects(
         async () =>
             await runtime.comHub.createInterface("websocket-client", {
@@ -49,7 +50,7 @@ Deno.test("websocket basic connect", async () => {
         return;
     }
     const port = 8484;
-    const runtime = await Runtime.create({ endpoint: "@unyt" }, {
+    const runtime = await Runtime.create({ endpoint: Endpoint.get("@unyt") }, {
         log_level: "debug",
     });
 

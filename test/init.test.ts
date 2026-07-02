@@ -1,5 +1,6 @@
 import { assertEquals } from "@std/assert";
-import { Runtime } from "../src/runtime/runtime.ts";
+import { Runtime } from "datex/runtime/runtime.ts";
+import { Endpoint } from "datex/lib/mod.ts";
 
 /**
  * Verify that the runtime is initialized correctly and the versions
@@ -20,7 +21,7 @@ Deno.test("runtime version", async () => {
         return versionMatch ? versionMatch[1] : "unknown";
     });
 
-    const runtime = await Runtime.create({ endpoint: "@unyt" });
+    const runtime = await Runtime.create({ endpoint: Endpoint.get("@unyt") });
     assertEquals(runtime.js_version, actual_js_version);
     assertEquals(runtime.version, actual_version);
     console.log(runtime);

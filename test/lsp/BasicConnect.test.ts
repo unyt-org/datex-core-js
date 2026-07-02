@@ -1,7 +1,8 @@
 import { dedent } from "@qnighy/dedent";
-import { Runtime } from "../../src/runtime/runtime.ts";
+import { Runtime } from "datex/runtime/runtime.ts";
 import { sleep } from "../utils.ts";
 import { assertEquals } from "@std/assert/equals";
+import { Endpoint } from "datex/lib/mod.ts";
 
 Deno.test("basic lsp", async () => {
     const INIT_FRAME = dedent`{
@@ -15,7 +16,7 @@ Deno.test("basic lsp", async () => {
         }
     }`;
 
-    const runtime = await Runtime.create({ endpoint: "@unyt" });
+    const runtime = await Runtime.create({ endpoint: Endpoint.get("@unyt") });
     const queue = [];
     const send = runtime.startLSP(
         (data: string) => {
