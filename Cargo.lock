@@ -477,8 +477,6 @@ dependencies = [
 [[package]]
 name = "datex-crypto-facade"
 version = "0.0.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f4139e03ec405b07919a6eea76461459f86bef9972502998c67d4326550444e4"
 dependencies = [
  "bs58",
 ]
@@ -2814,8 +2812,4 @@ checksum = "b8848ee67ecc8aedbaf3e4122217aff892639231befc6a1b58d29fff4c2cabaa"
 
 [[patch.unused]]
 name = "datex-core"
-version = "0.0.12"
-
-[[patch.unused]]
-name = "datex-crypto-facade"
-version = "0.0.3"
+version = "0.0.13"
