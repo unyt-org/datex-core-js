@@ -120,23 +120,12 @@ impl JSDIFInterface {
     ) -> Result<JsValue, JsError> {
         let address = PointerAddress::try_from(address).map_err(js_error)?;
         let update: Update = from_js_value(update, &mut self.cache())?;
-        let update_clone = update.clone();
 
         let result = self
             .dif_interface
             .borrow()
             .update(&address, update)
             .map_err(js_error)?;
-        let observer_callbacks = self
-            .dif_interface
-            .borrow()
-            .get_current_observers(&address, update_clone.source_id)
-            .map_err(js_error)?;
-
-        // Call each observer synchronously
-        for callback in observer_callbacks {
-            callback(&update_clone);
-        }
 
         Ok(to_js_value(&result, &mut self.cache()))
     }
