@@ -1,0 +1,62 @@
+import { Runtime } from "datex/runtime/runtime.ts";
+import { Endpoint } from "datex/lib/special-core-types/endpoint.ts";
+import {websocketServerDenoComInterfaceFactory} from "../../src/network/interfaces/websocket-server-deno.ts";
+import {sleep} from "../utils.ts";
+import { assertEquals } from "@std/assert/equals";
+import {BaseSharedContainer, SharedContainerMutability} from "../../src/shared-container/base-shared-container.ts";
+
+async function getTwoConnectedRuntimes(): Promise<{runtimeA: Runtime, runtimeB: Runtime, cleanup: ()=>Promise<void>}> {
+    const PORT = 8099;
+    const runtimeA = await Runtime.create({ endpoint: Endpoint.get("@test_a") });
+    runtimeA.comHub.registerInterfaceFactory(
+        websocketServerDenoComInterfaceFactory,
+    );
+    const serverInterfaceUUID = await runtimeA.comHub.createInterface(
+        "websocket-server",
+        { bind_address: `0.0.0.0:${PORT}` },
+    );
+
+    const runtimeB = await Runtime.create({ endpoint: Endpoint.get("@test_b") });
+    const clientInterfaceUUID = await runtimeB.comHub.createInterface(
+        "websocket-client",
+        { url: `ws://localhost:${PORT}` },
+    );
+
+    await sleep(100);
+
+    return {
+        runtimeA,
+        runtimeB,
+        cleanup: async () => {
+            await runtimeA.comHub.removeInterface(serverInterfaceUUID);
+            await runtimeB.comHub.removeInterface(clientInterfaceUUID);
+        }
+    }
+}
+
+
+Deno.test("sync value between two runtimes", async () => {
+    const {runtimeA, runtimeB, cleanup} = await getTwoConnectedRuntimes();
+
+    await runtimeA.execute(`
+        var x = shared mut 42; 
+        @@local.x = 'mut x; 
+        @test_b.x = 'mut x;
+    `)
+
+    const xOnA = runtimeA.executeSync<BaseSharedContainer<number, SharedContainerMutability.Mutable>>("@@local.x");
+    const xOnB = runtimeB.executeSync<BaseSharedContainer<number, SharedContainerMutability.Mutable>>("@@local.x");
+
+    console.log("x on A:", xOnA);
+    console.log("x on B:", xOnB);
+
+    assertEquals(xOnA.value, 42);
+    assertEquals(xOnA.value, xOnB.value);
+
+    xOnA.value = 43;
+
+    await sleep(500);
+    assertEquals(xOnB.value, 43); // FIXME
+
+    await cleanup();
+});

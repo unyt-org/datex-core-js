@@ -661,7 +661,7 @@ export class DIFHandler {
         } else if (cached === "not_cached") {
             // if not in cache, resolve from runtime
             const base: DIFBaseSharedValueContainer = this.#handle.resolve_pointer_address(
-                addressWithOwnership,
+                address,
             );
             const value = this.resolveDIFValueContainer<T>(
                 base[0],
