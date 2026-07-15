@@ -232,11 +232,9 @@ Deno.test("pointer object create and resolve", () => {
         ],
     ];
     const ptr = runtime.dif.constructSharedValue(initialDIFValue, SharedContainerMutability.Mutable);
-    console.log("ptr address", ptr);
     const loadedDIFValue = runtime.dif._handle.resolve_pointer_address(
         ptr,
     ) as DIFBaseSharedValueContainer;
-    console.log("loadedObj", loadedDIFValue);
 
     assertEquals(
         loadedDIFValue,
@@ -254,22 +252,18 @@ Deno.test("pointer object create and cache", () => {
         typeof val,
         SharedContainerMutability.Mutable
     >;
-    console.log("ptrObj", ptrObj);
     assertEquals(
         ptrObj,
         val,
     );
 
     const ptrId = runtime.dif.getPointerAddressForValue(ptrObj);
-    console.log("ptrId", ptrId);
     if (!ptrId) {
         throw new Error("Pointer ID not found for value");
     }
 
     // check if cache is used when resolving the pointer again
     const loadedObj = runtime.dif.resolvePointerAddress(DIFSharedContainerOwnership.Mutable, ptrId);
-    console.log("loadedObj", loadedObj);
-
     console.log(
         difBaseSharedContainerToDisplayString(
             runtime.dif._handle.resolve_pointer_address(ptrId),
@@ -300,7 +294,6 @@ Deno.test("pointer map create and cache", () => {
     // check if cache is used when resolving the pointer again
     // FIXME avoid cache for this check
     const loadedMap = runtime.dif.resolvePointerAddress(DIFSharedContainerOwnership.Mutable, ptrId);
-    console.log("loadedMap", loadedMap);
     console.log(
         difBaseSharedContainerToDisplayString(
             runtime.dif._handle.resolve_pointer_address(
@@ -320,15 +313,12 @@ Deno.test("pointer primitive ref create and cache", () => {
     if (!(ptrObj instanceof OwnedSharedContainer)) {
         throw new Error("Pointer object is not an OwnedSharedContainer");
     }
-    console.log(ptrObj);
-    console.log("ptrObj", ptrObj);
     assertEquals(ptrObj.value, val);
 
     const ptrId = ptrObj.pointerAddress;
 
     // check if cache is used when resolving the pointer again
     const loadedObj = runtime.dif.resolvePointerAddress(DIFSharedContainerOwnership.Mutable, ptrId);
-    console.log("loadedObj", loadedObj);
     // identical primitive value
     assertEquals(loadedObj, ptrObj.deriveImmutableReference());
 });
@@ -397,6 +387,8 @@ Deno.test("pointer primitive ref update and observe", () => {
 
     // update the ref value
     ptrObj.value = 456;
+
+    assertEquals(observedUpdate.length, 1);
 
     // check if the update was observed
     assertEquals(observedUpdate[0], [
