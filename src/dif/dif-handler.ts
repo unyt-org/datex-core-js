@@ -279,7 +279,6 @@ export class DIFHandler {
         options: ObserveOptions = { relay_own_updates: false },
     ): number {
         return this.#runtime.dif_interface().observe_pointer(
-            this.#transceiver_id,
             address,
             options,
             callback,

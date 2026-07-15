@@ -24,6 +24,8 @@ use std::{
     rc::Rc,
 };
 use datex_core::runtime::cache::shared_values_cache::SharedValuesCache;
+use datex_core::shared_values::SharedContainer;
+use datex_core::shared_values::traits::SharedContainerCommon;
 use wasm_bindgen::{JsError, JsValue, prelude::*};
 
 #[wasm_bindgen]
@@ -55,12 +57,10 @@ impl JSDIFInterface {
 impl JSDIFInterface {
     pub fn observe_pointer(
         &self,
-        transceiver_id: u32,
         address: &str,
         observe_options: JsValue,
         callback: &Function,
     ) -> Result<u32, JsError> {
-        let transceiver_id = TransceiverId(transceiver_id);
         let address = PointerAddress::try_from(address).map_err(js_error)?;
         let cb = callback.clone();
         let observe_options: ObserveOptions =
@@ -121,10 +121,16 @@ impl JSDIFInterface {
         let address = PointerAddress::try_from(address).map_err(js_error)?;
         let update: Update = from_js_value(update, &mut self.cache())?;
 
-        let result = self
+        let shared_container = self
             .dif_interface
             .borrow()
-            .update(&address, update)
+            .cache
+            .try_get_shared_container_mutable_reference(&address)
+            .map_err(js_error)?;
+
+        let result = SharedContainer::Referenced(shared_container)
+            .update(update)
+            .map_err(DIFUpdateError::UpdateError)
             .map_err(js_error)?;
 
         Ok(to_js_value(&result, &mut self.cache()))
