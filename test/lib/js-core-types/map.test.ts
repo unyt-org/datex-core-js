@@ -2,15 +2,18 @@ import { assertEquals } from "@std/assert/equals";
 import { mapTypeBinding } from "datex/lib/js-core-types/map.ts";
 import { Runtime } from "datex/runtime/runtime.ts";
 import { CoreLibTypeId } from "datex/dif/core.ts";
-import { Endpoint } from "datex/lib/mod.ts";
+import {arrayTypeBinding, Endpoint} from "datex/lib/mod.ts";
 import { performFakeRemoteUpdate } from "../utils.ts";
 import { SharedContainerMutability } from "datex/shared-container/base-shared-container.ts";
 import type { CachedSharedContainer } from "datex/dif/dif-handler.ts";
 import type { PointerAddress, SharedRef } from "datex/shared-container/mod.ts";
 import { clear, createDIFProperty, deleteEntry, DIFPropertyKind, replace, setEntry } from "datex/dif/update.ts";
 import { integer } from "datex/dif/helpers/typed-integer.ts";
-const runtime = await Runtime.create({ endpoint: Endpoint.get("@test") });
-runtime.dif.type_registry.registerTypeBinding(mapTypeBinding);
+let runtime: Runtime;
+Deno.test.beforeEach(async () => {
+    runtime = await Runtime.create({ endpoint: Endpoint.get("@test") });
+    runtime.dif.type_registry.registerTypeBinding(mapTypeBinding);
+});
 
 function getCurrentRuntimeLocalValue<T>(address: string) {
     return runtime.dif

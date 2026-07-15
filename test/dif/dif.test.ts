@@ -27,8 +27,11 @@ import { FAKE_TRANSCEIVER_ID, performFakeRemoteUpdate, performFakeRemoteUpdateWi
 import { OwnedSharedContainer } from "datex/shared-container/owned.ts";
 import { integer, u8 } from "datex/dif/helpers/typed-integer.ts";
 
-const runtime = await Runtime.create({ endpoint: Endpoint.get("@jonas") });
-runtime.dif.type_registry.registerTypeBinding(arrayTypeBinding);
+let runtime: Runtime;
+Deno.test.beforeEach(async () => {
+    runtime = await Runtime.create({ endpoint: Endpoint.get("@jonas") });
+    runtime.dif.type_registry.registerTypeBinding(arrayTypeBinding);
+});
 
 Deno.test("pointer create with observe", () => {
     const ref = runtime.dif.constructSharedValue(

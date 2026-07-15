@@ -17,8 +17,11 @@ import {
     setEntry,
 } from "datex/dif/update.ts";
 
-const runtime = await Runtime.create({ endpoint: Endpoint.get("@test") });
-runtime.dif.type_registry.registerTypeBinding(arrayTypeBinding);
+let runtime: Runtime;
+Deno.test.beforeEach(async () => {
+    runtime = await Runtime.create({ endpoint: Endpoint.get("@test") });
+    runtime.dif.type_registry.registerTypeBinding(arrayTypeBinding);
+});
 
 function getCurrentRuntimeLocalValue<T>(address: string) {
     return runtime.dif

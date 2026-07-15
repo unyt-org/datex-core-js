@@ -8,8 +8,11 @@ import {
     type SharedReferenceMutability,
 } from "datex/shared-container/mod.ts";
 
-const runtime = await Runtime.create({ endpoint: Endpoint.get("@jonas") });
-runtime.dif.type_registry.registerTypeBinding(arrayTypeBinding);
+let runtime: Runtime;
+Deno.test.beforeEach(async () => {
+    runtime = await Runtime.create({ endpoint: Endpoint.get("@jonas") });
+    runtime.dif.type_registry.registerTypeBinding(arrayTypeBinding);
+});
 
 Deno.test("detect illegal use of moved original value", () => {
     const original = [1, 2];
