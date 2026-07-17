@@ -54,8 +54,8 @@ Deno.test("sync value between two runtimes", async () => {
     assertEquals(xOnA.value, 42);
     assertEquals(xOnA.value, xOnB.value);
 
-    assert(xOnA.isMutable())
-    assert(xOnB.isMutable())
+    assert(xOnA.isMutable(), "xOnA should be mutable");
+    assert(xOnB.isMutable(), "xOnB should be mutable");
 
     // update on a
     xOnA.value = 43;
