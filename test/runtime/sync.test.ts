@@ -3,8 +3,8 @@ import { Endpoint } from "datex/lib/special-core-types/endpoint.ts";
 import {websocketServerDenoComInterfaceFactory} from "../../src/network/interfaces/websocket-server-deno.ts";
 import {sleep} from "../utils.ts";
 import { assertEquals } from "@std/assert/equals";
-import {BaseSharedContainer, SharedContainerMutability} from "../../src/shared-container/base-shared-container.ts";
-import {ReferencedSharedContainer, SharedContainer} from "../../src/shared-container/mod.ts";
+import { assert } from "@std/assert/assert";
+import type { ReferencedSharedContainer } from "../../src/shared-container/mod.ts";
 
 async function getTwoConnectedRuntimes(): Promise<{runtimeA: Runtime, runtimeB: Runtime, cleanup: ()=>Promise<void>}> {
     const PORT = 8099;
@@ -53,6 +53,9 @@ Deno.test("sync value between two runtimes", async () => {
 
     assertEquals(xOnA.value, 42);
     assertEquals(xOnA.value, xOnB.value);
+
+    assert(xOnA.isMutable())
+    assert(xOnB.isMutable())
 
     // update on a
     xOnA.value = 43;
