@@ -644,7 +644,7 @@ export class DIFHandler {
         // check cache first
         const cached = this.getCachedStateForSharedContainer<T>(address, ownership);
         if (cached === "insufficient_ownership") {
-            // try to resolve with with upgraded owership if possible
+            // try to resolve with upgraded ownership if possible
             if (
                 !this.#handle.has_address_with_ownership(
                     addressWithOwnership,
@@ -667,15 +667,20 @@ export class DIFHandler {
                 base[0],
             );
             // init pointer
-            return this.initSharedValue<T, SharedContainerMutability>(
+            const shared = this.initSharedValue<T, SharedContainerMutability>(
                 address,
                 value,
                 base[1],
                 ownership,
                 base[2],
             );
+            if (shared instanceof BaseSharedContainer) {
+                return shared.withOwnership(ownership) as AsShared<T, SharedContainerMutability>;
+            } else {
+                return shared as AsShared<T, SharedContainerMutability>;
+            }
         } else {
-            // falltrough case, already in cache with correct ownership
+            // fallthrough case, already in cache with correct ownership
             return cached;
         }
     }
@@ -738,7 +743,7 @@ export class DIFHandler {
         mutability: Mutability,
         ownership: DIFSharedContainerOwnership,
         allowedType?: DIFTypeDefinition,
-    ): AsShared<T, Mutability> {
+    ): CachedSharedContainer {
         let wrappedValue = this.wrapJSValue(
             value,
             pointerAddress,
@@ -815,7 +820,6 @@ export class DIFHandler {
                             }
                         }
                     }
-                    console.debug("Pointer update received", update);
                 },
             );
         }
@@ -830,7 +834,7 @@ export class DIFHandler {
         );
 
         // set up observers
-        return wrappedValue as AsShared<T, Mutability>;
+        return wrappedValue;
     }
 
     /**

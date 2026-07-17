@@ -4,10 +4,11 @@ import {websocketServerDenoComInterfaceFactory} from "../../src/network/interfac
 import {sleep} from "../utils.ts";
 import { assertEquals } from "@std/assert/equals";
 import {BaseSharedContainer, SharedContainerMutability} from "../../src/shared-container/base-shared-container.ts";
+import {ReferencedSharedContainer, SharedContainer} from "../../src/shared-container/mod.ts";
 
 async function getTwoConnectedRuntimes(): Promise<{runtimeA: Runtime, runtimeB: Runtime, cleanup: ()=>Promise<void>}> {
     const PORT = 8099;
-    const runtimeA = await Runtime.create({ endpoint: Endpoint.get("@test_a") });
+    const runtimeA = await Runtime.create({ endpoint: Endpoint.get("@test_a") }, {log_level: "info"});
     runtimeA.comHub.registerInterfaceFactory(
         websocketServerDenoComInterfaceFactory,
     );
@@ -16,7 +17,7 @@ async function getTwoConnectedRuntimes(): Promise<{runtimeA: Runtime, runtimeB: 
         { bind_address: `0.0.0.0:${PORT}` },
     );
 
-    const runtimeB = await Runtime.create({ endpoint: Endpoint.get("@test_b") });
+    const runtimeB = await Runtime.create({ endpoint: Endpoint.get("@test_b") }, {log_level: "info"});
     const clientInterfaceUUID = await runtimeB.comHub.createInterface(
         "websocket-client",
         { url: `ws://localhost:${PORT}` },
@@ -40,12 +41,12 @@ Deno.test("sync value between two runtimes", async () => {
 
     await runtimeA.execute(`
         var x = shared mut 42; 
-        @@local.x = 'mut x; 
         @test_b.x = 'mut x;
+        @@local.x = 'mut x; 
     `)
 
-    const xOnA = runtimeA.executeSync<BaseSharedContainer<number, SharedContainerMutability.Mutable>>("@@local.x");
-    const xOnB = runtimeB.executeSync<BaseSharedContainer<number, SharedContainerMutability.Mutable>>("@@local.x");
+    const xOnA = runtimeA.executeSync<ReferencedSharedContainer<number>>("@@local.x");
+    const xOnB = runtimeB.executeSync<ReferencedSharedContainer<number>>("@@local.x");
 
     console.log("x on A:", xOnA);
     console.log("x on B:", xOnB);
@@ -53,10 +54,15 @@ Deno.test("sync value between two runtimes", async () => {
     assertEquals(xOnA.value, 42);
     assertEquals(xOnA.value, xOnB.value);
 
+    // update on a
     xOnA.value = 43;
+    await sleep(100);
+    assertEquals(xOnB.value, 43);
 
-    await sleep(500);
-    assertEquals(xOnB.value, 43); // FIXME
+    // update on b
+    xOnB.value = 44;
+    await sleep(100);
+    assertEquals(xOnA.value, 44);
 
     await cleanup();
 });

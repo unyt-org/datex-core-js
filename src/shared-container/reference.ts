@@ -7,11 +7,11 @@ export enum SharedReferenceMutability {
 }
 export class ReferencedSharedContainer<
     T,
-    Mutability extends SharedContainerMutability,
-    ReferenceMutability extends SharedReferenceMutability,
+    Mutability extends SharedContainerMutability = SharedContainerMutability,
+    ReferenceMutability extends SharedReferenceMutability = SharedReferenceMutability,
 > {
-    #baseSharedContainer: BaseSharedContainer<T, Mutability>;
-    #referenceMutability: ReferenceMutability;
+    readonly #baseSharedContainer: BaseSharedContainer<T, Mutability>;
+    readonly #referenceMutability: ReferenceMutability;
 
     public constructor(
         baseSharedContainer: BaseSharedContainer<T, Mutability>,
