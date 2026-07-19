@@ -46,21 +46,28 @@ export type DIFUpdateReturn = ["none"] | ["single_value", DIFValueContainer] | [
     ...DIFValueContainer[],
 ];
 
+
 export type DIFUpdateData = [
+    DIFProperty[],
     typeof DIFUpdateKind.Replace,
     ...DIFUpdateDataReplace,
 ] | [
+    DIFProperty[],
     typeof DIFUpdateKind.AppendEntry,
     ...DIFUpdateDataPush,
 ] | [
+    DIFProperty[],
     typeof DIFUpdateKind.DeleteEntry,
     ...DIFUpdateDataDelete,
 ] | [
+    DIFProperty[],
     typeof DIFUpdateKind.SetEntry,
     ...DIFUpdateDataSet,
 ] | [
+    DIFProperty[],
     typeof DIFUpdateKind.Clear,
 ] | [
+    DIFProperty[],
     typeof DIFUpdateKind.ListSplice,
     ...DIFUpdateDataListSplice,
 ];

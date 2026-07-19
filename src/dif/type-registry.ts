@@ -231,71 +231,73 @@ export class TypeBinding<
                 pointerAddress,
                 difUpdateData,
             );
+            const path = difUpdateData[0]; // TODO handle path
+
             this.allowOriginalValueAccess(value as CachedSharedContainer, () => {
                 // call appropriate handler based on update kind
                 if (
-                    difUpdateData[0] === DIFUpdateKind.SetEntry &&
+                    difUpdateData[1] === DIFUpdateKind.SetEntry &&
                     this.#definition.handleSet
                 ) {
                     this.#definition.handleSet.call(
                         this,
                         value,
                         this.#difHandler.resolveDIFProperty(
-                            difUpdateData[1],
+                            difUpdateData[2],
                         ),
                         this.#difHandler.resolveDIFValueContainer(
-                            difUpdateData[2],
+                            difUpdateData[3],
                         ),
                     );
                 } else if (
-                    difUpdateData[0] === DIFUpdateKind.AppendEntry &&
+                    difUpdateData[1] === DIFUpdateKind.AppendEntry &&
                     this.#definition.handleAppend
                 ) {
                     this.#definition.handleAppend.call(
                         this,
                         value,
                         this.#difHandler.resolveDIFValueContainer(
-                            difUpdateData[1],
+                            difUpdateData[2],
                         ),
                     );
                 } else if (
-                    difUpdateData[0] === DIFUpdateKind.Replace &&
+                    difUpdateData[1] === DIFUpdateKind.Replace &&
                     this.#definition.handleReplace
                 ) {
                     this.#definition.handleReplace.call(
                         this,
                         value,
                         this.#difHandler.resolveDIFValueContainer(
-                            difUpdateData[1],
+                            difUpdateData[2],
                         ),
                     );
                 } else if (
-                    difUpdateData[0] === DIFUpdateKind.DeleteEntry &&
+                    difUpdateData[1] === DIFUpdateKind.DeleteEntry &&
                     this.#definition.handleDelete
                 ) {
                     this.#definition.handleDelete.call(
                         this,
                         value,
                         this.#difHandler.resolveDIFProperty(
-                            difUpdateData[1],
+                            difUpdateData[2],
                         ),
                     );
                 } else if (
-                    difUpdateData[0] === DIFUpdateKind.Clear &&
+                    difUpdateData[1] === DIFUpdateKind.Clear &&
                     this.#definition.handleClear
                 ) {
                     this.#definition.handleClear.call(this, value);
                 } else if (
-                    difUpdateData[0] === DIFUpdateKind.ListSplice &&
+                    difUpdateData[1] === DIFUpdateKind.ListSplice &&
                     this.#definition.handleListSplice
                 ) {
                     console.log("handling list splice with items:", difUpdateData);
                     this.#definition.handleListSplice.call(
                         this,
                         value,
-                        difUpdateData[1],
                         difUpdateData[2],
-                        difUpdateData[3].map((item) => this.#difHandler.resolveDIFValueContainer(item)),
+                        difUpdateData[3],
+                        difUpdateData[4].map((item) => this.#difHandler.resolveDIFValueContainer(item)),
                     );
                 }
             });

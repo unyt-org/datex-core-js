@@ -876,9 +876,10 @@ export class DIFHandler {
         const deref = cached.value.deref();
         if (!deref) return false;
 
-        if (deref instanceof BaseSharedContainer && update[0] === DIFUpdateKind.Replace) {
+        if (deref instanceof BaseSharedContainer && update[1] === DIFUpdateKind.Replace) {
+            const path = update[0]; // TODO handle path
             deref.updateValueSilently(this.resolveDIFValueContainer(
-                update[1],
+                update[2],
             ));
         }
         // handle generic updates for values (depending on type interface definition)

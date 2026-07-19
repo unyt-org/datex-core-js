@@ -58,7 +58,7 @@ Deno.test("pointer create with observe", () => {
 
     // if not equal, unobservePointer potentially failed
     assertEquals(observed.length, 1);
-    assertEquals(observed[0], [runtime.dif._transceiver_id, DIFUpdateKind.Replace, "Hello, Datex 2"]);
+    assertEquals(observed[0], [runtime.dif._transceiver_id, [], DIFUpdateKind.Replace, "Hello, Datex 2"]);
 });
 
 Deno.test("pointer create without observe", () => {

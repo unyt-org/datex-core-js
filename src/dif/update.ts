@@ -29,30 +29,33 @@ export function createDIFProperty(
     }
 }
 
-export function clear(): DIFUpdateData {
-    return [DIFUpdateKind.Clear];
+export function clear(path: DIFProperty[] = []): DIFUpdateData {
+    return [path, DIFUpdateKind.Clear];
 }
-export function replace(value: DIFValueContainer): DIFUpdateData {
-    return [DIFUpdateKind.Replace, value];
+export function replace(value: DIFValueContainer, path: DIFProperty[] = []): DIFUpdateData {
+    return [path, DIFUpdateKind.Replace, value];
 }
-export function appendEntry(value: DIFValueContainer): DIFUpdateData {
-    return [DIFUpdateKind.AppendEntry, value];
+export function appendEntry(value: DIFValueContainer, path: DIFProperty[] = []): DIFUpdateData {
+    return [path, DIFUpdateKind.AppendEntry, value];
 }
 export function setEntry(
     key: DIFProperty,
     value: DIFValueContainer,
+    path: DIFProperty[] = []
 ): DIFUpdateData {
-    return [DIFUpdateKind.SetEntry, key, value];
+    return [path, DIFUpdateKind.SetEntry, key, value];
 }
 export function deleteEntry(
     key: DIFProperty,
+    path: DIFProperty[] = []
 ): DIFUpdateData {
-    return [DIFUpdateKind.DeleteEntry, key];
+    return [path, DIFUpdateKind.DeleteEntry, key];
 }
 export function listSplice(
     start: number,
     deleteCount: number,
     items: DIFValueContainer[],
+    path: DIFProperty[] = []
 ): DIFUpdateData {
-    return [DIFUpdateKind.ListSplice, start, deleteCount, items];
+    return [path, DIFUpdateKind.ListSplice, start, deleteCount, items];
 }
