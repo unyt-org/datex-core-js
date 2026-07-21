@@ -7,12 +7,17 @@ import {
 } from "../datex.ts";
 import { ComHub } from "../network/com-hub.ts";
 import { DIFHandler } from "../dif/dif-handler.ts";
-import { type AsSharedMaybeOwned, SharedContainerMutability } from "../shared-container/mod.ts";
+import {
+    type AsSharedMaybeOwned, OwnedSharedContainer,
+    type ReferencedSharedContainer,
+    SharedContainerMutability
+} from "../shared-container/mod.ts";
 import type { FlatInstruction, InstructionTree } from "./types.d.ts";
 import type { DIFTypeDefinition } from "../dif/types/mod.ts";
-import {Endpoint, Tagged} from "../lib/mod.ts";
+import {Endpoint} from "../lib/mod.ts";
 import type { DisassemblerOptions } from "datex/datex-web/types/disassembler/options.ts";
 import type { DecompileOptions } from "datex/datex-web/types/decompiler/options.ts";
+import {InterfacePriority} from "../datex-web/types/network/com_hub/mod.ts";
 
 // TODO: move to global.ts
 /** auto-generated version - do not edit: */
@@ -27,7 +32,7 @@ interface DebugConfig {
 /** configuration for the runtime  */
 export type RuntimeConfig = {
     endpoint: Endpoint;
-    interfaces?: { type: string; config: unknown, priority: Tagged<"None"> }[];
+    interfaces?: { type: string; config: unknown, priority: InterfacePriority }[];
     env?: Record<string, string>;
 };
 
@@ -388,5 +393,23 @@ export class Runtime {
      */
     public disassembleDXBToString(dxb: Uint8Array, options?: DisassemblerOptions | null): string {
         return disassemble_dxb_to_string(dxb, options);
+    }
+
+    /**
+     * Creates a new shared value Ref
+     * @param value
+     */
+    public ref<T>(value: T): ReferencedSharedContainer<T> {
+        const shared = this.createSharedValueFromJSValue(
+            value,
+            undefined,
+            SharedContainerMutability.Mutable,
+        );
+        if (shared instanceof OwnedSharedContainer) {
+            return shared.deriveImmutableReference();
+        }
+        else {
+            return shared as unknown as ReferencedSharedContainer<T>; // FIXME make sure this is a ReferencedSharedContainer
+        }
     }
 }

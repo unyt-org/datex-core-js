@@ -5,7 +5,7 @@ export const runtime = await Runtime.create(
         endpoint: Builtins.Endpoint.get("@web_" + Math.floor(Math.random() * 1000)),
         interfaces: [
             {
-                priority: new Builtins.Tagged("None"),
+                priority: new Builtins.Tagged("Priority", 1),
                 type: "websocket-client",
                 config: {
                     url: "ws://0.0.0.0:8043",
@@ -26,7 +26,7 @@ runtime.comHub.printMetadata();
 // @ts-ignore global variable for debugging
 globalThis.Datex = runtime;
 // @ts-ignore global variable for debugging
-globalThis.Ref = Shared.ReferencedSharedContainer;
+globalThis.ReferencedSharedContainer = Shared.ReferencedSharedContainer;
 
 // @ts-ignore global variable for debugging
 globalThis.Range = Builtins.Range;
