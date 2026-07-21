@@ -1056,7 +1056,6 @@ export class DIFHandler {
         mutability: SharedContainerMutability,
         _type: DIFTypeDefinition | null = null,
     ): CachedSharedContainer {
-        console.warn("create ptr", pointerAddress);
         // primitive values are always wrapped in a Ref proxy
         if (this.isWeakKey(value)) {
             return value;
