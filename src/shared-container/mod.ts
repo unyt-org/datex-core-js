@@ -24,7 +24,9 @@ export function splitPointerAddressWithOwnership(
     } else if (ownershipStr === "'mut") {
         return [DIFSharedContainerOwnership.Mutable, addressStr];
     } else {
-        throw new Error(`Invalid pointer address with ownership: ${address}`);
+        // FIXME? raw hex address without $
+        return [DIFSharedContainerOwnership.Owned, address];
+        // throw new Error(`Invalid pointer address with ownership: ${address}`);
     }
 }
 export function combinePointerAddressWithOwnership(

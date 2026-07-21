@@ -250,7 +250,10 @@ export class DIFHandler {
         if (allowedType) {
             (baseSharedValueContainer as unknown[])[2] = allowedType;
         }
-        return this.#handle.create_pointer(baseSharedValueContainer) as PointerAddress;
+        const addr = this.#handle.create_pointer(baseSharedValueContainer);
+        // remove leading $
+        // FIXME
+        return addr.slice(1) as PointerAddress;
     }
 
     /**
@@ -1053,6 +1056,7 @@ export class DIFHandler {
         mutability: SharedContainerMutability,
         _type: DIFTypeDefinition | null = null,
     ): CachedSharedContainer {
+        console.warn("create ptr", pointerAddress);
         // primitive values are always wrapped in a Ref proxy
         if (this.isWeakKey(value)) {
             return value;
