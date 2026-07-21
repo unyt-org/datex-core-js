@@ -2,13 +2,13 @@ import { Builtins, Repl, Runtime, Shared } from "datex";
 
 export const runtime = await Runtime.create(
     {
-        endpoint: Builtins.Endpoint.get("@web"),
+        endpoint: Builtins.Endpoint.get("@web_" + Math.floor(Math.random() * 1000)),
         interfaces: [
             {
                 priority: new Builtins.Tagged("None"),
                 type: "websocket-client",
                 config: {
-                    url: "wss://example.unyt.land",
+                    url: "ws://0.0.0.0:8043",
                 },
             },
         ],
@@ -17,7 +17,7 @@ export const runtime = await Runtime.create(
         },
     },
     {
-        log_level: "info",
+        log_level: "warn",
     },
 );
 

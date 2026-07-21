@@ -4,14 +4,14 @@
       <h1 class="text-2xl font-bold mb-4">DATEX Demo</h1>
       <div>
         <ul>
-          <li>Endpoint: <code class="select-all">{{ runtime.endpoint }}</code></li>
+          <li>Endpoint: <code class="select-all">{{ runtime.endpoint.toString() }}</code></li>
           <li>Version: <code>{{ runtime.version }}</code></li>
         </ul>
 
         <div class="mt-4">
             <ul class="flex flex-col gap-2 w-2xl">
               <li
-                  v-for="inter in comHubStatus.interfaces.toSorted((a: any, b: any) => a.properties.interface_type.localeCompare(b.properties.interface_type))"
+                  v-for="inter in comHubStatus.interfaces?.toSorted((a: any, b: any) => a.properties.interface_type.localeCompare(b.properties.interface_type))"
                   :key="inter.id"
                   class="bg-gray-900 rounded-md p-2"
               >
@@ -32,7 +32,7 @@
                         <span v-else-if="socket.direction == 'In'">◀─</span>
                         <span v-else-if="socket.direction == 'Out'">─▶</span>
                       </span>
-                      <span class="text-endpoint select-all">{{ socket.endpoint }}</span>
+                      <span class="text-endpoint select-all">{{ socket.endpoint.toString() }}</span>
                       <span v-if="socket.properties.is_direct" class="bg-cyan-600 px-1.5 py-0.5 rounded-md ml-2">direct</span>
                       <span v-if="socket.properties.distance !== undefined" class="bg-gray-600 px-1.5 py-0.5 rounded-md ml-2">distance: {{ socket.properties.distance }}</span>
                     </div>
@@ -53,6 +53,8 @@ const comHubStatus = ref(runtime.comHub.getMetadata());
 setInterval(() => {
   comHubStatus.value = runtime.comHub.getMetadata();
 }, 500);
+
+console.log("Runtime", runtime);
 
 </script>
 
