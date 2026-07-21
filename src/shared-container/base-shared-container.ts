@@ -1,5 +1,5 @@
 import type { DIFHandler } from "../dif/dif-handler.ts";
-import { DIFSharedContainerOwnership } from "../dif/types/mod.ts";
+import {DIFSharedContainerOwnership, type DIFUpdateData} from "../dif/types/mod.ts";
 import { OwnedSharedContainer, type PointerAddress, type SharedContainer } from "./mod.ts";
 import { ReferencedSharedContainer } from "./reference.ts";
 
@@ -86,5 +86,13 @@ export class BaseSharedContainer<T, Mutability extends SharedContainerMutability
         } else {
             throw new Error(`Invalid ownership type: ${ownership}`);
         }
+    }
+
+    /**
+     * Observes changes to the shared container and invokes the provided callback when an update occurs.
+     * @param callback
+     */
+    public observe(callback: (value: DIFUpdateData) => void) {
+        this.#difHandler.observePointer(this.#pointerAddress, callback);
     }
 }

@@ -1,5 +1,6 @@
 import type { BaseSharedContainer, SharedContainerMutability } from "./base-shared-container.ts";
 import type { PointerAddress } from "datex/shared-container/mod.ts";
+import type {DIFUpdateData} from "../dif/types/update.ts";
 
 export enum SharedReferenceMutability {
     Immutable = 0,
@@ -66,6 +67,14 @@ export class ReferencedSharedContainer<
             this.#baseSharedContainer,
             SharedReferenceMutability.Immutable,
         );
+    }
+
+    /**
+     * Observes changes to the shared container and invokes the provided callback when an update occurs.
+     * @param callback
+     */
+    public observe(callback: (value: DIFUpdateData) => void) {
+        this.#baseSharedContainer.observe(callback);
     }
 }
 
