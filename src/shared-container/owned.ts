@@ -32,6 +32,11 @@ export class OwnedSharedContainer<T, Mutability extends SharedContainerMutabilit
         this.#baseSharedContainer.value = newValue;
     }
 
+    // FIXME
+    get _base(): BaseSharedContainer<T, Mutability> {
+        return this.#baseSharedContainer;
+    }
+
     /**
      * Derives a new mutable reference from the current reference if the current reference is mutable.
      * Otherwise returns an error

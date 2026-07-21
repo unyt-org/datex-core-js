@@ -35,6 +35,11 @@ export class ReferencedSharedContainer<
         return this.#baseSharedContainer.value;
     }
 
+    // FIXME
+    get _base(): BaseSharedContainer<T, Mutability> {
+        return this.#baseSharedContainer;
+    }
+
     /**
      * Replaces the current value of the reference with a new value.
      * Also notifies all observers of the pointer about the change.

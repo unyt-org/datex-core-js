@@ -24,7 +24,7 @@ import { panic, unimplemented, unreachable } from "../utils/exceptions.ts";
 import { isJsUndefined, JS_UNDEFINED } from "../lib/special-core-types/undefined.ts";
 import type { DIFBaseSharedValueContainer } from "./types/value.ts";
 import { SharedContainerMutability } from "../shared-container/base-shared-container.ts";
-import type { AsSharedMaybeOwned, PointerAddress } from "../shared-container/mod.ts";
+import {type AsSharedMaybeOwned, type PointerAddress, ReferencedSharedContainer} from "../shared-container/mod.ts";
 import { type AsShared, BaseSharedContainer, type SharedRef } from "../shared-container/mod.ts";
 import { DIFSharedContainerOwnership } from "./types/type.ts";
 import { splitPointerAddressWithOwnership } from "../shared-container/mod.ts";
@@ -1179,9 +1179,10 @@ export class DIFHandler {
         forceExplicitFormat = false,
     ): DIFValueContainer<T> {
         // if the value is a registered reference, return its address
+        const ref = (value instanceof ReferencedSharedContainer || value instanceof OwnedSharedContainer) ? value._base : value;
         const existingReference = difHandlerInstance &&
             difHandlerInstance.tryGetReferenceMetadata(
-                value as CachedSharedContainer,
+                ref as CachedSharedContainer,
             );
         if (existingReference) {
             const ownership = difHandlerInstance.#cache.get(existingReference.address);
