@@ -1,4 +1,6 @@
 import { Builtins, Repl, Runtime, Shared } from "datex";
+import {SharedContainerMutability} from "../../../src/shared-container/base-shared-container.ts";
+import {SharedReferenceMutability} from "../../../src/shared-container/reference.ts";
 
 export const runtime = await Runtime.create(
     {
@@ -27,6 +29,12 @@ runtime.comHub.printMetadata();
 globalThis.Datex = runtime;
 // @ts-ignore global variable for debugging
 globalThis.ReferencedSharedContainer = Shared.ReferencedSharedContainer;
+
+// @ts-ignore global variable for debugging
+globalThis.SharedContainerMutability = SharedContainerMutability;
+
+// @ts-ignore global variable for debugging
+globalThis.SharedReferenceMutability = SharedReferenceMutability;
 
 // @ts-ignore global variable for debugging
 globalThis.Range = Builtins.Range;

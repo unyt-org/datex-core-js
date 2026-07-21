@@ -412,4 +412,16 @@ export class Runtime {
             return shared as unknown as ReferencedSharedContainer<T>; // FIXME make sure this is a ReferencedSharedContainer
         }
     }
+
+    /**
+     * Creates a new shared value Ref
+     * @param value
+     */
+    public shared<T>(value: T): OwnedSharedContainer<T> {
+        return this.createSharedValueFromJSValue(
+            value,
+            undefined,
+            SharedContainerMutability.Mutable,
+        ) as OwnedSharedContainer<T> // FIXME make sure this is an OwnedSharedContainer
+    }
 }
