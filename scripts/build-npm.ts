@@ -46,6 +46,13 @@ await build({
         bugs: {
             url: "https://github.com/unyt-org/datex-web/issues",
         },
+        scripts: {
+            "serve": "vite"
+        },
+        devDependencies: {
+            "vite": "^5.0.0",
+            "vite-plugin-mkcert": "^2.1.0",
+        },
     },
     // steps to run after building and before running the tests
     async postBuild() {
@@ -116,6 +123,9 @@ await build({
             "src/datex-web/datex_web.d.ts",
             "npm/esm/datex-web/datex_web.d.ts",
         );
+
+        // copy files from npm-assets
+        Deno.copyFileSync("scripts/npm-assets/vite.config.ts", "npm/vite.config.ts");
 
         // currently required for version tests
         Deno.copyFileSync("deno.json", "npm/esm/deno.json");
