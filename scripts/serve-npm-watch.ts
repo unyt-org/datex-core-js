@@ -36,10 +36,10 @@ function startServer() {
         stderr: "inherit",
     }).spawn();
 
-    const path = encodeURIComponent("https://localhost:3489/esm/mod.js");
+    const url = encodeURIComponent("https://localhost:3489/esm/mod.js");
     setTimeout(() => {
         console.log("\n============================================================================================================================")
-        console.log(" Current DATEX build is available at https://workbench.unyt.org/local-patch?path=" + path);
+        console.log(" Current DATEX build is available at https://workbench.unyt.org/enable-local-patch?url=" + url);
         console.log("============================================================================================================================")
     }, 1000);
 }
