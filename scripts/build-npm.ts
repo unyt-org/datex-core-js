@@ -8,6 +8,12 @@ const VERSION: string = await Deno.readTextFile(
     new URL("../deno.json", import.meta.url),
 ).then(JSON.parse).then((data: { version: string }) => data.version);
 
+// check if --dev flag is passed
+const isDev = Deno.args.includes("--dev");
+if (isDev) {
+    console.log("Note: Building npm package in development mode");
+}
+
 await build({
     entryPoints: [
         {
@@ -129,5 +135,16 @@ await build({
 
         // currently required for version tests
         Deno.copyFileSync("deno.json", "npm/esm/deno.json");
+
+        // change version to *-dev if development build
+        if (isDev) {
+            // update npm/esm/runtime/runtime.js
+            const runtimeJs = Deno.readTextFileSync("npm/esm/runtime/runtime.js");
+            const updatedRuntimeJs = runtimeJs.replace(
+                /const VERSION = "([^"]+)"/,
+                `const VERSION = "$1-dev"`
+            );
+            Deno.writeTextFileSync("npm/esm/runtime/runtime.js", updatedRuntimeJs);
+        }
     },
 });

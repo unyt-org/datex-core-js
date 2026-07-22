@@ -12,7 +12,7 @@ async function runBuild() {
     console.log("Running build:npm...");
 
     const cmd = new Deno.Command("deno", {
-        args: ["task", "build:npm"],
+        args: ["task", "build:npm", "--dev"],
         stdout: "inherit",
         stderr: "inherit",
     });
