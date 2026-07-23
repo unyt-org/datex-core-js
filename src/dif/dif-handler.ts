@@ -18,7 +18,7 @@ import {
     type DIFValueContainer,
     type ObserveOptions,
 } from "./types/mod.ts";
-import { CoreLibTypeId, getCoreLibTypeIdForJSValue } from "./core.ts";
+import { CoreLibTypeId } from "./core.ts";
 import { type TypeBinding, TypeRegistry } from "./type-registry.ts";
 import { panic, unimplemented, unreachable } from "../utils/exceptions.ts";
 import { isJsUndefined, JS_UNDEFINED } from "../lib/special-core-types/undefined.ts";
@@ -44,6 +44,7 @@ import { OwnedSharedContainer } from "../shared-container/owned.ts";
 import { EMPTY_TAG, Tagged } from "../lib/special-core-types/tagged.ts";
 import { ibig } from "./helpers/mod.ts";
 import {
+    getCoreLibTypeIdForJSValue,
     isCoreLibType as isCoreLibTypeDefinition,
     isSharedContainerType as isSharedContainerTypeDefiniton,
 } from "./utils.ts";
@@ -786,6 +787,7 @@ export class DIFHandler {
                 : this.type_registry.getTypeBindingByCoreLibTypeId(actualType as CoreLibTypeId); // TS Bug
 
             if (typeBinding) {
+                console.log(`Binding JS value for pointer ${pointerAddress} with type ${actualType}`, typeBinding);
                 const { value: proxifiedValue, metadata: newMetadata } = typeBinding
                     .bindValue(
                         value as object,

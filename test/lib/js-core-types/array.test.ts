@@ -349,5 +349,5 @@ Deno.test("integration full", () => {
     reference.observe(([update, id]) => {
         console.log("observed change", { update, id });
     });
-    reference[1] = "newValue";
+    reference.value[1] = "newValue";
 });

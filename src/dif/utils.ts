@@ -4,6 +4,8 @@
 import type { PointerAddressWithOwnership } from "../shared-container/mod.ts";
 import type { Option } from "../utils/option.ts";
 import type { DIFCoreLibTypeDefinition, DIFTypeDefinition } from "./types/mod.ts";
+import { Endpoint, Range } from "../lib/mod.ts";
+import { CoreLibTypeId } from "./core.ts";
 
 export function getAllKeys(obj: object): Set<(string | symbol)> {
     const keys = new Set<string | symbol>();
@@ -122,4 +124,34 @@ export function isCoreLibType(type: DIFTypeDefinition): type is DIFCoreLibTypeDe
 }
 export function isSharedContainerType(type: DIFTypeDefinition): type is { shared: PointerAddressWithOwnership } {
     return typeof type === "object" && type != null && "shared" in type;
+}
+
+/**
+ * Gets the core library type id for a given JavaScript value.
+ * @param value The JavaScript value to get the core library type id for.
+ * @returns The core library type id corresponding to the JavaScript value.
+ */
+export function getCoreLibTypeIdForJSValue(value: unknown): CoreLibTypeId | null {
+    if (value === null) {
+        return CoreLibTypeId.null;
+    } else if (typeof value === "string") {
+        return CoreLibTypeId.text;
+    } else if (typeof value === "boolean") {
+        return CoreLibTypeId.boolean;
+    } else if (typeof value === "number") {
+        return CoreLibTypeId.decimal_f64;
+    } else if (typeof value === "bigint") {
+        return CoreLibTypeId.integer_ibig;
+    } else if (value instanceof Endpoint) {
+        return CoreLibTypeId.endpoint;
+    } else if (value instanceof Range) {
+        return CoreLibTypeId.Range;
+    } else if (Array.isArray(value)) {
+        return CoreLibTypeId.List;
+    } else if (value instanceof Map) {
+        return CoreLibTypeId.Map;
+    } else if (typeof value === "object") {
+        return CoreLibTypeId.Map;
+    }
+    return null;
 }
