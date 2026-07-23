@@ -5,7 +5,6 @@ import { assertThrows } from "@std/assert/throws";
 import { CoreLibTypeId } from "datex/dif/core.ts";
 import { assertStrictEquals } from "@std/assert/strict-equals";
 import { difBaseSharedContainerToDisplayString } from "datex/dif/display.ts";
-import { arrayTypeBinding } from "datex/lib/js-core-types/array.ts";
 import { Endpoint } from "datex/lib/mod.ts";
 import {
     type AsSharedMaybeOwned,
@@ -30,7 +29,6 @@ import { integer, u8 } from "datex/dif/helpers/typed-integer.ts";
 let runtime: Runtime;
 Deno.test.beforeEach(async () => {
     runtime = await Runtime.create({ endpoint: Endpoint.get("@jonas") });
-    runtime.dif.type_registry.registerTypeBinding(arrayTypeBinding);
 });
 
 Deno.test("pointer create with observe", () => {
@@ -127,7 +125,7 @@ Deno.test("pointer create primitive", () => {
         { x: a },
         undefined,
         SharedContainerMutability.Mutable,
-    ) satisfies AsSharedMaybeOwned<{ readonly x: typeof a }, SharedContainerMutability.Mutable>;
+    ).value satisfies AsSharedMaybeOwned<{ readonly x: typeof a }, SharedContainerMutability.Mutable>;
 
     if ("x" in b) {
         b.x satisfies OwnedSharedContainer<number, SharedContainerMutability.Mutable>;
@@ -251,12 +249,9 @@ Deno.test("pointer object create and resolve", () => {
 
 Deno.test("pointer object create and cache", () => {
     const val = { a: 123, b: 456 };
-    const ptrObj = runtime.createSharedValueFromJSValue(val) as SharedRef<
-        typeof val,
-        SharedContainerMutability.Mutable
-    >;
+    const ptrObj = runtime.createSharedValueFromJSValue(val);
     assertEquals(
-        ptrObj,
+        ptrObj.value,
         val,
     );
 
@@ -279,7 +274,7 @@ Deno.test("pointer object create and cache", () => {
 
 Deno.test("pointer map create and cache", () => {
     const val = new Map([[1, 2], [3, 4]]);
-    const ptrMap = runtime.createSharedValueFromJSValue(val) as SharedRef<Map<number, number>>;
+    const ptrMap = runtime.createSharedValueFromJSValue(val).value;
     assertEquals(ptrMap, val);
     ptrMap.set(5, 6);
     ptrMap satisfies Map<number, number>;

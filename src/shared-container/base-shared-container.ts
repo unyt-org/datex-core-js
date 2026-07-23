@@ -1,6 +1,6 @@
 import type { DIFHandler } from "../dif/dif-handler.ts";
-import {DIFSharedContainerOwnership, type DIFUpdateData} from "../dif/types/mod.ts";
-import { OwnedSharedContainer, type PointerAddress, type SharedContainer } from "./mod.ts";
+import { DIFSharedContainerOwnership, type DIFUpdateData } from "../dif/types/mod.ts";
+import { MaybeSharedRef, OwnedSharedContainer, type PointerAddress, type SharedContainer } from "./mod.ts";
 import { ReferencedSharedContainer } from "./reference.ts";
 
 export enum SharedContainerMutability {
@@ -13,12 +13,17 @@ export enum SharedContainerMutability {
  * Primitive values (string, number, boolean, null) are always wrapped in a Ref when stored in a pointer.
  */
 export class BaseSharedContainer<T, Mutability extends SharedContainerMutability> {
-    #value: T;
+    #value: MaybeSharedRef<T, Mutability>;
     #pointerAddress: PointerAddress;
     #difHandler: DIFHandler;
     #containerMutability: Mutability;
 
-    constructor(value: T, pointerAddress: PointerAddress, mutability: Mutability, difHandler: DIFHandler) {
+    constructor(
+        value: MaybeSharedRef<T, Mutability>,
+        pointerAddress: PointerAddress,
+        mutability: Mutability,
+        difHandler: DIFHandler,
+    ) {
         this.#value = value;
         this.#pointerAddress = pointerAddress;
         this.#containerMutability = mutability;
@@ -37,14 +42,14 @@ export class BaseSharedContainer<T, Mutability extends SharedContainerMutability
      * This should only be used internally.
      * @param newValue - The new value to set.
      */
-    updateValueSilently(newValue: T) {
+    updateValueSilently(newValue: MaybeSharedRef<T, Mutability>) {
         this.#value = newValue;
     }
 
     /**
      * Gets the current value of the reference.
      */
-    public get value(): T {
+    public get value(): MaybeSharedRef<T, Mutability> {
         return this.#value;
     }
 
@@ -53,7 +58,7 @@ export class BaseSharedContainer<T, Mutability extends SharedContainerMutability
      * Also notifies all observers of the pointer about the change.
      * @throws If the reference is immutable or the new value is of an incompatible type.
      */
-    set value(newValue: Mutability extends SharedContainerMutability.Mutable ? T : never) {
+    set value(newValue: Mutability extends SharedContainerMutability.Mutable ? MaybeSharedRef<T, Mutability> : never) {
         if (!this.isContainerMutable()) {
             throw new Error("Cannot set value of an immutable reference.");
         }

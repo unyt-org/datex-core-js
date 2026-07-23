@@ -1,13 +1,11 @@
 import { assertEquals } from "@std/assert/equals";
-import { mapTypeBinding } from "datex/lib/js-core-types/map.ts";
 import { Runtime } from "datex/runtime/runtime.ts";
-import { Endpoint} from "datex/lib/mod.ts";
+import { Endpoint } from "datex/lib/mod.ts";
 import { assert } from "@std/assert";
 
 let runtime: Runtime;
 Deno.test.beforeEach(async () => {
     runtime = await Runtime.create({ endpoint: Endpoint.get("@test") });
-    runtime.dif.type_registry.registerTypeBinding(mapTypeBinding);
 });
 Deno.test("JS object", () => {
     const obj = runtime.executeSync<Record<string, unknown>>("?", [

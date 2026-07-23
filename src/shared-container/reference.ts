@@ -1,6 +1,6 @@
 import type { BaseSharedContainer, SharedContainerMutability } from "./base-shared-container.ts";
-import type { PointerAddress } from "datex/shared-container/mod.ts";
-import type {DIFUpdateData} from "../dif/types/update.ts";
+import type { MaybeSharedRef, PointerAddress } from "datex/shared-container/mod.ts";
+import type { DIFUpdateData } from "../dif/types/update.ts";
 
 export enum SharedReferenceMutability {
     Immutable = 0,
@@ -32,13 +32,8 @@ export class ReferencedSharedContainer<
     /**
      * Gets the current value of the reference.
      */
-    public get value(): T {
+    public get value(): MaybeSharedRef<T, Mutability> {
         return this.#baseSharedContainer.value;
-    }
-
-    // FIXME
-    get _base(): BaseSharedContainer<T, Mutability> {
-        return this.#baseSharedContainer;
     }
 
     /**
@@ -46,8 +41,13 @@ export class ReferencedSharedContainer<
      * Also notifies all observers of the pointer about the change.
      * @throws If the reference is immutable or the new value is of an incompatible type.
      */
-    set value(newValue: Mutability extends SharedContainerMutability.Mutable ? T : never) {
+    set value(newValue: Mutability extends SharedContainerMutability.Mutable ? MaybeSharedRef<T, Mutability> : never) {
         this.#baseSharedContainer.value = newValue;
+    }
+
+    // FIXME
+    get _base(): BaseSharedContainer<T, Mutability> {
+        return this.#baseSharedContainer;
     }
 
     public isMutable(): boolean {

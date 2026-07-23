@@ -58,7 +58,7 @@ export type TypeBindingDefinition<
     pointerAddress?: PointerAddress;
     bind(
         this: TypeBindingContext<M>,
-        value: SharedRef<T, SharedContainerMutability>,
+        value: T,
         pointerAddress: PointerAddress,
     ): BindResult<T, M>;
     handleSet?(
@@ -206,12 +206,11 @@ export class TypeBinding<
      * @returns
      */
     public bindValue(value: T, pointerAddress: PointerAddress): BindResult<T, M> {
-        const newValue = this.#definition.bind.call(
+        return this.#definition.bind.call(
             this,
-            value as SharedRef<T, SharedContainerMutability>,
+            value,
             pointerAddress,
         );
-        return newValue;
     }
 
     /**

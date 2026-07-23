@@ -1,7 +1,9 @@
 /**
  * Utility functions DIF
  */
+import type { PointerAddressWithOwnership } from "../shared-container/mod.ts";
 import type { Option } from "../utils/option.ts";
+import type { DIFCoreLibTypeDefinition, DIFTypeDefinition } from "./types/mod.ts";
 
 export function getAllKeys(obj: object): Set<(string | symbol)> {
     const keys = new Set<string | symbol>();
@@ -113,4 +115,11 @@ export function interceptAccessors(
             );
         }
     }
+}
+
+export function isCoreLibType(type: DIFTypeDefinition): type is DIFCoreLibTypeDefinition {
+    return typeof type === "number";
+}
+export function isSharedContainerType(type: DIFTypeDefinition): type is { shared: PointerAddressWithOwnership } {
+    return typeof type === "object" && type != null && "shared" in type;
 }
