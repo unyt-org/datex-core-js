@@ -7,10 +7,8 @@ import { assertStrictEquals } from "@std/assert/strict-equals";
 import { difBaseSharedContainerToDisplayString } from "datex/dif/display.ts";
 import { Endpoint } from "datex/lib/mod.ts";
 import {
-    type AsSharedMaybeOwned,
-    type PointerAddress,
+    type AsSharedMaybeOwned, combinePointerAddressWithOwnership,
     SharedContainerMutability,
-    type SharedRef,
 } from "datex/shared-container/mod.ts";
 import {
     type DIFBaseSharedValueContainer,
@@ -28,7 +26,7 @@ import { integer, u8 } from "datex/dif/helpers/typed-integer.ts";
 
 let runtime: Runtime;
 Deno.test.beforeEach(async () => {
-    runtime = await Runtime.create({ endpoint: Endpoint.get("@jonas") });
+    runtime = await Runtime.create({ endpoint: Endpoint.get("@jonas") }, {log_level: "info"});
 });
 
 Deno.test("pointer create with observe", () => {
@@ -125,7 +123,7 @@ Deno.test("pointer create primitive", () => {
         { x: a },
         undefined,
         SharedContainerMutability.Mutable,
-    ).value satisfies AsSharedMaybeOwned<{ readonly x: typeof a }, SharedContainerMutability.Mutable>;
+    ).value;
 
     if ("x" in b) {
         b.x satisfies OwnedSharedContainer<number, SharedContainerMutability.Mutable>;
@@ -153,7 +151,7 @@ Deno.test("pointer create struct", () => {
     assertThrows(
         () => {
             runtime.createSharedValueFromJSValue(
-                ptrObjImmutable,
+                ptrObjImmutable.value,
                 undefined,
                 SharedContainerMutability.Mutable,
             );
@@ -203,23 +201,26 @@ Deno.test("pointer create struct", () => {
     innerPtr.value = 42;
     assertEquals(innerPtr.value, 42);
     // @ts-ignore assert transparent proxy container
-    assertEquals(ptrObjImmutable.e.f.value, 42);
+    assertEquals(ptrObjImmutable.value.e.f.value, 42);
     innerPtr.value = 7;
     // @ts-ignore assert transparent proxy container
-    assertEquals(ptrObjImmutable.e.f.value, 7);
+    assertEquals(ptrObjImmutable.value.e.f.value, 7);
     assertEquals(innerPtr.value, 7);
 
     // @ts-ignore assert transparent proxy container
-    ptrObjImmutable.e.f.value = 10;
+    ptrObjImmutable.value.e.f.value = 10;
 });
 
 Deno.test("pointer create and resolve", () => {
-    const ptr = runtime.dif.constructSharedValue(
-        runtime.dif.convertJSValueToDIFValueContainer("unyt.org"),
-        SharedContainerMutability.Mutable,
+    const ptr = combinePointerAddressWithOwnership(
+            runtime.dif.constructSharedValue(
+            runtime.dif.convertJSValueToDIFValueContainer("unyt.org"),
+            SharedContainerMutability.Mutable,
+        ),
+        DIFSharedContainerOwnership.Owned
     );
     const resolved = runtime.dif.resolveDIFValueContainer(
-        { $: ptr } as unknown as PointerAddress,
+        { $: ptr },
     ) as BaseSharedContainer<string, SharedContainerMutability.Mutable>;
     assertEquals(resolved.value, "unyt.org");
 });
@@ -249,10 +250,11 @@ Deno.test("pointer object create and resolve", () => {
 
 Deno.test("pointer object create and cache", () => {
     const val = { a: 123, b: 456 };
+    const valClone = structuredClone(val);
     const ptrObj = runtime.createSharedValueFromJSValue(val);
     assertEquals(
         ptrObj.value,
-        val,
+        valClone,
     );
 
     const ptrId = runtime.dif.getPointerAddressForValue(ptrObj);
@@ -261,7 +263,7 @@ Deno.test("pointer object create and cache", () => {
     }
 
     // check if cache is used when resolving the pointer again
-    const loadedObj = runtime.dif.resolvePointerAddress(DIFSharedContainerOwnership.Mutable, ptrId);
+    const loadedObj = runtime.dif.resolvePointerAddress(DIFSharedContainerOwnership.MutableRef, ptrId);
     console.log(
         difBaseSharedContainerToDisplayString(
             runtime.dif._handle.resolve_pointer_address(ptrId),
@@ -269,29 +271,30 @@ Deno.test("pointer object create and cache", () => {
     );
 
     // identical object reference
-    assertStrictEquals(loadedObj, ptrObj);
+    assertStrictEquals(loadedObj.value, ptrObj.value);
 });
 
 Deno.test("pointer map create and cache", () => {
-    const val = new Map([[1, 2], [3, 4]]);
-    const ptrMap = runtime.createSharedValueFromJSValue(val).value;
-    assertEquals(ptrMap, val);
-    ptrMap.set(5, 6);
-    ptrMap satisfies Map<number, number>;
-    assertEquals(ptrMap.get(5), 6);
+    const map = new Map([[1, 2], [3, 4]]);
+    const sharedMapContainer = runtime.createSharedValueFromJSValue(map);
+    const sharedMap = sharedMapContainer.value;
+    assertEquals(sharedMap, map);
+    sharedMap.set(5, 6);
+    sharedMap satisfies Map<number, number>;
+    assertEquals(sharedMap.get(5), 6);
 
-    ptrMap.delete(1);
-    assertEquals(ptrMap.has(1), false);
-    assertEquals(ptrMap.size, 2);
+    sharedMap.delete(1);
+    assertEquals(sharedMap.has(1), false);
+    assertEquals(sharedMap.size, 2);
 
-    const ptrId = runtime.dif.getPointerAddressForValue(ptrMap);
+    const ptrId = runtime.dif.getPointerAddressForValue(sharedMap);
     if (!ptrId) {
         throw new Error("Pointer ID not found for value");
     }
 
     // check if cache is used when resolving the pointer again
     // FIXME avoid cache for this check
-    const loadedMap = runtime.dif.resolvePointerAddress(DIFSharedContainerOwnership.Mutable, ptrId);
+    const loadedMap = runtime.dif.resolvePointerAddress(DIFSharedContainerOwnership.MutableRef, ptrId);
     console.log(
         difBaseSharedContainerToDisplayString(
             runtime.dif._handle.resolve_pointer_address(
@@ -300,9 +303,9 @@ Deno.test("pointer map create and cache", () => {
         ),
     );
 
-    ptrMap.clear();
+    sharedMap.clear();
     // identical object reference
-    assertStrictEquals(loadedMap, ptrMap);
+    assertStrictEquals(loadedMap.value, sharedMap);
 });
 
 Deno.test("pointer primitive ref create and cache", () => {
@@ -316,7 +319,7 @@ Deno.test("pointer primitive ref create and cache", () => {
     const ptrId = ptrObj.pointerAddress;
 
     // check if cache is used when resolving the pointer again
-    const loadedObj = runtime.dif.resolvePointerAddress(DIFSharedContainerOwnership.Mutable, ptrId);
+    const loadedObj = runtime.dif.resolvePointerAddress(DIFSharedContainerOwnership.MutableRef, ptrId);
     // identical primitive value
     assertEquals(loadedObj, ptrObj.deriveImmutableReference());
 });

@@ -11,7 +11,7 @@ import {
     type DIFHandler,
     IS_PROXY_ACCESS,
 } from "./dif-handler.ts";
-import type { PointerAddress, SharedContainerMutability, SharedRef } from "../shared-container/mod.ts";
+import type {BaseSharedContainer, PointerAddress, SharedContainerMutability, SharedRef} from "../shared-container/mod.ts";
 
 type ImplMethod = {
     name: string;
@@ -217,14 +217,13 @@ export class TypeBinding<
      * Sets up observers for the given value and pointer address if there are update handlers defined for this type binding.
      */
     public handleDifUpdate(
-        val: T,
+        base: BaseSharedContainer<T>,
         pointerAddress: string,
         difUpdateData: DIFUpdateData,
     ): void {
         const updateHandlerTypes = this.getUpdateHandlerTypes();
         // add observer if there are update handlers
         if (updateHandlerTypes.size > 0) {
-            const value = val as SharedRef<T, SharedContainerMutability>;
             console.log(
                 "got update for pointer:",
                 pointerAddress,
@@ -232,7 +231,9 @@ export class TypeBinding<
             );
             const path = difUpdateData[0]; // TODO handle path
 
-            this.allowOriginalValueAccess(value as CachedSharedContainer, () => {
+            const value = base.value as SharedRef<T>;
+
+            this.allowOriginalValueAccess(base, () => {
                 // call appropriate handler based on update kind
                 if (
                     difUpdateData[1] === DIFUpdateKind.SetEntry &&

@@ -25,9 +25,9 @@ export function splitPointerAddressWithOwnership(
     if (ownershipStr === "") {
         return [DIFSharedContainerOwnership.Owned, addressStr];
     } else if (ownershipStr === "'") {
-        return [DIFSharedContainerOwnership.Immutable, addressStr];
+        return [DIFSharedContainerOwnership.ImmutableRef, addressStr];
     } else if (ownershipStr === "'mut") {
-        return [DIFSharedContainerOwnership.Mutable, addressStr];
+        return [DIFSharedContainerOwnership.MutableRef, addressStr];
     }
     throw new Error(`Invalid pointer address with ownership: ${address}`);
 }
@@ -43,9 +43,9 @@ export function combinePointerAddressWithOwnership(
     ownership: DIFSharedContainerOwnership,
 ): PointerAddressWithOwnership {
     let ownershipStr: string = "";
-    if (ownership === DIFSharedContainerOwnership.Immutable) {
+    if (ownership === DIFSharedContainerOwnership.ImmutableRef) {
         ownershipStr = "'";
-    } else if (ownership === DIFSharedContainerOwnership.Mutable) {
+    } else if (ownership === DIFSharedContainerOwnership.MutableRef) {
         ownershipStr = "'mut";
     }
     return `${ownershipStr}$${address}` as unknown as PointerAddressWithOwnership;

@@ -116,4 +116,6 @@ Deno.test("send data between two runtimes", async () => {
 
     await runtimeA.comHub.removeInterface(serverInterfaceUUID);
     await runtimeB.comHub.removeInterface(clientInterfaceUUID);
+
+    await sleep(200);
 });

@@ -8,14 +8,13 @@ import {
 import { ComHub } from "../network/com-hub.ts";
 import { DIFHandler } from "../dif/dif-handler.ts";
 import {
-    type AsSharedMaybeOwned,
     OwnedSharedContainer,
     type ReferencedSharedContainer,
     SharedContainerMutability,
 } from "../shared-container/mod.ts";
 import type { FlatInstruction, InstructionTree } from "./types.d.ts";
 import type { DIFTypeDefinition } from "../dif/types/mod.ts";
-import { Endpoint, registerCoreTypeBindings } from "../lib/mod.ts";
+import { Endpoint } from "../lib/mod.ts";
 import type { DisassemblerOptions } from "datex/datex-web/types/disassembler/options.ts";
 import type { DecompileOptions } from "datex/datex-web/types/decompiler/options.ts";
 import type { InterfacePriority } from "../datex-web/types/network/com_hub/mod.ts";

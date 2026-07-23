@@ -12,7 +12,7 @@ export enum SharedContainerMutability {
  * The Ref class is a wrapper around a value that is stored in a pointer.
  * Primitive values (string, number, boolean, null) are always wrapped in a Ref when stored in a pointer.
  */
-export class BaseSharedContainer<T, Mutability extends SharedContainerMutability> {
+export class BaseSharedContainer<T, Mutability extends SharedContainerMutability = SharedContainerMutability> {
     #value: MaybeSharedRef<T, Mutability>;
     #pointerAddress: PointerAddress;
     #difHandler: DIFHandler;
@@ -78,9 +78,9 @@ export class BaseSharedContainer<T, Mutability extends SharedContainerMutability
     public withOwnership<Ownership extends DIFSharedContainerOwnership>(
         ownership: Ownership,
     ): SharedContainer<T, Mutability> {
-        if (ownership === DIFSharedContainerOwnership.Immutable) {
+        if (ownership === DIFSharedContainerOwnership.ImmutableRef) {
             return new ReferencedSharedContainer(this, ownership) as SharedContainer<T, Mutability>;
-        } else if (ownership === DIFSharedContainerOwnership.Mutable) {
+        } else if (ownership === DIFSharedContainerOwnership.MutableRef) {
             if (this.isContainerMutable()) {
                 return new ReferencedSharedContainer(this, ownership) as SharedContainer<T, Mutability>;
             } else {

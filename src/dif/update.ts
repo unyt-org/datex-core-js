@@ -9,25 +9,6 @@ export enum DIFPropertyKind {
     Text,
     ValueContainer,
 }
-export function createDIFProperty(
-    value: string | number | DIFValueContainer,
-    propertyKind: DIFPropertyKind,
-) {
-    switch (propertyKind) {
-        case DIFPropertyKind.Index:
-            if (typeof value !== "number") {
-                throw new Error("Expected number for index property");
-            }
-            return value;
-        case DIFPropertyKind.Text:
-            if (typeof value !== "string") {
-                throw new Error("Expected string for text property");
-            }
-            return value;
-        case DIFPropertyKind.ValueContainer:
-            return { value };
-    }
-}
 
 export function clear(path: DIFProperty[] = []): DIFUpdateData {
     return [path, DIFUpdateKind.Clear];

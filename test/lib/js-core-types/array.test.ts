@@ -2,14 +2,12 @@ import { assertEquals } from "@std/assert/equals";
 import { Runtime } from "datex/runtime/runtime.ts";
 
 import { Endpoint } from "datex/lib/mod.ts";
-import { type PointerAddress, SharedContainerMutability } from "datex/shared-container/mod.ts";
-import type { CachedSharedContainer } from "datex/dif/dif-handler.ts";
+import { SharedContainerMutability } from "datex/shared-container/mod.ts";
 import type { SharedRef } from "datex/shared-container/mod.ts";
 import { performFakeRemoteUpdate } from "../utils.ts";
 import {
     appendEntry,
     clear,
-    createDIFProperty,
     deleteEntry,
     DIFPropertyKind,
     listSplice,
@@ -41,7 +39,7 @@ Deno.test("array set external", () => {
         runtime,
         arrayRef.pointerAddress,
         setEntry(
-            createDIFProperty(0, DIFPropertyKind.Index),
+            runtime.dif.createDIFProperty(0, DIFPropertyKind.Index),
             runtime.dif.convertJSValueToDIFValueContainer("newValue"),
         ),
     );
@@ -74,7 +72,7 @@ Deno.test("array delete external", () => {
     const array = ["value1", "value2", 123];
     const arrayRef = runtime.createSharedValueFromJSValue(array);
 
-    performFakeRemoteUpdate(runtime, arrayRef.pointerAddress, deleteEntry(createDIFProperty(0, DIFPropertyKind.Index)));
+    performFakeRemoteUpdate(runtime, arrayRef.pointerAddress, deleteEntry(runtime.dif.createDIFProperty(0, DIFPropertyKind.Index)));
     assertEquals(arrayRef.value, ["value2", 123]);
 });
 

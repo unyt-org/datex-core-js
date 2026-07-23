@@ -25,14 +25,13 @@ async function getTwoConnectedRuntimes(): Promise<
         { url: `ws://localhost:${PORT}` },
     );
 
-    await sleep(100);
-
     return {
         runtimeA,
         runtimeB,
         cleanup: async () => {
             await runtimeA.comHub.removeInterface(serverInterfaceUUID);
             await runtimeB.comHub.removeInterface(clientInterfaceUUID);
+            await sleep(100); // needed for cleanup, fixme
         },
     };
 }

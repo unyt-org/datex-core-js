@@ -23,7 +23,7 @@ export const arrayTypeBinding: TypeBindingDefinition<Array<unknown>> = {
             this.difHandler,
             metadata,
         );
-        // catch acccess (get or set) to original array value, not via proxy - this check is only active in debug mode
+        // catch access (get or set) to original array value, not via proxy - this check is only active in debug mode
         if (DEBUG_MODE) {
             interceptAccessors(
                 target,

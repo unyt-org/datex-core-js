@@ -47,8 +47,8 @@ export const DIFLocalOwnership = {
 export type DIFLocalOwnership = typeof DIFLocalOwnership[keyof typeof DIFLocalOwnership];
 
 export const DIFSharedContainerOwnership = {
-    Immutable: 0,
-    Mutable: 1,
+    ImmutableRef: 0,
+    MutableRef: 1,
     Owned: null,
 } as const;
 export type DIFSharedContainerOwnership = typeof DIFSharedContainerOwnership[keyof typeof DIFSharedContainerOwnership];
