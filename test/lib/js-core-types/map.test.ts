@@ -3,7 +3,7 @@ import { Runtime } from "datex/runtime/runtime.ts";
 import { CoreLibTypeId } from "datex/dif/core.ts";
 import { Endpoint } from "datex/lib/mod.ts";
 import { performFakeRemoteUpdate } from "../utils.ts";
-import { SharedContainerMutability } from "datex/shared-container/base-shared-container.ts";
+import type { SharedContainerMutability } from "datex/shared-container/base-shared-container.ts";
 import type { SharedRef } from "datex/shared-container/mod.ts";
 import { clear, deleteEntry, DIFPropertyKind, replace, setEntry } from "datex/dif/update.ts";
 import { integer } from "datex/dif/helpers/typed-integer.ts";
@@ -117,12 +117,6 @@ Deno.test("map set local", () => {
     // 2. local update
     mapRef.set("localKey", "localValue");
     assertEquals(mapRef.get("localKey"), "localValue");
-
-    console.log(
-        getCurrentRuntimeLocalValue<Map<unknown, unknown>>(address).get(
-            "localKey",
-        ),
-    );
 
     assertEquals(
         getCurrentRuntimeLocalValue<Map<unknown, unknown>>(address).get(

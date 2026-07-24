@@ -11,7 +11,7 @@ const VERSION: string = await Deno.readTextFile(
 // check if --dev flag is passed
 const isDev = Deno.args.includes("--dev");
 if (isDev) {
-    console.log("Note: Building npm package in development mode");
+    console.info("Note: Building npm package in development mode");
 }
 
 await build({
@@ -53,7 +53,7 @@ await build({
             url: "https://github.com/unyt-org/datex-web/issues",
         },
         scripts: {
-            "serve": "vite"
+            "serve": "vite",
         },
         devDependencies: {
             "vite": "^5.0.0",
@@ -142,7 +142,7 @@ await build({
             const runtimeJs = Deno.readTextFileSync("npm/esm/runtime/runtime.js");
             const updatedRuntimeJs = runtimeJs.replace(
                 /const VERSION = "([^"]+)"/,
-                `const VERSION = "$1-dev"`
+                `const VERSION = "$1-dev"`,
             );
             Deno.writeTextFileSync("npm/esm/runtime/runtime.js", updatedRuntimeJs);
         }

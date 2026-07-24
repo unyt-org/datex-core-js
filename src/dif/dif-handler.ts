@@ -460,7 +460,6 @@ export class DIFHandler {
 
         // custom interpretation means
         if (!Array.isArray(value) || value.length < 2 || value.length > 3) {
-            console.log("value", value);
             throw new Error(
                 "Invalid DIFValue format: expected an array for non-primitive types",
             );

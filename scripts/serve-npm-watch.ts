@@ -1,6 +1,6 @@
 const watchDirs = [
     "./src",
-    "./rs-lib"
+    "./rs-lib",
 ];
 
 let serverProcess: Deno.ChildProcess | null = null;
@@ -9,7 +9,7 @@ let building = false;
 let pending = false;
 
 async function runBuild() {
-    console.log("Running build:npm...");
+    console.info("Running build:npm...");
 
     const cmd = new Deno.Command("deno", {
         args: ["task", "build:npm", "--dev"],
@@ -23,11 +23,11 @@ async function runBuild() {
         throw new Error("build:npm failed");
     }
 
-    console.log("Build complete");
+    console.info("Build complete");
 }
 
 function startServer() {
-    console.log("Starting npm server...");
+    console.info("Starting npm server...");
 
     serverProcess = new Deno.Command("npm", {
         args: ["run", "serve"],
@@ -38,16 +38,20 @@ function startServer() {
 
     const url = encodeURIComponent("https://localhost:3489/esm/mod.js");
     setTimeout(() => {
-        console.log("\n============================================================================================================================")
-        console.log(" Current DATEX build is available at https://workbench.unyt.org/enable-local-patch?url=" + url);
-        console.log("============================================================================================================================")
+        console.info(
+            "\n============================================================================================================================",
+        );
+        console.info(" Current DATEX build is available at https://workbench.unyt.org/enable-local-patch?url=" + url);
+        console.info(
+            "============================================================================================================================",
+        );
     }, 1000);
 }
 
 async function stopServer() {
     if (!serverProcess) return;
 
-    console.log("Stopping npm server...");
+    console.info("Stopping npm server...");
 
     serverProcess.kill("SIGTERM");
     await serverProcess.status;

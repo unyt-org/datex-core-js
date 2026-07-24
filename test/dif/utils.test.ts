@@ -71,12 +71,10 @@ Deno.test("intercept accessor for class instance", () => {
 
     interceptAccessors(
         example,
-        (key) => {
-            console.log("get", key);
+        (_key) => {
             return Option.None();
         },
-        (key, _value) => {
-            console.log("set", key);
+        (_key, _value) => {
         },
     );
 

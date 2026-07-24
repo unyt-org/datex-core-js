@@ -54,7 +54,6 @@ export const arrayTypeBinding: TypeBindingDefinition<Array<unknown>> = {
                 });
             },
             set(_target, prop, value, receiver) {
-                console.log("=> array." + String(prop) + " =", value);
                 return self.allowOriginalValueAccess(proxy, () => {
                     const index = Number(prop);
                     if (

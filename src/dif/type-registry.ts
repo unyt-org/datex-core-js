@@ -11,7 +11,12 @@ import {
     type DIFHandler,
     IS_PROXY_ACCESS,
 } from "./dif-handler.ts";
-import type {BaseSharedContainer, PointerAddress, SharedContainerMutability, SharedRef} from "../shared-container/mod.ts";
+import type {
+    BaseSharedContainer,
+    PointerAddress,
+    SharedContainerMutability,
+    SharedRef,
+} from "../shared-container/mod.ts";
 
 type ImplMethod = {
     name: string;
@@ -224,11 +229,6 @@ export class TypeBinding<
         const updateHandlerTypes = this.getUpdateHandlerTypes();
         // add observer if there are update handlers
         if (updateHandlerTypes.size > 0) {
-            console.log(
-                "got update for pointer:",
-                pointerAddress,
-                difUpdateData,
-            );
             const path = difUpdateData[0]; // TODO handle path
 
             const value = base.value as SharedRef<T>;
@@ -291,7 +291,6 @@ export class TypeBinding<
                     difUpdateData[1] === DIFUpdateKind.ListSplice &&
                     this.#definition.handleListSplice
                 ) {
-                    console.log("handling list splice with items:", difUpdateData);
                     this.#definition.handleListSplice.call(
                         this,
                         value,

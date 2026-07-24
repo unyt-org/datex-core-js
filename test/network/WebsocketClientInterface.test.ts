@@ -67,8 +67,7 @@ Deno.test("websocket basic connect", async () => {
         runtime.comHub.createInterface(
             "websocket-client",
             { url: `ws://localhost:${port}` },
-        ).then((uuid) => {
-            console.log("Interface created with UUID:", uuid);
+        ).then((_uuid) => {
             return false;
         }),
     ]);

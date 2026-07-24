@@ -4,10 +4,10 @@ import { assertThrows } from "@std/assert/throws";
 
 import { CoreLibTypeId } from "datex/dif/core.ts";
 import { assertStrictEquals } from "@std/assert/strict-equals";
-import { difBaseSharedContainerToDisplayString } from "datex/dif/display.ts";
 import { Endpoint } from "datex/lib/mod.ts";
 import {
-    type AsSharedMaybeOwned, combinePointerAddressWithOwnership,
+    type AsSharedMaybeOwned,
+    combinePointerAddressWithOwnership,
     SharedContainerMutability,
 } from "datex/shared-container/mod.ts";
 import {
@@ -26,7 +26,7 @@ import { integer, u8 } from "datex/dif/helpers/typed-integer.ts";
 
 let runtime: Runtime;
 Deno.test.beforeEach(async () => {
-    runtime = await Runtime.create({ endpoint: Endpoint.get("@jonas") }, {log_level: "info"});
+    runtime = await Runtime.create({ endpoint: Endpoint.get("@jonas") }, { log_level: "info" });
 });
 
 Deno.test("pointer create with observe", () => {
@@ -213,11 +213,11 @@ Deno.test("pointer create struct", () => {
 
 Deno.test("pointer create and resolve", () => {
     const ptr = combinePointerAddressWithOwnership(
-            runtime.dif.constructSharedValue(
+        runtime.dif.constructSharedValue(
             runtime.dif.convertJSValueToDIFValueContainer("unyt.org"),
             SharedContainerMutability.Mutable,
         ),
-        DIFSharedContainerOwnership.Owned
+        DIFSharedContainerOwnership.Owned,
     );
     const resolved = runtime.dif.resolveDIFValueContainer(
         { $: ptr },
@@ -264,12 +264,6 @@ Deno.test("pointer object create and cache", () => {
 
     // check if cache is used when resolving the pointer again
     const loadedObj = runtime.dif.resolvePointerAddress(DIFSharedContainerOwnership.MutableRef, ptrId);
-    console.log(
-        difBaseSharedContainerToDisplayString(
-            runtime.dif._handle.resolve_pointer_address(ptrId),
-        ),
-    );
-
     // identical object reference
     assertStrictEquals(loadedObj.value, ptrObj.value);
 });
@@ -295,13 +289,6 @@ Deno.test("pointer map create and cache", () => {
     // check if cache is used when resolving the pointer again
     // FIXME avoid cache for this check
     const loadedMap = runtime.dif.resolvePointerAddress(DIFSharedContainerOwnership.MutableRef, ptrId);
-    console.log(
-        difBaseSharedContainerToDisplayString(
-            runtime.dif._handle.resolve_pointer_address(
-                ptrId,
-            ) as DIFBaseSharedValueContainer,
-        ),
-    );
 
     sharedMap.clear();
     // identical object reference
@@ -382,7 +369,6 @@ Deno.test("pointer primitive ref update and observe", () => {
 
     const observedUpdate: Array<DIFUpdate> = [];
     runtime.dif.observeSharedValueBindDirect(ptrObj.pointerAddress, (update) => {
-        console.log("Observed pointer update:", update);
         observedUpdate.push(update);
     }, { relay_own_updates: true });
 
@@ -409,7 +395,6 @@ Deno.test("pointer primitive ref update and observe local", () => {
     const observerId = runtime.dif.observePointer(
         ptrObj.pointerAddress,
         (update) => {
-            console.log("Observed pointer update:", update);
             observedUpdate.push(update);
         },
     );
@@ -453,7 +438,6 @@ Deno.test("pointer primitive ref remote update and observe bind direct", () => {
     runtime.dif.observeSharedValueBindDirect(
         ptrObj.pointerAddress,
         (update) => {
-            console.log("Observed pointer update:", update);
             observedUpdate.push(update);
         },
     );
@@ -485,7 +469,6 @@ Deno.test("pointer primitive ref remote update and observe local", () => {
     runtime.dif.observePointer(
         ptrObj.pointerAddress,
         (update) => {
-            console.log("Observed pointer update:", update);
             observedUpdate.push(update);
         },
     );
@@ -551,8 +534,7 @@ Deno.test("pointer observe unobserve", () => {
         `not found`,
     );
 
-    const observerId = runtime.dif.observeSharedValueBindDirect(ref, (value) => {
-        console.log("Observed pointer value:", value);
+    const observerId = runtime.dif.observeSharedValueBindDirect(ref, (_value) => {
         runtime.dif.unobserveSharedValueBindDirect(ref, observerId);
     });
     assertEquals(observerId, 0);
@@ -575,7 +557,6 @@ Deno.test("core text", () => {
 Deno.test("core integer", () => {
     const script = "42";
     const result = runtime.dif.executeSyncDIF(script);
-    console.log("result", result);
     assertEquals(result, integer(42));
 });
 

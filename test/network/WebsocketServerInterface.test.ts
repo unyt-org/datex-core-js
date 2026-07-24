@@ -60,7 +60,6 @@ Deno.test("connect two runtimes", async () => {
 
     runtimeA.comHub.printMetadata();
     runtimeB.comHub.printMetadata();
-    console.log("META", runtimeA.comHub.getMetadata());
 
     const serverInterfaceMetadata = runtimeA.comHub.getMetadata().interfaces
         .find((v) => v.uuid === serverInterfaceUUID);

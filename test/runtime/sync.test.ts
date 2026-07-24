@@ -49,9 +49,6 @@ Deno.test("sync value between two runtimes", async () => {
     const xOnA = runtimeA.executeSync<ReferencedSharedContainer<number>>("@@local.x");
     const xOnB = runtimeB.executeSync<ReferencedSharedContainer<number>>("@@local.x");
 
-    console.log("x on A:", xOnA);
-    console.log("x on B:", xOnB);
-
     assertEquals(xOnA.value, 42);
     assertEquals(xOnA.value, xOnB.value);
 
