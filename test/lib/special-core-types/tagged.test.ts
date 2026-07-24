@@ -4,7 +4,7 @@ import { assertEquals, assertNotEquals } from "@std/assert";
 import { tagged } from "datex/lib/special-core-types/tagged.ts";
 import type { DIFValue } from "datex/dif/types/mod.ts";
 import { CoreLibTypeId } from "datex/dif/core.ts";
-import {arrayTypeBinding} from "../../../src/lib/js-core-types/array.ts";
+import { arrayTypeBinding } from "../../../src/lib/js-core-types/array.ts";
 
 let runtime: Runtime;
 Deno.test.beforeEach(async () => {

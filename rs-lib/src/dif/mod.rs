@@ -4,15 +4,17 @@ use crate::js_utils::{
 };
 use datex_core::{
     dif::{
-        dif_interface::DIFInterface,
-        error::DIFUpdateError, pointer_address::PointerAddressWithOwnership,
+        dif_interface::DIFInterface, error::DIFUpdateError,
+        pointer_address::PointerAddressWithOwnership,
     },
+    runtime::cache::shared_values_cache::SharedValuesCache,
     shared_values::{
-        PointerAddress, SharedContainerOwnership,
+        PointerAddress, SharedContainer, SharedContainerOwnership,
         base_shared_value_container::{
             BaseSharedValueContainer,
             observers::{ObserveOptions, ObserverId, TransceiverId},
         },
+        traits::SharedContainerCommon,
     },
     value_updates::{update_data::Update, update_handler::UpdateHandler},
     values::value_container::ValueContainer,
@@ -23,9 +25,6 @@ use std::{
     ops::DerefMut,
     rc::Rc,
 };
-use datex_core::runtime::cache::shared_values_cache::SharedValuesCache;
-use datex_core::shared_values::SharedContainer;
-use datex_core::shared_values::traits::SharedContainerCommon;
 use wasm_bindgen::{JsError, JsValue, prelude::*};
 
 #[wasm_bindgen]

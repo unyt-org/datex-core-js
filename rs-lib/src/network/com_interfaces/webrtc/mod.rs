@@ -25,9 +25,9 @@ use datex_core::{
 };
 mod channels;
 use channels::*;
-mod mappings;   
-use mappings::*;
+mod mappings;
 use futures::channel::oneshot;
+use mappings::*;
 use wasm_bindgen::{JsCast, JsValue, prelude::Closure};
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{
@@ -43,15 +43,13 @@ impl WebRTCSignaling for JSSignaling {
     {
         unreachable!()
     }
-    
     fn send(
         &self,
         signal: WebRTCSignalDX,
-    ) -> Pin<Box<dyn Future<Output = datex_core::network::com_interfaces::default_setup_data::webrtc::WebRTCSignalResult<()>> + Send>> {
+    ) -> Pin<Box<dyn Future<Output = datex_core::network::com_interfaces::default_setup_data::webrtc::WebRTCSignalResult<()>> + Send>>{
         todo!()
     }
 }
-
 
 #[derive(Datex)]
 pub struct WebRTCInterfaceSetupDataJS(WebRTCInterfaceSetupData);

@@ -21,14 +21,14 @@ use datex_core::{
     crypto::CryptoImpl,
     datex_proxy::DatexValueContainerProxyInfallibleSerialize,
     decompiler::DecompileOptions,
-    dif::{dif_interface::DIFInterface},
+    dif::dif_interface::DIFInterface,
     runtime::{
         Runtime, RuntimeConfig, RuntimeInternal, RuntimeRunner,
+        cache::shared_values_cache::SharedValuesCache,
     },
 };
 use serde_wasm_bindgen::from_value;
 use std::{cell::RefCell, fmt::Display, rc::Rc};
-use datex_core::runtime::cache::shared_values_cache::SharedValuesCache;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::{future_to_promise, spawn_local};
 use web_sys::js_sys::Promise;

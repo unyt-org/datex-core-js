@@ -1,7 +1,7 @@
 import { CoreLibTypeId } from "../../dif/core.ts";
 import { type CustomReferenceMetadata, type DIFHandler, IS_PROXY_ACCESS } from "../../dif/dif-handler.ts";
 import type { TypeBindingDefinition } from "../../dif/type-registry.ts";
-import { interceptAccessors } from "../../dif/utils.ts";
+import { interceptAccessors } from "../../dif/reflect-utils.ts";
 import { DEBUG_MODE } from "../../global.ts";
 import type { PointerAddress } from "../../shared-container/mod.ts";
 import { Option } from "../../utils/option.ts";

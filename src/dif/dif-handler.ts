@@ -42,11 +42,8 @@ import { isJsMapTypeDefinition, registerCoreTypeBindings } from "../lib/mod.ts";
 import { OwnedSharedContainer } from "../shared-container/owned.ts";
 import { EMPTY_TAG, Tagged } from "../lib/special-core-types/tagged.ts";
 import { ibig } from "./helpers/mod.ts";
-import {
-    getCoreLibTypeIdForJSValue,
-    isCoreLibType as isCoreLibTypeDefinition,
-    isSharedContainerType as isSharedContainerTypeDefiniton,
-} from "./utils.ts";
+import { isCoreLibTypeDefinition, isSharedContainerTypeDefinition } from "./helpers/type-definition.ts";
+import { getCoreLibTypeIdForJSValue } from "./helpers/type-id.ts";
 
 /**
  * Some DIF methods may return an optional ValueContainer, so does the execute_sync, when no result is returned.
@@ -772,11 +769,11 @@ export class DIFHandler {
         // only bind the value, if we have a shared container or a core lib type
         const bindJSValue = typeof value === "object" && value !== null &&
             mutability !== SharedContainerMutability.Immutable && (
-                isCoreLibTypeDefinition(actualType) || isSharedContainerTypeDefiniton(actualType)
+                isCoreLibTypeDefinition(actualType) || isSharedContainerTypeDefinition(actualType)
             );
 
         if (bindJSValue) {
-            typeBinding = isSharedContainerTypeDefiniton(actualType)
+            typeBinding = isSharedContainerTypeDefinition(actualType)
                 ? this.type_registry.getTypeBinding(addressWithoutOwnership(actualType.shared))
                 : this.type_registry.getTypeBindingByCoreLibTypeId(actualType as CoreLibTypeId); // TS Bug
 

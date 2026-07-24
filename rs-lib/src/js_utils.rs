@@ -4,11 +4,11 @@ use datex_core::{
         DatexValueContainerProxyDeserialize,
         DatexValueContainerProxyInfallibleSerialize,
     },
-    dif::{serde_context::SerdeContext},
+    dif::serde_context::SerdeContext,
+    runtime::cache::shared_values_cache::SharedValuesCache,
     utils::serde_serialize_seed::SerializeSeed,
     values::value_container::ValueContainer,
 };
-use datex_core::runtime::cache::shared_values_cache::SharedValuesCache;
 use serde::{
     Serialize,
     de::{DeserializeOwned, DeserializeSeed},

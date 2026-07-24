@@ -1,7 +1,7 @@
 import { Runtime } from "datex/runtime/runtime.ts";
 import { assert, assertEquals } from "@std/assert";
 import type { DIFValue } from "datex/dif/types/value.ts";
-import {arrayTypeBinding, Endpoint} from "datex/lib/mod.ts";
+import { arrayTypeBinding, Endpoint } from "datex/lib/mod.ts";
 import {
     isJsUndefined,
     isJsUndefinedTypeDefinition,

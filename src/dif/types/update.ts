@@ -46,7 +46,6 @@ export type DIFUpdateReturn = ["none"] | ["single_value", DIFValueContainer] | [
     ...DIFValueContainer[],
 ];
 
-
 export type DIFUpdateData = [
     DIFProperty[],
     typeof DIFUpdateKind.Replace,

@@ -625,9 +625,9 @@ mod tests {
     use crate::ts::{TsExport, TsTypeFolder};
     use datex_core::{
         datex_proxy::DatexProxyTypes, macros::Datex,
+        runtime::cache::shared_references_cache::SharedReferencesCache,
         types::r#type::Type,
     };
-    use datex_core::runtime::cache::shared_references_cache::SharedReferencesCache;
     use dedent::dedent;
 
     /// Helper function to fold a type into a TypeScript AST and convert it to a string.
@@ -659,7 +659,9 @@ mod tests {
         }
 
         assert_eq!(
-            to_typescript(Test::datex_type(&mut SharedReferencesCache::default())),
+            to_typescript(Test::datex_type(
+                &mut SharedReferencesCache::default()
+            )),
             dedent!(
                 r#"
                 export type Test = {
@@ -680,7 +682,9 @@ mod tests {
         }
 
         assert_eq!(
-            to_typescript(Test::datex_type(&mut SharedReferencesCache::default())),
+            to_typescript(Test::datex_type(
+                &mut SharedReferencesCache::default()
+            )),
             dedent!(
                 r#"
                 export type Test = {
@@ -700,7 +704,9 @@ mod tests {
         }
 
         assert_eq!(
-            to_typescript(Test::datex_type(&mut SharedReferencesCache::default())),
+            to_typescript(Test::datex_type(
+                &mut SharedReferencesCache::default()
+            )),
             dedent!(
                 r#"
                 export type Test = {
@@ -720,7 +726,9 @@ mod tests {
         }
 
         assert_eq!(
-            to_typescript(Test::datex_type(&mut SharedReferencesCache::default())),
+            to_typescript(Test::datex_type(
+                &mut SharedReferencesCache::default()
+            )),
             dedent!(
                 r#"
                 export type Test = Tagged<"A", {

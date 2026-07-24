@@ -11,11 +11,10 @@ use serde_wasm_bindgen::from_value;
 use datex_core::{
     compiler::{CompileOptions, compile_script, compile_template},
     decompiler::decompile_body,
-    disassembler::{disassemble_body},
+    disassembler::{disassemble_body, get_disassembled_with_options},
     global::protocol_structures::instructions::NestedInstructionResolutionStrategy,
     runtime::execution::{ExecutionInput, ExecutionOptions, execute_dxb_sync},
 };
-use datex_core::disassembler::get_disassembled_with_options;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 

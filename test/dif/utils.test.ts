@@ -1,4 +1,4 @@
-import { interceptAccessors } from "datex/dif/utils.ts";
+import { interceptAccessors } from "datex/dif/reflect-utils.ts";
 import { Option } from "datex/utils/option.ts";
 import { assertEquals } from "@std/assert/equals";
 import { assertThrows } from "@std/assert";

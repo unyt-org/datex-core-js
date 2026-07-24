@@ -1,6 +1,6 @@
 import { Builtins, Repl, Runtime, Shared } from "datex";
-import {SharedContainerMutability} from "../../../src/shared-container/base-shared-container.ts";
-import {SharedReferenceMutability} from "../../../src/shared-container/reference.ts";
+import { SharedContainerMutability } from "../../../src/shared-container/base-shared-container.ts";
+import { SharedReferenceMutability } from "../../../src/shared-container/reference.ts";
 
 export const runtime = await Runtime.create(
     {

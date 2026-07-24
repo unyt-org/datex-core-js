@@ -230,13 +230,14 @@ export class TypeBinding<
         // add observer if there are update handlers
         if (updateHandlerTypes.size > 0) {
             const path = difUpdateData[0]; // TODO handle path
+            const kind = difUpdateData[1];
 
             const value = base.value as SharedRef<T>;
 
             this.allowOriginalValueAccess(base, () => {
                 // call appropriate handler based on update kind
                 if (
-                    difUpdateData[1] === DIFUpdateKind.SetEntry &&
+                    kind === DIFUpdateKind.SetEntry &&
                     this.#definition.handleSet
                 ) {
                     this.#definition.handleSet.call(
@@ -250,7 +251,7 @@ export class TypeBinding<
                         ),
                     );
                 } else if (
-                    difUpdateData[1] === DIFUpdateKind.AppendEntry &&
+                    kind === DIFUpdateKind.AppendEntry &&
                     this.#definition.handleAppend
                 ) {
                     this.#definition.handleAppend.call(
@@ -261,7 +262,7 @@ export class TypeBinding<
                         ),
                     );
                 } else if (
-                    difUpdateData[1] === DIFUpdateKind.Replace &&
+                    kind === DIFUpdateKind.Replace &&
                     this.#definition.handleReplace
                 ) {
                     this.#definition.handleReplace.call(
@@ -272,7 +273,7 @@ export class TypeBinding<
                         ),
                     );
                 } else if (
-                    difUpdateData[1] === DIFUpdateKind.DeleteEntry &&
+                    kind === DIFUpdateKind.DeleteEntry &&
                     this.#definition.handleDelete
                 ) {
                     this.#definition.handleDelete.call(
@@ -283,12 +284,12 @@ export class TypeBinding<
                         ),
                     );
                 } else if (
-                    difUpdateData[1] === DIFUpdateKind.Clear &&
+                    kind === DIFUpdateKind.Clear &&
                     this.#definition.handleClear
                 ) {
                     this.#definition.handleClear.call(this, value);
                 } else if (
-                    difUpdateData[1] === DIFUpdateKind.ListSplice &&
+                    kind === DIFUpdateKind.ListSplice &&
                     this.#definition.handleListSplice
                 ) {
                     this.#definition.handleListSplice.call(

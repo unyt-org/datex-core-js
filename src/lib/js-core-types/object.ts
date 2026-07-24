@@ -2,7 +2,7 @@ import type { TypeBindingDefinition } from "../../dif/type-registry.ts";
 import { CoreLibTypeId } from "../../dif/core.ts";
 import { type CustomReferenceMetadata, IS_PROXY_ACCESS } from "../../dif/dif-handler.ts";
 import { DEBUG_MODE } from "../../global.ts";
-import { interceptAccessors } from "../../dif/utils.ts";
+import { interceptAccessors } from "../../dif/reflect-utils.ts";
 import { Option } from "../../utils/option.ts";
 
 export const objectTypeBinding: TypeBindingDefinition<

@@ -31,7 +31,6 @@ Deno.test.beforeEach(async () => {
     runtime = await Runtime.create({ endpoint: Endpoint.get("@unyt") });
 });
 
-
 Deno.test(`JSON parse compatibility`, async (t) => {
     for (const input of TEXT_INPUTS) {
         await t.step(`Testing input: ${input}`, () => {
