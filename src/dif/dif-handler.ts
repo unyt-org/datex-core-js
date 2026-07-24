@@ -810,7 +810,7 @@ export class DIFHandler {
                                 pointerAddress,
                                 wrappedValue,
                                 data,
-                                typeBinding as any, // ts: TypeBinding<T>
+                                typeBinding as T extends object ? TypeBinding<T> : null,
                             );
                         } catch (e) {
                             console.error(
@@ -1389,6 +1389,12 @@ export class DIFHandler {
         );
     }
 
+    /**
+     * Creates a DIFProperty from a given value and property kind.
+     * @param value The value to be wrapped in a DIFProperty.
+     * @param propertyKind The kind of DIFProperty to create.
+     * @returns The created DIFProperty.
+     */
     public createDIFProperty(
         value: string | number | DIFValueContainer,
         propertyKind: DIFPropertyKind,
