@@ -193,12 +193,16 @@ function generateInterceptedArrayPush<V>(
     difHandler: DIFHandler,
 ) {
     return (...items: V[]) => {
-        difHandler.triggerListSplice(
-            pointerAddress,
-            array.length,
-            0,
-            items,
-        );
+        if (items.length === 1) {
+            difHandler.triggerAppend(pointerAddress, items[0]);
+        } else {
+            difHandler.triggerListSplice(
+                pointerAddress,
+                array.length,
+                0,
+                items,
+            );
+        }
         return originalPush(...items);
     };
 }

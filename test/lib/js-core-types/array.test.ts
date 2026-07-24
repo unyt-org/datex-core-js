@@ -2,18 +2,10 @@ import { assertEquals } from "@std/assert/equals";
 import { Runtime } from "datex/runtime/runtime.ts";
 
 import { Endpoint } from "datex/lib/mod.ts";
-import { SharedContainerMutability } from "datex/shared-container/mod.ts";
+import type { SharedContainerMutability } from "datex/shared-container/mod.ts";
 import type { SharedRef } from "datex/shared-container/mod.ts";
 import { performFakeRemoteUpdate } from "../utils.ts";
-import {
-    appendEntry,
-    clear,
-    deleteEntry,
-    DIFPropertyKind,
-    listSplice,
-    replace,
-    setEntry,
-} from "datex/dif/update.ts";
+import { appendEntry, clear, deleteEntry, DIFPropertyKind, listSplice, replace, setEntry } from "datex/dif/update.ts";
 
 let runtime: Runtime;
 Deno.test.beforeEach(async () => {
@@ -72,7 +64,11 @@ Deno.test("array delete external", () => {
     const array = ["value1", "value2", 123];
     const arrayRef = runtime.createSharedValueFromJSValue(array);
 
-    performFakeRemoteUpdate(runtime, arrayRef.pointerAddress, deleteEntry(runtime.dif.createDIFProperty(0, DIFPropertyKind.Index)));
+    performFakeRemoteUpdate(
+        runtime,
+        arrayRef.pointerAddress,
+        deleteEntry(runtime.dif.createDIFProperty(0, DIFPropertyKind.Index)),
+    );
     assertEquals(arrayRef.value, ["value2", 123]);
 });
 
@@ -338,14 +334,4 @@ Deno.test("array fill local", () => {
         "excludeFirst",
         "excludeFirst",
     ]);
-});
-
-Deno.test("integration full", () => {
-    const reference = runtime.ref(["1", "2", "3"]);
-    console.log("reference", reference);
-
-    reference.observe(([update, id]) => {
-        console.log("observed change", { update, id });
-    });
-    reference.value[1] = "newValue";
 });

@@ -1,11 +1,7 @@
 import { Runtime } from "datex/runtime/runtime.ts";
 import { assertEquals, assertNotStrictEquals, assertThrows } from "@std/assert";
 import { Endpoint } from "datex/lib/mod.ts";
-import {
-    SharedContainerMutability,
-    type SharedRef,
-    type SharedReferenceMutability,
-} from "datex/shared-container/mod.ts";
+import { SharedContainerMutability } from "datex/shared-container/mod.ts";
 
 let runtime: Runtime;
 Deno.test.beforeEach(async () => {

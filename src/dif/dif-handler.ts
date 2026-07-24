@@ -28,7 +28,8 @@ import {
     addressWithoutOwnership,
     type MaybeSharedRef,
     type PointerAddress,
-    ReferencedSharedContainer, SharedContainer,
+    ReferencedSharedContainer,
+    type SharedContainer,
 } from "../shared-container/mod.ts";
 import { type AsShared, BaseSharedContainer, type SharedRef } from "../shared-container/mod.ts";
 import { DIFSharedContainerOwnership } from "./types/type.ts";
@@ -698,7 +699,7 @@ export class DIFHandler {
                 base[1],
                 ownership,
             );
-            return shared.withOwnership(ownership)
+            return shared.withOwnership(ownership);
         } else {
             // fallthrough case, already in cache with correct ownership
             return cached;
@@ -813,7 +814,7 @@ export class DIFHandler {
                                 pointerAddress,
                                 wrappedValue,
                                 data,
-                                typeBinding as any // ts: TypeBinding<T>
+                                typeBinding as any, // ts: TypeBinding<T>
                             );
                         } catch (e) {
                             console.error(
@@ -1085,14 +1086,13 @@ export class DIFHandler {
      * @private
      */
     private tryAsBaseSharedContainer<T = unknown>(
-        value: unknown
+        value: unknown,
     ): BaseSharedContainer<T, SharedContainerMutability> | null {
         if (value instanceof BaseSharedContainer) {
             return value;
         } else if (value instanceof ReferencedSharedContainer || value instanceof OwnedSharedContainer) {
             return value._base;
-        }
-        else {
+        } else {
             return null;
         }
     }
@@ -1106,8 +1106,7 @@ export class DIFHandler {
         const maybeBase = this.tryAsBaseSharedContainer(value);
         if (maybeBase) {
             return maybeBase.pointerAddress;
-        }
-        else {
+        } else {
             return this.#jsValueSharedContainerMetadata.get(value)?.address || null;
         }
     }
