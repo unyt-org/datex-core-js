@@ -86,6 +86,8 @@ export class Repl {
 
 export function create_runtime(config: any, debug_config: any): Promise<JSRuntime>;
 
+export function decompile_dxb_body(dxb: Uint8Array): string;
+
 export function disassemble_dxb_flat(dxb: Uint8Array): any;
 
 export function disassemble_dxb_to_string(dxb: Uint8Array, options: any): any;

@@ -1,5 +1,6 @@
 import {
     create_runtime,
+    decompile_dxb_body,
     disassemble_dxb_flat,
     disassemble_dxb_to_string,
     disassemble_dxb_tree,
@@ -391,6 +392,14 @@ export class Runtime {
      */
     public disassembleDXBToString(dxb: Uint8Array, options?: DisassemblerOptions | null): string {
         return disassemble_dxb_to_string(dxb, options);
+    }
+
+    /**
+     * Decompiles a DXB body to a DATEX script string.
+     * @param dxbBody
+     */
+    public decompileDXBBody(dxbBody: Uint8Array): string {
+        return decompile_dxb_body(dxbBody);
     }
 
     /**
