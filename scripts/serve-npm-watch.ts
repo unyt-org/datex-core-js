@@ -9,20 +9,28 @@ let building = false;
 let pending = false;
 
 async function runBuild() {
-    console.info("Running build:npm...");
-
+    console.info("Running build:debug:no-opt...");
     const cmd = new Deno.Command("deno", {
-        args: ["task", "build:npm", "--dev"],
+        args: ["task", "build:debug:no-opt"],
         stdout: "inherit",
         stderr: "inherit",
     });
-
     const result = await cmd.output();
-
     if (!result.success) {
         throw new Error("build:npm failed");
     }
 
+
+    console.info("Running build:npm...");
+    const npmCmd = new Deno.Command("deno", {
+        args: ["task", "build:npm", "--dev"],
+        stdout: "inherit",
+        stderr: "inherit",
+    });
+    const npmResult = await npmCmd.output();
+    if (!npmResult.success) {
+        throw new Error("build:npm failed");
+    }
     console.info("Build complete");
 }
 
@@ -92,7 +100,7 @@ function debounceRestart() {
 
     buildTimer = setTimeout(() => {
         scheduleRestart();
-    }, 500);
+    }, 2000);
 }
 
 // Initial startup
