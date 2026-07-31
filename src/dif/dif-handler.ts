@@ -110,6 +110,14 @@ export type CachedSharedContainer =
  */
 type Value<T> = T | AsShared<T, SharedContainerMutability>;
 
+
+export type CacheData = {
+    value: WeakRef<BaseSharedContainer<unknown, SharedContainerMutability>>;
+    maxOwnership: DIFSharedContainerOwnership;
+    originalValue: object | null;
+    observerId: number | null;
+};
+
 /**
  * The DIFHandler class provides methods to interact with the DATEX Core DIF runtime,
  * including executing Datex scripts, creating and managing references, and observing changes.
@@ -127,15 +135,7 @@ export class DIFHandler {
      * The reference cache for storing and reusing object instances on the JS side
      * The observerId is only set if the reference is being observed (if not final).
      */
-    readonly #cache = new Map<
-        PointerAddress,
-        {
-            value: WeakRef<BaseSharedContainer<unknown, SharedContainerMutability>>;
-            maxOwnership: DIFSharedContainerOwnership;
-            originalValue: object | null;
-            observerId: number | null;
-        }
-    >();
+    readonly #cache = new Map<PointerAddress, CacheData>();
 
     /**
      * Maps the original value to a proxy value
@@ -180,6 +180,14 @@ export class DIFHandler {
      */
     get _handle(): JSDIFInterface {
         return this.#handle;
+    }
+
+    /**
+     * This should only be used for debugging purposes, not for modifying the cache.
+     * @returns The map of cached references.
+     */
+    get _cache(): Map<PointerAddress, CacheData> {
+        return this.#cache;
     }
 
     /**
