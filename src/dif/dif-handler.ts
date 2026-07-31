@@ -131,6 +131,9 @@ export class DIFHandler {
     // always 0 for now - potentially used for multi DIF transceivers using the same underlying runtime
     readonly #transceiver_id = 0;
 
+    // The set of observers that are currently registered for cache updates.
+    readonly #cacheObservers = new Set<() => void>();
+
     /**
      * The reference cache for storing and reusing object instances on the JS side
      * The observerId is only set if the reference is being observed (if not final).
@@ -991,9 +994,32 @@ export class DIFHandler {
                 if (observerId !== null) {
                     this.unobserveSharedValueBindDirect(address, observerId);
                 }
+                // trigger cache change observers
+                this.#triggerCacheObservers();
             },
         );
         finalizationRegistry.register(baseSharedContainer, address);
+
+        // trigger cache change observers
+        this.#triggerCacheObservers();
+    }
+
+    #triggerCacheObservers() {
+        for (const observer of this.#cacheObservers) {
+            try {
+                observer();
+            } catch (e) {
+                console.error("Error in cache observer callback", e);
+            }
+        }
+    }
+
+    /**
+     * Registers a callback to be invoked whenever the cache changes (e.g., when a reference is added or removed).
+     * @param callback
+     */
+    public registerCacheObserver(callback: () => void) {
+        this.#cacheObservers.add(callback);
     }
 
     protected getCachedStateForSharedContainer<T>(
