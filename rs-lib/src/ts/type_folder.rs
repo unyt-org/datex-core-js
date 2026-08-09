@@ -11,7 +11,6 @@ use datex_core::{
     },
     types::{
         literal_type_definition::LiteralTypeDefinition,
-        shared_container_containing_nominal_type::SharedContainerContainingNominalType,
         shared_container_containing_type::SharedContainerContainingType,
         r#type::Type,
         type_definition::{
@@ -33,6 +32,7 @@ use datex_core::{
     },
     values::core_values::integer::typed_integer::TypedInteger,
 };
+use datex_core::types::shared_container_containing_nominal_type::SharedContainerContainingEntityType;
 use swc_common::DUMMY_SP;
 use swc_ecma_ast::{TsType, TsTypeAliasDecl};
 
@@ -511,9 +511,9 @@ impl TypeFolder for TsTypeFolder {
         todo!()
     }
 
-    fn fold_nominal_reference(
+    fn fold_entity_reference(
         &mut self,
-        _nominal: &SharedContainerContainingNominalType,
+        _nominal: &SharedContainerContainingEntityType,
     ) -> Result<Self::Output, Self::Error> {
         todo!()
     }
@@ -571,14 +571,6 @@ impl TypeFolder for TsTypeFolder {
         self.external_type_reference("Tagged", generics)
     }
 
-    fn fold_list_collection(
-        &mut self,
-        source: &ListCollectionTypeDefinition,
-        item: Self::Output,
-    ) -> Result<Self::Output, Self::Error> {
-        Ok(ts_array(item))
-    }
-
     fn fold_range(
         &mut self,
         source: &RangeTypeDefinition,
@@ -594,6 +586,14 @@ impl TypeFolder for TsTypeFolder {
         ty: Self::Output,
     ) -> Result<Self::Output, Self::Error> {
         todo!()
+    }
+
+    fn fold_list_collection(
+        &mut self,
+        source: &ListCollectionTypeDefinition,
+        item: Self::Output,
+    ) -> Result<Self::Output, Self::Error> {
+        Ok(ts_array(item))
     }
 
     fn fold_list_slice_collection(
