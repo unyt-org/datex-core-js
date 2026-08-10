@@ -472,6 +472,7 @@ dependencies = [
  "strum_macros",
  "syntect",
  "thiserror 2.0.18",
+ "twox-hash",
  "url",
  "wasm-bindgen",
  "wasm-bindgen-futures",
@@ -2412,6 +2413,12 @@ dependencies = [
  "serde",
  "stable_deref_trait",
 ]
+
+[[package]]
+name = "twox-hash"
+version = "2.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8464ec13c3691491391d9fce00f6416c9a48e46972f72d7865688be2080192c9"
 
 [[package]]
 name = "typed-arena"

@@ -289,7 +289,8 @@ impl JSComHub {
             Reflect::get(socket_configuration, &"properties".into())
                 .and_then(|v| v.dyn_into::<Object>())?;
 
-        #[derive(Debug, Clone, Datex)]
+        #[derive(Datex, Debug, Clone)]
+        #[datex(structural)]
         pub struct SocketPropertiesPartial {
             pub direction: InterfaceDirection,
             pub channel_factor: u32,

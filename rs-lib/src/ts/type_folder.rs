@@ -32,9 +32,9 @@ use datex_core::{
     },
     values::core_values::integer::typed_integer::TypedInteger,
 };
-use datex_core::types::shared_container_containing_nominal_type::SharedContainerContainingEntityType;
+use datex_core::types::shared_container_containing_entity_type::SharedContainerContainingEntityType;
 use swc_common::DUMMY_SP;
-use swc_ecma_ast::{TsType, TsTypeAliasDecl};
+use swc_ecma_ast::{TsKeywordType, TsType, TsTypeAliasDecl};
 
 use crate::ts::{
     TsExport,
@@ -515,7 +515,7 @@ impl TypeFolder for TsTypeFolder {
         &mut self,
         _nominal: &SharedContainerContainingEntityType,
     ) -> Result<Self::Output, Self::Error> {
-        todo!()
+        Ok(ts_null()) // TODO
     }
 
     fn fold_core_type(
@@ -653,6 +653,7 @@ mod tests {
     #[test]
     fn simple_types() {
         #[derive(Datex)]
+        #[datex(structural)]
         struct Test {
             a: String,
             b: i32,
@@ -676,6 +677,7 @@ mod tests {
     #[test]
     fn list_and_map() {
         #[derive(Datex)]
+        #[datex(structural)]
         struct Test {
             a: Vec<String>,
             b: HashMap<String, i32>,
@@ -699,6 +701,7 @@ mod tests {
     #[test]
     fn option() {
         #[derive(Datex)]
+        #[datex(structural)]
         struct Test {
             a: Option<String>,
         }
@@ -720,6 +723,7 @@ mod tests {
     #[test]
     fn tagged() {
         #[derive(Datex)]
+        #[datex(structural)]
         enum Test {
             A { x: i32 },
             B,

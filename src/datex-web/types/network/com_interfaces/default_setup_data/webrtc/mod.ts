@@ -52,4 +52,12 @@ export type RTCSessionDescriptionDX = {
     sdp: string;
 };
 
-export type WebRTCSignalDX = Tagged<"Description", RTCSessionDescriptionDX> | Tagged<"IceCandidate", RTCIceCandidateInitDX> | Tagged<"EndOfCandidates">;
+export type WebRTCSignalDX = Tagged<"Description", {
+    type: RTCSdpTypeDX;
+    sdp: string;
+}> | Tagged<"IceCandidate", {
+    candidate: string;
+    sdp_mid: null | string;
+    sdp_mline_index: null | number;
+    username_fragment: null | string;
+}> | Tagged<"EndOfCandidates">;
