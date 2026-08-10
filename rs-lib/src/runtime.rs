@@ -79,7 +79,7 @@ impl JSRuntime {
     }
 
     fn new(runtime: Runtime) -> JSRuntime {
-        let dif_interface = JSDIFInterface::new(runtime.create_dif_interface());
+        let dif_interface = JSDIFInterface::new(runtime.clone(), runtime.create_dif_interface());
         let com_hub =
             JSComHub::new(runtime.clone(), dif_interface.dif_interface_rc());
         JSRuntime {

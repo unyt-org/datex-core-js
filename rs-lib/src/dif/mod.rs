@@ -25,6 +25,7 @@ use std::{
     ops::DerefMut,
     rc::Rc,
 };
+use datex_core::runtime::Runtime;
 use wasm_bindgen::{JsError, JsValue, prelude::*};
 
 #[wasm_bindgen]
@@ -32,12 +33,15 @@ use wasm_bindgen::{JsError, JsValue, prelude::*};
 pub struct JSDIFInterface {
     #[wasm_bindgen(skip)]
     dif_interface: Rc<RefCell<DIFInterface>>,
+    #[wasm_bindgen(skip)]
+    runtime: Runtime,
 }
 
 impl JSDIFInterface {
-    pub fn new(dif_interface: DIFInterface) -> Self {
+    pub fn new(runtime: Runtime, dif_interface: DIFInterface) -> Self {
         Self {
             dif_interface: Rc::new(RefCell::new(dif_interface)),
+            runtime,
         }
     }
     pub fn cache(&'_ self) -> RefMut<'_, SharedValuesCache> {
@@ -147,7 +151,7 @@ impl JSDIFInterface {
         Ok(self
             .dif_interface
             .borrow_mut()
-            .apply(callee, value)
+            .apply(&self.runtime, callee, value)
             .map_err(js_error)?
             .map(|res| to_js_value(&res, &mut self.cache())))
     }
