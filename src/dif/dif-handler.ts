@@ -52,7 +52,6 @@ import { getCoreLibTypeIdForJSValue } from "./helpers/type-id.ts";
  * @returns The contained DIFValueContainer if present, or undefined if the value is not present.
  */
 function collapseDIFOption(value: DIFOptionalValueContainer): DIFValueContainer | undefined {
-    console.log("collapse", value);
     if (value === null) {
         return undefined;
     } else {
@@ -1326,6 +1325,14 @@ export class DIFHandler {
                 map[key] = this.convertJSValueToDIFValueContainer(val);
             }
             return [CoreLibTypeId.Map, map] as DIFValue;
+        } else if (typeof value == "function") {
+            if (!(DATEX_CALLABLE_HASH in (value as any))) {
+                unimplemented();
+            }
+            else {
+                const hash = (value as any)[DATEX_CALLABLE_HASH] as string;
+                return [CoreLibTypeId.Callable, [hash, null]];
+            }
         }
         throw new Error("Unsupported type for conversion to DIFValue");
     }
