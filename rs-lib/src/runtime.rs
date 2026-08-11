@@ -15,7 +15,7 @@ use datex_crypto_facade::crypto::Crypto;
 use log::info;
 use std::{borrow::Cow, ops::Deref};
 
-use crate::js_utils::to_js_value;
+use crate::js_utils::{optional_value_container_to_optional_js_dif_value, to_js_value};
 use datex_core::{
     compiler::{CompileOptions, compile_template},
     crypto::CryptoImpl,
@@ -289,7 +289,7 @@ impl JSRuntime {
             )
             .await
             .map_err(js_error)?;
-        Ok(self.optional_value_container_to_optional_js_dif_value(result))
+        Ok(optional_value_container_to_optional_js_dif_value(result, &mut self.dif_interface.cache()))
     }
 
     pub fn execute_sync_with_string_result(
@@ -331,7 +331,7 @@ impl JSRuntime {
                 None,
             )
             .map_err(js_error)?;
-        Ok(self.optional_value_container_to_optional_js_dif_value(result))
+        Ok(optional_value_container_to_optional_js_dif_value(result, &mut self.dif_interface.cache()))
     }
 
     pub fn value_to_string(
@@ -370,26 +370,6 @@ impl JSRuntime {
             value,
             &mut self.dif_interface.cache(),
         )
-    }
-
-    /**
-     * Convert an optional ValueContainer to an optional JsValue in the DIF format:
-     *  * no result (None) is represented as null
-     *  * a result (Some) is represented as [value] (wrapped in an array to differentiate from null)
-     */
-    fn optional_value_container_to_optional_js_dif_value(
-        &self,
-        value: Option<ValueContainer>,
-    ) -> JsValue {
-        match value {
-            Some(value) => {
-                let inner_value =
-                    to_js_value(&value, &mut self.dif_interface.cache());
-                // wrap in array
-                js_array(&[inner_value])
-            }
-            None => JsValue::NULL,
-        }
     }
 
     /// Get a handle to the DIF interface of the runtime

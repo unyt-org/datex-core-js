@@ -2,10 +2,10 @@ use std::{collections::BTreeMap, path::PathBuf};
 
 pub use crate::ts::type_folder::TsTypeFolder;
 use crate::ts::{ast::TsAst, type_folder::TsTypeFolderError};
-use datex_core::datex_registry::all_datex_registrations;
 pub use datex_core::{
     runtime::cache::shared_references_cache::SharedReferencesCache,
     types::r#type::Type,
+    datex_registry::all_datex_type_registrations
 };
 
 mod ast;
@@ -25,7 +25,7 @@ pub fn resolve_registry_types<'a>(
 ) -> Result<&'a TsAst, TsTypeFolderError> {
     let mut exports_by_file = BTreeMap::<PathBuf, Vec<TsExport<'_>>>::new();
 
-    for registration in all_datex_registrations() {
+    for registration in all_datex_type_registrations() {
         let metadata = &registration.metadata;
 
         let namespace = format!("{}.ts", metadata.namespace)

@@ -7,7 +7,7 @@ import type { JSDIFInterface, JSRuntime } from "../datex.ts";
 import { Endpoint } from "../lib/special-core-types/endpoint.ts";
 import { Range } from "../lib/special-core-types/range.ts";
 import {
-    type DIFCoreValue,
+    type DIFCoreValue, DIFCoreValueCallable,
     type DIFOptionalValueContainer,
     type DIFProperty,
     type DIFTypeDefinition,
@@ -52,6 +52,7 @@ import { getCoreLibTypeIdForJSValue } from "./helpers/type-id.ts";
  * @returns The contained DIFValueContainer if present, or undefined if the value is not present.
  */
 function collapseDIFOption(value: DIFOptionalValueContainer): DIFValueContainer | undefined {
+    console.log("collapse", value);
     if (value === null) {
         return undefined;
     } else {
@@ -117,6 +118,8 @@ export type CacheData = {
     originalValue: object | null;
     observerId: number | null;
 };
+
+const DATEX_CALLABLE_HASH: unique symbol = Symbol("DATEX_CALLABLE_HASH");
 
 /**
  * The DIFHandler class provides methods to interact with the DATEX Core DIF runtime,
@@ -445,6 +448,18 @@ export class DIFHandler {
     }
 
     /**
+     * Calls a callable DIF value identified by the given hash with the specified arguments.
+     */
+    private callCallable(hash: string, args: unknown[]) {
+        const result = collapseDIFOption(this.#handle.apply(
+            [CoreLibTypeId.Callable, [hash, null]] satisfies DIFValue,
+            args.map((arg) => this.convertJSValueToDIFValueContainer(arg))
+        ));
+        if (result === undefined) return result;
+        return this.resolveDIFValueContainer(result);
+    }
+
+    /**
      * Resolves a DIFValue to its corresponding JS value.
      * This function handles core types and custom types (not yet implemented).
      * It returns the resolved value as the specified type T.
@@ -604,6 +619,19 @@ export class DIFHandler {
             } else {
                 throw new Error("Expected array of key-value pairs or object for map type");
             }
+
+        }
+        else if (type === CoreLibTypeId.Callable) {
+            const [hash, name] = core as DIFCoreValueCallable;
+            const callable = new Function(
+                "fn", "hash",
+                `return function ${name||""}(...args) {return fn(hash, args)}`)
+            (this.callCallable.bind(this), hash);
+            callable[DATEX_CALLABLE_HASH] = hash;
+            return callable;
+        }
+        else {
+            throw new Error(`Unsupported DIF type: ${type}`);
         }
 
         // for tagged type definition, wrap in Tagged

@@ -1,7 +1,4 @@
-use crate::js_utils::{
-    from_dif_js_value, from_js_value, js_error, to_js_value,
-    unwrap_or_report_js_error_debug,
-};
+use crate::js_utils::{from_dif_js_value, from_js_value, js_error, optional_value_container_to_optional_js_dif_value, to_js_value, unwrap_or_report_js_error_debug};
 use datex_core::{
     dif::{
         dif_interface::DIFInterface, error::DIFUpdateError,
@@ -19,7 +16,7 @@ use datex_core::{
     value_updates::{update_data::Update, update_handler::UpdateHandler},
     values::value_container::ValueContainer,
 };
-use js_sys::Function;
+use js_sys::{Array, Function};
 use std::{
     cell::{RefCell, RefMut},
     ops::DerefMut,
@@ -142,18 +139,25 @@ impl JSDIFInterface {
     pub fn apply(
         &mut self,
         callee: JsValue,
-        value: JsValue,
-    ) -> Result<Option<JsValue>, JsError> {
+        args: JsValue,
+    ) -> Result<JsValue, JsError> {
         let callee: ValueContainer =
             from_dif_js_value(callee, &mut self.cache())?;
-        let value: ValueContainer =
-            from_dif_js_value(value, &mut self.cache())?;
-        Ok(self
+        let js_array: Array = args.into();
+        let args = js_array.to_vec().into_iter().map(|v| {
+            from_dif_js_value(v, &mut self.cache())
+        }).collect::<Result<Vec<ValueContainer>, _>>()?;
+
+        let res = self
             .dif_interface
             .borrow_mut()
-            .apply(&self.runtime, callee, value)
-            .map_err(js_error)?
-            .map(|res| to_js_value(&res, &mut self.cache())))
+            .apply(&self.runtime, callee, args)
+            .map_err(js_error)?;
+
+        Ok(optional_value_container_to_optional_js_dif_value(
+            res,
+            &mut self.cache()
+        ))
     }
 
     pub fn create_pointer(&self, value: JsValue) -> Result<String, JsError> {
