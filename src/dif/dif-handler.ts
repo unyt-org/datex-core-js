@@ -3,11 +3,12 @@
  * Represents the main interface for interacting with the DATEX Core via DIF from JavaScript.
  */
 
-import type { JSDIFInterface, JSRuntime } from "../datex.ts";
-import { Endpoint } from "../lib/special-core-types/endpoint.ts";
-import { Range } from "../lib/special-core-types/range.ts";
+import type {JSDIFInterface, JSRuntime} from "../datex.ts";
+import {Endpoint} from "../lib/special-core-types/endpoint.ts";
+import {Range} from "../lib/special-core-types/range.ts";
 import {
-    type DIFCoreValue, DIFCoreValueCallable,
+    type DIFCoreValue,
+    DIFCoreValueCallable,
     type DIFOptionalValueContainer,
     type DIFProperty,
     type DIFTypeDefinition,
@@ -18,32 +19,34 @@ import {
     type DIFValueContainer,
     type ObserveOptions,
 } from "./types/mod.ts";
-import { CoreLibTypeId } from "./core.ts";
-import { type TypeBinding, TypeRegistry } from "./type-registry.ts";
-import { panic, unimplemented, unreachable } from "../utils/exceptions.ts";
-import { isJsUndefined, JS_UNDEFINED } from "../lib/special-core-types/undefined.ts";
-import type { DIFBaseSharedValueContainer } from "./types/value.ts";
-import { SharedContainerMutability } from "../shared-container/base-shared-container.ts";
+import {CoreLibTypeId} from "./core.ts";
+import {type TypeBinding, TypeRegistry} from "./type-registry.ts";
+import {panic, unimplemented, unreachable} from "../utils/exceptions.ts";
+import {isJsUndefined, JS_UNDEFINED} from "../lib/special-core-types/undefined.ts";
+import type {DIFBaseSharedValueContainer} from "./types/value.ts";
+import {SharedContainerMutability} from "../shared-container/base-shared-container.ts";
 import {
     addressWithoutOwnership,
+    type AsShared,
+    BaseSharedContainer,
+    combinePointerAddressWithOwnership,
     type MaybeSharedRef,
     type PointerAddress,
     ReferencedSharedContainer,
     type SharedContainer,
+    type SharedRef,
+    splitPointerAddressWithOwnership,
 } from "../shared-container/mod.ts";
-import { type AsShared, BaseSharedContainer, type SharedRef } from "../shared-container/mod.ts";
-import { DIFSharedContainerOwnership } from "./types/type.ts";
-import { splitPointerAddressWithOwnership } from "../shared-container/mod.ts";
-import { combinePointerAddressWithOwnership } from "../shared-container/mod.ts";
-import type { DIFUpdateReturn } from "./types/update.ts";
-import { appendEntry, clear, deleteEntry, DIFPropertyKind, listSplice, replace, setEntry } from "./update.ts";
-import { JsLibTypeAddress } from "./js-lib.ts";
-import { isJsMapTypeDefinition, registerCoreTypeBindings } from "../lib/mod.ts";
-import { OwnedSharedContainer } from "../shared-container/owned.ts";
-import { EMPTY_TAG, Tagged } from "../lib/special-core-types/tagged.ts";
-import { ibig } from "./helpers/mod.ts";
-import { isCoreLibTypeDefinition, isSharedContainerTypeDefinition } from "./helpers/type-definition.ts";
-import { getCoreLibTypeIdForJSValue } from "./helpers/type-id.ts";
+import {DIFSharedContainerOwnership} from "./types/type.ts";
+import type {DIFUpdateReturn} from "./types/update.ts";
+import {appendEntry, clear, deleteEntry, DIFPropertyKind, listSplice, replace, setEntry} from "./update.ts";
+import {JsLibTypeAddress} from "./js-lib.ts";
+import {isJsMapTypeDefinition, registerCoreTypeBindings} from "../lib/mod.ts";
+import {OwnedSharedContainer} from "../shared-container/owned.ts";
+import {EMPTY_TAG, Tagged} from "../lib/special-core-types/tagged.ts";
+import {ibig} from "./helpers/mod.ts";
+import {isCoreLibTypeDefinition, isSharedContainerTypeDefinition} from "./helpers/type-definition.ts";
+import {getCoreLibTypeIdForJSValue} from "./helpers/type-id.ts";
 
 /**
  * Some DIF methods may return an optional ValueContainer, so does the execute_sync, when no result is returned.
@@ -283,10 +286,7 @@ export class DIFHandler {
             (baseSharedValueContainer as unknown[])[2] = allowedType;
         }
 
-        const addr = this.#handle.create_pointer(baseSharedValueContainer);
-        // remove leading $
-        // FIXME
-        return addr.slice(1) as PointerAddress;
+        return this.#handle.create_pointer(baseSharedValueContainer) as PointerAddress;
     }
 
     /**
@@ -1252,15 +1252,7 @@ export class DIFHandler {
                 ref as CachedSharedContainer,
             );
         if (existingReference) {
-            const ownership = difHandlerInstance.#cache.get(existingReference.address);
-            if (!ownership) {
-                throw new Error(
-                    `Reference metadata found for address ${existingReference.address} but no ownership info in cache`,
-                );
-            }
-
-            // move(x) -> function (x: OwnedValue) {}
-            return { $: combinePointerAddressWithOwnership(existingReference.address, ownership.maxOwnership) };
+            return difHandlerInstance.generateDIFValueContainerForCachedPointer(existingReference.address);
         }
         // TODO: handle custom types
 
@@ -1326,15 +1318,61 @@ export class DIFHandler {
             }
             return [CoreLibTypeId.Map, map] as DIFValue;
         } else if (typeof value == "function") {
+            // function originating from JS side, register it as shared value with pointer address
             if (!(DATEX_CALLABLE_HASH in (value as any))) {
-                unimplemented();
+                if (!difHandlerInstance) {
+                    throw new Error(
+                        "Cannot register callable function without a DIFHandler instance",
+                    );
+                }
+                // register the JS function as native callable via DIF
+                difHandlerInstance.registerCallable(value as (...args: unknown[]) => unknown);
+                // after registration, the function should be in cache, so we can get its reference metadata and return the pointer address
+                const existingReference = difHandlerInstance.tryGetReferenceMetadata(value as CachedSharedContainer);
+                return difHandlerInstance.generateDIFValueContainerForCachedPointer(existingReference.address);
             }
+            // local DATEX function with hash
             else {
                 const hash = (value as any)[DATEX_CALLABLE_HASH] as string;
                 return [CoreLibTypeId.Callable, [hash, null]];
             }
         }
         throw new Error("Unsupported type for conversion to DIFValue");
+    }
+
+    /**
+     * Registers a callable function with the DATEX core runtime and stores its hash in the function's metadata.
+     */
+    private registerCallable(
+        callable: (...args: unknown[]) => unknown,
+    ) {
+        const wrapperFn = (args: DIFValueContainer[]) => {
+            return callable(...args.map((arg) => this.resolveDIFValueContainer(arg)));
+        }
+        const address = this.#handle.register_callable(wrapperFn, false) as PointerAddress;
+        const shared = this.initSharedValue(
+            address,
+            callable,
+            SharedContainerMutability.Immutable,
+            DIFSharedContainerOwnership.ImmutableRef,
+        );
+    }
+
+    /**
+     * Generates the DIF representation for a cached pointer address, using the ownership information from the cache.
+     */
+    private generateDIFValueContainerForCachedPointer(
+        address: PointerAddress,
+    ) {
+        const ownership = this.#cache.get(address);
+        if (!ownership) {
+            throw new Error(
+                `Reference metadata found for address ${address} but no ownership info in cache`,
+            );
+        }
+
+        // move(x) -> function (x: OwnedValue) {}
+        return { $: combinePointerAddressWithOwnership(address, ownership.maxOwnership) };
     }
 
     /**

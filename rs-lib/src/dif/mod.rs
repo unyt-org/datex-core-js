@@ -1,4 +1,4 @@
-use crate::js_utils::{from_dif_js_value, from_js_value, js_error, optional_value_container_to_optional_js_dif_value, to_js_value, unwrap_or_report_js_error_debug};
+use crate::js_utils::{from_dif_js_value, from_js_value, js_error, optional_value_container_to_optional_js_dif_value, to_dif_js_value, to_js_value, unwrap_or_report_js_error_debug};
 use datex_core::{
     dif::{
         dif_interface::DIFInterface, error::DIFUpdateError,
@@ -23,6 +23,7 @@ use std::{
     rc::Rc,
 };
 use datex_core::runtime::Runtime;
+use datex_core::types::type_definition::callable::{CallableKind, CallableTypeDefinition};
 use wasm_bindgen::{JsError, JsValue, prelude::*};
 
 #[wasm_bindgen]
@@ -136,6 +137,38 @@ impl JSDIFInterface {
         Ok(to_js_value(&result, &mut self.cache()))
     }
 
+    pub fn register_callable(
+        &mut self,
+        callable: &Function,
+        is_method: bool, // TODO
+    ) -> Result<String, JsError> {
+        let callable_clone = callable.clone();
+        let self_clone = self.clone();
+        let native_callable = move |args: Vec<ValueContainer>| {
+            let js_args = args.into_iter().map(|v| to_dif_js_value(v, &mut self_clone.cache())).collect::<Array>();
+            let result = unwrap_or_report_js_error_debug(
+                callable_clone.call1(&JsValue::NULL, &js_args),
+            );
+            Ok(result
+                .map(|res| from_dif_js_value::<ValueContainer>(res, &mut self_clone.cache()).unwrap()))
+        };
+
+        let signature = CallableTypeDefinition {
+            kind: CallableKind::Procedure,
+            parameters: vec![],
+            rest_parameter: None,
+            return_type: None,
+            yeet_type: None,
+        };
+
+        Ok(self
+            .dif_interface
+            .borrow_mut()
+            .register_callable(native_callable, signature)
+            .to_address_string()
+        )
+    }
+
     pub fn apply(
         &mut self,
         callee: JsValue,
@@ -167,7 +200,7 @@ impl JSDIFInterface {
             .dif_interface
             .borrow_mut()
             .create_pointer(value)
-            .to_string())
+            .to_address_string())
     }
 
     /// Resolve a pointer address synchronously if it's in memory, otherwise return an error

@@ -30,6 +30,7 @@ export class JSDIFInterface {
     create_pointer(value: any): string;
     has_address_with_ownership(address: string, ownership?: number | null): boolean;
     observe_pointer(address: string, observe_options: any, callback: Function): number;
+    register_callable(callable: Function, is_method: boolean): string;
     /**
      * Resolve a pointer address synchronously if it's in memory, otherwise return an error
      */
