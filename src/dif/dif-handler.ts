@@ -7,6 +7,8 @@ import type {JSDIFInterface, JSRuntime} from "../datex.ts";
 import {Endpoint} from "../lib/special-core-types/endpoint.ts";
 import {Range} from "../lib/special-core-types/range.ts";
 import {
+    DIFCallableKind,
+    DIFCallableTypeDefinition,
     type DIFCoreValue,
     DIFCoreValueCallable,
     type DIFOptionalValueContainer,
@@ -1345,17 +1347,42 @@ export class DIFHandler {
      */
     private registerCallable(
         callable: (...args: unknown[]) => unknown,
+        typeDefinition?: DIFCallableTypeDefinition,
+        isMethod = false,
     ) {
+        const isAsync = callable.constructor.name === "AsyncFunction";
+
+        typeDefinition ??= {
+            kind: DIFCallableKind.Procedure,
+            requires_async: isAsync,
+            parameters: this.extractFunctionParameterNames(callable).map((name) => ([name, CoreLibTypeId.Any])),
+            rest_parameter: null,
+            return_type: CoreLibTypeId.Any,
+            yeet_type: CoreLibTypeId.Any
+        } satisfies DIFCallableTypeDefinition;
+
         const wrapperFn = (args: DIFValueContainer[]) => {
             return callable(...args.map((arg) => this.resolveDIFValueContainer(arg)));
         }
-        const address = this.#handle.register_callable(wrapperFn, false) as PointerAddress;
+        const address = this.#handle.register_callable(wrapperFn, callable.name || null, typeDefinition, isMethod) as PointerAddress;
         const shared = this.initSharedValue(
             address,
             callable,
             SharedContainerMutability.Immutable,
             DIFSharedContainerOwnership.ImmutableRef,
         );
+    }
+
+    private extractFunctionParameterNames(
+        fn: (...args: unknown[]) => unknown,
+    ): string[] {
+        const fnStr = fn.toString();
+        const result = fnStr.match(/\(([^)]*)\)/);
+        if (!result) {
+            throw new Error("Could not extract parameter names from function");
+        }
+        const params = result[1].split(",").map((param) => param.trim());
+        return params;
     }
 
     /**

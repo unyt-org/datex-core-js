@@ -16,7 +16,7 @@ use datex_core::{
     value_updates::{update_data::Update, update_handler::UpdateHandler},
     values::value_container::ValueContainer,
 };
-use js_sys::{Array, Function};
+use js_sys::{Array, Function, Promise};
 use std::{
     cell::{RefCell, RefMut},
     ops::DerefMut,
@@ -24,6 +24,7 @@ use std::{
 };
 use datex_core::runtime::Runtime;
 use datex_core::types::type_definition::callable::{CallableKind, CallableTypeDefinition};
+use datex_core::values::core_values::callable::NativeCallable;
 use wasm_bindgen::{JsError, JsValue, prelude::*};
 
 #[wasm_bindgen]
@@ -140,31 +141,55 @@ impl JSDIFInterface {
     pub fn register_callable(
         &mut self,
         callable: &Function,
+        name: Option<String>,
+        signature: JsValue,
         is_method: bool, // TODO
     ) -> Result<String, JsError> {
+        let signature: CallableTypeDefinition =
+            from_js_value(signature, &mut self.cache())?;
+
         let callable_clone = callable.clone();
         let self_clone = self.clone();
-        let native_callable = move |args: Vec<ValueContainer>| {
-            let js_args = args.into_iter().map(|v| to_dif_js_value(v, &mut self_clone.cache())).collect::<Array>();
-            let result = unwrap_or_report_js_error_debug(
-                callable_clone.call1(&JsValue::NULL, &js_args),
-            );
-            Ok(result
-                .map(|res| from_dif_js_value::<ValueContainer>(res, &mut self_clone.cache()).unwrap()))
-        };
-
-        let signature = CallableTypeDefinition {
-            kind: CallableKind::Procedure,
-            parameters: vec![],
-            rest_parameter: None,
-            return_type: None,
-            yeet_type: None,
+        let native_callable = if signature.requires_async {
+            NativeCallable::new_async(move |args: Vec<ValueContainer>| {
+                let callable_clone = callable_clone.clone();
+                let self_clone = self_clone.clone();
+                Box::pin(async move {
+                    let js_args = args.into_iter().map(|v| to_dif_js_value(v, &mut self_clone.cache())).collect::<Array>();
+                    let promise = unwrap_or_report_js_error_debug(
+                        callable_clone.call1(&JsValue::NULL, &js_args),
+                    ).map(Promise::from);
+                    match promise {
+                        Some(promise) => {
+                            let result = unwrap_or_report_js_error_debug(wasm_bindgen_futures::JsFuture::from(promise).await);
+                            Ok(result
+                                .map(|res| from_dif_js_value::<ValueContainer>(res, &mut self_clone.cache()).unwrap()))
+                        }
+                        None => {
+                            panic!("Callable did not return a Promise, but signature requires async")
+                        }
+                    }
+                })
+            })
+        } else {
+            NativeCallable::new_sync(move |args: Vec<ValueContainer>| {
+                let js_args = args.into_iter().map(|v| to_dif_js_value(v, &mut self_clone.cache())).collect::<Array>();
+                let result = unwrap_or_report_js_error_debug(
+                    callable_clone.call1(&JsValue::NULL, &js_args),
+                );
+                // TODO: handle promise (convert to DATEX task)
+                if result.is_some() && result.as_ref().unwrap().is_instance_of::<Promise>() {
+                    panic!("Callable returned a Promise, but signature does not require async")
+                }
+                Ok(result
+                    .map(|res| from_dif_js_value::<ValueContainer>(res, &mut self_clone.cache()).unwrap()))
+            })
         };
 
         Ok(self
             .dif_interface
             .borrow_mut()
-            .register_callable(native_callable, signature)
+            .register_callable(native_callable, name, signature)
             .to_address_string()
         )
     }

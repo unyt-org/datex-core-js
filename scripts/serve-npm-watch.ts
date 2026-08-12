@@ -3,23 +3,28 @@ const watchDirs = [
     "./rs-lib",
 ];
 
+const ignoreDirs = [
+    "/src/datex-web/",
+]
+
 let serverProcess: Deno.ChildProcess | null = null;
 let buildTimer: number | undefined;
 let building = false;
 let pending = false;
 
-async function runBuild() {
-    console.info("Running build:debug:no-opt...");
-    const cmd = new Deno.Command("deno", {
-        args: ["task", "build:debug:no-opt"],
-        stdout: "inherit",
-        stderr: "inherit",
-    });
-    const result = await cmd.output();
-    if (!result.success) {
-        throw new Error("build:npm failed");
+async function runBuild(buildRust = true) {
+    if (buildRust) {
+        console.info("Running build:debug:no-opt...");
+        const cmd = new Deno.Command("deno", {
+            args: ["task", "build:debug:no-opt"],
+            stdout: "inherit",
+            stderr: "inherit",
+        });
+        const result = await cmd.output();
+        if (!result.success) {
+            throw new Error("build:debug:no-opt failed");
+        }
     }
-
 
     console.info("Running build:npm...");
     const npmCmd = new Deno.Command("deno", {
@@ -67,13 +72,13 @@ async function stopServer() {
     serverProcess = null;
 }
 
-async function restartServer() {
+async function restartServer(buildRust = true) {
     await stopServer();
-    await runBuild();
+    await runBuild(buildRust);
     startServer();
 }
 
-async function scheduleRestart() {
+async function scheduleRestart(buildRust = true) {
     if (building) {
         pending = true;
         return;
@@ -82,25 +87,25 @@ async function scheduleRestart() {
     building = true;
 
     try {
-        await restartServer();
+        await restartServer(buildRust);
     } finally {
         building = false;
 
         if (pending) {
             pending = false;
-            scheduleRestart();
+            scheduleRestart(buildRust);
         }
     }
 }
 
-function debounceRestart() {
+function debounceRestart(buildRust = true) {
     if (buildTimer) {
         clearTimeout(buildTimer);
     }
 
     buildTimer = setTimeout(() => {
-        scheduleRestart();
-    }, 2000);
+        scheduleRestart(buildRust);
+    }, 1000);
 }
 
 // Initial startup
@@ -114,7 +119,11 @@ for await (const event of Deno.watchFs(watchDirs)) {
         event.kind === "create" ||
         event.kind === "remove"
     ) {
-        debounceRestart();
+        if (event.paths.some((path) => ignoreDirs.some((ignoreDir) => path.includes(ignoreDir)))) {
+            continue;
+        }
+        const isRustFileChange = event.paths.some((path) => path.endsWith(".rs"));
+        debounceRestart(isRustFileChange);
     }
 }
 

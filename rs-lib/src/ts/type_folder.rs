@@ -534,7 +534,7 @@ impl TypeFolder for TsTypeFolder {
                 }
                 CoreLibBaseTypeId::Unit => Ok(ts_void()),
                 CoreLibBaseTypeId::Never => Ok(ts_never()),
-                CoreLibBaseTypeId::Unknown => Ok(ts_unknown()),
+                CoreLibBaseTypeId::Any => Ok(ts_unknown()),
                 CoreLibBaseTypeId::List => Ok(ts_array(ts_unknown())),
                 CoreLibBaseTypeId::Map => Ok(ts_type_reference(
                     "Map",
