@@ -13,7 +13,7 @@ import {
     type ReferencedSharedContainer,
     SharedContainerMutability,
 } from "../shared-container/mod.ts";
-import type { FlatInstruction, InstructionTree } from "./types.d.ts";
+import type { FlatResult, TreeResult} from "./types.d.ts";
 import type { DIFTypeDefinition } from "../dif/types/mod.ts";
 import { Endpoint } from "../lib/mod.ts";
 import type { DisassemblerOptions } from "datex/datex-web/types/disassembler/options.ts";
@@ -372,7 +372,7 @@ export class Runtime {
      * @param dxb DATEX binary body
      * @returns a tuple of the instruction tree and an optional error message if the disassembly (partially) failed
      */
-    public disassembleDXBFlat(dxb: Uint8Array): [FlatInstruction[], string | null] {
+    public disassembleDXBFlat(dxb: Uint8Array): FlatResult {
         return disassemble_dxb_flat(dxb);
     }
 
@@ -381,7 +381,7 @@ export class Runtime {
      * @param dxb DATEX binary body
      * @returns a tuple of the instruction tree and an optional error message if the disassembly (partially) failed
      */
-    public disassembleDXBTree(dxb: Uint8Array): [InstructionTree, string | null] {
+    public disassembleDXBTree(dxb: Uint8Array): TreeResult {
         return disassemble_dxb_tree(dxb);
     }
 
