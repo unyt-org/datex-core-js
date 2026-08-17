@@ -57,7 +57,7 @@ impl JSRuntime {
             "Initializing runtime with config: {}",
             config
                 .clone()
-                .to_datex_string(DecompileOptions::colorized_pretty())
+                .to_datex_string(DecompileOptions::colorized_pretty(), &mut ())
         );
         let runtime_runner = RuntimeRunner::new(config);
         // Note: JSRuntime::new must be called before runtime run to initialize com interface factories

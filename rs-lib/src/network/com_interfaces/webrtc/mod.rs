@@ -52,7 +52,7 @@ impl WebRTCSignaling for JSSignaling {
 }
 
 #[derive(Datex)]
-#[datex(structural)]
+#[datex(structural_recursive)]
 pub struct WebRTCInterfaceSetupDataJS(WebRTCInterfaceSetupData);
 
 impl Deref for WebRTCInterfaceSetupDataJS {

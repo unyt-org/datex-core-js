@@ -551,6 +551,7 @@ impl TypeFolder for TsTypeFolder {
                 CoreLibBaseTypeId::Type => {
                     self.external_type_reference("Type", vec![ts_unknown()])
                 }
+                CoreLibBaseTypeId::Box => self.external_type_reference("Box", vec![ts_unknown()]),
             },
             CoreLibTypeId::Variant(variant) => match variant {
                 CoreLibVariantTypeId::Decimal(_)
@@ -653,7 +654,7 @@ mod tests {
     #[test]
     fn simple_types() {
         #[derive(Datex)]
-        #[datex(structural)]
+        #[datex(structural_recursive)]
         struct Test {
             a: String,
             b: i32,
@@ -677,7 +678,7 @@ mod tests {
     #[test]
     fn list_and_map() {
         #[derive(Datex)]
-        #[datex(structural)]
+        #[datex(structural_recursive)]
         struct Test {
             a: Vec<String>,
             b: HashMap<String, i32>,
@@ -701,7 +702,7 @@ mod tests {
     #[test]
     fn option() {
         #[derive(Datex)]
-        #[datex(structural)]
+        #[datex(structural_recursive)]
         struct Test {
             a: Option<String>,
         }
@@ -723,7 +724,7 @@ mod tests {
     #[test]
     fn tagged() {
         #[derive(Datex)]
-        #[datex(structural)]
+        #[datex(structural_recursive)]
         enum Test {
             A { x: i32 },
             B,

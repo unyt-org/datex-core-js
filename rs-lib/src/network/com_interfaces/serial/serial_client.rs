@@ -28,7 +28,7 @@ use web_sys::{
 };
 
 #[derive(Datex)]
-#[datex(structural)]
+#[datex(structural_recursive)]
 pub struct SerialClientInterfaceSetupDataJS(SerialClientInterfaceSetupData);
 
 impl Deref for SerialClientInterfaceSetupDataJS {
