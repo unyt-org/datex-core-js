@@ -5,31 +5,6 @@
 import type { Tagged } from "../../../../../../lib/mod.ts";
 
 /**
- * Represents the type of a WebRTC session description.
- */
-export type RTCSdpTypeDX = Tagged<"Unspecified"> | Tagged<"Answer"> | Tagged<"Offer">;
-
-/**
- * Represents a WebRTC session description.
- */
-export type RTCSessionDescriptionDX = {
-    type: RTCSdpTypeDX;
-    sdp: string;
-};
-
-/**
- * Represents an ICE candidate initialization message in WebRTC.
- */
-export type RTCIceCandidateInitDX = {
-    candidate: string;
-    sdp_mid: null | string;
-    sdp_mline_index: null | number;
-    username_fragment: null | string;
-};
-
-export type WebRTCSignalDX = Tagged<"Description", RTCSessionDescriptionDX> | Tagged<"IceCandidate", RTCIceCandidateInitDX> | Tagged<"EndOfCandidates">;
-
-/**
  * Represents the role of a WebRTC participant in a connection.
  */
 export type WebRTCRoleDX = Tagged<"Offerer"> | Tagged<"Answerer">;
@@ -53,3 +28,36 @@ export type WebRTCInterfaceSetupData = {
     negotiated_data_channel_id: null | number;
     ordered: boolean;
 };
+
+/**
+ * Represents an ICE candidate initialization message in WebRTC.
+ */
+export type RTCIceCandidateInitDX = {
+    candidate: string;
+    sdp_mid: null | string;
+    sdp_mline_index: null | number;
+    username_fragment: null | string;
+};
+
+/**
+ * Represents the type of a WebRTC session description.
+ */
+export type RTCSdpTypeDX = Tagged<"Unspecified"> | Tagged<"Answer"> | Tagged<"Offer">;
+
+/**
+ * Represents a WebRTC session description.
+ */
+export type RTCSessionDescriptionDX = {
+    type: RTCSdpTypeDX;
+    sdp: string;
+};
+
+export type WebRTCSignalDX = Tagged<"Description", {
+    type: RTCSdpTypeDX;
+    sdp: string;
+}> | Tagged<"IceCandidate", {
+    candidate: string;
+    sdp_mid: null | string;
+    sdp_mline_index: null | number;
+    username_fragment: null | string;
+}> | Tagged<"EndOfCandidates">;

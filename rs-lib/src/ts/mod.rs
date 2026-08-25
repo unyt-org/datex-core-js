@@ -2,9 +2,11 @@ use std::{collections::BTreeMap, path::PathBuf};
 
 pub use crate::ts::type_folder::TsTypeFolder;
 use crate::ts::{ast::TsAst, type_folder::TsTypeFolderError};
-use datex_core::datex_registry::all_datex_registrations;
-pub use datex_core::{types::r#type::Type};
-pub use datex_core::runtime::cache::shared_references_cache::SharedReferencesCache;
+pub use datex_core::{
+    runtime::cache::shared_references_cache::SharedReferencesCache,
+    types::r#type::Type,
+    datex_registry::all_datex_type_registrations
+};
 
 mod ast;
 mod swc;
@@ -23,7 +25,7 @@ pub fn resolve_registry_types<'a>(
 ) -> Result<&'a TsAst, TsTypeFolderError> {
     let mut exports_by_file = BTreeMap::<PathBuf, Vec<TsExport<'_>>>::new();
 
-    for registration in all_datex_registrations() {
+    for registration in all_datex_type_registrations() {
         let metadata = &registration.metadata;
 
         let namespace = format!("{}.ts", metadata.namespace)
@@ -53,10 +55,10 @@ mod tests {
     };
     use datex_core::{
         datex_proxy::DatexProxyTypes, macros::Datex,
+        runtime::cache::shared_references_cache::SharedReferencesCache,
         values::core_values::endpoint::Endpoint,
     };
     use std::collections::{BTreeMap, BTreeSet};
-    use datex_core::runtime::cache::shared_references_cache::SharedReferencesCache;
 
     fn names(values: &[&str]) -> BTreeSet<String> {
         values.iter().map(|value| (*value).to_string()).collect()
@@ -67,11 +69,13 @@ mod tests {
     }
 
     #[derive(Datex, Debug, Clone, PartialEq)]
+    #[datex(structural_recursive)]
     struct Dependency {
         endpoint: Endpoint,
     }
 
     #[derive(Datex, Debug, Clone, PartialEq)]
+    #[datex(structural_recursive)]
     struct Root {
         dependency: Dependency,
     }
@@ -234,6 +238,7 @@ mod tests {
     #[test]
     fn no_unused_import() {
         #[derive(Datex, Debug, Clone, PartialEq)]
+        #[datex(structural_recursive)]
         struct Plain {
             value: String,
         }
@@ -261,6 +266,7 @@ mod tests {
     }
 
     #[derive(Datex, Debug, Clone, PartialEq)]
+    #[datex(structural_recursive)]
     #[datex(namespace = "a/b/c")]
     struct Example {
         a: u8,
@@ -269,6 +275,7 @@ mod tests {
     }
 
     #[derive(Datex, Debug, Clone, PartialEq)]
+    #[datex(structural_recursive)]
     #[datex(namespace = "a/c")]
     struct WrappedExample {
         inner: Example,

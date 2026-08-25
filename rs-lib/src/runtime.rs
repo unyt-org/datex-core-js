@@ -1,6 +1,6 @@
 use crate::{
     dif::JSDIFInterface,
-    js_utils::{from_dif_js_value, js_array, js_error, to_dif_js_value},
+    js_utils::{from_dif_js_value, js_array, js_error},
     network::com_hub::JSComHub,
 };
 use datex_core::{
@@ -15,20 +15,21 @@ use datex_crypto_facade::crypto::Crypto;
 use log::info;
 use std::{borrow::Cow, ops::Deref};
 
-use crate::js_utils::to_js_value;
+use crate::js_utils::{optional_value_container_to_optional_js_dif_value, to_js_value};
 use datex_core::{
     compiler::{CompileOptions, compile_template},
     crypto::CryptoImpl,
     datex_proxy::DatexValueContainerProxyInfallibleSerialize,
     decompiler::DecompileOptions,
-    dif::{dif_interface::DIFInterface},
+    dif::dif_interface::DIFInterface,
     runtime::{
         Runtime, RuntimeConfig, RuntimeInternal, RuntimeRunner,
+        cache::shared_values_cache::SharedValuesCache,
     },
 };
 use serde_wasm_bindgen::from_value;
 use std::{cell::RefCell, fmt::Display, rc::Rc};
-use datex_core::runtime::cache::shared_values_cache::SharedValuesCache;
+use datex_core::runtime::cache::shared_references_cache::SharedReferencesCache;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::{future_to_promise, spawn_local};
 use web_sys::js_sys::Promise;
@@ -50,8 +51,6 @@ impl JSRuntime {
     }
 
     pub(crate) async fn run(config: JsValue) -> JSRuntime {
-        // FIXME remove
-        wasm_logger::init(wasm_logger::Config::new(log::Level::Debug));
         let config: RuntimeConfig =
             from_dif_js_value(config, &mut SharedValuesCache::default())
                 .unwrap();
@@ -59,7 +58,7 @@ impl JSRuntime {
             "Initializing runtime with config: {}",
             config
                 .clone()
-                .to_datex_string(DecompileOptions::colorized_pretty())
+                .to_datex_string(DecompileOptions::colorized_pretty(), &mut SharedReferencesCache::default())
         );
         let runtime_runner = RuntimeRunner::new(config);
         // Note: JSRuntime::new must be called before runtime run to initialize com interface factories
@@ -81,7 +80,7 @@ impl JSRuntime {
     }
 
     fn new(runtime: Runtime) -> JSRuntime {
-        let dif_interface = JSDIFInterface::new(runtime.create_dif_interface());
+        let dif_interface = JSDIFInterface::new(runtime.clone(), runtime.create_dif_interface());
         let com_hub =
             JSComHub::new(runtime.clone(), dif_interface.dif_interface_rc());
         JSRuntime {
@@ -291,7 +290,7 @@ impl JSRuntime {
             )
             .await
             .map_err(js_error)?;
-        Ok(self.optional_value_container_to_optional_js_dif_value(result))
+        Ok(optional_value_container_to_optional_js_dif_value(result, &mut self.dif_interface.cache()))
     }
 
     pub fn execute_sync_with_string_result(
@@ -333,7 +332,7 @@ impl JSRuntime {
                 None,
             )
             .map_err(js_error)?;
-        Ok(self.optional_value_container_to_optional_js_dif_value(result))
+        Ok(optional_value_container_to_optional_js_dif_value(result, &mut self.dif_interface.cache()))
     }
 
     pub fn value_to_string(
@@ -372,26 +371,6 @@ impl JSRuntime {
             value,
             &mut self.dif_interface.cache(),
         )
-    }
-
-    /**
-     * Convert an optional ValueContainer to an optional JsValue in the DIF format:
-     *  * no result (None) is represented as null
-     *  * a result (Some) is represented as [value] (wrapped in an array to differentiate from null)
-     */
-    fn optional_value_container_to_optional_js_dif_value(
-        &self,
-        value: Option<ValueContainer>,
-    ) -> JsValue {
-        match value {
-            Some(value) => {
-                let inner_value =
-                    to_js_value(&value, &mut self.dif_interface.cache());
-                // wrap in array
-                js_array(&[inner_value])
-            }
-            None => JsValue::NULL,
-        }
     }
 
     /// Get a handle to the DIF interface of the runtime

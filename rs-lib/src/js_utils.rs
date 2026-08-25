@@ -4,11 +4,13 @@ use datex_core::{
         DatexValueContainerProxyDeserialize,
         DatexValueContainerProxyInfallibleSerialize,
     },
-    dif::{serde_context::SerdeContext},
+    dif::serde_context::SerdeContext,
+    runtime::cache::shared_values_cache::SharedValuesCache,
     utils::serde_serialize_seed::SerializeSeed,
     values::value_container::ValueContainer,
 };
-use datex_core::runtime::cache::shared_values_cache::SharedValuesCache;
+use datex_core::datex_proxy::ToDatexNativeValueContainer;
+use datex_core::runtime::cache::shared_references_cache::SharedReferencesCache;
 use serde::{
     Serialize,
     de::{DeserializeOwned, DeserializeSeed},
@@ -161,5 +163,25 @@ pub fn to_dif_js_value<T: DatexValueContainerProxyInfallibleSerialize>(
     value: T,
     cache: &mut SharedValuesCache,
 ) -> JsValue {
-    to_js_value(&value.to_value_container(), cache)
+    to_js_value(&value.to_value_container_without_cache(), cache)
+}
+
+/**
+ * Convert an optional ValueContainer to an optional JsValue in the DIF format:
+ *  * no result (None) is represented as null
+ *  * a result (Some) is represented as [value] (wrapped in an array to differentiate from null)
+ */
+pub fn optional_value_container_to_optional_js_dif_value(
+    value: Option<ValueContainer>,
+    cache: &mut SharedValuesCache,
+) -> JsValue {
+    match value {
+        Some(value) => {
+            let inner_value =
+                to_js_value(&value, cache);
+            // wrap in array
+            js_array(&[inner_value])
+        }
+        None => JsValue::NULL,
+    }
 }
