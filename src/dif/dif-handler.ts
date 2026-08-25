@@ -449,10 +449,22 @@ export class DIFHandler {
     }
 
     /**
-     * Calls a callable DIF value identified by the given hash with the specified arguments.
+     * Calls a sync callable DIF value identified by the given hash with the specified arguments.
      */
-    private callCallable(hash: string, args: unknown[]) {
-        const result = collapseDIFOption(this.#handle.apply(
+    private callCallableSync(hash: string, args: unknown[]) {
+        const result = collapseDIFOption(this.#handle.apply_sync(
+            [CoreLibTypeId.Callable, [hash, null]] satisfies DIFValue,
+            args.map((arg) => this.convertJSValueToDIFValueContainer(arg))
+        ));
+        if (result === undefined) return result;
+        return this.resolveDIFValueContainer(result);
+    }
+
+    /**
+     * Calls an async callable DIF value identified by the given hash with the specified arguments.
+     */
+    private async callCallableAsync(hash: string, args: unknown[]) {
+        const result = collapseDIFOption(await this.#handle.apply_async(
             [CoreLibTypeId.Callable, [hash, null]] satisfies DIFValue,
             args.map((arg) => this.convertJSValueToDIFValueContainer(arg))
         ));
@@ -623,11 +635,16 @@ export class DIFHandler {
 
         }
         else if (type === CoreLibTypeId.Callable) {
-            const [hash, name] = core as DIFCoreValueCallable;
-            const callable = new Function(
-                "fn", "hash",
-                `return function ${name||""}(...args) {return fn(hash, args)}`)
-            (this.callCallable.bind(this), hash);
+            const [hash, name, requiresAsync] = core as DIFCoreValueCallable;
+            const callableBuilder = new Function(
+                "fn",
+                "hash",
+                `return ${requiresAsync?'async ' : ''}function ${name||""}(...args) {return fn(hash, args)}`
+            );
+            const boundCallable = requiresAsync
+                ? this.callCallableAsync.bind(this)
+                : this.callCallableSync.bind(this)
+            const callable = callableBuilder(boundCallable, hash);
             callable[DATEX_CALLABLE_HASH] = hash;
             return callable;
         }
