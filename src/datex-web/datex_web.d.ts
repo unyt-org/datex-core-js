@@ -26,7 +26,8 @@ export class JSDIFInterface {
     private constructor();
     free(): void;
     [Symbol.dispose](): void;
-    apply(callee: any, args: any): any;
+    apply_async(callee: any, args: any): Promise<any>;
+    apply_sync(callee: any, args: any): any;
     create_pointer(value: any): string;
     has_address_with_ownership(address: string, ownership?: number | null): boolean;
     observe_pointer(address: string, observe_options: any, callback: Function): number;

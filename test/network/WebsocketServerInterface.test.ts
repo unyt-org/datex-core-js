@@ -38,7 +38,7 @@ Deno.test("connect two runtimes", async () => {
         return;
     }
 
-    const PORT = 8082;
+    const PORT = 8124;
     const runtimeA = await Runtime.create({ endpoint: Endpoint.get("@test_a") }, { log_level: "debug" });
     const runtimeB = await Runtime.create({ endpoint: Endpoint.get("@test_b") }, { log_level: "debug" });
 

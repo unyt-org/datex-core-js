@@ -9,7 +9,7 @@ use datex_core::{
     utils::serde_serialize_seed::SerializeSeed,
     values::value_container::ValueContainer,
 };
-use datex_core::datex_proxy::DatexValueContainerProxyInfallibleSerializeWithoutContext;
+use datex_core::datex_proxy::ToDatexNativeValueContainer;
 use datex_core::runtime::cache::shared_references_cache::SharedReferencesCache;
 use serde::{
     Serialize,
@@ -159,11 +159,11 @@ where
 }
 
 /// Convert a serializable #[Datex] struct to a JsValue, using the DIF cache for resolving shared containers
-pub fn to_dif_js_value<T: DatexValueContainerProxyInfallibleSerialize<()>>(
+pub fn to_dif_js_value<T: DatexValueContainerProxyInfallibleSerialize>(
     value: T,
     cache: &mut SharedValuesCache,
 ) -> JsValue {
-    to_js_value(&value.to_value_container_without_context(), cache)
+    to_js_value(&value.to_value_container_without_cache(), cache)
 }
 
 /**

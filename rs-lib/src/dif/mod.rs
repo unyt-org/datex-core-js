@@ -1,4 +1,4 @@
-use crate::js_utils::{from_dif_js_value, from_js_value, js_error, optional_value_container_to_optional_js_dif_value, to_dif_js_value, to_js_value, unwrap_or_report_js_error_debug};
+use crate::js_utils::{from_dif_js_value, from_js_value, js_error, optional_value_container_to_optional_js_dif_value, to_js_value, unwrap_or_report_js_error_debug};
 use datex_core::{
     dif::{
         dif_interface::DIFInterface, error::DIFUpdateError,
@@ -23,6 +23,7 @@ use std::{
     rc::Rc,
 };
 use datex_core::runtime::Runtime;
+use datex_core::traits::apply::{get_borrowed_apply_argument_values, ApplyArgument};
 use datex_core::types::type_definition::callable::{CallableKind, CallableTypeDefinition};
 use datex_core::values::core_values::callable::NativeCallable;
 use wasm_bindgen::{JsError, JsValue, prelude::*};
@@ -151,29 +152,31 @@ impl JSDIFInterface {
         let callable_clone = callable.clone();
         let self_clone = self.clone();
         let native_callable = if signature.requires_async {
-            NativeCallable::new_async(move |args: Vec<ValueContainer>| {
+            NativeCallable::new_async(move |args: Vec<ApplyArgument>| {
                 let callable_clone = callable_clone.clone();
                 let self_clone = self_clone.clone();
                 Box::pin(async move {
-                    let js_args = args.into_iter().map(|v| to_dif_js_value(v, &mut self_clone.cache())).collect::<Array>();
+                    let js_args = args.iter().map(|v| to_js_value(&v.value, &mut self_clone.cache())).collect::<Array>();
                     let promise = unwrap_or_report_js_error_debug(
                         callable_clone.call1(&JsValue::NULL, &js_args),
                     ).map(Promise::from);
-                    match promise {
+                    let res = match promise {
                         Some(promise) => {
                             let result = unwrap_or_report_js_error_debug(wasm_bindgen_futures::JsFuture::from(promise).await);
-                            Ok(result
-                                .map(|res| from_dif_js_value::<ValueContainer>(res, &mut self_clone.cache()).unwrap()))
+                            result
+                                .map(|res| from_dif_js_value::<ValueContainer>(res, &mut self_clone.cache()).unwrap())
                         }
                         None => {
                             panic!("Callable did not return a Promise, but signature requires async")
                         }
-                    }
+                    };
+
+                    Ok((res, get_borrowed_apply_argument_values(args)))
                 })
             })
         } else {
-            NativeCallable::new_sync(move |args: Vec<ValueContainer>| {
-                let js_args = args.into_iter().map(|v| to_dif_js_value(v, &mut self_clone.cache())).collect::<Array>();
+            NativeCallable::new_sync(move |args: Vec<ApplyArgument>| {
+                let js_args = args.iter().map(|v| to_js_value(&v.value, &mut self_clone.cache())).collect::<Array>();
                 let result = unwrap_or_report_js_error_debug(
                     callable_clone.call1(&JsValue::NULL, &js_args),
                 );
@@ -181,8 +184,10 @@ impl JSDIFInterface {
                 if result.is_some() && result.as_ref().unwrap().is_instance_of::<Promise>() {
                     panic!("Callable returned a Promise, but signature does not require async")
                 }
-                Ok(result
-                    .map(|res| from_dif_js_value::<ValueContainer>(res, &mut self_clone.cache()).unwrap()))
+                let res = result
+                    .map(|res| from_dif_js_value::<ValueContainer>(res, &mut self_clone.cache()).unwrap());
+
+                Ok((res, get_borrowed_apply_argument_values(args)))
             })
         };
 
@@ -194,28 +199,65 @@ impl JSDIFInterface {
         )
     }
 
-    pub fn apply(
+    pub fn apply_sync(
         &mut self,
         callee: JsValue,
         args: JsValue,
     ) -> Result<JsValue, JsError> {
-        let callee: ValueContainer =
-            from_dif_js_value(callee, &mut self.cache())?;
-        let js_array: Array = args.into();
-        let args = js_array.to_vec().into_iter().map(|v| {
-            from_dif_js_value(v, &mut self.cache())
-        }).collect::<Result<Vec<ValueContainer>, _>>()?;
+        let (callee, args) =
+            self.get_callee_and_args_from_js_values(callee, args)?;
 
-        let res = self
+        let (res, _) = self
             .dif_interface
             .borrow_mut()
-            .apply(&self.runtime, callee, args)
+            .apply_sync(&self.runtime, callee, args)
             .map_err(js_error)?;
 
         Ok(optional_value_container_to_optional_js_dif_value(
             res,
             &mut self.cache()
         ))
+    }
+
+    pub async fn apply_async(
+        &mut self,
+        callee: JsValue,
+        args: JsValue,
+    ) -> Result<JsValue, JsError> {
+        let (callee, args) =
+            self.get_callee_and_args_from_js_values(callee, args)?;
+
+        let (res, _) = self
+            .dif_interface
+            .borrow_mut()
+            .apply_async(&self.runtime, callee, args)
+            .await
+            .map_err(js_error)?;
+
+        Ok(optional_value_container_to_optional_js_dif_value(
+            res,
+            &mut self.cache()
+        ))
+    }
+
+    fn get_callee_and_args_from_js_values(
+        &mut self,
+        callee: JsValue,
+        args: JsValue,
+    ) -> Result<(ValueContainer, Vec<ApplyArgument>), JsError> {
+        let callee: ValueContainer =
+            from_js_value(callee, &mut self.cache())?;
+        let js_array: Array = args.into();
+        let args = js_array
+            .to_vec()
+            .into_iter()
+            .map(|v|
+                from_js_value::<ValueContainer>(
+                    v, &mut self.cache()
+                ).map(|v|ApplyArgument::from(v))
+            )
+            .collect::<Result<Vec<ApplyArgument>, _>>()?;
+        Ok((callee, args))
     }
 
     pub fn create_pointer(&self, value: JsValue) -> Result<String, JsError> {

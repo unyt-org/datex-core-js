@@ -1331,6 +1331,11 @@ export class DIFHandler {
                 difHandlerInstance.registerCallable(value as (...args: unknown[]) => unknown);
                 // after registration, the function should be in cache, so we can get its reference metadata and return the pointer address
                 const existingReference = difHandlerInstance.tryGetReferenceMetadata(value as CachedSharedContainer);
+                if (!existingReference) {
+                    throw new Error(
+                        "Failed to register callable function and retrieve its reference metadata",
+                    );
+                }
                 return difHandlerInstance.generateDIFValueContainerForCachedPointer(existingReference.address);
             }
             // local DATEX function with hash

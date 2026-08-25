@@ -1,6 +1,6 @@
 use crate::{
     dif::JSDIFInterface,
-    js_utils::{from_dif_js_value, js_array, js_error, to_dif_js_value},
+    js_utils::{from_dif_js_value, js_array, js_error},
     network::com_hub::JSComHub,
 };
 use datex_core::{
@@ -29,6 +29,7 @@ use datex_core::{
 };
 use serde_wasm_bindgen::from_value;
 use std::{cell::RefCell, fmt::Display, rc::Rc};
+use datex_core::runtime::cache::shared_references_cache::SharedReferencesCache;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::{future_to_promise, spawn_local};
 use web_sys::js_sys::Promise;
@@ -57,7 +58,7 @@ impl JSRuntime {
             "Initializing runtime with config: {}",
             config
                 .clone()
-                .to_datex_string(DecompileOptions::colorized_pretty(), &mut ())
+                .to_datex_string(DecompileOptions::colorized_pretty(), &mut SharedReferencesCache::default())
         );
         let runtime_runner = RuntimeRunner::new(config);
         // Note: JSRuntime::new must be called before runtime run to initialize com interface factories
